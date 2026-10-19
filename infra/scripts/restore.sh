@@ -28,6 +28,10 @@ SCHEMAS="${DUMP_SCHEMAS:-public auth storage}"
 # Roles que Supabase da por existentes y que el dump referencia (GRANT/POLICY).
 ROLES_SQL="do \$\$ declare r text; begin foreach r in array array['anon','authenticated','service_role','supabase_admin','authenticator','supabase_auth_admin','supabase_storage_admin','dashboard_user'] loop if not exists (select 1 from pg_roles where rolname=r) then execute format('create role %I nologin', r); end if; end loop; end \$\$;"
 
+# Esquema y extensiones que las migraciones crean en `extensions` (pg_dump no los incluye al
+# respaldar solo public/auth/storage). pgtap queda fuera: solo sirve para pruebas del esquema.
+EXT_SQL='create schema if not exists extensions; create extension if not exists pgcrypto with schema extensions; create extension if not exists pg_trgm with schema extensions; create extension if not exists unaccent with schema extensions; create extension if not exists citext with schema extensions; create extension if not exists "uuid-ossp" with schema extensions;'
+
 if [ -n "$TARGET" ]; then
   case "$TARGET" in
     *supabase.co*|*supabase.com*|*pooler.*) echo "RECHAZADO: la URL parece un proyecto de Supabase." >&2; exit 3 ;;
@@ -35,6 +39,7 @@ if [ -n "$TARGET" ]; then
   if [ "$TARGET" = "${DATABASE_URL:-}" ]; then echo "RECHAZADO: el destino es DATABASE_URL." >&2; exit 3; fi
   export PGURL="$TARGET"
   pg_run psql -X -q -c "$ROLES_SQL"
+  pg_run psql -X -q -c "$EXT_SQL"
   pg_run psql -X -q -c "drop schema if exists public cascade"
   gunzip -c "$ARCHIVO" | pg_run psql -X -q -v ON_ERROR_STOP=1 >/dev/null
   log "Restauración completada en la base temporal indicada"
@@ -51,6 +56,7 @@ for _ in $(seq 1 40); do [ "$(docker logs "$NOMBRE" 2>&1 | grep -c "ready to acc
 sleep 2
 dpsql() { docker exec -i "$NOMBRE" psql -X -q -U postgres -d postgres "$@"; }
 dpsql -c "$ROLES_SQL"
+dpsql -c "$EXT_SQL"
 # El dump trae CREATE SCHEMA public: se parte de una base vacía (solo es seguro en la base temporal).
 dpsql -c "drop schema if exists public cascade"
 gunzip -c "$ARCHIVO" | dpsql -v ON_ERROR_STOP=1 >/dev/null
