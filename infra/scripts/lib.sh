@@ -13,6 +13,10 @@ log() { echo "[$(date +%FT%T%z)] $*"; }
 pg_run() {
   local bin="$1"; shift
   parse_pg_url "$PGURL" || { echo "URL de base de datos inválida" >&2; return 1; }
+  # Variables de libpq que cambiarían el destino real sin que se vea en la URL (evaden la lista
+  # blanca de restore.sh): se anulan; el servicio de conexión se apunta a un archivo vacío.
+  unset PGSERVICE PGHOSTADDR PGOPTIONS PGPASSFILE PGSYSCONFDIR PGPASSCOMMAND
+  export PGSERVICEFILE=/dev/null
   export PGHOST="$U_HOST" PGPORT="$U_PORT" PGUSER="$U_USER" PGPASSWORD="$U_PASS"
   if [ -n "$U_DB" ]; then export PGDATABASE="$U_DB"; else unset PGDATABASE; fi
   if [[ "$U_QUERY" =~ sslmode=([a-z-]+) ]]; then export PGSSLMODE="${BASH_REMATCH[1]}"; else unset PGSSLMODE; fi

@@ -42,4 +42,21 @@ source ./lib.sh
 parse_pg_url "postgres://u%40x:p%3Aa%2Fb%40c@HOST.Example:6543/db%20n?sslmode=require"
 if [ "$U_USER|$U_PASS|$U_HOST|$U_PORT|$U_DB|$U_QUERY" = "u@x|p:a/b@c|host.example|6543|db n|sslmode=require" ]; then echo "OK   parse_pg_url"; else echo "FALLA parse_pg_url"; FALLOS=$((FALLOS+1)); fi
 
+echo "--- variables de entorno de libpq que evadirían la lista blanca"
+mkdir -p "$TMP/shim"
+cat > "$TMP/shim/psql" <<'SH'
+#!/usr/bin/env bash
+echo "PGSERVICE=[${PGSERVICE-}] PGHOSTADDR=[${PGHOSTADDR-}] PGOPTIONS=[${PGOPTIONS-}] PGSERVICEFILE=[${PGSERVICEFILE-}] PGPASSFILE=[${PGPASSFILE-}] PGHOST=[${PGHOST-}]" > "$SHIM_SALIDA"
+SH
+chmod +x "$TMP/shim/psql"
+(
+  export SHIM_SALIDA="$TMP/entorno.txt" PATH="$TMP/shim:$PATH"
+  export PGSERVICE=malicioso PGHOSTADDR=3.3.3.3 PGOPTIONS="-c search_path=x" PGSERVICEFILE=/tmp/svc PGPASSFILE=/tmp/pw
+  unset PG_FORCE_DOCKER
+  PGURL="postgres://u:p@127.0.0.1:5432/izao_restore_x"
+  source ./lib.sh
+  pg_run psql -c "select 1"
+)
+if grep -q "PGSERVICE=\[\] PGHOSTADDR=\[\] PGOPTIONS=\[\] PGSERVICEFILE=\[/dev/null\] PGPASSFILE=\[\] PGHOST=\[127.0.0.1\]" "$TMP/entorno.txt"; then echo "OK   pg_run limpia PGSERVICE/PGHOSTADDR/PGOPTIONS/PGPASSFILE y fija PGSERVICEFILE=/dev/null"; else echo "FALLA entorno de pg_run: $(cat "$TMP/entorno.txt")"; FALLOS=$((FALLOS+1)); fi
+
 [ "$FALLOS" -eq 0 ] && echo "GUARDA OK" || { echo "GUARDA CON $FALLOS FALLOS"; exit 1; }
