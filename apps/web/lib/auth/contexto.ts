@@ -69,8 +69,10 @@ export async function cargarContexto<A extends AdminInfo = AdminInfo>(
     marcaVigente(deps.marca, usuario.id, deps.ahoraMs, deps.secreto),
   ]);
 
-  // A-3: una sesión aal2 solo vale si se verificó con el factor aprobado.
-  if (sesion.aal === 'aal2') {
+  // A-3: una sesión aal2 solo vale si se verificó con el factor aprobado. Solo se
+  // evalúa con la marca de 12 h vigente: la cookie de Supabase dura mucho más que
+  // las marcas, y una sesión vencida es "sesión expirada", no "MFA no aprobado".
+  if (sesionVigente && sesion.aal === 'aal2') {
     const aprobado = usuario.app_metadata?.mfa_factor_aprobado;
     const factorAprobado = typeof aprobado === 'string' ? aprobado : null;
     const valida = await marcaMfaVigente(deps.marcaMfa, usuario.id, factorAprobado, deps.ahoraMs, deps.secreto);

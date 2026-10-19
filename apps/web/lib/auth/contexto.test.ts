@@ -187,6 +187,41 @@ describe('cargarContexto + decidirAcceso con mocks', () => {
       expect(ctx.mfaNoAprobada).toBe(true);
     });
 
+    it('N-1: aal2 con ambas marcas vencidas: sesión expirada, sin marcar MFA no aprobado', async () => {
+      const vieja = AHORA - 13 * 60 * 60 * 1000;
+      const ctx = await cargarContexto({
+        supabase: clienteSimulado({ usuario: { id: 'u1' }, actual: 'aal2', siguiente: 'aal2', factorAprobado: FACTOR }),
+        buscarAdmin: async () => ({ role: 'admin', isActive: true }),
+        marca: await crearMarca('u1', vieja, SECRETO),
+        marcaMfa: await crearMarcaMfa('u1', FACTOR, vieja, SECRETO),
+        ahoraMs: AHORA,
+        secreto: SECRETO,
+      });
+      expect(ctx.mfaNoAprobada).toBe(false);
+      expect(ctx.sesionVigente).toBe(false);
+      expect(decidirAcceso({ pathname: '/admin', esApi: false, ...ctx })).toMatchObject({
+        tipo: 'redirigir',
+        destino: '/admin/login?error=sesion-expirada',
+        cerrarSesion: true,
+      });
+    });
+
+    it('N-1: aal2 sin ninguna de las dos marcas (cookies vencidas y borradas): sesión expirada', async () => {
+      const ctx = await cargarContexto({
+        supabase: clienteSimulado({ usuario: { id: 'u1' }, actual: 'aal2', siguiente: 'aal2', factorAprobado: FACTOR }),
+        buscarAdmin: async () => ({ role: 'admin', isActive: true }),
+        marca: undefined,
+        marcaMfa: undefined,
+        ahoraMs: AHORA,
+        secreto: SECRETO,
+      });
+      expect(ctx.mfaNoAprobada).toBe(false);
+      expect(decidirAcceso({ pathname: '/admin', esApi: false, ...ctx })).toMatchObject({
+        tipo: 'redirigir',
+        destino: '/admin/login?error=sesion-expirada',
+      });
+    });
+
     it('en aal1 no hay nada que comprobar todavía', async () => {
       const ctx = await cargar({ actual: 'aal1', factorAprobado: FACTOR });
       expect(ctx.mfaNoAprobada).toBe(false);
