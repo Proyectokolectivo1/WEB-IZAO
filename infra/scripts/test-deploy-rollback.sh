@@ -18,15 +18,20 @@ case "$1" in
   rev-parse)
     # Antes del merge: aaa1111; después: bbb2222. Con --short el sha corto; sin él, el completo.
     if [ -f "$STUB_DIR/merged" ]; then c=bbb2222; else c=aaa1111; fi
-    if [ "$2" = "--short" ]; then echo "$c"; else echo "${c}full"; fi ;;
+    if [ "$2" = "--short" ]; then echo "$c"; else echo "${c}0000"; fi ;;
   merge) touch "$STUB_DIR/merged" ;;
-  diff) [ -n "${STUB_MIG_CHANGED:-}" ] && echo "packages/db/supabase/migrations/20261101000000_nueva.sql" || true ;;
+  diff)
+    # STUB_MIG_CHANGED: siempre hay migraciones nuevas. STUB_MIG_BASE: solo si el diff parte de ese commit.
+    if [ -n "${STUB_MIG_CHANGED:-}" ] || [ "$3" = "${STUB_MIG_BASE:-sin-base}" ]; then
+      echo "packages/db/supabase/migrations/20261101000000_nueva.sql"
+    fi ;;
+  reset) [ "$3" = "aaa11110000" ] && rm -f "$STUB_DIR/merged" || true ;;
   *) ;;
 esac
 EOF
 cat > "$T/bin/pnpm" <<'EOF'
 #!/usr/bin/env bash
-exit 0
+[ -z "${STUB_PNPM_FAIL:-}" ]
 EOF
 cat > "$T/bin/curl" <<'EOF'
 #!/usr/bin/env bash
@@ -61,8 +66,8 @@ escenario() { # nombre, esperado: rollback|sinimagen|ok|abortamig, variables... 
       grep -q -- '--no-build' <<<"$rb" || ok=0
       grep -q -- '--no-deps' <<<"$rb" || ok=0
       # El código vuelve al commit anterior y ultimo-ok conserva el tag sano
-      grep -q "^git reset --keep aaa1111full" "$STUB_DIR/calls.log" || ok=0
-      [ "$(cat "$ULTIMO_OK_FILE")" = "${RB_TAG:-aaa1111}" ] || ok=0 ;;
+      grep -q "^git reset --keep aaa11110000" "$STUB_DIR/calls.log" || ok=0
+      [ "$(cut -d" " -f1 "$ULTIMO_OK_FILE")" = "${RB_TAG:-aaa1111}" ] || ok=0 ;;
     sinimagen)
       [ "$rc" -ne 0 ] || ok=0
       [ -z "$rb" ] || ok=0
@@ -70,7 +75,7 @@ escenario() { # nombre, esperado: rollback|sinimagen|ok|abortamig, variables... 
     ok)
       [ "$rc" -eq 0 ] || ok=0
       [ -z "$rb" ] || ok=0
-      [ "$(cat "$ULTIMO_OK_FILE" 2>/dev/null)" = "bbb2222" ] || ok=0 ;;
+      [ "$(cut -d" " -f1 "$ULTIMO_OK_FILE" 2>/dev/null)" = "bbb2222" ] || ok=0 ;;
     abortamig)
       [ "$rc" -ne 0 ] || ok=0
       grep -q 'list_migrations' "$STUB_DIR/salida.txt" || ok=0
@@ -89,5 +94,21 @@ SEMILLA_OK=good111 RB_TAG=good111 escenario "rollback usa ultimo-ok y devuelve g
 RUNNING_TAG=run5555 RB_TAG=run5555 escenario "rollback usa el tag del contenedor vivo" rollback STUB_CURL_FAIL=1
 escenario "migraciones nuevas sin confirmar: aborta antes de construir" abortamig STUB_MIG_CHANGED=1
 EXTRA_ARGS="--migraciones-verificadas" escenario "migraciones nuevas confirmadas a mano: continúa" ok STUB_MIG_CHANGED=1
+
+# --- Dos despliegues seguidos: el 1.º trae una migración y falla en pnpm (tras avanzar git);
+#     el 2.º debe seguir exigiendo --migraciones-verificadas (el diff parte del último despliegue sano).
+echo "--- escenario: despliegue fallido antes del paso 5 no oculta migraciones al siguiente"
+export STUB_DIR="$T/s2"; rm -rf "$STUB_DIR"; mkdir -p "$STUB_DIR"
+echo "good111 aaa11110000" > "$STUB_DIR/ultimo-ok"
+correr() { env STUB_MIG_BASE=aaa11110000 PATH="$T/bin:$PATH" STUB_DIR="$STUB_DIR" ULTIMO_OK="$STUB_DIR/ultimo-ok" DEPLOY_LOG="$T/deploys.log" HEALTH_URL=http://127.0.0.1:1/x "$@" bash "$T/repo/infra/scripts/deploy.sh" ${ARGS:-} > "$STUB_DIR/salida.txt" 2>&1; }
+rc1=0; ARGS="--migraciones-verificadas" correr STUB_PNPM_FAIL=1 || rc1=$?
+rc2=0; ARGS="" correr STUB_X=1 || rc2=$?
+if [ "$rc1" -ne 0 ] && [ "$rc2" -ne 0 ] && grep -q 'list_migrations' "$STUB_DIR/salida.txt"; then
+  echo "OK   el 2.º despliegue sigue exigiendo --migraciones-verificadas"
+else
+  echo "FALLA 2.º despliegue no exigió verificar migraciones (rc1=$rc1 rc2=$rc2)"; sed 's/^/     /' "$STUB_DIR/salida.txt" | tail -8; FALLOS=$((FALLOS+1))
+fi
+rc3=0; ARGS="--skip-tests --migraciones-verificadas" correr STUB_X=1 || rc3=$?
+if [ "$rc3" -eq 0 ] && [ "$(cut -d' ' -f1 "$STUB_DIR/ultimo-ok")" = "bbb2222" ] && [ "$(cut -d' ' -f2 "$STUB_DIR/ultimo-ok")" = "bbb22220000" ]; then echo "OK   con la bandera continúa y ultimo-ok guarda tag y commit"; else echo "FALLA 3.º despliegue (rc=$rc3): $(cat "$STUB_DIR/ultimo-ok")"; FALLOS=$((FALLOS+1)); fi
 
 [ "$FALLOS" -eq 0 ] && echo "DEPLOY ROLLBACK OK" || { echo "DEPLOY ROLLBACK CON $FALLOS FALLOS"; exit 1; }

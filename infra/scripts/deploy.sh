@@ -46,8 +46,13 @@ if [ "$DRY_RUN" -eq 0 ]; then
   # Tag a restaurar si algo falla: NO se toma de git (tras un despliegue fallido HEAD puede quedar
   # en el commit malo). Orden: 1) /srv/izao/ultimo-ok (último tag sano), 2) tag de la imagen del
   # contenedor web vivo, 3) git como último recurso.
-  PREV_SHA=""
-  if [ -s "$ULTIMO_OK" ]; then PREV_SHA="$(head -1 "$ULTIMO_OK" | tr -cd 'A-Za-z0-9._-')"; fi
+  PREV_SHA=""; BASE_GIT=""
+  # Formato de ultimo-ok: "<tag-de-imagen> <commit-git-completo>" del último despliegue sano.
+  if [ -s "$ULTIMO_OK" ]; then
+    read -r PREV_SHA BASE_GIT < "$ULTIMO_OK" || true
+    PREV_SHA="$(printf '%s' "$PREV_SHA" | tr -cd 'A-Za-z0-9._-')"; BASE_GIT="$(printf '%s' "$BASE_GIT" | tr -cd 'A-Fa-f0-9')"
+    if [ -n "$BASE_GIT" ] && ! git cat-file -e "${BASE_GIT}^{commit}" 2>/dev/null; then BASE_GIT=""; fi
+  fi
   if [ -z "$PREV_SHA" ]; then
     CID="$("${COMPOSE[@]}" ps -q web 2>/dev/null | head -1 || true)"
     if [ -n "$CID" ]; then PREV_SHA="$(docker inspect --format '{{.Config.Image}}' "$CID" 2>/dev/null | sed 's/.*://' || true)"; fi
@@ -56,7 +61,20 @@ if [ "$DRY_RUN" -eq 0 ]; then
 else
   PREV_GIT="<commit-actual>"
   PREV_SHA="<tag-sano-anterior>"
+  BASE_GIT=""
 fi
+# Base del diff de migraciones: el commit del último despliegue SANO (no HEAD: un despliegue
+# fallido antes del paso 5 deja HEAD adelantado y ocultaría sus migraciones al siguiente intento).
+BASE_DIFF="${BASE_GIT:-$PREV_GIT}"
+
+# Si algo falla antes de tocar los contenedores (pasos 1 a 4), el código vuelve al commit anterior.
+ANTES_PASO5=1
+volver_git() {
+  if [ "$ANTES_PASO5" -eq 1 ] && [ "$DRY_RUN" -eq 0 ]; then
+    git reset --keep "$PREV_GIT" 2>/dev/null || echo "AVISO: no se pudo devolver git a $PREV_GIT" >&2
+  fi
+}
+trap volver_git ERR
 
 paso "1/7 Código"
 run git fetch origin "$BRANCH"
@@ -75,10 +93,10 @@ paso "3/7 Migraciones de base de datos (paso manual, D-008)"
 # Este paso solo exige que, si el commit nuevo trae migraciones, alguien haya comprobado que
 # packages/db/supabase/migrations coincide con las remotas (list_migrations) y lo confirme.
 if [ "$DRY_RUN" -eq 1 ]; then
-  echo "[dry-run] git diff --name-only $PREV_GIT $NEW_SHA -- packages/db/supabase/migrations"
+  echo "[dry-run] git diff --name-only $BASE_DIFF $NEW_SHA -- packages/db/supabase/migrations"
   MIG_NUEVAS=""
 else
-  MIG_NUEVAS="$(git diff --name-only "$PREV_GIT" "$NEW_SHA" -- packages/db/supabase/migrations || true)"
+  MIG_NUEVAS="$(git diff --name-only "$BASE_DIFF" "$NEW_SHA" -- packages/db/supabase/migrations || true)"
 fi
 if [ -n "$MIG_NUEVAS" ] && [ "$MIG_OK" -ne 1 ]; then
   echo "Este despliegue trae migraciones nuevas o modificadas:" >&2
@@ -87,6 +105,7 @@ if [ -n "$MIG_NUEVAS" ] && [ "$MIG_OK" -ne 1 ]; then
   echo "Antes de desplegar: aplícalas con el MCP de Supabase (apply_migration), compara con list_migrations" >&2
   echo "que las versiones remotas coinciden con los archivos de packages/db/supabase/migrations y vuelve" >&2
   echo "a ejecutar con --migraciones-verificadas (ver docs/RUNBOOK.md)." >&2
+  volver_git
   exit 1
 fi
 [ -n "$MIG_NUEVAS" ] && echo "Migraciones confirmadas a mano (--migraciones-verificadas)." || echo "Sin cambios en migraciones."
@@ -95,11 +114,12 @@ paso "4/7 Construcción de imágenes"
 export IZAO_TAG="$NEW_SHA"
 run "${COMPOSE[@]}" build web worker
 
+ANTES_PASO5=0
 paso "5/7 Actualización: web y luego worker; 6/7 verificación de salud"
 guardar_ultimo_ok() {
-  if [ "$DRY_RUN" -eq 1 ]; then echo "[dry-run] echo $1 > $ULTIMO_OK"; return; fi
+  if [ "$DRY_RUN" -eq 1 ]; then echo "[dry-run] echo '$1 $2' > $ULTIMO_OK"; return; fi
   mkdir -p "$(dirname "$ULTIMO_OK")" 2>/dev/null || true
-  echo "$1" > "$ULTIMO_OK" 2>/dev/null || echo "AVISO: no se pudo escribir $ULTIMO_OK" >&2
+  echo "$1 $2" > "$ULTIMO_OK" 2>/dev/null || echo "AVISO: no se pudo escribir $ULTIMO_OK" >&2
 }
 
 revertir() {
@@ -120,7 +140,7 @@ revertir() {
   registrar "ROLLBACK $NEW_SHA -> $PREV_SHA"
   # El código vuelve al commit anterior para que el siguiente despliegue y su diff partan de lo sano.
   git reset --keep "$PREV_GIT" || echo "AVISO: no se pudo devolver git a $PREV_GIT" >&2
-  guardar_ultimo_ok "$PREV_SHA"
+  guardar_ultimo_ok "$PREV_SHA" "$BASE_DIFF"
 }
 
 actualizar_y_verificar() {
@@ -140,7 +160,7 @@ if ! actualizar_y_verificar; then
   exit 1
 fi
 
-guardar_ultimo_ok "$NEW_SHA"
+guardar_ultimo_ok "$NEW_SHA" "$( [ "$DRY_RUN" -eq 1 ] && echo "<commit-nuevo>" || git rev-parse HEAD )"
 paso "7/7 Registro"
 registrar "DEPLOY $PREV_SHA -> $NEW_SHA rama=$BRANCH"
 echo "Despliegue terminado."
