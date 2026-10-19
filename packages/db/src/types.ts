@@ -1,6 +1,3 @@
-// Generado con generate_typescript_types (Supabase MCP) para el proyecto wyxjmlgrcjclelbrluvd. No editar a mano.
-// Regenerar tras cada migración.
-
 export type Json =
   | string
   | number
@@ -1409,6 +1406,7 @@ export type Database = {
           amount: number
           created_at: string
           customer_key: string
+          customer_keys: string[]
           discount_code_id: string
           id: string
           order_id: string
@@ -1419,6 +1417,7 @@ export type Database = {
           amount: number
           created_at?: string
           customer_key: string
+          customer_keys?: string[]
           discount_code_id: string
           id?: string
           order_id: string
@@ -1429,6 +1428,7 @@ export type Database = {
           amount?: number
           created_at?: string
           customer_key?: string
+          customer_keys?: string[]
           discount_code_id?: string
           id?: string
           order_id?: string
@@ -2101,6 +2101,7 @@ export type Database = {
           shipping_zip: string | null
           status: string
           stock_reserved_until: string | null
+          stock_state: string
           subtotal: number
           total_customer: number
           updated_at: string
@@ -2152,6 +2153,7 @@ export type Database = {
           shipping_zip?: string | null
           status: string
           stock_reserved_until?: string | null
+          stock_state?: string
           subtotal: number
           total_customer: number
           updated_at?: string
@@ -2203,6 +2205,7 @@ export type Database = {
           shipping_zip?: string | null
           status?: string
           stock_reserved_until?: string | null
+          stock_state?: string
           subtotal?: number
           total_customer?: number
           updated_at?: string
@@ -3732,10 +3735,32 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claves_cliente: {
+        Args: { p_celular: string; p_correo: string; p_documento: string }
+        Returns: string[]
+      }
+      confirmar_canje: { Args: { p_order_id: string }; Returns: Json }
+      confirmar_stock: { Args: { p_order_id: string }; Returns: Json }
       f_unaccent: { Args: { p_text: string }; Returns: string }
+      liberar_canje: { Args: { p_order_id: string }; Returns: Json }
+      liberar_stock: { Args: { p_order_id: string }; Returns: Json }
       next_document_number: {
         Args: { p_country_code: string; p_kind: string }
         Returns: number
+      }
+      pedidos_por_vencer: {
+        Args: { p_ahora?: string; p_limite?: number }
+        Returns: {
+          country_code: string
+          estado_actual: string
+          nuevo_estado: string
+          number: string
+          order_id: string
+          payment_method: string
+          stock_reserved_until: string
+          stock_state: string
+          tiene_codigo: boolean
+        }[]
       }
       purgar_audit_log: { Args: { p_dias?: number }; Returns: number }
       refresh_catalog_listing: {
@@ -3747,6 +3772,8 @@ export type Database = {
         Args: { p_product_ids: string[] }
         Returns: number
       }
+      reservar_canje: { Args: { p_order_id: string }; Returns: Json }
+      reservar_stock: { Args: { p_order_id: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
