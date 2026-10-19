@@ -3,7 +3,7 @@ import { cargarContexto, type ClienteAuth } from './contexto';
 import { decidirAcceso } from './decision';
 import { crearMarca } from './marca-sesion';
 
-const SECRETO = 'secreto-de-prueba-dos';
+const SECRETO = Buffer.alloc(32, 5).toString('base64');
 const AHORA = 1_800_000_000_000;
 
 function clienteSimulado(opciones: {

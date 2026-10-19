@@ -3,7 +3,8 @@ import { DURACION_SESION_MS } from './decision';
 import { crearMarca, marcaVigente } from './marca-sesion';
 
 // Secretos de prueba, sin relación con ninguna llave real.
-const SECRETO = 'secreto-de-prueba-uno';
+const SECRETO = Buffer.alloc(32, 3).toString('base64');
+const OTRO_SECRETO = Buffer.alloc(32, 4).toString('base64');
 const AHORA = 1_800_000_000_000;
 
 describe('marca de sesión de 12 h', () => {
@@ -24,7 +25,7 @@ describe('marca de sesión de 12 h', () => {
   });
 
   it('rechaza una marca firmada con otro secreto', async () => {
-    const marca = await crearMarca('u1', AHORA, 'otro-secreto');
+    const marca = await crearMarca('u1', AHORA, OTRO_SECRETO);
     expect(await marcaVigente(marca, 'u1', AHORA, SECRETO)).toBe(false);
   });
 

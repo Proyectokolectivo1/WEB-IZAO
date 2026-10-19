@@ -45,7 +45,7 @@ export async function iniciarSesion(
   const siguiente = rutaSiguienteSegura(lectura.data.siguiente);
 
   const ip = await ipDelCliente();
-  const huella = huellaDeCorreo(correo);
+  const huella = await huellaDeCorreo(correo);
   const desde = new Date(Date.now() - VENTANA_BLOQUEO_MS);
   // Falla cerrado: el intento se registra ANTES de autenticar y, si no se puede
   // registrar o contar, no se intenta el ingreso.

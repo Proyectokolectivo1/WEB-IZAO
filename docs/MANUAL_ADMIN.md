@@ -18,7 +18,7 @@ APP_ENCRYPTION_KEY=<32 bytes en base64>
 ```
 
 - `SUPABASE_SECRET_KEY` da acceso total a la base: solo va en este archivo y en el `.env` del servidor. No se comparte ni se pega en chats.
-- `APP_ENCRYPTION_KEY` se genera con: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. En el panel también firma la marca de sesión de 12 h. Si se cambia, todas las sesiones abiertas se cierran. Para producción usa una distinta de la de pruebas.
+- `APP_ENCRYPTION_KEY` se genera con: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. El panel la valida al arrancar (debe ser base64 de exactamente 32 bytes; si no, el ingreso falla con un mensaje claro) y de ella deriva, con HKDF, una subllave distinta para firmar la marca de sesión de 12 h y las huellas de correo. Si se cambia, todas las sesiones abiertas se cierran. Para producción usa una distinta de la de pruebas.
 
 ### 2. Crear el primer administrador
 

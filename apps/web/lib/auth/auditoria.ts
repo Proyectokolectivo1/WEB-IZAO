@@ -6,9 +6,9 @@
  * solo como huella HMAC, para poder contar intentos fallidos sin exponerlo.
  */
 import { isIP } from 'node:net';
-import { createHmac } from 'node:crypto';
 import { netosDe } from './bloqueo';
 import { secretoSesion } from './env';
+import { firmarHmac } from './llaves';
 import { crearClienteServicio } from './supabase/servicio';
 
 export type AccionAcceso =
@@ -58,14 +58,12 @@ export function construirFilaAuditoria(evento: EventoAuditoria): FilaAuditoria {
 }
 
 /** Huella no reversible del correo, estable para contar intentos. */
-export function huellaCorreo(correo: string, secreto: string): string {
-  return createHmac('sha256', `huella-correo:${secreto}`)
-    .update(correo.trim().toLowerCase())
-    .digest('hex')
-    .slice(0, 32);
+export async function huellaCorreo(correo: string, claveBase64: string): Promise<string> {
+  const firma = await firmarHmac(claveBase64, 'huella-correo-v1', correo.trim().toLowerCase());
+  return firma.slice(0, 32);
 }
 
-export function huellaDeCorreo(correo: string): string {
+export function huellaDeCorreo(correo: string): Promise<string> {
   return huellaCorreo(correo, secretoSesion());
 }
 

@@ -5,6 +5,7 @@
  * `SUPABASE_SECRET_KEY` y `APP_ENCRYPTION_KEY` solo se leen en el servidor.
  */
 import 'server-only';
+import { validarClaveMaestra } from './llaves';
 
 function requerida(nombre: string): string {
   const valor = process.env[nombre];
@@ -27,9 +28,14 @@ export function llaveSecretaSupabase(): string {
   return requerida('SUPABASE_SECRET_KEY');
 }
 
-/** Secreto con el que se firma la marca de sesión de 12 h. Solo servidor. */
+/**
+ * Clave maestra (`APP_ENCRYPTION_KEY`, 32 bytes en base64). Se valida al leerla;
+ * de ella se derivan subllaves con HKDF (`llaves.ts`). Solo servidor.
+ */
 export function secretoSesion(): string {
-  return requerida('APP_ENCRYPTION_KEY');
+  const valor = requerida('APP_ENCRYPTION_KEY');
+  validarClaveMaestra(valor);
+  return valor.trim();
 }
 
 export function esProduccion(): boolean {

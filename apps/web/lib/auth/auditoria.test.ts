@@ -22,15 +22,22 @@ describe('construirFilaAuditoria', () => {
 });
 
 describe('huellaCorreo', () => {
-  it('es estable, no distingue mayúsculas ni espacios y no contiene el correo', () => {
-    const a = huellaCorreo('Dueno@Ejemplo.com ', 's1');
-    expect(a).toBe(huellaCorreo('dueno@ejemplo.com', 's1'));
+  const S1 = Buffer.alloc(32, 1).toString('base64');
+  const S2 = Buffer.alloc(32, 2).toString('base64');
+
+  it('es estable, no distingue mayúsculas ni espacios y no contiene el correo', async () => {
+    const a = await huellaCorreo('Dueno@Ejemplo.com ', S1);
+    expect(a).toBe(await huellaCorreo('dueno@ejemplo.com', S1));
     expect(a).not.toContain('dueno');
     expect(a).toMatch(/^[0-9a-f]{32}$/);
   });
 
-  it('cambia con el secreto y con el correo', () => {
-    expect(huellaCorreo('a@b.co', 's1')).not.toBe(huellaCorreo('a@b.co', 's2'));
-    expect(huellaCorreo('a@b.co', 's1')).not.toBe(huellaCorreo('c@b.co', 's1'));
+  it('cambia con el secreto y con el correo', async () => {
+    expect(await huellaCorreo('a@b.co', S1)).not.toBe(await huellaCorreo('a@b.co', S2));
+    expect(await huellaCorreo('a@b.co', S1)).not.toBe(await huellaCorreo('c@b.co', S1));
+  });
+
+  it('rechaza una clave que no sea de 32 bytes en base64', async () => {
+    await expect(huellaCorreo('a@b.co', 's1')).rejects.toThrow();
   });
 });

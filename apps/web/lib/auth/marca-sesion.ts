@@ -3,31 +3,20 @@
  *
  * El plan gratuito de Supabase no permite limitar la duración de la sesión, así
  * que el panel guarda en una cookie `httpOnly` el instante del inicio de sesión,
- * firmado con HMAC-SHA256. Va ligada al usuario: no sirve para otra cuenta.
+ * firmado con HMAC-SHA256 (subllave HKDF derivada de `APP_ENCRYPTION_KEY`). Va ligada al usuario: no sirve para otra cuenta.
  *
  * Usa solo Web Crypto, por lo que corre igual en el middleware (Edge) y en Node.
  */
 import { DURACION_SESION_MS } from './decision';
+import { firmarHmac } from './llaves';
 
 export const NOMBRE_COOKIE_MARCA = 'izao_admin_inicio';
 
-const ETIQUETA = 'izao-admin-sesion-v1';
+/** Propósito HKDF de la subllave de la marca (ver `llaves.ts`). */
+const PROPOSITO = 'marca-sesion-v1';
 
-const codificador = new TextEncoder();
-
-function aHex(bytes: ArrayBuffer): string {
-  return Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function firmar(mensaje: string, secreto: string): Promise<string> {
-  const llave = await crypto.subtle.importKey(
-    'raw',
-    codificador.encode(`${ETIQUETA}:${secreto}`),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  return aHex(await crypto.subtle.sign('HMAC', llave, codificador.encode(mensaje)));
+function firmar(mensaje: string, secreto: string): Promise<string> {
+  return firmarHmac(secreto, PROPOSITO, mensaje);
 }
 
 /** Comparación en tiempo constante de dos cadenas hexadecimales. */
