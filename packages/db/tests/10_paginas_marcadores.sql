@@ -1,7 +1,7 @@
 -- Pruebas pgtap · B-5: el trigger de publicación de páginas detecta cualquier marcador [MAYÚSCULAS ...], no una lista cerrada.
 begin;
 set local search_path = public, extensions;
-select plan(12);
+select plan(15);
 
 insert into public.currencies (code, exponent, symbol, format_pattern)
   values ('COP', 0, '$', '$ #.##0') on conflict do nothing;
@@ -23,6 +23,16 @@ from (values
   ('[PRECIO POR DEFINIR] (nuevo)', '<p>Costo: [PRECIO POR DEFINIR]</p>'),
   ('[TELÉFONO] (nuevo)', '<p>Llama al [TELÉFONO]</p>')
 ) as t(etiqueta, html);
+
+-- Marcadores de dos letras y mensaje que nombra el marcador
+select throws_ok($$update public.pages set content_html = '<p>Codigo [ID]</p>', status = 'published' where id = 'a0000000-0000-0000-0000-0000000000c1'$$,
+  '23514', null, 'bloquea [ID] (dos letras)');
+select throws_like($$update public.pages set content_html = '<p>Costo: [PRECIO POR DEFINIR] y [NIT]</p>', status = 'published' where id = 'a0000000-0000-0000-0000-0000000000c1'$$,
+  '%[PRECIO POR DEFINIR]%', 'el error nombra el marcador encontrado');
+-- Siglas legitimas y CDATA: no son marcadores
+select lives_ok($$update public.pages set content_html = '<p>Precios en [COP], [USD 100], [IVA incluido].</p><![CDATA[x]]>', status = 'published' where id = 'a0000000-0000-0000-0000-0000000000c1'$$,
+  'siglas COP, USD, IVA y CDATA no bloquean');
+update public.pages set status = 'draft' where id = 'a0000000-0000-0000-0000-0000000000c1';
 
 -- Corchetes legitimos: no son marcadores
 select lives_ok($$update public.pages set content_html = '<p>Plazo de [30] dias, abono de [$10.000], entrega en [2 a 4] dias, antes de las [2:00 p. m.], cargo del [10 %].</p><p>Ver [más detalles]</p>', status = 'published' where id = 'a0000000-0000-0000-0000-0000000000c1'$$,

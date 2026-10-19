@@ -94,3 +94,14 @@ Ejemplo de comparación local: `ls packages/db/supabase/migrations | sed 's/\.sq
 - Versiones probadas con `bash infra/scripts/test-nginx.sh`: 1.27, 1.24 (Ubuntu 24.04) y 1.18 (Ubuntu 22.04). Por eso se usa `listen 443 ssl http2;` y no `http2 on;`.
 - Rate limits: `/api/` 30 r/s, `/api/chat` 10 r/min, formularios 5 r/min, y `POST /admin/login` y `POST /admin/mfa/*` 5 r/min por IP (zonas separadas). Además, **todo POST con cabecera `Next-Action`** se limita a 1 r/s con ráfaga de 30 sin importar la ruta, porque Next 15 ejecuta Server Actions en cualquier ruta y el límite por ruta se esquivaría con un POST a `/`. Nginx no sabe qué acción se invoca: el bloqueo por intentos fallidos del login debe existir también en la aplicación.
 - CSP: se elige por ruta con un `map` (`izao-zones.conf`). Hoy `/admin/**` y la tienda tienen el mismo contenido (ambas con `img-src data:`); se separan para poder quitar `data:` solo de la tienda cuando izao-tienda confirme que no usa placeholders borrosos (`blurDataURL`). El panel lo necesita para el QR del MFA.
+
+## Base de datos: retención de la bitácora y publicación de páginas legales
+
+- **Retención de `audit_log`.** La bitácora es de solo agregar (UPDATE, DELETE y TRUNCATE fallan). Los eventos de acceso
+  (`entity = 'sesion_admin'`) se purgan con `select public.purgar_audit_log();` (solo `service_role`). Sin argumento usa
+  `site_settings.audit_retention_days` (por defecto 180, mínimo 30, editable en el panel). Devuelve cuántos eventos borró.
+  Los demás eventos no se borran nunca. Solo `postgres` y `service_role` tienen DELETE sobre la tabla (lo vigila la prueba `11_audit_retencion_config`).
+- **Marcadores en páginas legales.** Una página no pasa a `published` si su HTML contiene un marcador: corchetes cuyo contenido
+  empieza por una palabra de 2 o más letras MAYÚSCULAS (`[COMPLETAR]`, `[RAZÓN SOCIAL]`, `[ID]`, `[COMPLETAR: algo]`). El error nombra el
+  marcador encontrado. No cuentan los corchetes con cifras o minúsculas (`[30]`, `[más detalles]`), `[CDATA[` ni las siglas `COP`, `USD`, `IVA` y `UVT`.
+  Para permitir otra sigla hay que añadirla a la lista de `enforce_page_publish_markers()` con una migración.
