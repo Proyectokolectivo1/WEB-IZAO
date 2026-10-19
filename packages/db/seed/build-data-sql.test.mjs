@@ -126,3 +126,26 @@ test('los lotes de productos respetan offset y limit', () => {
   assert.match(sql, /"segunda"/);
   assert.doesNotMatch(sql, /"rosa-prueba"/);
 });
+
+test('la regla 7 también aplica a marcas, categorías, notas, SEO y opciones (B11)', () => {
+  const casos = [
+    (d) => { d.taxonomias.brands[0].name = 'Casa Oficial'; },
+    (d) => { d.taxonomias.categories[0].description = 'Perfumes 100% auténticos'; },
+    (d) => { d.taxonomias.olfactory_families[0].description = 'Con certificado'; },
+    (d) => { d.productos[0].notes_top = ['Inspirado en un clásico']; },
+    (d) => { d.productos[0].seo_description = 'Perfume genuino'; },
+    (d) => { d.productos[0].options[0].values = ['50 ml original']; d.productos[0].variants[0].option_values.Presentación = '50 ml original'; },
+  ];
+  for (const [i, mutar] of casos.entries()) {
+    const data = sampleData();
+    mutar(data);
+    assert.ok(validate(data).some((e) => e.includes('regla 7')), `caso ${i + 1} debería rechazarse`);
+  }
+});
+
+test('el SQL libera la variante por defecto anterior antes del upsert de variantes (B11)', () => {
+  const sql = buildSql(sampleData());
+  const liberar = sql.indexOf('set is_default = false');
+  const upsert = sql.indexOf('insert into public.product_variants');
+  assert.ok(liberar > 0 && upsert > liberar, 'la liberación debe ir antes del upsert');
+});

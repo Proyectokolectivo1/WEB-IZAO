@@ -103,6 +103,12 @@ export function validate(data) {
       if (typeof x.name !== 'string' || !x.name) errors.push(`taxonomias/${t}[${i}]: name requerido`);
       if (x.sort_order !== undefined && !Number.isInteger(x.sort_order)) errors.push(`taxonomias/${t}[${i}]: sort_order entero`);
     });
+    // Regla 7 también en marcas, categorías, familias, géneros y concentraciones.
+    list.forEach((x, i) => {
+      for (const f of ['name', 'description', 'seo_title', 'seo_description']) {
+        if (typeof x[f] === 'string' && FORBIDDEN_RE.test(x[f])) errors.push(`taxonomias/${t}[${i}]: ${f} infringe la regla 7 ("${x[f].match(FORBIDDEN_RE)[0]}")`);
+      }
+    });
     checkUnique(list, (x) => x.slug, `taxonomias/${t}`, errors);
     slugSets[t] = new Set(list.map((x) => x.slug));
   }
@@ -123,8 +129,15 @@ export function validate(data) {
     const at = `productos[${i}] ${p.slug ?? ''}`;
     if (!SLUG_RE.test(p.slug ?? '')) errors.push(`${at}: slug inválido`);
     if (typeof p.name !== 'string' || !p.name) errors.push(`${at}: name requerido`);
-    for (const f of ['name', 'short_description', 'description_html']) {
-      if (typeof p[f] === 'string' && FORBIDDEN_RE.test(p[f])) errors.push(`${at}: ${f} infringe la regla 7 ("${p[f].match(FORBIDDEN_RE)[0]}")`);
+    // Regla 7 en todos los textos del producto: nombre, descripciones, notas, ocasión, temporada, SEO y atributos.
+    const texts = [
+      ...['name', 'short_description', 'description_html', 'seo_title', 'seo_description'].map((f) => [f, p[f]]),
+      ...['notes_top', 'notes_heart', 'notes_base', 'occasion', 'season'].flatMap((f) => (Array.isArray(p[f]) ? p[f].map((t) => [f, t]) : [])),
+      ['attributes', p.attributes && Object.keys(p.attributes).length ? JSON.stringify(p.attributes) : null],
+      ...(p.options ?? []).flatMap((o) => [['options', o.name], ...(o.values ?? []).map((v) => ['options', v])]),
+    ];
+    for (const [f, t] of texts) {
+      if (typeof t === 'string' && FORBIDDEN_RE.test(t)) errors.push(`${at}: ${f} infringe la regla 7 ("${t.match(FORBIDDEN_RE)[0]}")`);
     }
     for (const [f, set] of [['brand_slug', 'brands'], ['gender_slug', 'genders'], ['family_slug', 'olfactory_families'], ['concentration_slug', 'concentrations']]) {
       if (p[f] != null && !slugSets[set].has(p[f])) errors.push(`${at}: ${f} "${p[f]}" no existe`);
@@ -327,6 +340,13 @@ join public.product_options po on po.product_id = x.product_id and po.name = o->
 cross join lateral jsonb_array_elements_text(coalesce(o->'values', '[]')) with ordinality as v(value, n)
 on conflict (option_id, value) do update set sort_order = excluded.sort_order
 where public.product_option_values.sort_order is distinct from excluded.sort_order;
+
+-- Si cambia la variante por defecto, primero se libera la anterior: product_variants_one_default_idx es único por producto
+update public.product_variants pv set is_default = false
+from _pid x
+where pv.product_id = x.product_id and pv.is_default
+  and not exists (select 1 from jsonb_array_elements(coalesce(x.p->'variants', '[]')) v
+                   where v->>'sku' = pv.sku and coalesce((v->>'is_default')::boolean, false));
 
 with up as (
   insert into public.product_variants (product_id, sku, option_value_ids, weight_kg, is_default, mastershop_product_id, mastershop_variant_id, sort_order)
