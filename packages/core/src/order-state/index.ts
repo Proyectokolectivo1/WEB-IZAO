@@ -38,6 +38,9 @@ export type OrderStatus = (typeof ORDER_STATUSES)[number];
  * - Decisión del dueño (Oleada 1): pago completo aprobado después de `expirado` →
  *   `requiere_reembolso`, para que el dinero cobrado quede con rastro y alerta al admin.
  *   Es la única salida de `expirado`.
+ * - Decisión del dueño (Oleada 1): MasterShop puede cancelar (id 9) un pedido en 3–4 →
+ *   `en_preparacion → cancelado`, para no bloquear el pedido ni perder la cancelación.
+ *   `en_transito → cancelado` sigue prohibida: un envío en tránsito no se cancela, se devuelve.
  */
 export const ORDER_TRANSITIONS: Readonly<Record<OrderStatus, readonly OrderStatus[]>> =
   Object.freeze({
@@ -51,7 +54,7 @@ export const ORDER_TRANSITIONS: Readonly<Record<OrderStatus, readonly OrderStatu
     abono_pagado: ['enviado_transportadora', 'error_transportadora'],
     error_transportadora: ['enviado_transportadora'],
     enviado_transportadora: ['en_preparacion', 'cancelado'],
-    en_preparacion: ['en_transito'],
+    en_preparacion: ['en_transito', 'cancelado'],
     en_transito: ['entregado', 'devuelto', 'reclamacion'],
     entregado: ['reclamacion'],
     devuelto: [],

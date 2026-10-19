@@ -14,7 +14,8 @@ import {
 
 /**
  * Tabla literal de §16 de la especificación, más D-002, §12.2 (abono tardío sin stock)
- * y la decisión del dueño de la Oleada 1 (pago completo aprobado después de expirar).
+ * y las decisiones del dueño de la Oleada 1 (pago completo aprobado después de expirar;
+ * MasterShop cancela un pedido en preparación).
  */
 const ESPERADA: Record<OrderStatus, OrderStatus[]> = {
   pendiente_pago: ['pagado', 'pago_rechazado', 'expirado'],
@@ -27,7 +28,7 @@ const ESPERADA: Record<OrderStatus, OrderStatus[]> = {
   abono_pagado: ['enviado_transportadora', 'error_transportadora'],
   error_transportadora: ['enviado_transportadora'],
   enviado_transportadora: ['en_preparacion', 'cancelado'],
-  en_preparacion: ['en_transito'],
+  en_preparacion: ['en_transito', 'cancelado'],
   en_transito: ['entregado', 'devuelto', 'reclamacion'],
   entregado: ['reclamacion'],
   devuelto: [],
@@ -234,6 +235,21 @@ describe('order-state: findTransitionPath (sincronización que se salta estados)
 
   it('expirado → cancelado pasa por requiere_reembolso', () => {
     expect(findTransitionPath('expirado', 'cancelado')).toEqual(['requiere_reembolso', 'cancelado']);
+  });
+
+  it('decisión del dueño: en_preparacion → cancelado (MasterShop 9 desde 3–4)', () => {
+    expect(puedeTransicionar('en_preparacion', 'cancelado')).toBe(true);
+    expect(findTransitionPath('en_preparacion', 'cancelado')).toEqual(['cancelado']);
+  });
+
+  it('en_transito → cancelado no está permitida ni tiene camino (en tránsito se devuelve)', () => {
+    expect(puedeTransicionar('en_transito', 'cancelado')).toBe(false);
+    expect(findTransitionPath('en_transito', 'cancelado')).toBeNull();
+  });
+
+  it('cancelado sigue siendo terminal', () => {
+    expect(isTerminal('cancelado')).toBe(true);
+    expect(siguientesEstados('cancelado')).toEqual([]);
   });
 
   it('sin camino devuelve null', () => {
