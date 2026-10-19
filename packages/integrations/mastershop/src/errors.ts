@@ -79,5 +79,19 @@ export function isMasterShopError(e: unknown): e is MasterShopError {
 /** Respuesta `500` de creación que en realidad significa "ya existe" (§14.5). */
 export const DUPLICATE_ORDER_PATTERN = /409\s*-\s*La orden ya existe/i;
 
+/**
+ * Código de la plataforma dentro de un `500` de creación ("Código 400 - … - Error interno
+ * del servidor"). La colección documenta que toda falla de la plataforma al crear se
+ * reporta con 500 y el código original va en el mensaje.
+ */
+export const PLATFORM_CODE_PATTERN = /C[oó]digo\s+(\d{3})\b/i;
+
+/** Código 4xx de la plataforma dentro del mensaje, o `null`. */
+export function platformClientErrorCode(message: string | null): number | null {
+  const m = message === null ? null : PLATFORM_CODE_PATTERN.exec(message);
+  const code = m ? Number(m[1]) : null;
+  return code !== null && code >= 400 && code < 500 ? code : null;
+}
+
 /** `409` de edición concurrente (texto de la documentación). */
 export const CONCURRENT_EDIT_PATTERN = /actualizaci[oó]n en curso/i;

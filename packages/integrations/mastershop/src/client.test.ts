@@ -111,15 +111,29 @@ describe('MasterShopClient.createOrder', () => {
     expect(e.providerMessage).toBe('Error interno del servidor');
   });
 
-  it('el rechazo de negativos en modo A (si MasterShop no los aceptara) no se confunde con duplicado', async () => {
+  it('500 con "Código 400 - …" (rechazo de la plataforma) es validación, sin reintento (M4)', async () => {
     const { client } = setup({ acceptNegativeCharges: false });
     const e = await expectError(
       client.createOrder(
         body({ items: [makeItem({ line_discount: 9_000n })] }, 'additional_charge'),
       ),
-      'servidor',
+      'validacion',
     );
-    expect(e.providerMessage).toMatch(/Cargo adicional/);
+    expect(e.status).toBe(500);
+    expect(e.retryable).toBe(false);
+    expect(e.providerMessage).toMatch(/Código 400 - Cargo adicional/);
+  });
+
+  it.each([
+    ['Código 422 - Destino no cubierto - Error interno del servidor', 'validacion', false],
+    ['Código 404 - Producto no existe - Error interno del servidor', 'validacion', false],
+    ['Código 503 - Servicio no disponible - Error interno del servidor', 'servidor', true],
+    ['Error interno del servidor', 'servidor', true],
+  ] as const)('500 "%s" → %s', async (error, kind, retryable) => {
+    const { mock, client } = setup();
+    mock.inject('create', { status: 500, body: { data: null, error, success: false } });
+    const e = await expectError(client.createOrder(body()), kind);
+    expect(e.retryable).toBe(retryable);
   });
 
   it('400 de validación no es reintentable', async () => {

@@ -16,7 +16,12 @@ import { fromDbAmount } from '@izao/core/money';
 import { z } from 'zod';
 import { systemClock } from './clock';
 import type { Clock } from './clock';
-import { CONCURRENT_EDIT_PATTERN, DUPLICATE_ORDER_PATTERN, MasterShopError } from './errors';
+import {
+  CONCURRENT_EDIT_PATTERN,
+  DUPLICATE_ORDER_PATTERN,
+  MasterShopError,
+  platformClientErrorCode,
+} from './errors';
 import type { MasterShopErrorKind } from './errors';
 import { serializeMasterShopJson } from './json';
 import { MasterShopOrderBodySchema, ORDER_NUMBER_PATTERN } from './order';
@@ -333,7 +338,15 @@ export class MasterShopClient {
         kind = method === 'PUT' ? 'no_confirmado' : 'servidor';
         break;
       default:
-        kind = res.status >= 500 ? 'servidor' : 'respuesta_invalida';
+        // M4: un 500 que trae un código 4xx de la plataforma es un rechazo definitivo
+        // (reintentarlo daría lo mismo). El duplicado "409 - La orden ya existe" se
+        // atiende antes, en createOrder.
+        kind =
+          res.status >= 500
+            ? platformClientErrorCode(msg) !== null
+              ? 'validacion'
+              : 'servidor'
+            : 'respuesta_invalida';
     }
     return new MasterShopError({
       kind,
