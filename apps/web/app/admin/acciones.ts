@@ -1,5 +1,6 @@
 'use server';
 
+import { cerrarSesionLocal } from '@/lib/auth/cerrar-sesion';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { registrarAuditoria } from '@/lib/auth/auditoria';
@@ -20,7 +21,7 @@ export async function cerrarSesion(): Promise<void> {
       ip: await ipDelCliente(),
     });
   }
-  await supabase.auth.signOut();
+  await cerrarSesionLocal(supabase);
   (await cookies()).delete(NOMBRE_COOKIE_MARCA);
   redirect(RUTA_LOGIN);
 }

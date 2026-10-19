@@ -7,6 +7,7 @@
  *
  * La decisión vive en `lib/auth/decision.ts` (función pura con pruebas).
  */
+import { cerrarSesionLocal } from '@/lib/auth/cerrar-sesion';
 import { NextResponse, type NextRequest } from 'next/server';
 import { cargarContexto } from '@/lib/auth/contexto';
 import { buscarAdminPorId } from '@/lib/auth/admin-users';
@@ -56,7 +57,7 @@ export async function middleware(request: NextRequest) {
   for (const cookie of obtenerRespuesta().cookies.getAll()) respuesta.cookies.set(cookie);
 
   if (decision.tipo === 'redirigir' && decision.cerrarSesion) {
-    await supabase.auth.signOut();
+    await cerrarSesionLocal(supabase);
     for (const cookie of obtenerRespuesta().cookies.getAll()) respuesta.cookies.set(cookie);
     respuesta.cookies.delete(NOMBRE_COOKIE_MARCA);
   }

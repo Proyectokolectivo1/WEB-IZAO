@@ -1,5 +1,6 @@
 'use server';
 
+import { cerrarSesionLocal } from '@/lib/auth/cerrar-sesion';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { buscarAdminPorId } from '@/lib/auth/admin-users';
@@ -104,7 +105,7 @@ export async function iniciarSesion(
       diff: { huella_correo: huella, motivo: admin ? 'usuario_inactivo' : 'sin_fila_admin' },
       ip,
     });
-    await supabase.auth.signOut();
+    await cerrarSesionLocal(supabase);
     return { error: MENSAJE_SIN_ACCESO };
   }
 
