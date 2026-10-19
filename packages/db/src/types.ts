@@ -2072,9 +2072,11 @@ export type Database = {
           created_at: string
           currency_code: string
           customer_id: string | null
+          data_policy_version: string | null
           delivered_at: string | null
           discount_amount: number
           discount_code_id: string | null
+          discount_code_text: string | null
           document_number: string | null
           document_type: string | null
           financing_surcharge_amount: number
@@ -2103,9 +2105,11 @@ export type Database = {
           stock_reserved_until: string | null
           stock_state: string
           subtotal: number
+          terms_accepted_at: string | null
           total_customer: number
           updated_at: string
           utm: Json
+          whatsapp_opt_in: boolean
         }
         Insert: {
           abandoned_at?: string | null
@@ -2124,9 +2128,11 @@ export type Database = {
           created_at?: string
           currency_code: string
           customer_id?: string | null
+          data_policy_version?: string | null
           delivered_at?: string | null
           discount_amount?: number
           discount_code_id?: string | null
+          discount_code_text?: string | null
           document_number?: string | null
           document_type?: string | null
           financing_surcharge_amount?: number
@@ -2155,9 +2161,11 @@ export type Database = {
           stock_reserved_until?: string | null
           stock_state?: string
           subtotal: number
+          terms_accepted_at?: string | null
           total_customer: number
           updated_at?: string
           utm?: Json
+          whatsapp_opt_in?: boolean
         }
         Update: {
           abandoned_at?: string | null
@@ -2176,9 +2184,11 @@ export type Database = {
           created_at?: string
           currency_code?: string
           customer_id?: string | null
+          data_policy_version?: string | null
           delivered_at?: string | null
           discount_amount?: number
           discount_code_id?: string | null
+          discount_code_text?: string | null
           document_number?: string | null
           document_type?: string | null
           financing_surcharge_amount?: number
@@ -2207,9 +2217,11 @@ export type Database = {
           stock_reserved_until?: string | null
           stock_state?: string
           subtotal?: number
+          terms_accepted_at?: string | null
           total_customer?: number
           updated_at?: string
           utm?: Json
+          whatsapp_opt_in?: boolean
         }
         Relationships: [
           {
