@@ -9,7 +9,7 @@ Scripts en `infra/scripts/`: `backup.sh`, `restore.sh`, `keepalive.sh`, `check-a
 ### Qué se respalda
 
 - Base: `pg_dump` de los esquemas `public`, `auth` y `storage`, comprimido y **cifrado** → `/srv/izao/backups/db/AAAA-MM-DD.sql.gz.age` (o `.gpg`).
-- No se respaldan los datos de `auth.refresh_tokens`, `auth.sessions`, `auth.flow_state` ni `auth.one_time_tokens` (no sirven tras restaurar y son sensibles). Tras una restauración los usuarios deben iniciar sesión de nuevo. `auth.mfa_factors` y los hashes de contraseña sí van, por eso el cifrado es obligatorio.
+- De `auth.*` solo se respaldan los **datos** de `users`, `identities`, `mfa_factors` y `schema_migrations`; el resto (sesiones, refresh tokens, desafíos y claims MFA, flow_state, tokens de un solo uso, auditoría...) se excluye leyendo la lista de tablas de la base (cubre tablas nuevas de GoTrue). Un respaldo parcial de tablas con llaves foráneas entre sí no se podría restaurar. Tras restaurar los usuarios deben iniciar sesión de nuevo. `mfa_factors` y los hashes de contraseña sí van, por eso el cifrado es obligatorio. La prueba usa un esquema `auth` tipo GoTrue (`infra/scripts/fixtures/auth-gotrue-schema.sql`, representativo, no un volcado literal): restaurar contra el esquema real de Supabase sigue pendiente de verificar.
 - Media: `tar` incremental (completo los domingos) en `/srv/izao/backups/media/`. Son imágenes públicas; no se cifran.
 - Permisos: carpetas `700`, archivos `600` (`umask 077`). Retención 14 días.
 - `backup.sh` se niega a respaldar la base si no hay `BACKUP_AGE_RECIPIENT` o `BACKUP_GPG_RECIPIENT`.
@@ -47,7 +47,7 @@ Prueba automática del ciclo completo (migraciones y seed reales → backup cifr
 
 ### Programación (`izao.cron`)
 
-Horas en UTC (sin depender de `CRON_TZ`): backup 03:00 Bogotá = `0 8 * * *`, keepalive de Supabase cada 3 días, alertas de base (70 % de 500 MB) y disco (80 %) cada 6 horas. Instalar en `/etc/cron.d/izao` (T0.16).
+Horas en UTC (sin depender de `CRON_TZ`; `.env` se carga con `run-with-env.sh`, que lo lee como texto literal): backup 03:00 Bogotá = `0 8 * * *`, keepalive de Supabase cada 3 días, alertas de base (70 % de 500 MB) y disco (80 %) cada 6 horas. Instalar en `/etc/cron.d/izao` (T0.16).
 
 ### Alertas
 
@@ -84,3 +84,13 @@ Redis lleva las colas (`noeviction`): si llega a `maxmemory` rechaza escrituras 
 4. Volver a ejecutar `deploy.sh --migraciones-verificadas`.
 
 Ejemplo de comparación local: `ls packages/db/supabase/migrations | sed 's/\.sql$//'` frente a la lista de `list_migrations`.
+
+### Rollback: de dónde sale el tag anterior
+
+`deploy.sh` no toma el tag de git (tras un despliegue fallido HEAD podría quedar en el commit malo). Orden: `/srv/izao/ultimo-ok` (se escribe tras un healthcheck sano o un rollback exitoso), luego el tag de la imagen del contenedor `web` vivo y, solo como último recurso, git. Tras revertir, `git reset --keep` devuelve el repositorio al commit anterior.
+
+## Nginx
+
+- Versiones probadas con `bash infra/scripts/test-nginx.sh`: 1.27, 1.24 (Ubuntu 24.04) y 1.18 (Ubuntu 22.04). Por eso se usa `listen 443 ssl http2;` y no `http2 on;`.
+- Rate limits: `/api/` 30 r/s, `/api/chat` 10 r/min, formularios 5 r/min, y `POST /admin/login` y `POST /admin/mfa/*` 5 r/min por IP (zonas separadas). Además, **todo POST con cabecera `Next-Action`** se limita a 1 r/s con ráfaga de 30 sin importar la ruta, porque Next 15 ejecuta Server Actions en cualquier ruta y el límite por ruta se esquivaría con un POST a `/`. Nginx no sabe qué acción se invoca: el bloqueo por intentos fallidos del login debe existir también en la aplicación.
+- CSP: se elige por ruta con un `map` (`izao-zones.conf`). Hoy `/admin/**` y la tienda tienen el mismo contenido (ambas con `img-src data:`); se separan para poder quitar `data:` solo de la tienda cuando izao-tienda confirme que no usa placeholders borrosos (`blurDataURL`). El panel lo necesita para el QR del MFA.
