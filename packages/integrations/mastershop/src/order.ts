@@ -11,6 +11,7 @@
  */
 import { COUNTRY_CURRENCY, formatMoney, money } from '@izao/core/money';
 import type { Order, OrderItem } from '@izao/core/contracts';
+import { normalizeName, normalizePhone } from '@izao/core/schemas';
 import { z } from 'zod';
 import { buildCarrierLines, CarrierLinesError } from './lines';
 import type { CarrierDiscountMode, CarrierLines, CarrierPaymentKind } from './lines';
@@ -198,27 +199,6 @@ function blankToNull(v: string | null | undefined): string | null {
   return t === '' ? null : t;
 }
 
-/** Deja solo letras y espacios simples. */
-export function sanitizeName(raw: string): string {
-  return raw
-    .normalize('NFC')
-    .replace(/[^\p{L}]+/gu, ' ')
-    .trim();
-}
-
-/** Teléfono nacional colombiano (10 dígitos) a partir de E.164 o de un número local. */
-export function nationalPhoneCO(raw: string): string | null {
-  const compact = raw.replace(/[\s().-]/g, '');
-  let digits: string;
-  if (compact.startsWith('+')) {
-    if (!compact.startsWith('+57')) return null;
-    digits = compact.slice(3);
-  } else {
-    digits = compact;
-  }
-  return NATIONAL_PHONE_PATTERN.test(digits) ? digits : null;
-}
-
 function formatAmount(amount: bigint, currency: Order['currency_code']): string {
   return formatMoney(money(amount, currency)).replace(/\s/g, ' ');
 }
@@ -270,8 +250,8 @@ export function buildCarrierOrder(order: Order, options: CarrierOrderOptions): B
   }
 
   // Nombres
-  const firstName = sanitizeName(order.contact_first_name);
-  const lastName = sanitizeName(order.contact_last_name);
+  const firstName = normalizeName(order.contact_first_name);
+  const lastName = normalizeName(order.contact_last_name);
   if (firstName === '')
     add('nombre_invalido', 'contact_first_name', 'El nombre debe tener al menos una letra.');
   if (lastName === '')
@@ -279,7 +259,7 @@ export function buildCarrierOrder(order: Order, options: CarrierOrderOptions): B
   const fullName = `${firstName} ${lastName}`.trim();
 
   // Teléfono
-  const phone = nationalPhoneCO(order.contact_phone_e164);
+  const phone = normalizePhone('CO', order.contact_phone_e164)?.national ?? null;
   if (phone === null) {
     add(
       'telefono_invalido',

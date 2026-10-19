@@ -181,9 +181,9 @@ describe('buildCarrierOrder — nombres solo letras y espacios', () => {
       opts,
     );
     expect(body.customer.first_name).toBe('María José');
-    expect(body.customer.last_name).toBe('O Neil Ruiz Jr');
-    expect(body.customer.full_name).toBe('María José O Neil Ruiz Jr');
-    expect(body.shipping_address.full_name).toBe('María José O Neil Ruiz Jr');
+    expect(body.customer.last_name).toBe('ONeil Ruiz Jr');
+    expect(body.customer.full_name).toBe('María José ONeil Ruiz Jr');
+    expect(body.shipping_address.full_name).toBe('María José ONeil Ruiz Jr');
     for (const n of [body.customer.first_name, body.customer.last_name, body.customer.full_name]) {
       expect(n).toMatch(/^[\p{L} ]+$/u);
     }
