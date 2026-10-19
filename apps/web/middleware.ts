@@ -14,7 +14,7 @@ import { buscarAdminPorId } from '@/lib/auth/admin-users';
 import { decidirAcceso, type Decision } from '@/lib/auth/decision';
 import { secretoSesion } from '@/lib/auth/env';
 import { NOMBRE_COOKIE_MARCA, NOMBRE_COOKIE_MARCA_MFA } from '@/lib/auth/marca-sesion';
-import { registrarAuditoria } from '@/lib/auth/auditoria';
+import { auditarMfaNoAprobada } from '@/lib/auth/mfa-no-aprobada';
 import { tieneCookiesDeSesion } from '@/lib/auth/supabase/cookies';
 import { crearClienteMiddleware } from '@/lib/auth/supabase/middleware';
 
@@ -41,12 +41,9 @@ export async function middleware(request: NextRequest) {
 
   // A-3: aal2 con un factor que el servidor no aprobó. Se cierra la sesión local y se audita.
   if (contexto.mfaNoAprobada) {
-    await registrarAuditoria({
-      actor: contexto.userId ?? 'anonimo',
-      accion: 'mfa_no_aprobado',
-      entidadId: contexto.userId ?? null,
-      ip: request.headers.get('x-real-ip')?.trim() ?? null,
-    });
+    if (contexto.userId) {
+      await auditarMfaNoAprobada(contexto.userId, request.headers.get('x-real-ip')?.trim() ?? null);
+    }
   }
 
   const decision: Decision = contexto.mfaNoAprobada
