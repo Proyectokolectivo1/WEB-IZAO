@@ -93,20 +93,35 @@ export function phoneSchemaFor(country: CountryCode) {
 // Documento (§10.1)
 // ---------------------------------------------------------------------------
 
-/** Quita puntos, espacios y guiones y pasa a mayúsculas: `1.020.304.050` → `1020304050`. */
+/**
+ * Quita puntos, espacios y guiones y pasa a mayúsculas: `1.020.304.050` → `1020304050`.
+ * [VERIFICAR] que MasterShop acepte el NIT sin guion y con el dígito de verificación pegado.
+ */
 export function normalizeDocumentNumber(raw: string): string {
   return raw.replace(/[\s.-]/g, '').toUpperCase();
 }
 
-/** Reglas por tipo. Solo se fijan longitudes exactas conocidas (cédula y RUC de Ecuador). */
+/**
+ * Reglas por tipo de documento. Interpretación propia (la especificación solo fija los
+ * tipos y que el documento es obligatorio); todas quedan [VERIFICAR] con MasterShop y
+ * las pasarelas antes de producción.
+ */
 const DOCUMENT_RULES: Record<string, { re: RegExp; message: string }> = {
+  // [VERIFICAR] CC: solo dígitos, 3 a 15.
   CC: { re: /^\d{3,15}$/, message: 'La cédula solo lleva números.' },
+  // [VERIFICAR] TI: solo dígitos, 3 a 15.
   TI: { re: /^\d{3,15}$/, message: 'La tarjeta de identidad solo lleva números.' },
+  // [VERIFICAR] NIT: solo dígitos, 3 a 15; el dígito de verificación queda pegado al quitar el guion.
   NIT: { re: /^\d{3,15}$/, message: 'El NIT solo lleva números.' },
+  // [VERIFICAR] CE: letras y dígitos, 3 a 20.
   CE: { re: /^[A-Z0-9]{3,20}$/, message: 'La cédula de extranjería no es válida.' },
+  // [VERIFICAR] PAS: letras y dígitos, 3 a 20.
   PAS: { re: /^[A-Z0-9]{3,20}$/, message: 'El pasaporte no es válido.' },
+  // [VERIFICAR] Cédula de Ecuador: exactamente 10 dígitos (sin validar el dígito verificador).
   CEDULA: { re: /^\d{10}$/, message: 'La cédula debe tener 10 dígitos.' },
+  // [VERIFICAR] RUC de Ecuador: exactamente 13 dígitos.
   RUC: { re: /^\d{13}$/, message: 'El RUC debe tener 13 dígitos.' },
+  // [VERIFICAR] Pasaporte en Ecuador: letras y dígitos, 3 a 20.
   PASAPORTE: { re: /^[A-Z0-9]{3,20}$/, message: 'El pasaporte no es válido.' },
 };
 

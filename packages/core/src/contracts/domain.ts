@@ -36,7 +36,11 @@ export type PaymentStatus =
 
 export type Environment = 'sandbox' | 'production';
 
-/** Tipos de documento por país (§10.1). */
+/**
+ * Tipos de documento por país (§10.1).
+ * [VERIFICAR] los códigos de Ecuador (`CEDULA`, `RUC`, `PASAPORTE`) son propios: la
+ * especificación solo da los nombres; confirmar con la pasarela/transportadora de Ecuador.
+ */
 export const DOCUMENT_TYPES = {
   CO: ['CC', 'CE', 'NIT', 'PAS', 'TI'],
   EC: ['CEDULA', 'RUC', 'PASAPORTE'],
