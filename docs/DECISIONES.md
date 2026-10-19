@@ -127,3 +127,14 @@ Decisiones de `izao-admin` en T0.13:
 - **Sin migración de datos:** aún no hay administradores en producción; quien tuviera un factor inscrito antes de este cambio debe reiniciarlo con ese indicador.
 
 - **Complemento a D-021 (2026-10-19):** la ventana de enrolamiento de 24 h se abre solo al crear el usuario o con `crear-admin --reiniciar-mfa`; reemplazar la contraseña de un usuario existente ya no la reabre. Mientras la ventana está abierta, la primera inscripción depende de quién llegue primero: quien conozca la contraseña y complete la inscripción antes que el dueño (llamando a la pantalla del panel) queda como el autenticador aprobado. Por eso el dueño debe activar su verificación apenas se cree la cuenta, y `mfa_no_aprobado`/`mfa_inscrito` en la auditoría permiten detectar una inscripción ajena (se corrige con `--reiniciar-mfa`).
+
+## D-022 — Decisiones de la Oleada 1 sobre estados, descuentos y documentos (2026-10-19)
+
+- **Estados:** se agregan las transiciones `abandonado → requiere_reembolso` (abono tardío sin stock, §12.2) y `expirado → requiere_reembolso` (pago completo aprobado después de expirar), con alerta al admin. Cambian lo que dice §16, donde `expirado` era final.
+- **Código fijo ≥ subtotal:** el dueño indica que no ocurre porque los precios de las lociones superan siempre los valores fijos. No hay manejo especial; el motor de precios solo marca un error estable si `total_customer <= 0` con un método en línea, para que el checkout se niegue a crear el pago.
+- **Documentos:** `izao-pagos` interpretó reglas que §10.1 no define (cédula de Ecuador 10 dígitos, RUC 13, documentos numéricos de Colombia de 3 a 15 dígitos, CE y pasaporte de 3 a 20 alfanuméricos; códigos `CEDULA`, `RUC`, `PASAPORTE`). Quedan marcadas `[VERIFICAR]` con MasterShop y las pasarelas.
+- **Interpretaciones del motor de precios:** `exclude_ids` excluye por producto o categoría; `min_subtotal` se compara con el subtotal de todo el carrito; un código vale desde `starts_at` inclusive hasta antes de `ends_at`; el correo es opcional en el checkout; límites técnicos de 999 unidades por línea y 100 líneas por carrito.
+- **`usage_limit_per_customer` con cliente sin identificar:** la vista previa aplica el código con `customer_check_pending`; el checkout del servidor debe negarse a crear el pedido en ese estado.
+- **`buildCarrierLines`** vive en `packages/integrations/mastershop` (izao-logistica) y usa `allocate` de `@izao/core`, no en `packages/core` como dice la skill `izao-motor-precios`.
+- **Consentimientos y código en el pedido:** `orders.terms_accepted_at`, `data_policy_version`, `whatsapp_opt_in` y `discount_code_text` (esta última la rellena un trigger).
+- **Coordinación de Git:** los agentes commitean con `git commit -o -- <rutas>` para no llevarse el stage ajeno.
