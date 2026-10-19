@@ -494,6 +494,15 @@ describe('pricing: códigos de descuento', () => {
     }
   });
 
+  it('B1: tope max_discount_amount cero o negativo es inválido (CODE_INVALID)', () => {
+    for (const max_discount_amount of [0n, -1n]) {
+      const r = calc({ items: [item(90_000n)], discountCode: codigo({ max_discount_amount }) });
+      expect(r.discount_code).toMatchObject({ status: 'rejected', reason: 'CODE_INVALID' });
+      expect(r.discount).toBe(0n);
+      expect(r.messages).toContainEqual({ code: 'CODE_INVALID', level: 'error' });
+    }
+  });
+
   it('fijo con valor no positivo es inválido', () => {
     const r = calc({ items: [item(90_000n)], discountCode: codigo({ type: 'fixed', value: 0n }) });
     expect(r.discount_code).toMatchObject({ status: 'rejected', reason: 'CODE_INVALID' });

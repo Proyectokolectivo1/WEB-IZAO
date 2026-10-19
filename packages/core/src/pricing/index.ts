@@ -309,6 +309,10 @@ function evaluateDiscount(
   if (dc.type === 'percent' ? dc.value < 1n || dc.value > 100n : dc.value <= 0n) {
     return reject('CODE_INVALID');
   }
+  // B1: un tope en cero o negativo anularía el código o daría descuento negativo.
+  if (dc.max_discount_amount !== null && dc.max_discount_amount <= 0n) {
+    return reject('CODE_INVALID');
+  }
   if (!dc.is_active) return reject('CODE_INACTIVE');
   if (dc.country_code !== input.countrySettings.country_code) return reject('CODE_WRONG_COUNTRY');
   const now = input.now.getTime();
