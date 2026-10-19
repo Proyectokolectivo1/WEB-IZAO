@@ -38,6 +38,21 @@ probar() { # etiqueta
     cab="$(curl -sk -D - -o /dev/null -H "Host: izaoperfumeria.com" "https://127.0.0.1$ruta")"
     if echo "$cab" | grep -qi "^strict-transport-security: max-age="; then echo "OK   [$1] HSTS en $ruta"; else echo "FALLA [$1] sin HSTS en $ruta"; fallos=$((fallos+1)); fi
   done
+  # Login y MFA del panel: límite estricto solo para POST (5 r/min por IP, ráfaga pequeña)
+  for ruta in /admin/login /admin/mfa/verify; do
+    codigos=""
+    for i in 1 2 3 4 5 6 7 8; do
+      codigos="$codigos $(curl -sk -o /dev/null -w '%{http_code}' -X POST -H 'Host: izaoperfumeria.com' "https://127.0.0.1$ruta")"
+    done
+    n429=$(echo "$codigos" | tr ' ' '
+' | grep -c '^429$' || true)
+    n200=$(echo "$codigos" | tr ' ' '
+' | grep -c '^200$' || true)
+    if [ "$n429" -ge 3 ] && [ "$n200" -ge 1 ]; then echo "OK   [$1] POST $ruta limitado ($n200 pasan, $n429 con 429)"; else echo "FALLA [$1] POST $ruta sin límite estricto:$codigos"; fallos=$((fallos+1)); fi
+  done
+  codigos=""
+  for i in 1 2 3 4 5 6 7 8; do codigos="$codigos $(curl -sk -o /dev/null -w '%{http_code}' -H 'Host: izaoperfumeria.com' "https://127.0.0.1/admin/login")"; done
+  if echo "$codigos" | grep -q 429; then echo "FALLA [$1] el GET de /admin/login no debe limitarse:$codigos"; fallos=$((fallos+1)); else echo "OK   [$1] GET /admin/login sin límite estricto"; fi
   cab="$(curl -sk -D - -o /dev/null -H "Host: www.izaoperfumeria.com" "https://127.0.0.1/x")"
   if echo "$cab" | grep -qi "^strict-transport-security: max-age=" && echo "$cab" | grep -qi "^location: https://izaoperfumeria.com/x"; then echo "OK   [$1] www -> raíz 301"; else echo "FALLA [$1] www"; fallos=$((fallos+1)); fi
   cab="$(curl -s -D - -o /dev/null -H "Host: izaoperfumeria.com" "http://127.0.0.1/algo")"
