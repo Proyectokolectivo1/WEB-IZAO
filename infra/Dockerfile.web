@@ -13,7 +13,7 @@ RUN pnpm --filter @izao/web build
 
 FROM node:22-alpine AS runner
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 \
-    NODE_OPTIONS=--max-old-space-size=1536
+    NODE_OPTIONS=--max-old-space-size=1152
 WORKDIR /app
 RUN addgroup -S izao && adduser -S izao -G izao
 COPY --from=build --chown=izao:izao /repo/apps/web/.next/standalone ./

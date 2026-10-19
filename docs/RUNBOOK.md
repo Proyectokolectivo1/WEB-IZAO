@@ -56,3 +56,20 @@ Horas en UTC (sin depender de `CRON_TZ`): backup 03:00 Bogotá = `0 8 * * *`, ke
 ## Despliegue
 
 `infra/scripts/deploy.sh [--dry-run]`. Si falla la actualización o el healthcheck, revierte a las imágenes `izao-web:<sha anterior>` e `izao-worker:<sha anterior>` con `up -d --no-build --no-deps --wait`. Si esas imágenes no existen avisa y no revierte. Prueba: `bash infra/scripts/test-deploy-rollback.sh`.
+
+## Presupuesto de memoria (VPS de 8 GB compartido con otros proyectos)
+
+Límites de contenedor (`infra/docker-compose.yml`), con 2 réplicas de `web` en producción:
+
+| Servicio | Límite | Heap / tope interno | Notas |
+|---|---|---|---|
+| web (x2) | 1536 MB c/u | `--max-old-space-size=1152` | El resto es memoria nativa, buffers y `sharp`; heap = 75 % del límite |
+| worker | 1024 MB | `--max-old-space-size=768` | 75 % del límite |
+| redis | 600 MB | `maxmemory 400mb`, `noeviction`, AOF | Margen de 200 MB para fork de AOF/RDB (copy-on-write), buffers y fragmentación. §4.3 decía 512 MB: se bajó a 400 MB para que el límite no mate a Redis |
+| uptime-kuma | 384 MB | — | |
+| nginx (solo sin proxy del host) | 128 MB | — | |
+| **Total (techo)** | **5208 MB** | | Peor caso; el consumo normal es mucho menor |
+
+El techo deja unos 3 GB para el sistema y los otros proyectos del VPS. Verificación automática: `bash infra/scripts/test-memoria.sh` (heap <= 80 % del límite, `maxmemory` <= 75 % del límite de Redis, suma <= 5,5 GB). Si el inventario del VPS (T0.15) muestra menos memoria libre, reducir primero a 1 réplica de `web` (`WEB_REPLICAS=1`).
+
+Redis lleva las colas (`noeviction`): si llega a `maxmemory` rechaza escrituras en vez de perder trabajos.
