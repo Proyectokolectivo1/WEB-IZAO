@@ -1,7 +1,7 @@
 -- Pruebas pgtap · T1.14: reservar_canje / confirmar_canje / liberar_canje (§17.1). Límites exactos, idempotencia y solo service_role.
 begin;
 set local search_path = public, extensions;
-select plan(23);
+select plan(26);
 
 insert into public.currencies (code, exponent, symbol, format_pattern) values ('COP', 0, '$', '$ #.##0') on conflict do nothing;
 insert into public.countries (code, name, currency_code, locale, timezone, phone_prefix)
@@ -52,8 +52,18 @@ select is((public.confirmar_canje('d0000000-0000-0000-0000-0000000000f1')->>'est
 select is(public.confirmar_canje('d0000000-0000-0000-0000-0000000000f1')->>'repetido', 'true', 'confirmar dos veces es idempotente');
 select is((select usage_count from public.discount_codes where id = 'c0000000-0000-0000-0000-0000000000f1'), 2, 'confirmar no cambia usage_count');
 select is(public.liberar_canje('d0000000-0000-0000-0000-0000000000f1')->>'estado', 'confirmed', 'un canje confirmado no se libera');
--- pago tardio sin cupo
-select is(public.confirmar_canje('d0000000-0000-0000-0000-0000000000f5')->>'motivo', 'limite_total', 'pago tardio sin cupo no confirma');
+-- M3: pago tardio sin cupo: el cliente ya pago con el descuento, se confirma y se avisa al admin
+select is(public.confirmar_canje('d0000000-0000-0000-0000-0000000000f5')->>'advertencia', 'limite_superado', 'pago tardio sin cupo: confirma con advertencia limite_superado');
+select is((select status from public.discount_redemptions where order_id = 'd0000000-0000-0000-0000-0000000000f5'), 'confirmed', 'y el canje queda confirmado');
+
+-- M3: pago tardio con el codigo ya vencido tambien confirma (sin revalidar vigencia)
+update public.discount_codes set ends_at = now() - interval '1 day' where id = 'c0000000-0000-0000-0000-0000000000f1';
+select is((public.confirmar_canje('d0000000-0000-0000-0000-0000000000f6')->>'ok')::boolean, true, 'pago tardio con codigo vencido confirma');
+-- B5: vencido cuando now >= ends_at (igual que el motor de precios)
+update public.discount_codes set ends_at = now() where id = 'c0000000-0000-0000-0000-0000000000f1';
+insert into public.orders (id, country_code, currency_code, contact_first_name, contact_last_name, contact_phone_e164, contact_email, document_number, payment_method, status, subtotal, discount_code_id, discount_amount, total_customer)
+  values ('d0000000-0000-0000-0000-0000000000f9', 'CO', 'COP', 'A', 'B', '+573000000019', 'nueve@test.local', '1000000009', 'wompi', 'pendiente_pago', 100000, 'c0000000-0000-0000-0000-0000000000f1', 10000, 90000);
+select is(public.reservar_canje('d0000000-0000-0000-0000-0000000000f9')->>'motivo', 'codigo_fuera_de_vigencia', 'B5: con ends_at = ahora el codigo ya esta vencido');
 
 -- sin codigo e inactivo
 select is(public.reservar_canje('d0000000-0000-0000-0000-0000000000f7')->>'estado', 'sin_codigo', 'pedido sin codigo: nada que hacer');

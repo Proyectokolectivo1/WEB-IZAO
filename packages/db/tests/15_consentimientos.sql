@@ -1,7 +1,7 @@
 -- Pruebas pgtap · T1.12: consentimientos del checkout (§10.1 paso 6) y copia del código de descuento en el pedido.
 begin;
 set local search_path = public, extensions;
-select plan(8);
+select plan(10);
 
 insert into public.currencies (code, exponent, symbol, format_pattern) values ('COP', 0, '$', '$ #.##0') on conflict do nothing;
 insert into public.countries (code, name, currency_code, locale, timezone, phone_prefix)
@@ -21,6 +21,13 @@ delete from public.discount_codes where id = 'c0000000-0000-0000-0000-0000000000
 select is((select discount_code_text from public.orders where id = 'd0000000-0000-0000-0000-0000000000c1'), 'COPIAPGTAP', 'al borrar el codigo el pedido conserva el texto');
 select is((select count(*)::int from pg_attribute a where a.attrelid = 'public.orders'::regclass and a.attname in ('terms_accepted_at','data_policy_version','whatsapp_opt_in','discount_code_text')
             and has_column_privilege('authenticated', a.attrelid, a.attnum, 'select')), 0, 'el cliente no lee las columnas nuevas directamente');
+
+-- B4: un valor escrito a mano se anula
+insert into public.orders (id, country_code, currency_code, contact_first_name, contact_last_name, contact_phone_e164, payment_method, status, subtotal, total_customer, discount_code_text) values
+  ('d0000000-0000-0000-0000-0000000000c3', 'CO', 'COP', 'A', 'B', '+573000000001', 'wompi', 'pendiente_pago', 1000, 1000, 'FALSO');
+select is((select discount_code_text from public.orders where id = 'd0000000-0000-0000-0000-0000000000c3'), null, 'B4: sin codigo, el texto escrito a mano se anula al insertar');
+update public.orders set discount_code_text = 'OTRO' where id = 'd0000000-0000-0000-0000-0000000000c1';
+select is((select discount_code_text from public.orders where id = 'd0000000-0000-0000-0000-0000000000c1'), 'COPIAPGTAP', 'B4: editar el texto a mano no lo cambia');
 
 select * from finish();
 rollback;
