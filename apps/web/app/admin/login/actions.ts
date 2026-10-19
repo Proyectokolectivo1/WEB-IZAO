@@ -3,7 +3,8 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { buscarAdminPorId } from '@/lib/auth/admin-users';
-import { contarFallos, huellaDeCorreo, registrarAuditoria } from '@/lib/auth/auditoria';
+import { contarNetos, huellaDeCorreo, registrarAuditoria, registrarEvento } from '@/lib/auth/auditoria';
+import { evaluarIntento } from '@/lib/auth/bloqueo';
 import { ipDelCliente } from '@/lib/auth/cabeceras';
 import { RUTA_MFA_INSCRIBIR, RUTA_MFA_VERIFICAR, rutaSiguienteSegura } from '@/lib/auth/decision';
 import { esProduccion, secretoSesion } from '@/lib/auth/env';
@@ -18,6 +19,7 @@ const MAX_FALLOS_POR_IP = 15;
 
 const MENSAJE_CREDENCIALES = 'El correo o la contraseña no son correctos.';
 const MENSAJE_BLOQUEO = 'Hubo demasiados intentos. Espera 15 minutos e inténtalo de nuevo.';
+const MENSAJE_NO_DISPONIBLE = 'No pudimos verificar tu ingreso en este momento. Inténtalo de nuevo en unos minutos.';
 const MENSAJE_SIN_ACCESO = 'Esta cuenta no tiene acceso al panel. Consulta con el administrador.';
 
 export async function iniciarSesion(
@@ -45,11 +47,28 @@ export async function iniciarSesion(
   const ip = await ipDelCliente();
   const huella = huellaDeCorreo(correo);
   const desde = new Date(Date.now() - VENTANA_BLOQUEO_MS);
-  const [fallosCorreo, fallosIp] = await Promise.all([
-    contarFallos({ accion: 'login_fallido', desde, huella }),
-    ip ? contarFallos({ accion: 'login_fallido', desde, ip }) : Promise.resolve(0),
-  ]);
-  if (fallosCorreo >= MAX_FALLOS_POR_CORREO || fallosIp >= MAX_FALLOS_POR_IP) {
+  // Falla cerrado: el intento se registra ANTES de autenticar y, si no se puede
+  // registrar o contar, no se intenta el ingreso.
+  const intento = await evaluarIntento({
+    registrar: () =>
+      registrarEvento({ actor: 'anonimo', accion: 'login_intento', diff: { huella_correo: huella }, ip }),
+    contadores: [
+      {
+        max: MAX_FALLOS_POR_CORREO,
+        netos: () => contarNetos('login_intento', ['login_exitoso'], { desde, huella }),
+      },
+      ...(ip
+        ? [
+            {
+              max: MAX_FALLOS_POR_IP,
+              netos: () => contarNetos('login_intento', ['login_exitoso'], { desde, ip }),
+            },
+          ]
+        : []),
+    ],
+  });
+  if (intento === 'error') return { error: MENSAJE_NO_DISPONIBLE };
+  if (intento === 'bloqueado') {
     await registrarAuditoria({
       actor: 'anonimo',
       accion: 'login_bloqueado',
@@ -100,7 +119,7 @@ export async function iniciarSesion(
     actor: userId,
     accion: 'login_exitoso',
     entidadId: userId,
-    diff: { paso: 'contrasena', rol: admin.role },
+    diff: { paso: 'contrasena', rol: admin.role, huella_correo: huella },
     ip,
   });
 

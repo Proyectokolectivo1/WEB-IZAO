@@ -82,6 +82,22 @@ Verás `login_exitoso`, `login_fallido`, `login_denegado`, `login_bloqueado`, `m
 
 Mientras no exista el módulo Usuarios: en SQL Editor, `update admin_users set is_active = false where auth_user_id = '<id>';`. El usuario pierde el acceso en su siguiente clic.
 
+## Límites de ingreso que debe configurar el dueño en Supabase
+
+El panel bloquea 15 minutos después de 5 contraseñas incorrectas por correo (15 por IP) y de 5 códigos incorrectos por usuario. Ese bloqueo falla cerrado: si no se puede registrar o contar el intento, el ingreso se niega con "No pudimos verificar tu ingreso".
+
+Pero la llave publicable de Supabase es pública por diseño, así que cualquiera puede llamar directamente a `/auth/v1/token` (contraseña) y a `/auth/v1/factors/.../verify` (código) sin pasar por el panel. El bloqueo de la aplicación no cubre ese camino. Por eso, en Supabase (proyecto `wyxjmlgrcjclelbrluvd`) revisa:
+
+1. **Authentication > Rate Limits**: baja al mínimo razonable los límites de inicio de sesión (sign-ups and sign-ins), de verificación de tokens y de verificación MFA, que Supabase aplica por IP.
+2. **Authentication > Attack Protection**: activa la protección con CAPTCHA (Cloudflare Turnstile) para el inicio de sesión. Cuando se active, el formulario del panel deberá enviar el token del CAPTCHA; avísale al equipo para que lo incorpore.
+3. **Authentication > Sign In / Providers > Email**: exige contraseñas de al menos 12 caracteres y activa la protección contra contraseñas filtradas si tu plan la ofrece.
+4. Usa siempre contraseñas largas y únicas para las cuentas del panel: el segundo factor protege, pero no debe ser la única barrera.
+
+Pendientes de otros equipos (no los hace el dueño):
+
+- Regla `limit_req` de Nginx para `/admin/login` y `/admin/mfa/*` (la configura infraestructura).
+- Límite de intentos con Redis en el login, el checkout y los formularios (§26.1): tarea futura. Cuando exista, se suma al bloqueo actual, que se queda como segunda barrera.
+
 ## Notas técnicas para el equipo
 
 - Todo el flujo de autenticación ocurre en el servidor (Server Actions); el navegador no recibe la llave secreta ni la de servicio.

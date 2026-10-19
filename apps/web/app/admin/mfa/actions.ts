@@ -1,7 +1,8 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { contarFallos, registrarAuditoria } from '@/lib/auth/auditoria';
+import { contarNetos, registrarAuditoria, registrarEvento } from '@/lib/auth/auditoria';
+import { evaluarIntento } from '@/lib/auth/bloqueo';
 import { ipDelCliente } from '@/lib/auth/cabeceras';
 import { rutaSiguienteSegura } from '@/lib/auth/decision';
 import { esquemaCodigoTotp, type EstadoFormulario } from '@/lib/auth/esquemas';
@@ -12,6 +13,7 @@ const VENTANA_BLOQUEO_MS = 15 * 60 * 1000;
 const MAX_FALLOS_MFA = 5;
 
 const MENSAJE_CODIGO = 'El código no es correcto o ya venció. Revisa tu aplicación e inténtalo de nuevo.';
+const MENSAJE_NO_DISPONIBLE = 'No pudimos verificar el código en este momento. Inténtalo de nuevo en unos minutos.';
 const MENSAJE_BLOQUEO = 'Hubo demasiados intentos. Espera 15 minutos e inténtalo de nuevo.';
 
 export type ResultadoInscripcion =
@@ -85,11 +87,8 @@ export async function confirmarInscripcionMfa(
   const { codigo, factorId } = lectura.data;
   const ip = await ipDelCliente();
 
-  const bloqueado = await estaBloqueado(userId);
-  if (bloqueado) {
-    await registrarAuditoria({ actor: userId, accion: 'mfa_bloqueado', entidadId: userId, ip });
-    return { error: MENSAJE_BLOQUEO };
-  }
+  const bloqueo = await controlarIntento(userId, ip);
+  if (bloqueo) return bloqueo;
 
   const supabase = await crearClienteServidor();
   const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId, code: codigo });
@@ -129,10 +128,8 @@ export async function verificarMfa(
   if (!lectura.success) return { error: MENSAJE_CODIGO };
   const ip = await ipDelCliente();
 
-  if (await estaBloqueado(userId)) {
-    await registrarAuditoria({ actor: userId, accion: 'mfa_bloqueado', entidadId: userId, ip });
-    return { error: MENSAJE_BLOQUEO };
-  }
+  const bloqueo = await controlarIntento(userId, ip);
+  if (bloqueo) return bloqueo;
 
   const supabase = await crearClienteServidor();
   const { data: factores } = await supabase.auth.mfa.listFactors();
@@ -163,11 +160,25 @@ export async function verificarMfa(
   redirect(rutaSiguienteSegura(lectura.data.siguiente));
 }
 
-async function estaBloqueado(userId: string): Promise<boolean> {
-  const fallos = await contarFallos({
-    accion: 'mfa_fallido',
-    desde: new Date(Date.now() - VENTANA_BLOQUEO_MS),
-    actor: userId,
+/**
+ * Registra el intento ANTES de verificar el código y falla cerrado (ver
+ * `evaluarIntento`). Devuelve el estado de error si no se debe continuar.
+ */
+async function controlarIntento(userId: string, ip: string | null): Promise<EstadoFormulario | null> {
+  const desde = new Date(Date.now() - VENTANA_BLOQUEO_MS);
+  const resultado = await evaluarIntento({
+    registrar: () => registrarEvento({ actor: userId, accion: 'mfa_intento', entidadId: userId, ip }),
+    contadores: [
+      {
+        max: MAX_FALLOS_MFA,
+        netos: () => contarNetos('mfa_intento', ['mfa_verificado', 'mfa_inscrito'], { desde, actor: userId }),
+      },
+    ],
   });
-  return fallos >= MAX_FALLOS_MFA;
+  if (resultado === 'error') return { error: MENSAJE_NO_DISPONIBLE };
+  if (resultado === 'bloqueado') {
+    await registrarAuditoria({ actor: userId, accion: 'mfa_bloqueado', entidadId: userId, ip });
+    return { error: MENSAJE_BLOQUEO };
+  }
+  return null;
 }

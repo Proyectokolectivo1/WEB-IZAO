@@ -7,15 +7,18 @@
  */
 import { isIP } from 'node:net';
 import { createHmac } from 'node:crypto';
+import { netosDe } from './bloqueo';
 import { secretoSesion } from './env';
 import { crearClienteServicio } from './supabase/servicio';
 
 export type AccionAcceso =
+  | 'login_intento'
   | 'login_exitoso'
   | 'login_fallido'
   | 'login_denegado'
   | 'login_bloqueado'
   | 'logout'
+  | 'mfa_intento'
   | 'mfa_inscripcion_iniciada'
   | 'mfa_inscrito'
   | 'mfa_verificado'
@@ -81,23 +84,60 @@ export async function registrarAuditoria(evento: EventoAuditoria): Promise<void>
   }
 }
 
-/** Intentos fallidos recientes (para el bloqueo temporal). */
-export async function contarFallos(filtro: {
-  accion: 'login_fallido' | 'mfa_fallido';
+/**
+ * Registra un evento y avisa si se guardó. Para el bloqueo por intentos: si no
+ * se guarda, el llamador debe negar el acceso (falla cerrado).
+ */
+export async function registrarEvento(evento: EventoAuditoria): Promise<boolean> {
+  try {
+    const { error } = await crearClienteServicio().from('audit_log').insert(construirFilaAuditoria(evento));
+    if (error) {
+      console.error('[auditoria] no se pudo registrar:', error.message);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('[auditoria] no se pudo registrar:', e instanceof Error ? e.message : 'error');
+    return false;
+  }
+}
+
+export type FiltroConteo = {
+  acciones: AccionAcceso[];
   desde: Date;
   huella?: string;
   ip?: string | null;
   actor?: string;
-}): Promise<number> {
-  let consulta = crearClienteServicio()
-    .from('audit_log')
-    .select('id', { count: 'exact', head: true })
-    .eq('action', filtro.accion)
-    .gte('created_at', filtro.desde.toISOString());
-  if (filtro.huella) consulta = consulta.contains('diff', { huella_correo: filtro.huella });
-  if (filtro.ip && isIP(filtro.ip) !== 0) consulta = consulta.eq('ip', filtro.ip);
-  if (filtro.actor) consulta = consulta.eq('actor', filtro.actor);
-  const { count, error } = await consulta;
-  if (error) return 0;
-  return count ?? 0;
+};
+
+/** Cuenta eventos de la ventana. Devuelve `null` si la consulta falla (nunca 0). */
+export async function contarEventos(filtro: FiltroConteo): Promise<number | null> {
+  try {
+    let consulta = crearClienteServicio()
+      .from('audit_log')
+      .select('id', { count: 'exact', head: true })
+      .in('action', filtro.acciones)
+      .gte('created_at', filtro.desde.toISOString());
+    if (filtro.huella) consulta = consulta.contains('diff', { huella_correo: filtro.huella });
+    if (filtro.ip && isIP(filtro.ip) !== 0) consulta = consulta.eq('ip', filtro.ip);
+    if (filtro.actor) consulta = consulta.eq('actor', filtro.actor);
+    const { count, error } = await consulta;
+    if (error || count === null) return null;
+    return count;
+  } catch {
+    return null;
+  }
+}
+
+/** Intentos sin éxito: `accionIntento` menos los `accionesExito` de la misma clave. */
+export async function contarNetos(
+  accionIntento: AccionAcceso,
+  accionesExito: AccionAcceso[],
+  clave: Omit<FiltroConteo, 'acciones'>,
+): Promise<number | null> {
+  const [intentos, exitos] = await Promise.all([
+    contarEventos({ ...clave, acciones: [accionIntento] }),
+    contarEventos({ ...clave, acciones: accionesExito }),
+  ]);
+  return netosDe(intentos, exitos);
 }
