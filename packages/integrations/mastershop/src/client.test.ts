@@ -1,0 +1,465 @@
+import { describe, expect, it } from 'vitest';
+import { MasterShopClient } from './client';
+import { FakeClock } from './clock';
+import { MasterShopError } from './errors';
+import { MasterShopMock } from './mock/server';
+import { MS_ERRORS } from './mock/fixtures';
+import { buildCarrierOrder } from './order';
+import { makeItem, makeOrder } from './test-utils/orders';
+
+const KEY = 'clave-de-prueba';
+const DAY = 24 * 60 * 60 * 1000;
+
+function setup(mockExtra: Partial<ConstructorParameters<typeof MasterShopMock>[0]> = {}) {
+  const clock = new FakeClock();
+  const mock = new MasterShopMock({ apiKey: KEY, clock, ...mockExtra });
+  const client = new MasterShopClient({ apiKey: KEY, fetch: mock.fetch, clock });
+  return { clock, mock, client };
+}
+
+const body = (
+  overrides: Parameters<typeof makeOrder>[0] = {},
+  mode: 'prorate' | 'additional_charge' = 'prorate',
+) =>
+  buildCarrierOrder(makeOrder(overrides), {
+    mode,
+    paymentGateway: 'wompi',
+    paymentReference: 'ref-1',
+  }).body;
+
+async function expectError(
+  p: Promise<unknown>,
+  kind: MasterShopError['kind'],
+): Promise<MasterShopError> {
+  try {
+    await p;
+  } catch (e) {
+    expect(e).toBeInstanceOf(MasterShopError);
+    expect((e as MasterShopError).kind).toBe(kind);
+    return e as MasterShopError;
+  }
+  throw new Error(`se esperaba MasterShopError ${kind}`);
+}
+
+describe('MasterShopClient.createOrder', () => {
+  it('envía el cuerpo con montos enteros exactos y la cabecera ms-api-key', async () => {
+    const { mock, client } = setup();
+    const r = await client.createOrder(
+      body({
+        items: [
+          makeItem({ sku: 'A', unit_price: 90_000n, line_discount: 9_000n }),
+          makeItem({ id: 'i2', sku: 'B', unit_price: 60_000n, line_discount: 6_000n }),
+        ],
+      }),
+    );
+    expect(r).toEqual({
+      idOrder: 1001,
+      externalOrderId: 'IZ-CO-000123',
+      statusName: 'Por Confirmar',
+      duplicated: false,
+    });
+    const req = mock.requests.at(-1)!;
+    expect(req.method).toBe('POST');
+    expect(req.path).toBe('/api/orders');
+    expect(req.headers['ms-api-key']).toBe(KEY);
+    expect(req.headers['content-type']).toBe('application/json');
+    expect(req.body).toContain('"total":125000');
+    expect(req.body).toContain('"price":75000');
+    expect(req.body).toContain('"price":50000');
+    expect(req.body).not.toContain('"125000"');
+  });
+
+  it('el modo A con additional_charge negativo cuadra exacto en el mock', async () => {
+    const { mock, client } = setup();
+    await client.createOrder(
+      body(
+        {
+          items: [
+            makeItem({ sku: 'A', unit_price: 90_000n, line_discount: 9_000n }),
+            makeItem({ id: 'i2', sku: 'B', unit_price: 60_000n, line_discount: 6_000n }),
+          ],
+        },
+        'additional_charge',
+      ),
+    );
+    expect(mock.requests.at(-1)!.body).toContain(
+      '"additional_charge":[{"type_charge":"descuento","value":-25000}]',
+    );
+  });
+
+  it('500 "409 - La orden ya existe" se trata como creado y consulta por externalOrderId', async () => {
+    const { mock, client } = setup();
+    const first = await client.createOrder(body());
+    const again = await client.createOrder(body());
+    expect(again).toEqual({
+      idOrder: first.idOrder,
+      externalOrderId: 'IZ-CO-000123',
+      statusName: null,
+      duplicated: true,
+    });
+    expect(mock.orders.size).toBe(1);
+    const get = mock.requests.at(-1)!;
+    expect(get.method).toBe('GET');
+    expect(get.query).toEqual({ externalOrderId: 'IZ-CO-000123' });
+  });
+
+  it('otro 500 es reintentable y conserva el mensaje del proveedor', async () => {
+    const { mock, client } = setup();
+    mock.inject('create', { status: 500, body: MS_ERRORS.internal });
+    const e = await expectError(client.createOrder(body()), 'servidor');
+    expect(e.retryable).toBe(true);
+    expect(e.providerMessage).toBe('Error interno del servidor');
+  });
+
+  it('el rechazo de negativos en modo A (si MasterShop no los aceptara) no se confunde con duplicado', async () => {
+    const { client } = setup({ acceptNegativeCharges: false });
+    const e = await expectError(
+      client.createOrder(
+        body({ items: [makeItem({ line_discount: 9_000n })] }, 'additional_charge'),
+      ),
+      'servidor',
+    );
+    expect(e.providerMessage).toMatch(/Cargo adicional/);
+  });
+
+  it('400 de validación no es reintentable', async () => {
+    const { mock, client } = setup();
+    mock.inject('create', {
+      status: 400,
+      body: { data: null, error: MS_ERRORS.totalMismatch, success: false },
+    });
+    const e = await expectError(client.createOrder(body()), 'validacion');
+    expect(e.retryable).toBe(false);
+  });
+
+  it('no envía un cuerpo que no cumple el esquema', async () => {
+    const { mock, client } = setup();
+    const b = body();
+    const bad = {
+      ...b,
+      order_transaction: { ...b.order_transaction, total: b.order_transaction.total + 1n },
+    };
+    await expectError(client.createOrder(bad), 'validacion');
+    expect(mock.requests).toHaveLength(0);
+  });
+
+  it('401 → autenticación, no reintentable', async () => {
+    const clock = new FakeClock();
+    const mock = new MasterShopMock({ apiKey: KEY, clock });
+    const client = new MasterShopClient({ apiKey: 'otra', fetch: mock.fetch, clock });
+    const e = await expectError(client.createOrder(body()), 'autenticacion');
+    expect(e.retryable).toBe(false);
+  });
+
+  it('fallo de red y tiempo agotado son reintentables', async () => {
+    const clock = new FakeClock();
+    const down = new MasterShopClient({
+      apiKey: KEY,
+      clock,
+      fetch: () => Promise.reject(new TypeError('fetch failed')),
+    });
+    expect((await expectError(down.createOrder(body()), 'red')).retryable).toBe(true);
+    const slow = new MasterShopClient({
+      apiKey: KEY,
+      clock,
+      fetch: () => Promise.reject(new DOMException('timeout', 'TimeoutError')),
+    });
+    expect((await expectError(slow.createOrder(body()), 'tiempo_agotado')).retryable).toBe(true);
+  });
+
+  it('pasa una señal de tiempo de espera a fetch', async () => {
+    let signal: AbortSignal | null | undefined;
+    const clock = new FakeClock();
+    const mock = new MasterShopMock({ apiKey: KEY, clock });
+    const client = new MasterShopClient({
+      apiKey: KEY,
+      clock,
+      fetch: (input, init) => {
+        signal = init?.signal;
+        return mock.fetch(input, init);
+      },
+    });
+    await client.createOrder(body());
+    expect(signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+describe('MasterShopClient.getOrder', () => {
+  it('devuelve guía, rastreo y shippingLabel', async () => {
+    const { mock, client } = setup();
+    const { idOrder } = await client.createOrder(body());
+    const before = await client.getOrder({ externalOrderId: 'IZ-CO-000123' });
+    expect(before).toMatchObject({ idOrder, guide: null, labelUrl: null, statusId: null });
+    mock.attachLabel(idOrder, '240000000001');
+    const after = await client.getOrder({ idOrder });
+    expect(after).toMatchObject({
+      idOrder,
+      externalOrderId: 'IZ-CO-000123',
+      guide: '240000000001',
+      trackingCode: '240000000001',
+      trackingUrl: 'https://rastreo.example.com/240000000001',
+      labelUrl: 'https://labels.example.com/240000000001.pdf',
+    });
+  });
+
+  it('rechaza externalOrderId con guion bajo sin llamar a la API', async () => {
+    const { mock, client } = setup();
+    await expectError(client.getOrder({ externalOrderId: 'IZ_CO_1' }), 'validacion');
+    await expectError(client.getOrder({}), 'validacion');
+    expect(mock.requests).toHaveLength(0);
+  });
+
+  it('404 → no encontrado', async () => {
+    const { client } = setup();
+    await expectError(client.getOrder({ idOrder: 999 }), 'no_encontrado');
+  });
+});
+
+describe('MasterShopClient.listOrders / listAllOrders', () => {
+  it('siempre envía startDate y limit ≤ 50', async () => {
+    const { mock, clock, client } = setup();
+    await client.listOrders({ startDate: new Date(clock.now() - 45 * DAY), page: 1, limit: 500 });
+    const req = mock.requests.at(-1)!;
+    expect(req.query).toEqual({ page: '1', limit: '50' });
+    expect(JSON.parse(req.body!)).toEqual({
+      startDate: new Date(clock.now() - 45 * DAY).toISOString(),
+    });
+  });
+
+  it('sin startDate no llama a la API', async () => {
+    const { mock, client } = setup();
+    await expectError(client.listOrders({ startDate: new Date('x'), page: 1 }), 'validacion');
+    expect(mock.requests).toHaveLength(0);
+  });
+
+  it('pagina hasta una respuesta vacía (no se detiene en la página corta) y ve pedidos de más de 7 días', async () => {
+    const { mock, clock, client } = setup();
+    for (let i = 0; i < 120; i++) {
+      mock.seed({
+        externalOrderId: `IZ-CO-${String(i).padStart(6, '0')}`,
+        createdAt: new Date(clock.now() - i * 6 * 60 * 60 * 1000),
+      });
+    }
+    const all = await client.listAllOrders({ startDate: new Date(clock.now() - 45 * DAY) });
+    expect(all).toHaveLength(120);
+    expect(new Set(all.map((o) => o.idOrder)).size).toBe(120);
+    // 50 + 50 + 20 + [] → 4 solicitudes.
+    expect(mock.countRequests('POST', '/api/orders/list')).toBe(4);
+  });
+
+  it('mapea estado, grupo, novedad y montos a bigint', async () => {
+    const { mock, clock, client } = setup();
+    const o = mock.seed({
+      externalOrderId: 'IZ-CO-000777',
+      createdAt: new Date(clock.now() - DAY),
+      statusId: 6,
+      hasNovelty: true,
+      alerts: [{ idAlert: 3, name: 'Dirección incompleta', type: 'novedad' }],
+      shippingRate: 12_000,
+      totalProvider: 50_000,
+      totalOrder: 89_900,
+    });
+    const [row] = await client.listOrders({ startDate: new Date(clock.now() - 45 * DAY), page: 1 });
+    expect(row).toMatchObject({
+      idOrder: o.idOrder,
+      externalOrderId: 'IZ-CO-000777',
+      statusName: 'En tránsito',
+      statusParent: 'En tránsito',
+      statusId: 6,
+      hasNovelty: true,
+      alerts: [{ idAlert: 3, name: 'Dirección incompleta', type: 'novedad' }],
+      shippingRate: 12_000n,
+      totalProvider: 50_000n,
+      totalOrder: 89_900n,
+    });
+  });
+
+  it('un monto no entero es una respuesta inválida (nunca float)', async () => {
+    const { mock, clock, client } = setup();
+    mock.inject('list', {
+      status: 200,
+      body: [{ idOrder: 1, orderStatus: 'Pendiente', shippingRate: 12000.5 }],
+    });
+    await expectError(
+      client.listOrders({ startDate: new Date(clock.now() - DAY), page: 1 }),
+      'respuesta_invalida',
+    );
+  });
+});
+
+describe('MasterShopClient.updateOrderStatus (confirmar y cancelar)', () => {
+  async function created() {
+    const s = setup();
+    const { idOrder } = await s.client.createOrder(body());
+    const since = new Date(s.clock.now() - 45 * DAY);
+    return { ...s, idOrder, since };
+  }
+
+  it('confirma con exactamente { idStatus: 2 } y cancela con exactamente { idStatus: 9 }', async () => {
+    const { mock, client, idOrder, since } = await created();
+    expect(await client.updateOrderStatus(idOrder, 2, { since })).toEqual({
+      applied: true,
+      statusId: 2,
+      via: 'respuesta',
+    });
+    expect(mock.requests.at(-1)!.body).toBe('{"idStatus":2}');
+    expect(await client.updateOrderStatus(idOrder, 9, { since })).toEqual({
+      applied: true,
+      statusId: 9,
+      via: 'respuesta',
+    });
+    expect(mock.requests.at(-1)!.body).toBe('{"idStatus":9}');
+    expect(mock.requests.at(-1)!.path).toBe(`/api/orders/${idOrder}`);
+  });
+
+  it('409 por edición concurrente → reintenta a los 5 s', async () => {
+    const { mock, clock, client, idOrder, since } = await created();
+    mock.inject('update', { status: 409, body: MS_ERRORS.concurrentEdit });
+    const t0 = clock.now();
+    expect(await client.updateOrderStatus(idOrder, 2, { since })).toMatchObject({ applied: true });
+    expect(clock.sleeps).toEqual([5_000]);
+    expect(clock.now() - t0).toBe(5_000);
+    expect(mock.countRequests('PUT', '/api/orders/')).toBe(2);
+  });
+
+  it('409 concurrente persistente → se rinde tras 3 reintentos, reintentable por el job', async () => {
+    const { mock, clock, client, idOrder, since } = await created();
+    for (let i = 0; i < 4; i++)
+      mock.inject('update', { status: 409, body: MS_ERRORS.concurrentEdit });
+    const e = await expectError(
+      client.updateOrderStatus(idOrder, 2, { since }),
+      'edicion_concurrente',
+    );
+    expect(e.retryable).toBe(true);
+    expect(clock.sleeps).toEqual([5_000, 5_000, 5_000]);
+    expect(mock.countRequests('PUT', '/api/orders/')).toBe(4);
+  });
+
+  it('409 por estado no editable no se reintenta', async () => {
+    const { mock, clock, client, idOrder, since } = await created();
+    mock.setStatus(idOrder, 3);
+    const e = await expectError(
+      client.updateOrderStatus(idOrder, 9, { since }),
+      'estado_no_editable',
+    );
+    expect(e.retryable).toBe(false);
+    expect(clock.sleeps).toEqual([]);
+    expect(mock.countRequests('PUT', '/api/orders/')).toBe(1);
+  });
+
+  it('502 que sí se aplicó: no reintenta el PUT, consulta y reporta aplicado', async () => {
+    const { mock, client, idOrder, since } = await created();
+    mock.inject('update', { status: 502, body: MS_ERRORS.notConfirmed, apply: true });
+    expect(await client.updateOrderStatus(idOrder, 2, { since })).toEqual({
+      applied: true,
+      statusId: 2,
+      via: 'consulta',
+    });
+    expect(mock.countRequests('PUT', '/api/orders/')).toBe(1);
+    const list = mock.requests.at(-1)!;
+    expect(list.path).toBe('/api/orders/list');
+    expect(JSON.parse(list.body!)).toEqual({ startDate: since.toISOString(), idOrder });
+  });
+
+  it('502 que no se aplicó: no reintenta y reporta el estado real', async () => {
+    const { mock, client, idOrder, since } = await created();
+    mock.inject('update', { status: 502, body: MS_ERRORS.notConfirmed, apply: false });
+    expect(await client.updateOrderStatus(idOrder, 2, { since })).toEqual({
+      applied: false,
+      statusId: 1,
+      via: 'consulta',
+    });
+    expect(mock.countRequests('PUT', '/api/orders/')).toBe(1);
+  });
+
+  it('502 al confirmar cuando el pedido ya avanzó a 3 cuenta como aplicado', async () => {
+    const { mock, client, idOrder, since } = await created();
+    mock.inject('update', { status: 502, body: MS_ERRORS.notConfirmed, apply: false });
+    mock.setStatus(idOrder, 3);
+    expect(await client.updateOrderStatus(idOrder, 2, { since })).toEqual({
+      applied: true,
+      statusId: 3,
+      via: 'consulta',
+    });
+  });
+
+  it('502 y el pedido no aparece en la consulta → no_confirmado, no reintentable', async () => {
+    const { mock, client, idOrder } = await created();
+    mock.inject('update', { status: 502, body: MS_ERRORS.notConfirmed });
+    const e = await expectError(
+      client.updateOrderStatus(idOrder, 2, { since: new Date(Date.UTC(2030, 0, 1)) }),
+      'no_confirmado',
+    );
+    expect(e.retryable).toBe(false);
+  });
+
+  it('422 → rechazado', async () => {
+    const { mock, client, idOrder, since } = await created();
+    mock.inject('update', { status: 422, body: MS_ERRORS.rejected });
+    await expectError(client.updateOrderStatus(idOrder, 2, { since }), 'rechazado');
+  });
+});
+
+describe('MasterShopClient y RateLimit-*', () => {
+  it('en 429 espera RateLimit-Reset y reintenta', async () => {
+    const { clock, client, mock } = setup({ rateLimit: { limit: 1, windowSeconds: 60 } });
+    // Una solicitud por fuera del cliente agota la ventana.
+    await mock.fetch('https://prod.api.mastershop.com/api/products', {
+      headers: { 'ms-api-key': KEY },
+    });
+    clock.advance(20_000);
+    expect(await client.testCredentials()).toEqual({
+      ok: true,
+      message: 'Conexión con MasterShop correcta.',
+    });
+    expect(clock.sleeps).toEqual([40_000]);
+  });
+
+  it('con Remaining 0 espera el reinicio antes de la siguiente solicitud (sin provocar 429)', async () => {
+    const { clock, client, mock } = setup({ rateLimit: { limit: 2, windowSeconds: 30 } });
+    await client.testCredentials();
+    await client.testCredentials(); // Remaining 0, Reset 30
+    await client.testCredentials();
+    expect(clock.sleeps).toEqual([30_000]);
+    expect(mock.requests.every((r) => r.path === '/api/products')).toBe(true);
+    expect(mock.requests).toHaveLength(3);
+  });
+
+  it('429 persistente → error de límite con la espera sugerida', async () => {
+    const { client, mock } = setup();
+    for (let i = 0; i < 3; i++) {
+      mock.inject('products', {
+        status: 429,
+        body: MS_ERRORS.tooManyRequests,
+        headers: { 'RateLimit-Reset': '17' },
+      });
+    }
+    // testCredentials no lanza: devuelve el mensaje.
+    expect(await client.testCredentials()).toEqual({
+      ok: false,
+      message: 'Se alcanzó el límite de solicitudes de MasterShop.',
+    });
+    for (let i = 0; i < 3; i++) {
+      mock.inject('get', {
+        status: 429,
+        body: MS_ERRORS.tooManyRequests,
+        headers: { 'RateLimit-Reset': '17' },
+      });
+    }
+    const e = await expectError(client.getOrder({ idOrder: 1 }), 'limite');
+    expect(e.retryAfterMs).toBe(17_000);
+    expect(e.retryable).toBe(true);
+  });
+});
+
+describe('MasterShopClient.testCredentials', () => {
+  it('llave inválida → ok false con mensaje amable', async () => {
+    const clock = new FakeClock();
+    const mock = new MasterShopMock({ apiKey: KEY, clock });
+    const client = new MasterShopClient({ apiKey: 'mala', fetch: mock.fetch, clock });
+    expect(await client.testCredentials()).toEqual({
+      ok: false,
+      message: 'La llave de API de MasterShop no es válida o no tiene permiso.',
+    });
+  });
+});
