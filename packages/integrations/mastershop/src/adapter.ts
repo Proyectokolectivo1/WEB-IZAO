@@ -56,6 +56,15 @@ export class MasterShopCarrier implements CarrierProvider {
     this.clock = options.clock ?? systemClock;
   }
 
+  /** Para logs: sin cliente ni opciones (la llave vive en el cliente). */
+  toJSON(): Record<string, string> {
+    return { id: this.id };
+  }
+
+  [Symbol.for('nodejs.util.inspect.custom')](): string {
+    return `MasterShopCarrier { id: '${this.id}' }`;
+  }
+
   /** Arma y envía el pedido. Lanza `CarrierOrderError` (sin red) si el pedido no es válido. */
   async createOrder(order: Order): Promise<{ providerOrderId: number; statusId: number }> {
     const opts = await this.options.resolveOrderOptions(order);

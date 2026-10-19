@@ -21,6 +21,7 @@ import {
   DUPLICATE_ORDER_PATTERN,
   MasterShopError,
   platformClientErrorCode,
+  REDACTED,
 } from './errors';
 import type { MasterShopErrorKind } from './errors';
 import { serializeMasterShopJson } from './json';
@@ -219,7 +220,8 @@ const FRIENDLY: Record<MasterShopErrorKind, string> = {
 };
 
 export class MasterShopClient {
-  private readonly apiKey: string;
+  /** Campo privado real: no aparece en `JSON.stringify`, `inspect` ni `Object.keys`. */
+  readonly #apiKey: string;
   private readonly fetchImpl: FetchLike;
   private readonly baseUrl: string;
   private readonly clock: Clock;
@@ -233,7 +235,7 @@ export class MasterShopClient {
 
   constructor(options: MasterShopClientOptions) {
     if (options.apiKey.trim() === '') throw new Error('Falta la llave de API de MasterShop.');
-    this.apiKey = options.apiKey;
+    this.#apiKey = options.apiKey;
     this.fetchImpl = options.fetch ?? ((input, init) => fetch(input, init));
     this.baseUrl = (options.baseUrl ?? MASTERSHOP_BASE_URL).replace(/\/+$/, '');
     this.clock = options.clock ?? systemClock;
@@ -243,6 +245,15 @@ export class MasterShopClient {
     this.maxRateLimitWaits = options.maxRateLimitWaits ?? 2;
     this.rateLimitFallbackMs = options.rateLimitFallbackMs ?? 60_000;
     this.maxPages = options.maxPages ?? 200;
+  }
+
+  /** Para logs: nunca la llave. */
+  toJSON(): Record<string, string> {
+    return { baseUrl: this.baseUrl, apiKey: REDACTED };
+  }
+
+  [Symbol.for('nodejs.util.inspect.custom')](): string {
+    return `MasterShopClient { baseUrl: '${this.baseUrl}', apiKey: '${REDACTED}' }`;
   }
 
   // -------------------------------------------------------------------------
@@ -266,7 +277,7 @@ export class MasterShopClient {
         response = await this.fetchImpl(url.toString(), {
           method,
           headers: {
-            'ms-api-key': this.apiKey,
+            'ms-api-key': this.#apiKey,
             accept: 'application/json',
             ...(opts.body === undefined ? {} : { 'content-type': 'application/json' }),
           },
@@ -305,6 +316,7 @@ export class MasterShopClient {
           message: FRIENDLY.limite,
           providerMessage: providerError(data),
           retryAfterMs: delay,
+          secrets: [this.#apiKey],
         });
       }
       return { status: response.status, data, headers: response.headers };
@@ -354,6 +366,7 @@ export class MasterShopClient {
       message: FRIENDLY[kind],
       providerMessage: msg,
       providerData: providerData(res.data),
+      secrets: [this.#apiKey],
     });
   }
 

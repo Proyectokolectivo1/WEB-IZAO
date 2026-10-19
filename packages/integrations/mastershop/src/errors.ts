@@ -38,6 +38,29 @@ const RETRYABLE: ReadonlySet<MasterShopErrorKind> = new Set([
   'tiempo_agotado',
 ]);
 
+export const REDACTED = '[REDACTADO]';
+
+const SECRET_KEY_NAMES = /^(api_?key|ms-api-key|apikey|token|secret)$/i;
+
+/** Reemplaza cada secreto por `[REDACTADO]` y redacta claves con nombre de llave. */
+export function redactSecrets<T>(value: T, secrets: readonly string[]): T {
+  const usable = secrets.filter((s) => s.length >= 4);
+  const scrub = (v: unknown, depth: number): unknown => {
+    if (typeof v === 'string') {
+      return usable.reduce((acc, s) => acc.split(s).join(REDACTED), v);
+    }
+    if (depth > 20 || v === null || typeof v !== 'object') return v;
+    if (Array.isArray(v)) return v.map((x) => scrub(x, depth + 1));
+    const out: Record<string, unknown> = {};
+    for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
+      out[k] =
+        SECRET_KEY_NAMES.test(k) && x !== null && x !== undefined ? REDACTED : scrub(x, depth + 1);
+    }
+    return out;
+  };
+  return scrub(value, 0) as T;
+}
+
 export class MasterShopError extends Error {
   readonly kind: MasterShopErrorKind;
   readonly status: number | null;
@@ -56,14 +79,33 @@ export class MasterShopError extends Error {
     providerData?: unknown;
     retryAfterMs?: number | null;
     cause?: unknown;
+    /** Valores que nunca deben quedar en el error (la `ms-api-key`). */
+    secrets?: readonly string[];
   }) {
-    super(init.message, init.cause === undefined ? undefined : { cause: init.cause });
+    const secrets = init.secrets ?? [];
+    super(
+      redactSecrets(init.message, secrets),
+      init.cause === undefined ? undefined : { cause: init.cause },
+    );
     this.name = 'MasterShopError';
     this.kind = init.kind;
     this.status = init.status ?? null;
-    this.providerMessage = init.providerMessage ?? null;
-    this.providerData = init.providerData;
+    this.providerMessage = redactSecrets(init.providerMessage ?? null, secrets);
+    this.providerData = redactSecrets(init.providerData, secrets);
     this.retryAfterMs = init.retryAfterMs ?? null;
+  }
+
+  /** Forma segura para logs y `order_events`. */
+  toJSON(): Record<string, unknown> {
+    return {
+      name: this.name,
+      kind: this.kind,
+      status: this.status,
+      message: this.message,
+      providerMessage: this.providerMessage,
+      providerData: this.providerData,
+      retryAfterMs: this.retryAfterMs,
+    };
   }
 
   /** Si un job puede volver a intentarlo más tarde con la política de reintentos. */
