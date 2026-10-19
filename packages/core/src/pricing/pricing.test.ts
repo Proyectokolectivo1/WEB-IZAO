@@ -422,6 +422,18 @@ describe('pricing: códigos de descuento', () => {
     expect(r.discount).toBe(0n);
   });
 
+  it('B5: vigencia semiabierta [starts_at, ends_at): vale 1 ms antes de ends_at', () => {
+    const ends_at = new Date(AHORA.getTime() + 1);
+    const r = calc({ items: [item(90_000n)], discountCode: codigo({ starts_at: AHORA, ends_at }) });
+    expect(r.discount_code?.status).toBe('applied');
+    const vencido = calc({
+      items: [item(90_000n)],
+      discountCode: codigo({ ends_at }),
+      now: ends_at,
+    });
+    expect(vencido.discount_code).toMatchObject({ status: 'rejected', reason: 'CODE_EXPIRED' });
+  });
+
   it('código vencido (ends_at ya pasó o es exactamente ahora)', () => {
     for (const ends_at of [new Date('2026-10-01T00:00:00Z'), AHORA]) {
       const r = calc({ items: [item(90_000n)], discountCode: codigo({ ends_at }) });

@@ -61,6 +61,11 @@ export interface PricingDiscountCode {
   value: bigint;
   max_discount_amount: bigint | null;
   min_subtotal: bigint;
+  /**
+   * Vigencia semiabierta `[starts_at, ends_at)` (B5): el código vale desde `starts_at`
+   * inclusive y vence en `ends_at` exacto (`now >= ends_at` → `CODE_EXPIRED`). La base
+   * (`reservar_canje`) debe usar el mismo criterio.
+   */
   starts_at: Date | null;
   ends_at: Date | null;
   is_active: boolean;
