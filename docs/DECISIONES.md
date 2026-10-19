@@ -100,3 +100,12 @@ Decisiones de `izao-admin` en T0.13:
 - **QR del MFA:** lo genera Supabase (SVG en `data:`); no se agrega librería de QR. La CSP de `/admin` debe permitir `img-src data:`.
 - **Auditoría de acceso:** `entity = 'sesion_admin'`, `actor` = id de Auth (o `anonimo` en fallos de contraseña). El correo se guarda solo como huella HMAC.
 - **Rutas de operador:** `/admin/pedidos`, `/admin/garantias`, `/admin/agente-impresion`. Las rutas de `/admin` que no figuran en la tabla exigen rol `admin`.
+
+## D-019 — Correcciones de infraestructura tras la revisión de la Oleada 0 (2026-10-19)
+
+- **Redis:** `maxmemory` baja de 512 MB (§4.3) a **400 MB** con límite de contenedor de 600 MB, para dejar margen al fork del AOF y a la fragmentación. Política `noeviction` sin cambios.
+- **Web:** heap `--max-old-space-size=1152` con límite de contenedor de 1536 MB (75 %). Con 2 réplicas el techo de memoria de todos los servicios es 5208 MB; si el inventario del VPS muestra poca memoria libre, se usa 1 réplica. El presupuesto está en `docs/RUNBOOK.md`.
+- **Nginx:** `infra/nginx/izao.conf` contiene solo bloques `server` y se incluyen snippets `izao-*.conf` desde `/srv/izao/nginx/`. El contexto `http` va aparte por entorno (`env/container` y `env/host`). HSTS se emite en cada `location`; `includeSubDomains` queda comentado hasta confirmar que `web.izaoperfumeria.com` tiene HTTPS.
+- **Migraciones en el despliegue:** `deploy.sh` ya no ejecuta `supabase db push`. Si el commit toca `packages/db/supabase/migrations`, se detiene y exige `--migraciones-verificadas` tras aplicarlas con el MCP de Supabase y compararlas con `list_migrations` (D-008).
+- **Backups:** se cifran con `age` o `gpg` (obligatorio), con permisos 600/700, sin datos de `auth.refresh_tokens`, `auth.sessions`, `auth.flow_state` ni `auth.one_time_tokens`. `restore.sh --target-url` solo acepta `localhost`, bases `izao_restore_*` y `--confirmo-base-temporal`. Tras restaurar, todos los usuarios deben iniciar sesión de nuevo.
+- **Cron:** en horas UTC (backup `0 8 * * *` = 03:00 Bogotá; keepalive `0 9 */3 * *`), sin depender de `CRON_TZ`.
