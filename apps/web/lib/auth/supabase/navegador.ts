@@ -8,7 +8,8 @@
  * imagen. La llave publicable es pública por diseño; la secreta jamás llega aquí.
  */
 import { createBrowserClient } from '@supabase/ssr';
+import { opcionesCookieSesion } from './cookies';
 
 export function crearClienteNavegador(url: string, llavePublicable: string) {
-  return createBrowserClient(url, llavePublicable);
+  return createBrowserClient(url, llavePublicable, { cookieOptions: opcionesCookieSesion() });
 }

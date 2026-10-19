@@ -5,11 +5,12 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { llavePublicaSupabase, urlSupabase } from '../env';
-import { endurecerCookie } from './cookies';
+import { endurecerCookie, opcionesCookieSesion } from './cookies';
 
 export async function crearClienteServidor() {
   const almacen = await cookies();
   return createServerClient(urlSupabase(), llavePublicaSupabase(), {
+    cookieOptions: opcionesCookieSesion(),
     cookies: {
       getAll() {
         return almacen.getAll();

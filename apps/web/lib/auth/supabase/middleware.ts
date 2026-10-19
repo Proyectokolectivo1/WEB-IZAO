@@ -5,12 +5,13 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { llavePublicaSupabase, urlSupabase } from '../env';
-import { endurecerCookie } from './cookies';
+import { endurecerCookie, opcionesCookieSesion } from './cookies';
 
 export function crearClienteMiddleware(request: NextRequest) {
   let respuesta = NextResponse.next({ request });
 
   const supabase = createServerClient(urlSupabase(), llavePublicaSupabase(), {
+    cookieOptions: opcionesCookieSesion(),
     cookies: {
       getAll() {
         return request.cookies.getAll();

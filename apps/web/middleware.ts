@@ -13,16 +13,12 @@ import { buscarAdminPorId } from '@/lib/auth/admin-users';
 import { decidirAcceso } from '@/lib/auth/decision';
 import { secretoSesion } from '@/lib/auth/env';
 import { NOMBRE_COOKIE_MARCA } from '@/lib/auth/marca-sesion';
+import { tieneCookiesDeSesion } from '@/lib/auth/supabase/cookies';
 import { crearClienteMiddleware } from '@/lib/auth/supabase/middleware';
 
 export const config = {
   matcher: ['/admin/:path*', '/api/admin/:path*'],
 };
-
-/** Prefijo de las cookies de sesión de Supabase (`sb-<ref>-auth-token…`). */
-function tieneCookiesDeSesion(request: NextRequest): boolean {
-  return request.cookies.getAll().some((c) => c.name.startsWith('sb-'));
-}
 
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -30,7 +26,7 @@ export async function middleware(request: NextRequest) {
   const { supabase, obtenerRespuesta } = crearClienteMiddleware(request);
 
   // Sin cookies de sesión no hay nada que validar contra Supabase.
-  const contexto = tieneCookiesDeSesion(request)
+  const contexto = tieneCookiesDeSesion(request.cookies.getAll().map((c) => c.name))
     ? await cargarContexto({
         supabase,
         buscarAdmin: buscarAdminPorId,
