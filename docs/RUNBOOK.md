@@ -73,3 +73,14 @@ Límites de contenedor (`infra/docker-compose.yml`), con 2 réplicas de `web` en
 El techo deja unos 3 GB para el sistema y los otros proyectos del VPS. Verificación automática: `bash infra/scripts/test-memoria.sh` (heap <= 80 % del límite, `maxmemory` <= 75 % del límite de Redis, suma <= 5,5 GB). Si el inventario del VPS (T0.15) muestra menos memoria libre, reducir primero a 1 réplica de `web` (`WEB_REPLICAS=1`).
 
 Redis lleva las colas (`noeviction`): si llega a `maxmemory` rechaza escrituras en vez de perder trabajos.
+
+### Migraciones en el despliegue (D-008)
+
+`deploy.sh` no ejecuta `supabase db push`: las migraciones se aplican con el MCP de Supabase y los archivos de `packages/db/supabase/migrations/` son la fuente de verdad. Si el commit nuevo toca esa carpeta, `deploy.sh` se detiene y exige `--migraciones-verificadas` tras comprobar a mano:
+
+1. Aplicar las migraciones pendientes con `apply_migration` (en el proyecto `wyxjmlgrcjclelbrluvd`).
+2. Ejecutar `list_migrations` y comparar: cada archivo `AAAAMMDDHHMMSS_nombre.sql` debe tener una versión remota con el mismo número y nombre, y no debe haber versiones remotas sin archivo.
+3. Opcional: `get_advisors` (seguridad y rendimiento) tras el cambio.
+4. Volver a ejecutar `deploy.sh --migraciones-verificadas`.
+
+Ejemplo de comparación local: `ls packages/db/supabase/migrations | sed 's/\.sql$//'` frente a la lista de `list_migrations`.

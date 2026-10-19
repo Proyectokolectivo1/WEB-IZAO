@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # Despliegue de Izao (§4.5). Uso:
-#   infra/scripts/deploy.sh [--dry-run] [--skip-tests] [--skip-migrations] [--branch main]
+#   infra/scripts/deploy.sh [--dry-run] [--skip-tests] [--migraciones-verificadas] [--branch main]
 # --dry-run imprime cada paso sin ejecutar nada (no toca git, Docker ni la base).
 # Pensado para correr en el VPS (/srv/izao/app) vía el MCP contabo; también sirve en local.
 set -euo pipefail
 
-DRY_RUN=0; SKIP_TESTS=0; SKIP_MIG=0; BRANCH=main
+DRY_RUN=0; SKIP_TESTS=0; MIG_OK=0; BRANCH=main
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
     --skip-tests) SKIP_TESTS=1 ;;
-    --skip-migrations) SKIP_MIG=1 ;;
+    --migraciones-verificadas) MIG_OK=1 ;;
     --branch) BRANCH="${2:?falta la rama}"; shift ;;
     -h|--help) sed -n '2,6p' "$0"; exit 0 ;;
     *) echo "Argumento desconocido: $1" >&2; exit 2 ;;
@@ -58,14 +58,26 @@ if [ "$SKIP_TESTS" -eq 1 ]; then echo "(pruebas omitidas)"; else
   run pnpm lint; run pnpm typecheck; run pnpm test
 fi
 
-paso "3/7 Migraciones (Supabase)"
-if [ "$SKIP_MIG" -eq 1 ]; then echo "(migraciones omitidas)"; else
-  if [ "$DRY_RUN" -eq 1 ] || { command -v supabase >/dev/null && [ -d packages/db/supabase/migrations -o -d supabase/migrations ]; }; then
-    run supabase db push
-  else
-    echo "(sin Supabase CLI o sin migraciones: se omite)"
-  fi
+paso "3/7 Migraciones de base de datos (paso manual, D-008)"
+# Las migraciones NO se aplican desde aquí: se aplican con el MCP de Supabase (apply_migration).
+# Este paso solo exige que, si el commit nuevo trae migraciones, alguien haya comprobado que
+# packages/db/supabase/migrations coincide con las remotas (list_migrations) y lo confirme.
+if [ "$DRY_RUN" -eq 1 ]; then
+  echo "[dry-run] git diff --name-only $PREV_SHA $NEW_SHA -- packages/db/supabase/migrations"
+  MIG_NUEVAS=""
+else
+  MIG_NUEVAS="$(git diff --name-only "$PREV_SHA" "$NEW_SHA" -- packages/db/supabase/migrations || true)"
 fi
+if [ -n "$MIG_NUEVAS" ] && [ "$MIG_OK" -ne 1 ]; then
+  echo "Este despliegue trae migraciones nuevas o modificadas:" >&2
+  echo "$MIG_NUEVAS" | sed 's/^/  /' >&2
+  echo >&2
+  echo "Antes de desplegar: aplícalas con el MCP de Supabase (apply_migration), compara con list_migrations" >&2
+  echo "que las versiones remotas coinciden con los archivos de packages/db/supabase/migrations y vuelve" >&2
+  echo "a ejecutar con --migraciones-verificadas (ver docs/RUNBOOK.md)." >&2
+  exit 1
+fi
+[ -n "$MIG_NUEVAS" ] && echo "Migraciones confirmadas a mano (--migraciones-verificadas)." || echo "Sin cambios en migraciones."
 
 paso "4/7 Construcción de imágenes"
 export IZAO_TAG="$NEW_SHA"
