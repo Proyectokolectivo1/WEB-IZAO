@@ -129,6 +129,8 @@ commit;
 -- ---------------------------------------------------------------------------
 begin;
 
+-- Estado de publicación (M8): todas las páginas se siembran en `draft` (default de la columna): las de Colombia tienen
+-- marcadores [COMPLETAR]/[RAZÓN SOCIAL]/[NIT] por resolver y las de Ecuador parten de texto colombiano. El panel las publica.
 insert into public.pages (country_code, slug, title, content_html, version) values
 ('CO', 'quienes-somos', 'Quiénes somos', '<p>[COMPLETAR]</p>', 1),
 
@@ -205,11 +207,11 @@ insert into public.pages (country_code, slug, title, content_html, version) valu
 on conflict (country_code, slug) do nothing;
 
 -- Ecuador: borrador base de Colombia + ajustes del Anexo A para Ecuador al inicio (pendiente de adaptar).
-insert into public.pages (country_code, slug, title, content_html, version)
+insert into public.pages (country_code, slug, title, content_html, version, status)
 select 'EC', p.slug, p.title,
   case when n.note is null then p.content_html
        else '<aside data-ajuste="ecuador"><p><strong>Ajustes para Ecuador (pendiente de adaptar):</strong> ' || n.note || '</p></aside>' || E'\n' || p.content_html end,
-  1
+  1, 'draft'
 from public.pages p
 left join (values
   ('politica-de-envios', 'cobertura según la transportadora aliada en Ecuador [COMPLETAR]; valores en USD; tiempos de entrega [COMPLETAR]; el abono contra entrega aplica cuando ese método esté habilitado.'),
