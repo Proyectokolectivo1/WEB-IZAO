@@ -8,6 +8,8 @@
 **/.env.*
 !**/.env.example
 infra/data
+logs
+**/logs
 43iCH7rQJ3vx*
 *_ed25519*
 id_rsa*
