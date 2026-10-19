@@ -37,4 +37,9 @@ SALIDA="$(PG_FORCE_DOCKER=1 PG_DOCKER_NETWORK="container:$TGT" DATABASE_URL="pos
   ./restore.sh "$TMP/mini.sql.gz" --target-url "postgres://postgres:prueba@127.0.0.1:5432/izao_restore_ok" --confirmo-base-temporal 2>&1)" || { echo "$SALIDA"; echo "FALLA caso válido"; FALLOS=$((FALLOS+1)); }
 if grep -q "public.t 3" <<<"$SALIDA"; then echo "OK   restauró y contó public.t = 3"; else echo "$SALIDA"; echo "FALLA conteo del caso válido"; FALLOS=$((FALLOS+1)); fi
 
+echo "--- parse_pg_url con caracteres especiales"
+source ./lib.sh
+parse_pg_url "postgres://u%40x:p%3Aa%2Fb%40c@HOST.Example:6543/db%20n?sslmode=require"
+if [ "$U_USER|$U_PASS|$U_HOST|$U_PORT|$U_DB|$U_QUERY" = "u@x|p:a/b@c|host.example|6543|db n|sslmode=require" ]; then echo "OK   parse_pg_url"; else echo "FALLA parse_pg_url"; FALLOS=$((FALLOS+1)); fi
+
 [ "$FALLOS" -eq 0 ] && echo "GUARDA OK" || { echo "GUARDA CON $FALLOS FALLOS"; exit 1; }

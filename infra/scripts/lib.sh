@@ -8,16 +8,43 @@ export MSYS_NO_PATHCONV=1
 
 log() { echo "[$(date +%FT%T%z)] $*"; }
 
-# Ejecuta un binario de Postgres (pg_dump|psql) con la URL en la variable de entorno PGURL.
+# Ejecuta un binario de Postgres (pg_dump|psql) con la URL en la variable PGURL. La contraseña
+# nunca va como argumento (se vería en `ps`): se pasa por PGHOST/PGUSER/PGPASSWORD/... en el entorno.
 pg_run() {
   local bin="$1"; shift
+  parse_pg_url "$PGURL" || { echo "URL de base de datos inválida" >&2; return 1; }
+  export PGHOST="$U_HOST" PGPORT="$U_PORT" PGUSER="$U_USER" PGPASSWORD="$U_PASS"
+  if [ -n "$U_DB" ]; then export PGDATABASE="$U_DB"; else unset PGDATABASE; fi
+  if [[ "$U_QUERY" =~ sslmode=([a-z-]+) ]]; then export PGSSLMODE="${BASH_REMATCH[1]}"; else unset PGSSLMODE; fi
   if [ -z "${PG_FORCE_DOCKER:-}" ] && command -v "$bin" >/dev/null 2>&1; then
-    "$bin" "$PGURL" "$@"
+    "$bin" "$@"
   else
     local net=()
-    [ -n "${PG_DOCKER_NETWORK:-}" ] && net=(--network "$PG_DOCKER_NETWORK")
-    docker run --rm -i "${net[@]}" -e PGURL "$PG_IMAGE" sh -c 'bin="$1"; shift; exec "$bin" "$PGURL" "$@"' _ "$bin" "$@"
+    if [ -n "${PG_DOCKER_NETWORK:-}" ]; then net=(--network "$PG_DOCKER_NETWORK")
+    else
+      case "$U_HOST" in localhost|127.0.0.1|::1) net=(--network host) ;; esac
+    fi
+    docker run --rm -i "${net[@]}" -e PGHOST -e PGPORT -e PGUSER -e PGPASSWORD -e PGDATABASE -e PGSSLMODE "$PG_IMAGE" "$bin" "$@"
   fi
+}
+
+# Cifrado de los backups de base de datos (llave PÚBLICA en el VPS; la privada queda fuera).
+#   BACKUP_AGE_RECIPIENT=age1...   (preferido)   o   BACKUP_GPG_RECIPIENT=correo-o-huella
+cifrado_configurado() { [ -n "${BACKUP_AGE_RECIPIENT:-}" ] || [ -n "${BACKUP_GPG_RECIPIENT:-}" ]; }
+extension_cifrado() { if [ -n "${BACKUP_AGE_RECIPIENT:-}" ]; then echo age; else echo gpg; fi; }
+# stdin -> stdout
+cifrar() {
+  if [ -n "${BACKUP_AGE_RECIPIENT:-}" ]; then age -r "$BACKUP_AGE_RECIPIENT"
+  elif [ -n "${BACKUP_GPG_RECIPIENT:-}" ]; then gpg --batch --yes --trust-model always --encrypt --recipient "$BACKUP_GPG_RECIPIENT"
+  else return 1; fi
+}
+# archivo -> stdout (gzip en claro). Requiere la llave privada: BACKUP_AGE_IDENTITY (archivo) o el llavero de gpg.
+descifrar() {
+  case "$1" in
+    *.age) age -d -i "${BACKUP_AGE_IDENTITY:?define BACKUP_AGE_IDENTITY con la ruta de la llave privada}" "$1" ;;
+    *.gpg) gpg --batch --quiet --decrypt "$1" ;;
+    *) cat "$1" ;;
+  esac
 }
 
 # Conteo de filas por tabla (esquemas indicados): líneas "esquema.tabla N" ordenadas.
@@ -46,7 +73,7 @@ alertar() {
 }
 
 # Descodifica %XX de una URL.
-urldecode() { local s="${1//+/+}"; printf '%b' "${s//%/\x}"; }
+urldecode() { local s="$1"; printf '%b' "${s//\%/\\x}"; }
 
 # Descompone postgres://usuario:clave@host:puerto/base?consulta en U_USER, U_PASS, U_HOST (en
 # minúsculas, sin corchetes), U_PORT (def. 5432), U_DB y U_QUERY. Falla si no es una URL de Postgres.

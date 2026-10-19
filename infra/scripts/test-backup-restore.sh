@@ -52,10 +52,38 @@ echo imagen > "$TMP/media/p1/a.webp"
 export DATABASE_URL="postgres://postgres:prueba@$SRC:5432/postgres" PG_DOCKER_NETWORK="$RED" PG_FORCE_DOCKER=1
 export BACKUP_DIR="$TMP/backups" MEDIA_ROOT="$TMP/media"
 
+# Llave de prueba (solo en este directorio temporal; la privada real nunca está en el VPS).
+export GNUPGHOME="$TMP/gnupg"; mkdir -p "$GNUPGHOME"; chmod 700 "$GNUPGHOME" || true
+gpg --batch --quiet --passphrase '' --quick-generate-key "izao-prueba <prueba@ejemplo.test>" default default never 2>/dev/null
+export BACKUP_GPG_RECIPIENT="prueba@ejemplo.test"
+
+# Espía de docker: registra los argumentos para comprobar que la contraseña no viaja en ellos.
+REAL_DOCKER="$(command -v docker)"
+mkdir -p "$TMP/shim"
+printf '#!/usr/bin/env bash
+echo "$*" >> "%s/docker-args.log"
+exec "%s" "$@"
+' "$TMP" "$REAL_DOCKER" > "$TMP/shim/docker"
+chmod +x "$TMP/shim/docker"
+
+echo "--- backup sin llave pública configurada: debe negarse"
+if env -u BACKUP_GPG_RECIPIENT ./backup.sh --db-only --no-s3 >/dev/null 2>&1; then echo "FALLA: hizo backup sin cifrar"; exit 1; else echo "OK   se niega a respaldar sin cifrado"; fi
 echo "--- backup"
-./backup.sh --no-s3
-FILE="$BACKUP_DIR/db/$(date +%F).sql.gz"
+PATH="$TMP/shim:$PATH" ./backup.sh --no-s3
+FILE="$BACKUP_DIR/db/$(date +%F).sql.gz.gpg"
 ls -l "$FILE" "$BACKUP_DIR"/media/
+if gzip -t "$FILE" 2>/dev/null; then echo "FALLA: el dump no está cifrado"; exit 1; else echo "OK   el dump está cifrado"; fi
+if grep -q "prueba" "$TMP/docker-args.log"; then echo "FALLA: la contraseña viaja en los argumentos"; exit 1; else echo "OK   la contraseña no va en argumentos"; fi
+echo "--- permisos reales en Linux (el disco de Windows no los aplica): backup dentro de un contenedor"
+SCRIPTS_WIN="$(pwd -W 2>/dev/null || pwd)"
+docker run --rm --network "$RED" -v "$SCRIPTS_WIN:/s:ro" -e DATABASE_URL -e BACKUP_DIR=/b -e MEDIA_ROOT=/m postgres:17 bash -ec '
+  export GNUPGHOME=/root/g; mkdir -p -m 700 $GNUPGHOME /m; echo x > /m/a
+  gpg --batch --quiet --passphrase "" --quick-generate-key "p <p@ejemplo.test>" default default never 2>/dev/null
+  export BACKUP_GPG_RECIPIENT=p@ejemplo.test
+  bash /s/backup.sh --no-s3 >/dev/null
+  echo "modos: $(stat -c %a /b) $(stat -c %a /b/db) $(stat -c %a /b/media) $(stat -c %a /b/db/*.gpg) $(stat -c %a /b/media/*.tar.gz)"
+' | tee "$TMP/modos.txt"
+if grep -q "modos: 700 700 700 600 600" "$TMP/modos.txt"; then echo "OK   permisos 700 (carpetas) y 600 (archivos)"; else echo "FALLA permisos"; exit 1; fi
 echo "--- conteos origen"
 export PGURL="$DATABASE_URL"
 source ./lib.sh
@@ -63,9 +91,13 @@ table_counts "public auth storage" | tee "$TMP/origen.txt"
 echo "--- restore (contenedor temporal)"
 unset PG_DOCKER_NETWORK
 ./restore.sh "$FILE" --counts "$TMP/restaurado.txt" >/dev/null
-diff "$TMP/origen.txt" "$TMP/restaurado.txt" && echo "CONTEOS IGUALES"
+# Las tablas de sesiones/tokens se excluyen del backup: deben quedar vacías tras restaurar.
+awk '$1 ~ /^auth\.(refresh_tokens|sessions|flow_state|one_time_tokens)$/ {print $1, 0; next} {print}' "$TMP/origen.txt" > "$TMP/esperado.txt"
+grep -E '^auth\.refresh_tokens [1-9]' "$TMP/origen.txt" >/dev/null || { echo "FALLA: el origen no tenía tokens de prueba"; exit 1; }
+diff "$TMP/esperado.txt" "$TMP/restaurado.txt" || { echo "FALLA: los conteos difieren"; exit 1; }
+echo "CONTEOS IGUALES (tokens y sesiones excluidos)"
 echo "--- el restore rechaza Supabase"
-if ./restore.sh "$FILE" --target-url "postgres://x:y@db.example.supabase.co:5432/postgres" 2>&1; then
+if ./restore.sh "$FILE" --target-url "postgres://x:y@db.example.supabase.co:5432/postgres" --confirmo-base-temporal 2>&1; then
   echo "ERROR: no rechazó"; exit 1
 fi
 echo "--- keepalive y alertas"
@@ -73,7 +105,8 @@ export PG_DOCKER_NETWORK="$RED"
 ./keepalive.sh
 DISK_PATH="$TMP" ./check-alerts.sh
 echo "--- retención: un archivo viejo se borra"
-touch -d "20 days ago" "$BACKUP_DIR/db/2000-01-01.sql.gz"
+touch -d "20 days ago" "$BACKUP_DIR/db/2000-01-01.sql.gz.gpg"
 ./backup.sh --db-only --no-s3 >/dev/null
-if [ ! -f "$BACKUP_DIR/db/2000-01-01.sql.gz" ]; then echo "RETENCION OK"; fi
+if [ -f "$BACKUP_DIR/db/2000-01-01.sql.gz.gpg" ]; then echo "FALLA: la retención no borró el archivo viejo"; exit 1; fi
+echo "OK   retención de 14 días"
 echo "PRUEBA COMPLETA OK"

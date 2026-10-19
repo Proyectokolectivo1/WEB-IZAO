@@ -3,8 +3,10 @@
 #   infra/scripts/backup.sh [--db-only|--media-only] [--no-s3]
 # Variables: DATABASE_URL (obligatoria para la base), BACKUP_DIR (def. /srv/izao/backups),
 #   MEDIA_ROOT (def. /srv/izao/media), RETENTION_DAYS (14), DUMP_SCHEMAS ("public auth storage"),
-#   BACKUP_S3_ENDPOINT/BUCKET/KEY/SECRET (opcionales; copia solo los domingos).
+#   BACKUP_AGE_RECIPIENT (llave pública age) o BACKUP_GPG_RECIPIENT: OBLIGATORIA, los dumps se cifran.
+#   BACKUP_S3_ENDPOINT/BUCKET/KEY/SECRET (opcionales; copia solo los domingos; el dump ya va cifrado).
 set -euo pipefail
+umask 077
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 DO_DB=1; DO_MEDIA=1; DO_S3=1
@@ -25,18 +27,26 @@ RETENTION_DAYS="${RETENTION_DAYS:-14}"
 DUMP_SCHEMAS="${DUMP_SCHEMAS:-public auth storage}"
 HOY="$(date +%F)"
 mkdir -p "$BACKUP_DIR/db" "$BACKUP_DIR/media"
+chmod 700 "$BACKUP_DIR" "$BACKUP_DIR/db" "$BACKUP_DIR/media"
 fallo() { alertar "Backup falló en la línea $1"; exit 1; }
 trap 'fallo $LINENO' ERR
 
 if [ "$DO_DB" -eq 1 ]; then
   : "${DATABASE_URL:?DATABASE_URL no está definida}"
+  if ! cifrado_configurado; then
+    alertar "Backup de base NO realizado: define BACKUP_AGE_RECIPIENT o BACKUP_GPG_RECIPIENT (llave pública)"
+    exit 1
+  fi
   export PGURL="$DATABASE_URL"
-  DESTINO="$BACKUP_DIR/db/$HOY.sql.gz"
+  DESTINO="$BACKUP_DIR/db/$HOY.sql.gz.$(extension_cifrado)"
   args=(--no-owner --no-privileges)
   for s in $DUMP_SCHEMAS; do args+=(--schema="$s"); done
-  log "pg_dump -> $DESTINO"
-  pg_run pg_dump "${args[@]}" | gzip -9 > "$DESTINO.tmp"
-  gzip -t "$DESTINO.tmp"
+  # Sesiones y tokens no se respaldan: no sirven tras una restauración y son sensibles.
+  for t in auth.refresh_tokens auth.sessions auth.flow_state auth.one_time_tokens; do args+=(--exclude-table-data="$t"); done
+  log "pg_dump (cifrado) -> $DESTINO"
+  pg_run pg_dump "${args[@]}" | gzip -9 | cifrar > "$DESTINO.tmp"
+  [ -s "$DESTINO.tmp" ] || { alertar "Backup de base vacío"; exit 1; }
+  chmod 600 "$DESTINO.tmp"
   mv "$DESTINO.tmp" "$DESTINO"
   log "Base respaldada ($(du -h "$DESTINO" | cut -f1))"
 fi
@@ -62,7 +72,7 @@ fi
 # Retención. Base: archivos con más de N días. Media: se conserva la cadena completa
 # desde el último "full" anterior al corte (un incremental sin su full no sirve).
 log "Aplicando retención de $RETENTION_DAYS días"
-find "$BACKUP_DIR/db" -name '*.sql.gz' -mtime +"$RETENTION_DAYS" -delete
+find "$BACKUP_DIR/db" -name '*.sql.gz*' -mtime +"$RETENTION_DAYS" -delete
 CORTE="$(date -d "-$RETENTION_DAYS days" +%F)"
 BASE_FULL=""
 for f in "$BACKUP_DIR"/media/*-full.tar.gz; do

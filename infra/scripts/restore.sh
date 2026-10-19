@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Restaura un backup SOLO en una base temporal. Nunca sobrescribe el proyecto de Supabase.
+# Restaura un backup (.sql.gz, .sql.gz.age o .sql.gz.gpg) SOLO en una base temporal. Nunca sobrescribe el proyecto de Supabase.
 #   infra/scripts/restore.sh <archivo.sql.gz> [--keep] [--counts salida.txt]
 #     Crea un contenedor postgres:17 desechable, restaura, imprime conteos por tabla y lo borra
 #     (--keep lo deja vivo para inspección; se imprime su nombre).
@@ -23,7 +23,8 @@ while [ $# -gt 0 ]; do
   shift
 done
 [ -f "$ARCHIVO" ] || { echo "Uso: restore.sh <archivo.sql.gz> [--keep] [--counts f] [--target-url URL --confirmo-base-temporal]" >&2; exit 2; }
-gzip -t "$ARCHIVO"
+# Los backups de base van cifrados (.age/.gpg): se descifran con la llave privada, que NO está en el VPS.
+descifrar "$ARCHIVO" | gzip -t
 
 SCHEMAS="${DUMP_SCHEMAS:-public auth storage}"
 # Roles que Supabase da por existentes y que el dump referencia (GRANT/POLICY).
@@ -57,7 +58,7 @@ if [ -n "$TARGET" ]; then
   pg_run psql -X -q -c "$ROLES_SQL"
   pg_run psql -X -q -c "$EXT_SQL"
   pg_run psql -X -q -c "drop schema if exists public cascade"
-  gunzip -c "$ARCHIVO" | pg_run psql -X -q -v ON_ERROR_STOP=1 >/dev/null
+  descifrar "$ARCHIVO" | gunzip | pg_run psql -X -q -v ON_ERROR_STOP=1 >/dev/null
   log "Restauración completada en la base temporal indicada"
   if [ -n "$COUNTS" ]; then table_counts "$SCHEMAS" > "$COUNTS"; fi
   table_counts "$SCHEMAS"
@@ -75,7 +76,7 @@ dpsql -c "$ROLES_SQL"
 dpsql -c "$EXT_SQL"
 # El dump trae CREATE SCHEMA public: se parte de una base vacía (solo es seguro en la base temporal).
 dpsql -c "drop schema if exists public cascade"
-gunzip -c "$ARCHIVO" | dpsql -v ON_ERROR_STOP=1 >/dev/null
+descifrar "$ARCHIVO" | gunzip | dpsql -v ON_ERROR_STOP=1 >/dev/null
 log "Restauración completada en $NOMBRE"
 CUENTAS="$(dpsql -At -c "select format('select %L, count(*) from %I.%I', schemaname||'.'||tablename, schemaname, tablename) from pg_tables where schemaname = any(string_to_array('${SCHEMAS// /,}', ',')) order by 1" \
   | { grep . || true; } | while read -r q; do dpsql -At -F ' ' -c "$q" </dev/null; done | tr '|' ' ' | sort)"
