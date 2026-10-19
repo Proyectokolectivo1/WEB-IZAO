@@ -47,7 +47,7 @@ Prueba automática del ciclo completo (migraciones y seed reales → backup cifr
 
 ### Programación (`izao.cron`)
 
-Horas en UTC (sin depender de `CRON_TZ`; `.env` se carga con `run-with-env.sh`, que lo lee como texto literal): backup 03:00 Bogotá = `0 8 * * *`, keepalive de Supabase cada 3 días, alertas de base (70 % de 500 MB) y disco (80 %) cada 6 horas. Instalar en `/etc/cron.d/izao` (T0.16).
+Horas en UTC (sin depender de `CRON_TZ`; `.env` se carga con `run-with-env.sh`, que lo lee como texto literal; todo valor con `$`, `#` o espacios va entre comillas simples para que cron y Compose coincidan (el script avisa por stderr si no)): backup 03:00 Bogotá = `0 8 * * *`, keepalive de Supabase cada 3 días, alertas de base (70 % de 500 MB) y disco (80 %) cada 6 horas. Instalar en `/etc/cron.d/izao` (T0.16).
 
 ### Alertas
 
@@ -87,7 +87,7 @@ Ejemplo de comparación local: `ls packages/db/supabase/migrations | sed 's/\.sq
 
 ### Rollback: de dónde sale el tag anterior
 
-`deploy.sh` no toma el tag de git (tras un despliegue fallido HEAD podría quedar en el commit malo). Orden: `/srv/izao/ultimo-ok` (se escribe tras un healthcheck sano o un rollback exitoso), luego el tag de la imagen del contenedor `web` vivo y, solo como último recurso, git. Tras revertir, `git reset --keep` devuelve el repositorio al commit anterior.
+`deploy.sh` no toma el tag de git (tras un despliegue fallido HEAD podría quedar en el commit malo). Orden: `/srv/izao/ultimo-ok` (una línea `<tag> <commit-git>`, se escribe tras un healthcheck sano o un rollback exitoso), luego el tag de la imagen del contenedor `web` vivo y, solo como último recurso, git. Tras revertir, `git reset --keep` devuelve el repositorio al commit anterior. Lo mismo ocurre si falla algo en los pasos 1 a 4. La guarda de migraciones compara contra el **commit del último despliegue sano** guardado en `ultimo-ok`, así un despliegue fallido no oculta sus migraciones al siguiente intento.
 
 ## Nginx
 
@@ -105,3 +105,7 @@ Ejemplo de comparación local: `ls packages/db/supabase/migrations | sed 's/\.sq
   empieza por una palabra de 2 o más letras MAYÚSCULAS (`[COMPLETAR]`, `[RAZÓN SOCIAL]`, `[ID]`, `[COMPLETAR: algo]`). El error nombra el
   marcador encontrado. No cuentan los corchetes con cifras o minúsculas (`[30]`, `[más detalles]`), `[CDATA[` ni las siglas `COP`, `USD`, `IVA` y `UVT`.
   Para permitir otra sigla hay que añadirla a la lista de `enforce_page_publish_markers()` con una migración.
+
+## Tareas futuras
+
+- **B-n1 (antes de F1):** medir cuántos 429 produce la zona `izao_next_action` (60 por minuto por IP; todo POST con `Next-Action`). En Colombia muchos usuarios móviles comparten IP (CGNAT) y podrían saturarla durante el checkout. Revisar el log de Nginx (`limit_req`) con tráfico real y subir `rate`/`burst` si hace falta.
