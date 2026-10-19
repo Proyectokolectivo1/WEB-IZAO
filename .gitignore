@@ -15,6 +15,7 @@ tools/contabo-mcp/.env
 tools/contabo-mcp/node_modules/
 tools/contabo-mcp/dist/
 tools/contabo-mcp/logs/
+logs/
 
 # Llaves y secretos (nunca en git)
 43iCH7rQJ3vx*
