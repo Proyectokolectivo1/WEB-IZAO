@@ -3734,6 +3734,7 @@ export type Database = {
         Args: { p_country_code: string; p_kind: string }
         Returns: number
       }
+      purgar_audit_log: { Args: { p_dias?: number }; Returns: number }
       refresh_catalog_listing: {
         Args: { p_product_id: string }
         Returns: undefined
