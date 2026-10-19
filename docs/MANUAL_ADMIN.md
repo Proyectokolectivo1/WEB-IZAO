@@ -92,7 +92,8 @@ Pero la llave publicable de Supabase es pública por diseño, así que cualquier
 1. **Authentication > Rate Limits**: baja al mínimo razonable los límites de inicio de sesión (sign-ups and sign-ins), de verificación de tokens y de verificación MFA, que Supabase aplica por IP.
 2. **Authentication > Attack Protection**: activa la protección con CAPTCHA (Cloudflare Turnstile) para el inicio de sesión. Cuando se active, el formulario del panel deberá enviar el token del CAPTCHA; avísale al equipo para que lo incorpore.
 3. **Authentication > Sign In / Providers > Email**: exige contraseñas de al menos 12 caracteres y activa la protección contra contraseñas filtradas si tu plan la ofrece.
-4. Usa siempre contraseñas largas y únicas para las cuentas del panel: el segundo factor protege, pero no debe ser la única barrera.
+4. **Verifica que los límites por IP de Supabase Auth no se agoten:** todos los `signInWithPassword` del panel (y las verificaciones de código) salen desde la IP del VPS, no desde la de cada persona. Supabase aplica sus límites de inicio de sesión y de verificación por IP, así que una ráfaga de intentos contra el panel (o varias personas ingresando a la vez) podría agotar el límite y bloquear temporalmente a los usuarios legítimos. Al configurar los límites del punto 1, comprueba que el valor por IP sea suficiente para el uso normal del equipo y revisa en Authentication > Logs si aparecen errores `over_request_rate_limit`. El bloqueo propio del panel (5 intentos por correo, 15 por IP, 5 códigos por usuario) corta los intentos mucho antes de llegar a ese límite.
+5. Usa siempre contraseñas largas y únicas para las cuentas del panel: el segundo factor protege, pero no debe ser la única barrera.
 
 Pendientes de otros equipos (no los hace el dueño):
 
