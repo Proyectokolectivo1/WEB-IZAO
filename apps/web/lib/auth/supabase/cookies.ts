@@ -6,8 +6,6 @@
  * sesión de un cliente de la tienda, y este la perdería. Con un nombre propio
  * las dos sesiones conviven sin tocarse.
  */
-import { esProduccion } from '../env';
-
 export const NOMBRE_COOKIE_SESION = 'sb-izao-admin';
 
 export type OpcionesCookie = {
@@ -40,6 +38,7 @@ export function endurecerCookie(opciones: OpcionesCookie | undefined): OpcionesC
     path: '/',
     httpOnly: true,
     sameSite: 'lax',
-    secure: esProduccion(),
+    // Sin importar `env.ts` (solo servidor): este módulo también lo usa el cliente de navegador.
+    secure: process.env.NODE_ENV === 'production',
   };
 }

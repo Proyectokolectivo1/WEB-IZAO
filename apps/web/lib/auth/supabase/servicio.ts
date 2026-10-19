@@ -5,6 +5,7 @@
  * importa desde un componente de cliente ni se devuelve su resultado sin filtrar.
  * No tiene sesión ni la persiste.
  */
+import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 import { llaveSecretaSupabase, urlSupabase } from '../env';
 

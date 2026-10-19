@@ -4,6 +4,7 @@
  * Los mensajes de error nombran la variable que falta, nunca su valor.
  * `SUPABASE_SECRET_KEY` y `APP_ENCRYPTION_KEY` solo se leen en el servidor.
  */
+import 'server-only';
 
 function requerida(nombre: string): string {
   const valor = process.env[nombre];

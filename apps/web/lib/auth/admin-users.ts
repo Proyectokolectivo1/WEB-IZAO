@@ -2,6 +2,7 @@
  * Lectura de `admin_users` con el rol de servicio. La tabla tiene RLS sin
  * políticas para usuarios normales: solo el servidor puede leerla.
  */
+import 'server-only';
 import type { AdminInfo } from './decision';
 import { crearClienteServicio } from './supabase/servicio';
 
