@@ -89,3 +89,14 @@ Respecto a §6.2, `izao-db` aplicó estos cambios:
 - Los 520 productos de prueba son ficticios, con marcas ficticias; ningún texto usa términos de originalidad, autenticidad, certificación o afiliación (regla 7). Se corrigieron 4 nombres que decían "Original Ficticio".
 - Las ciudades y regiones se cargan tal cual las publican DANE e INEC, en MAYÚSCULAS. La presentación al cliente se decide en la tienda.
 - Cundinamarca no tiene capital municipal en DIVIPOLA; su capital, Bogotá D.C., es una región propia.
+
+## D-018 — Login del panel con MFA (2026-10-19)
+
+Decisiones de `izao-admin` en T0.13:
+- **Permisos:** la tabla módulo→roles y acción→roles vive en `apps/web/lib/auth/permissions.ts` (zona de `izao-admin`), no en `packages/core` (dueño `izao-pagos`). Si otro paquete la necesita, se mueve entonces. Está probada contra §24.3.
+- **Sesión de 12 h (§26.1):** el plan gratuito de Supabase no limita la duración de la sesión. El panel guarda la cookie `izao_admin_inicio` (`httpOnly`), con el instante del ingreso firmado con HMAC-SHA256 y ligado al usuario. La firma usa `APP_ENCRYPTION_KEY` (§28) con una etiqueta de dominio propia; no se agrega una variable nueva. Rotar esa llave cierra todas las sesiones.
+- **Aal2 siempre:** `/admin/**` exige MFA verificado a todos los roles; la columna `admin_users.mfa_required` queda sin efecto hasta que el módulo Usuarios defina su uso.
+- **Bloqueo de intentos:** mientras Redis no esté disponible para el panel, el límite de 5 fallos por correo (15 por IP) y 5 fallos de código por usuario, en 15 minutos, se cuenta sobre `audit_log`. Cuando exista el rate limiting con Redis (§26.1) se puede sustituir.
+- **QR del MFA:** lo genera Supabase (SVG en `data:`); no se agrega librería de QR. La CSP de `/admin` debe permitir `img-src data:`.
+- **Auditoría de acceso:** `entity = 'sesion_admin'`, `actor` = id de Auth (o `anonimo` en fallos de contraseña). El correo se guarda solo como huella HMAC.
+- **Rutas de operador:** `/admin/pedidos`, `/admin/garantias`, `/admin/agente-impresion`. Las rutas de `/admin` que no figuran en la tabla exigen rol `admin`.

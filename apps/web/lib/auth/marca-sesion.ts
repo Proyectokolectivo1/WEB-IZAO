@@ -1,0 +1,77 @@
+/**
+ * Marca de inicio de sesión del panel (§26.1: sesión de 12 h).
+ *
+ * El plan gratuito de Supabase no permite limitar la duración de la sesión, así
+ * que el panel guarda en una cookie `httpOnly` el instante del inicio de sesión,
+ * firmado con HMAC-SHA256. Va ligada al usuario: no sirve para otra cuenta.
+ *
+ * Usa solo Web Crypto, por lo que corre igual en el middleware (Edge) y en Node.
+ */
+import { DURACION_SESION_MS } from './decision';
+
+export const NOMBRE_COOKIE_MARCA = 'izao_admin_inicio';
+
+const ETIQUETA = 'izao-admin-sesion-v1';
+
+const codificador = new TextEncoder();
+
+function aHex(bytes: ArrayBuffer): string {
+  return Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function firmar(mensaje: string, secreto: string): Promise<string> {
+  const llave = await crypto.subtle.importKey(
+    'raw',
+    codificador.encode(`${ETIQUETA}:${secreto}`),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  return aHex(await crypto.subtle.sign('HMAC', llave, codificador.encode(mensaje)));
+}
+
+/** Comparación en tiempo constante de dos cadenas hexadecimales. */
+function iguales(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diferencia = 0;
+  for (let i = 0; i < a.length; i += 1) diferencia |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diferencia === 0;
+}
+
+/** Valor de la cookie: `<ms>.<firma>`. */
+export async function crearMarca(userId: string, ahoraMs: number, secreto: string): Promise<string> {
+  const firma = await firmar(`${userId}.${ahoraMs}`, secreto);
+  return `${ahoraMs}.${firma}`;
+}
+
+/**
+ * `true` si la marca es auténtica, pertenece al usuario y tiene menos de 12 h.
+ * Una marca con fecha futura (más de 1 minuto) se rechaza.
+ */
+export async function marcaVigente(
+  valor: string | undefined | null,
+  userId: string,
+  ahoraMs: number,
+  secreto: string,
+): Promise<boolean> {
+  if (!valor) return false;
+  const [msTexto, firma, ...resto] = valor.split('.');
+  if (!msTexto || !firma || resto.length > 0 || !/^\d{10,16}$/.test(msTexto)) return false;
+  const inicio = Number(msTexto);
+  if (!Number.isSafeInteger(inicio)) return false;
+  if (inicio > ahoraMs + 60_000) return false;
+  if (ahoraMs - inicio >= DURACION_SESION_MS) return false;
+  const esperada = await firmar(`${userId}.${inicio}`, secreto);
+  return iguales(firma, esperada);
+}
+
+/** Opciones de la cookie de la marca. Caduca junto con la sesión. */
+export function opcionesCookieMarca(produccion: boolean) {
+  return {
+    httpOnly: true,
+    sameSite: 'lax' as const,
+    secure: produccion,
+    path: '/',
+    maxAge: Math.floor(DURACION_SESION_MS / 1000),
+  };
+}
