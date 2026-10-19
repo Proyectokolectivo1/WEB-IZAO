@@ -1,0 +1,26 @@
+{
+  "name": "@izao/core",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./money": "./src/money/index.ts",
+    "./pricing": "./src/pricing/index.ts",
+    "./order-state": "./src/order-state/index.ts",
+    "./schemas": "./src/schemas/index.ts",
+    "./contracts": "./src/contracts/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}
