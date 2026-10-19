@@ -53,6 +53,13 @@ probar() { # etiqueta
   codigos=""
   for i in 1 2 3 4 5 6 7 8; do codigos="$codigos $(curl -sk -o /dev/null -w '%{http_code}' -H 'Host: izaoperfumeria.com' "https://127.0.0.1/admin/login")"; done
   if echo "$codigos" | grep -q 429; then echo "FALLA [$1] el GET de /admin/login no debe limitarse:$codigos"; fallos=$((fallos+1)); else echo "OK   [$1] GET /admin/login sin límite estricto"; fi
+  # CSP: /admin/** debe permitir img-src data: (QR del MFA); todas las rutas llevan CSP
+  for ruta in / /api/productos /media/a.webp /admin/login /admin/mfa/enroll; do
+    csp="$(curl -sk -D - -o /dev/null -H 'Host: izaoperfumeria.com' "https://127.0.0.1$ruta" | grep -i '^content-security-policy:' || true)"
+    [ -n "$csp" ] || { echo "FALLA [$1] sin CSP en $ruta"; fallos=$((fallos+1)); }
+  done
+  csp="$(curl -sk -D - -o /dev/null -H 'Host: izaoperfumeria.com' "https://127.0.0.1/admin/mfa/enroll" | grep -i '^content-security-policy:' || true)"
+  if echo "$csp" | grep -q "img-src[^;]* data:"; then echo "OK   [$1] CSP de /admin/mfa permite img-src data:"; else echo "FALLA [$1] CSP de /admin sin data:"; fallos=$((fallos+1)); fi
   cab="$(curl -sk -D - -o /dev/null -H "Host: www.izaoperfumeria.com" "https://127.0.0.1/x")"
   if echo "$cab" | grep -qi "^strict-transport-security: max-age=" && echo "$cab" | grep -qi "^location: https://izaoperfumeria.com/x"; then echo "OK   [$1] www -> raíz 301"; else echo "FALLA [$1] www"; fallos=$((fallos+1)); fi
   cab="$(curl -s -D - -o /dev/null -H "Host: izaoperfumeria.com" "http://127.0.0.1/algo")"
