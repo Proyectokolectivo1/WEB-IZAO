@@ -8,18 +8,20 @@ import {
   resolveMasterShopStatus,
 } from './status';
 
-// Tabla completa de §14.6: id, nombre del filtro, grupo, estado interno, confirmado, final.
+// Tabla de §14.6 con el grupo `statusParent` de la colección de Postman (observado el
+// 2026-10-02: 1-2 Por preparar, 3-5 En preparación, 6 En tránsito, 8-11 Finalizadas).
+// id, nombre del filtro, grupo, estado interno, confirmado, final.
 const TABLE = [
   [1, 'Por Confirmar', 'Por preparar', 'enviado_transportadora', false, false],
   [2, 'Pendiente', 'Por preparar', 'enviado_transportadora', true, false],
   [3, 'Por Alistar', 'En preparación', 'en_preparacion', true, false],
   [4, 'Por Recolectar', 'En preparación', 'en_preparacion', true, false],
-  [5, 'Recolectada', 'En tránsito', 'en_transito', true, false],
+  [5, 'Recolectada', 'En preparación', 'en_transito', true, false],
   [6, 'En tránsito', 'En tránsito', 'en_transito', true, false],
   [8, 'Entregada', 'Finalizadas', 'entregado', true, true],
   [9, 'Cancelada', 'Finalizadas', 'cancelado', false, true],
   [10, 'Devuelta', 'Finalizadas', 'devuelto', true, true],
-  [11, 'Reclamaciones', null, 'reclamacion', true, true],
+  [11, 'Reclamaciones', 'Finalizadas', 'reclamacion', true, true],
 ] as const;
 
 describe('estados de MasterShop (§14.6)', () => {
@@ -40,13 +42,7 @@ describe('estados de MasterShop (§14.6)', () => {
 
   it('los grupos son los del dashboard (§21.3)', () => {
     const groups = new Set(MASTERSHOP_STATUSES.map((s) => s.group));
-    expect([...groups]).toEqual([
-      'Por preparar',
-      'En preparación',
-      'En tránsito',
-      'Finalizadas',
-      null,
-    ]);
+    expect([...groups]).toEqual(['Por preparar', 'En preparación', 'En tránsito', 'Finalizadas']);
   });
 
   it.each(TABLE)(

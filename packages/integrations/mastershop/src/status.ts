@@ -25,8 +25,13 @@ export interface MasterShopStatusInfo {
   name: string;
   /** Nombre que usa el filtro `orderStatus` del listado. */
   filterName: string;
-  /** `statusParent`; `null` en Reclamaciones (sin grupo en §14.6). */
-  group: MasterShopStatusGroup | null;
+  /**
+   * `statusParent` según la colección de Postman (observado el 2026-10-02): 1-2 Por
+   * preparar, 3-5 En preparación, 6 En tránsito, 8-11 Finalizadas. Difiere de §14.6
+   * (5 en tránsito, 11 sin grupo): gana el proveedor. La plataforma lo define y no es
+   * contrato: si el listado trae `statusParent`, ese valor manda.
+   */
+  group: MasterShopStatusGroup;
   internal: OrderStatus;
   /** Ya salió de "Por Confirmar" (§14.6 marca el 2 como confirmado). */
   confirmed: boolean;
@@ -39,19 +44,19 @@ export const MASTERSHOP_STATUSES: readonly MasterShopStatusInfo[] = Object.freez
   s(2, 'Pendiente', 'Pendiente', 'Por preparar', 'enviado_transportadora', true, false),
   s(3, 'Por alistar', 'Por Alistar', 'En preparación', 'en_preparacion', true, false),
   s(4, 'Por recolectar', 'Por Recolectar', 'En preparación', 'en_preparacion', true, false),
-  s(5, 'Recolectada', 'Recolectada', 'En tránsito', 'en_transito', true, false),
+  s(5, 'Recolectada', 'Recolectada', 'En preparación', 'en_transito', true, false),
   s(6, 'En tránsito', 'En tránsito', 'En tránsito', 'en_transito', true, false),
   s(8, 'Entregada', 'Entregada', 'Finalizadas', 'entregado', true, true),
   s(9, 'Cancelada', 'Cancelada', 'Finalizadas', 'cancelado', false, true),
   s(10, 'Devuelta', 'Devuelta', 'Finalizadas', 'devuelto', true, true),
-  s(11, 'Reclamaciones', 'Reclamaciones', null, 'reclamacion', true, true),
+  s(11, 'Reclamaciones', 'Reclamaciones', 'Finalizadas', 'reclamacion', true, true),
 ]);
 
 function s(
   id: MasterShopStatusId,
   name: string,
   filterName: string,
-  group: MasterShopStatusGroup | null,
+  group: MasterShopStatusGroup,
   internal: OrderStatus,
   confirmed: boolean,
   final: boolean,

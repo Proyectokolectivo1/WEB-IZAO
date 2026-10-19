@@ -56,19 +56,18 @@ export const MS_ERRORS = {
   documentPair: 'documentType y documentNumber deben enviarse juntos',
 } as const;
 
-/** Estados en el texto que usa el listado (`orderStatus`), por id. */
+/** Estados en el texto del listado (`orderStatus`) y su `statusParent` observado, por id. */
 export const MS_STATUS_NAMES: Readonly<Record<number, { name: string; parent: string | null }>> = {
   1: { name: 'Por Confirmar', parent: 'Por preparar' },
   2: { name: 'Pendiente', parent: 'Por preparar' },
   3: { name: 'Por Alistar', parent: 'En preparación' },
   4: { name: 'Por Recolectar', parent: 'En preparación' },
-  5: { name: 'Recolectada', parent: 'En tránsito' },
+  5: { name: 'Recolectada', parent: 'En preparación' },
   6: { name: 'En tránsito', parent: 'En tránsito' },
   8: { name: 'Entregada', parent: 'Finalizadas' },
   9: { name: 'Cancelada', parent: 'Finalizadas' },
   10: { name: 'Devuelta', parent: 'Finalizadas' },
-  // `[VERIFICAR]` qué `statusParent` trae el listado para Reclamaciones.
-  11: { name: 'Reclamaciones', parent: null },
+  11: { name: 'Reclamaciones', parent: 'Finalizadas' },
 };
 
 /** Ejemplo documentado de un ítem del listado (`POST /api/orders/list`). */
