@@ -8,6 +8,8 @@ Estos pasos los hace el dueño una sola vez, en su computador, para crear el pri
 
 ### 1. Crear `apps/web/.env.local`
 
+Copia `apps/web/.env.example` como `apps/web/.env.local` y completa los valores. Las variables son:
+
 Crea el archivo `apps/web/.env.local` con estas variables (los valores salen de Supabase, proyecto `wyxjmlgrcjclelbrluvd`, en Project Settings > API Keys):
 
 ```
@@ -61,7 +63,8 @@ Ahora mismo no existe aún el módulo Usuarios. Para probar al operador, con el 
 pnpm crear-admin -- --correo operador@ejemplo.com --nombre "Operador de prueba" --rol operator
 ```
 
-El script crea el usuario y abre una ventana de 24 horas para que active su verificación en dos pasos (ver abajo). Ingresa con ese usuario, actívala y comprueba que solo ve Pedidos, Garantías y Agente de impresión, y que `/admin/productos` o `/admin/usuarios` lo llevan a "No tienes permiso para esta sección".
+El script crea el usuario y abre una ventana de 24 horas para que active su verificación en dos pasos (ver el paso 3). Ingresa con ese usuario, actívala y comprueba que solo ve Pedidos, Garantías y Agente de impresión, y que `/admin/productos` o `/admin/usuarios` lo llevan a "No tienes permiso para esta sección".
+
 ### 6. Revisar la auditoría
 
 En Supabase > SQL Editor:
