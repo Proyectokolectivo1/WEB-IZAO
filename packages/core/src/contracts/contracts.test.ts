@@ -15,7 +15,10 @@ import {
   type Payment,
   type PaymentProvider,
   type ProviderStatus,
+  type ConfirmRedemptionResult,
+  type ExpiringOrderRow,
   type RawRequest,
+  type ReserveRedemptionResult,
   type RedemptionFunctionResult,
   type StockFunctionResult,
   type StockShortage,
@@ -171,6 +174,33 @@ describe('contracts: interfaces (comprobación de tipos)', () => {
     >();
     expectTypeOf<Order['stock_state']>().toEqualTypeOf<StockState>();
     expectTypeOf<Order['whatsapp_opt_in']>().toEqualTypeOf<boolean>();
+  });
+
+  it('A2/M3: pago_rechazado vence y confirmar_canje no revalida límites ni vigencia', () => {
+    expectTypeOf<ExpiringOrderRow['estado_actual']>().toEqualTypeOf<
+      'pendiente_pago' | 'pago_rechazado' | 'esperando_abono' | 'pendiente_manual'
+    >();
+    expectTypeOf<ExpiringOrderRow['nuevo_estado']>().toEqualTypeOf<'expirado' | 'abandonado'>();
+    expectTypeOf<Extract<ConfirmRedemptionResult, { ok: false }>['motivo']>().toEqualTypeOf<
+      'pedido_inexistente'
+    >();
+    expectTypeOf<Extract<ConfirmRedemptionResult, { ok: true }>['advertencia']>().toEqualTypeOf<
+      'limite_superado' | undefined
+    >();
+    expectTypeOf<Extract<ReserveRedemptionResult, { ok: false }>['motivo']>().toEqualTypeOf<
+      | 'pedido_inexistente'
+      | 'codigo_inactivo'
+      | 'codigo_de_otro_pais'
+      | 'codigo_fuera_de_vigencia'
+      | 'limite_total'
+      | 'limite_por_cliente'
+    >();
+    const r: ConfirmRedemptionResult = { ok: true, estado: 'confirmed', advertencia: 'limite_superado' };
+    expect(r.ok && r.advertencia).toBe('limite_superado');
+    // discount_code_text lo llena el trigger: es de solo lectura en el contrato.
+    expectTypeOf<Readonly<Pick<Order, 'discount_code_text'>>>().toEqualTypeOf<
+      Pick<Order, 'discount_code_text'>
+    >();
   });
 
   it('un adaptador de prueba implementa CarrierProvider', async () => {

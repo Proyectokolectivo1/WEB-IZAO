@@ -38,11 +38,38 @@ export type RedemptionRejectReason =
   | 'limite_total'
   | 'limite_por_cliente';
 
-/** `reservar_canje`, `confirmar_canje`, `liberar_canje`. */
-export type RedemptionFunctionResult =
+type OrderNotFound = { ok: false; estado: null; motivo: 'pedido_inexistente' };
+
+/** `reservar_canje`: valida vigencia [starts_at, ends_at) y cupos (total y por cliente). */
+export type ReserveRedemptionResult =
   | { ok: true; estado: RedemptionState; repetido?: true }
-  | { ok: false; estado: null; motivo: 'pedido_inexistente' }
+  | OrderNotFound
   | { ok: false; estado: RedemptionState; motivo: RedemptionRejectReason };
+
+/**
+ * `confirmar_canje` (M3): en un pago tardío no revalida vigencia ni cupo; confirma
+ * siempre. Si con eso se supera un límite devuelve `advertencia: 'limite_superado'` y
+ * el worker debe alertar al admin.
+ */
+export type ConfirmRedemptionResult =
+  | {
+      ok: true;
+      estado: 'confirmed' | 'sin_codigo';
+      repetido?: true;
+      advertencia?: 'limite_superado';
+    }
+  | OrderNotFound;
+
+/** `liberar_canje`. */
+export type ReleaseRedemptionResult =
+  | { ok: true; estado: RedemptionState; repetido?: true }
+  | OrderNotFound;
+
+/** Cualquiera de las tres funciones de canje. */
+export type RedemptionFunctionResult =
+  | ReserveRedemptionResult
+  | ConfirmRedemptionResult
+  | ReleaseRedemptionResult;
 
 /** Fila de `pedidos_por_vencer(p_ahora, p_limite)`. */
 export interface ExpiringOrderRow {
@@ -50,7 +77,8 @@ export interface ExpiringOrderRow {
   number: string;
   country_code: string;
   payment_method: string;
-  estado_actual: 'pendiente_pago' | 'esperando_abono' | 'pendiente_manual';
+  /** A2: `pago_rechazado` también vence (→ `expirado`). */
+  estado_actual: 'pendiente_pago' | 'pago_rechazado' | 'esperando_abono' | 'pendiente_manual';
   nuevo_estado: 'expirado' | 'abandonado';
   stock_reserved_until: string;
   stock_state: StockState;

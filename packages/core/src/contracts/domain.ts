@@ -108,7 +108,10 @@ export interface Order {
   cod_deposit_amount: bigint;
   cod_collect_amount: bigint;
 
-  /** Copia del código usado; la llena un trigger de la base al insertar. No escribirla a mano. */
+  /**
+   * Copia del código usado. La controla por completo un trigger a partir de
+   * `discount_code_id`: no se envía en el insert (si se envía, la base la ignora).
+   */
   readonly discount_code_text: string | null;
 
   /** Consentimientos del checkout (§10.1 paso 6). */
