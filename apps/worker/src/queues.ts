@@ -1,5 +1,6 @@
 import { Queue, Worker, type Processor } from 'bullmq';
 import { Redis } from 'ioredis';
+import { JOB_PURGAR_AUDIT_LOG, purgarAuditLog } from './jobs/purgar-audit-log.js';
 
 /** Conexión compartida; BullMQ exige `maxRetriesPerRequest: null` en workers. */
 export function createConnection(url = process.env.REDIS_URL): Redis {
@@ -25,9 +26,17 @@ export function createQueue(name: QueueName, connection: Redis): Queue {
   return new Queue(name, { connection, defaultJobOptions });
 }
 
-/** Procesador de ejemplo: idempotente y sin efectos. */
+/** Procesador de la cola de sistema: cada job es idempotente. */
 export const procesarSistema: Processor = async (job) => {
-  return { ok: true, job: job.name };
+  switch (job.name) {
+    case JOB_PURGAR_AUDIT_LOG: {
+      const borrados = await purgarAuditLog();
+      console.log(`[worker] purgar_audit_log: ${borrados} eventos borrados`);
+      return { ok: true, job: job.name, borrados };
+    }
+    default:
+      return { ok: true, job: job.name };
+  }
 };
 
 export function createWorker(name: QueueName, processor: Processor, connection: Redis): Worker {
