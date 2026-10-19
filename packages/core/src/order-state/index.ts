@@ -34,13 +34,16 @@ export type OrderStatus = (typeof ORDER_STATUSES)[number];
  * Transiciones válidas. Fuente: tabla de §16, más:
  * - D-002: `pendiente_manual → expirado` al vencer la reserva.
  * - §12.2: abono aprobado tarde para un pedido `abandonado` sin stock →
- *   `requiere_reembolso` (§16 lo describe como "pago tardío sin stock").
+ *   `requiere_reembolso` (§16 lo describe como "pago tardío sin stock"). Aprobado por el dueño.
+ * - Decisión del dueño (Oleada 1): pago completo aprobado después de `expirado` →
+ *   `requiere_reembolso`, para que el dinero cobrado quede con rastro y alerta al admin.
+ *   Es la única salida de `expirado`.
  */
 export const ORDER_TRANSITIONS: Readonly<Record<OrderStatus, readonly OrderStatus[]>> =
   Object.freeze({
     pendiente_pago: ['pagado', 'pago_rechazado', 'expirado'],
     pago_rechazado: ['pendiente_pago', 'expirado'],
-    expirado: [],
+    expirado: ['requiere_reembolso'],
     esperando_abono: ['abono_pagado', 'abandonado'],
     abandonado: ['abono_pagado', 'requiere_reembolso'],
     pendiente_manual: ['pagado', 'cancelado', 'expirado'],

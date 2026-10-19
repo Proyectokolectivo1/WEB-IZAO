@@ -12,11 +12,14 @@ import {
   type OrderStatus,
 } from './index';
 
-/** Tabla literal de §16 de la especificación, más D-002 y §12.2 (pago tardío sin stock). */
+/**
+ * Tabla literal de §16 de la especificación, más D-002, §12.2 (abono tardío sin stock)
+ * y la decisión del dueño de la Oleada 1 (pago completo aprobado después de expirar).
+ */
 const ESPERADA: Record<OrderStatus, OrderStatus[]> = {
   pendiente_pago: ['pagado', 'pago_rechazado', 'expirado'],
   pago_rechazado: ['pendiente_pago', 'expirado'],
-  expirado: [],
+  expirado: ['requiere_reembolso'],
   esperando_abono: ['abono_pagado', 'abandonado'],
   abandonado: ['abono_pagado', 'requiere_reembolso'],
   pendiente_manual: ['pagado', 'cancelado', 'expirado'],
@@ -64,10 +67,8 @@ describe('order-state: estados', () => {
     expect(isOrderStatus(undefined)).toBe(false);
   });
 
-  it('terminales: expirado, devuelto, cancelado, reclamacion', () => {
-    expect([...TERMINAL_STATUSES].sort()).toEqual(
-      ['cancelado', 'devuelto', 'expirado', 'reclamacion'].sort(),
-    );
+  it('terminales: devuelto, cancelado, reclamacion', () => {
+    expect([...TERMINAL_STATUSES].sort()).toEqual(['cancelado', 'devuelto', 'reclamacion'].sort());
   });
 });
 
@@ -89,6 +90,17 @@ describe('order-state: tabla completa de transiciones (17 × 17)', () => {
 
   it('D-002: pendiente_manual → expirado está permitida', () => {
     expect(puedeTransicionar('pendiente_manual', 'expirado')).toBe(true);
+  });
+
+  it('§12.2: abono aprobado tarde sin stock, abandonado → requiere_reembolso', () => {
+    expect(puedeTransicionar('abandonado', 'requiere_reembolso')).toBe(true);
+  });
+
+  it('decisión del dueño: pago completo aprobado tras expirar, expirado → requiere_reembolso y nada más', () => {
+    expect(puedeTransicionar('expirado', 'requiere_reembolso')).toBe(true);
+    expect(siguientesEstados('expirado')).toEqual(['requiere_reembolso']);
+    expect(puedeTransicionar('expirado', 'pagado')).toBe(false);
+    expect(puedeTransicionar('expirado', 'pendiente_pago')).toBe(false);
   });
 });
 
@@ -167,6 +179,18 @@ describe('order-state: transicionar', () => {
     expect(r).toMatchObject({ ok: false, error: { code: 'TERMINAL_STATE' } });
   });
 
+  it('expirado ya no es final pero solo admite requiere_reembolso', () => {
+    const r = transicionar({ from: 'expirado', to: 'pagado', actor: 'webhook:wompi' });
+    expect(r).toMatchObject({ ok: false, error: { code: 'INVALID_TRANSITION' } });
+    const ok = transicionar({ from: 'expirado', to: 'requiere_reembolso', actor: 'webhook:wompi' });
+    expect(ok.ok).toBe(true);
+  });
+
+  it('rechaza salir de devuelto', () => {
+    const r = transicionar({ from: 'devuelto', to: 'cancelado', actor: 'system' });
+    expect(r).toMatchObject({ ok: false, error: { code: 'TERMINAL_STATE' } });
+  });
+
   it('rechaza transición al mismo estado', () => {
     const r = transicionar({ from: 'pagado', to: 'pagado', actor: 'system' });
     expect(r).toMatchObject({ ok: false, error: { code: 'SAME_STATE' } });
@@ -206,6 +230,10 @@ describe('order-state: findTransitionPath (sincronización que se salta estados)
     expect(findTransitionPath('pagado', 'enviado_transportadora')).toEqual([
       'enviado_transportadora',
     ]);
+  });
+
+  it('expirado → cancelado pasa por requiere_reembolso', () => {
+    expect(findTransitionPath('expirado', 'cancelado')).toEqual(['requiere_reembolso', 'cancelado']);
   });
 
   it('sin camino devuelve null', () => {
