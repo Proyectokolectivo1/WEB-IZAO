@@ -113,13 +113,15 @@ export type MethodUnavailableCode =
   | 'COD_DISABLED'
   | 'COD_NOT_CONFIGURED'
   | 'COD_BELOW_MINIMUM'
-  | 'FINANCING_PCT_MISSING';
+  | 'FINANCING_PCT_MISSING'
+  | 'TOTAL_NOT_POSITIVE';
 
 export type PricingMessageCode =
   | 'CART_EMPTY'
   | 'DISCOUNT_NOT_ALLOWED_WITH_FINANCING'
   | DiscountRejectionCode
   | 'COD_BELOW_MINIMUM'
+  | 'TOTAL_NOT_POSITIVE'
   | 'NO_PAYMENT_METHODS'
   | 'PAYMENT_METHOD_UNAVAILABLE';
 
@@ -405,6 +407,10 @@ function computeFor(
 
   const total = subtotal - discount + surcharge;
 
+  // Defensa: un pago en línea nunca se crea por 0 o menos. El dueño indica que un código
+  // fijo no alcanza el precio de ningún producto; si ocurriera, el checkout debe negarse.
+  if (isOnlineMethod(method) && total <= 0n) unavailable ??= 'TOTAL_NOT_POSITIVE';
+
   let codDeposit = 0n;
   let codCollect = 0n;
   if (method === 'cod') {
@@ -432,6 +438,11 @@ function computeFor(
     carrierTotal,
     unavailable,
   };
+}
+
+/** Métodos que cobran en línea el total del pedido. */
+function isOnlineMethod(method: PricingPaymentMethod | null): boolean {
+  return method === 'wompi' || method === 'addi' || method === 'sistecredito';
 }
 
 function freezeAll<T extends object>(list: T[]): readonly Readonly<T>[] {
@@ -502,6 +513,9 @@ export function calcularPrecios(input: PricingInput): PricingResult {
         ? { code: 'CODE_MIN_SUBTOTAL', level: 'error', missing_amount: outcomeBase.missing_amount }
         : { code: outcomeBase.reason, level: 'error' },
     );
+  }
+  if (lines.length > 0 && isOnlineMethod(input.paymentMethod) && selected.total <= 0n) {
+    messages.push({ code: 'TOTAL_NOT_POSITIVE', level: 'error' });
   }
   if (available_methods.some((m) => m.method === 'cod' && m.reason === 'COD_BELOW_MINIMUM')) {
     messages.push({ code: 'COD_BELOW_MINIMUM', level: 'info' });

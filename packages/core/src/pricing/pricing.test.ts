@@ -284,6 +284,40 @@ describe('pricing: códigos de descuento', () => {
     expect(r.total_customer).toBe(0n);
   });
 
+  it('defensa: total 0 con pago en línea (Wompi) queda marcado con error estable y no disponible', () => {
+    const r = calc({
+      items: [item(15_000n)],
+      paymentMethod: 'wompi',
+      discountCode: codigo({ type: 'fixed', value: 15_000n }),
+    });
+    expect(r.total_customer).toBe(0n);
+    expect(r.payment_method_available).toBe(false);
+    expect(r.messages).toContainEqual({ code: 'TOTAL_NOT_POSITIVE', level: 'error' });
+    expect(metodo(r, 'wompi')).toEqual({
+      method: 'wompi',
+      available: false,
+      reason: 'TOTAL_NOT_POSITIVE',
+    });
+  });
+
+  it('defensa: con total positivo no aparece TOTAL_NOT_POSITIVE', () => {
+    const r = calc({ items: [item(15_001n)], discountCode: codigo({ type: 'fixed', value: 15_000n }) });
+    expect(r.total_customer).toBe(1n);
+    expect(r.payment_method_available).toBe(true);
+    expect(r.messages.map((m) => m.code)).not.toContain('TOTAL_NOT_POSITIVE');
+  });
+
+  it('defensa: total 0 en pedido manual o sin método no emite TOTAL_NOT_POSITIVE (no hay pago en línea)', () => {
+    for (const paymentMethod of ['manual', null] as const) {
+      const r = calc({
+        items: [item(15_000n)],
+        paymentMethod,
+        discountCode: codigo({ type: 'fixed', value: 15_000n }),
+      });
+      expect(r.messages.map((m) => m.code)).not.toContain('TOTAL_NOT_POSITIVE');
+    }
+  });
+
   it('fijo mayor que la base elegible (por categoría) se limita a esa base', () => {
     const r = calc({
       items: [item(5_000n, { category_ids: [CAT_X] }), item(50_000n)],
