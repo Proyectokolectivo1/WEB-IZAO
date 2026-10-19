@@ -206,6 +206,34 @@ describe('§11.3 casos obligatorios', () => {
     expect(r.total_customer).toBe(8_982n);
   });
 
+  it('caso 9 con pedido manual (Ecuador sin métodos activos): disponible y mismo total 89,82', () => {
+    const r = calc({
+      countrySettings: EC,
+      paymentMethodSettings: [],
+      paymentMethod: 'manual',
+      items: [item(4_990n, { quantity: 2 })],
+      discountCode: codigo({ country_code: 'EC' }),
+    });
+    expect(r.payment_method_available).toBe(true);
+    expect(r.total_customer).toBe(8_982n);
+  });
+
+  it('caso 9 con pedido manual y Ecuador con un método activo: manual rechazado', () => {
+    const r = calc({
+      countrySettings: EC,
+      paymentMethodSettings: [{ method: 'wompi', is_enabled: true, sort_order: 1 }],
+      paymentMethod: 'manual',
+      items: [item(4_990n, { quantity: 2 })],
+      discountCode: codigo({ country_code: 'EC' }),
+    });
+    expect(r.payment_method_available).toBe(false);
+    expect(r.messages).toContainEqual({
+      code: 'PAYMENT_METHOD_UNAVAILABLE',
+      level: 'error',
+      reason: 'METHOD_DISABLED',
+    });
+  });
+
   it('caso 10: 90.000 + 60.000 contra entrega con 10 % → descuento 15.000 (9.000 + 6.000), total 135.000, recauda 125.000, ítems a MasterShop 75.000 y 50.000', () => {
     const r = calc({
       items: [item(90_000n), item(60_000n)],
@@ -649,6 +677,35 @@ describe('pricing: contra entrega y métodos', () => {
     const r = calc({ items: [item(90_000n)], paymentMethod: null, discountCode: codigo({}) });
     expect(r.total_customer).toBe(81_000n);
     expect(r.cod_deposit).toBe(0n);
+    expect(r.payment_method_available).toBe(false);
+  });
+
+  it('A3: pedido manual en Colombia con métodos activos se rechaza (METHOD_DISABLED)', () => {
+    const r = calc({ items: [item(90_000n)], paymentMethod: 'manual' });
+    expect(r.payment_method_available).toBe(false);
+    expect(r.messages).toContainEqual({
+      code: 'PAYMENT_METHOD_UNAVAILABLE',
+      level: 'error',
+      reason: 'METHOD_DISABLED',
+    });
+  });
+
+  it('A3: manual disponible si todos los métodos del país están apagados', () => {
+    const r = calc({
+      items: [item(90_000n)],
+      paymentMethod: 'manual',
+      paymentMethodSettings: METODOS_CO.map((m) => ({ ...m, is_enabled: false })),
+    });
+    expect(r.payment_method_available).toBe(true);
+  });
+
+  it('A3: manual con carrito vacío no está disponible', () => {
+    const r = calc({
+      countrySettings: EC,
+      paymentMethodSettings: [],
+      paymentMethod: 'manual',
+      items: [],
+    });
     expect(r.payment_method_available).toBe(false);
   });
 

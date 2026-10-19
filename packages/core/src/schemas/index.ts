@@ -3,7 +3,7 @@
  * El cliente nunca manda precios ni totales: solo variantes y cantidades (regla 2).
  */
 import { z } from 'zod';
-import { DOCUMENT_TYPES, type VerifiedEvent } from '../contracts';
+import { DOCUMENT_TYPES, type PaymentMethod, type VerifiedEvent } from '../contracts';
 import { COUNTRY_CURRENCY, MoneyError, fromDbAmount, type CountryCode } from '../money';
 import { ORDER_STATUSES } from '../order-state';
 
@@ -262,6 +262,7 @@ const rawCheckoutSchema = z.strictObject({
   data_policy_version: z.string().min(1).max(40),
 });
 
+/** Solo forma y reglas por país. Para el método de pago usar `checkoutInputSchemaFor`. */
 export const checkoutInputSchema = rawCheckoutSchema.transform((v, ctx) => {
   const country = v.country_code;
   const phone = normalizePhone(country, v.contact.phone);
@@ -313,6 +314,28 @@ export const checkoutInputSchema = rawCheckoutSchema.transform((v, ctx) => {
     data_policy_version: v.data_policy_version,
   };
 });
+
+/**
+ * Checkout con el método validado contra los métodos activos del país (§5.4, A3).
+ * `activeMethods` = métodos con `is_enabled` en `payment_method_settings` del país,
+ * leídos en el servidor. `manual` solo se acepta si la lista está vacía.
+ *
+ * `checkoutInputSchema` solo valida la forma: el servidor debe usar esta variante (o
+ * comprobar `calcularPrecios(...).payment_method_available`) antes de crear el pedido.
+ */
+export function checkoutInputSchemaFor(activeMethods: readonly PaymentMethod[]) {
+  const active = new Set<string>(activeMethods);
+  return checkoutInputSchema.superRefine((v, ctx) => {
+    const ok = v.payment_method === 'manual' ? active.size === 0 : active.has(v.payment_method);
+    if (!ok) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Este método de pago no está disponible en este país.',
+        path: ['payment_method'],
+      });
+    }
+  });
+}
 
 export type CheckoutInput = z.output<typeof checkoutInputSchema>;
 export type CartItemInput = z.output<typeof cartItemSchema>;

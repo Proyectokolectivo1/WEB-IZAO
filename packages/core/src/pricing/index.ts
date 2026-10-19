@@ -440,6 +440,14 @@ function computeFor(
   };
 }
 
+/**
+ * §5.4: el pedido `manual` ("Finalizar pedido por WhatsApp") solo se permite cuando el
+ * país no tiene ningún método de pago activo en `payment_method_settings`.
+ */
+export function isManualAllowed(settings: readonly PricingPaymentMethodSetting[]): boolean {
+  return !settings.some((s) => s.is_enabled);
+}
+
 /** Métodos que cobran en línea el total del pedido. */
 function isOnlineMethod(method: PricingPaymentMethod | null): boolean {
   return method === 'wompi' || method === 'addi' || method === 'sistecredito';
@@ -492,8 +500,14 @@ export function calcularPrecios(input: PricingInput): PricingResult {
   let payment_method_available = false;
   let selectedReason: MethodUnavailableCode | null = null;
   if (input.paymentMethod === 'manual') {
-    payment_method_available = lines.length > 0;
-    selectedReason = lines.length > 0 ? null : 'CART_EMPTY';
+    // §5.4: "Finalizar por WhatsApp" solo existe si el país no tiene ningún método activo.
+    selectedReason =
+      lines.length === 0
+        ? 'CART_EMPTY'
+        : isManualAllowed(input.paymentMethodSettings)
+          ? null
+          : 'METHOD_DISABLED';
+    payment_method_available = selectedReason === null;
   } else if (input.paymentMethod !== null) {
     const entry = available_methods.find((m) => m.method === input.paymentMethod);
     selectedReason = entry ? entry.reason : 'METHOD_DISABLED';

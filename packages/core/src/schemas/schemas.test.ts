@@ -6,6 +6,7 @@ import {
   cartItemSchema,
   cartSchema,
   checkoutInputSchema,
+  checkoutInputSchemaFor,
   discountCodeInputSchema,
   documentSchemaFor,
   normalizeDocumentNumber,
@@ -287,6 +288,27 @@ describe('schemas: entrada del checkout (§10.1, §10.2)', () => {
 
   it('rechaza campos de dinero enviados por el cliente (el servidor manda)', () => {
     expect(checkoutInputSchema.safeParse(checkoutValido({ total: 1 })).success).toBe(false);
+  });
+
+  it('A3: checkoutInputSchemaFor rechaza manual si el país tiene métodos activos', () => {
+    const co = checkoutInputSchemaFor(['wompi', 'cod']);
+    expect(co.safeParse(checkoutValido({ payment_method: 'manual' })).success).toBe(false);
+    expect(co.safeParse(checkoutValido({ payment_method: 'wompi' })).success).toBe(true);
+    // Método válido en forma pero apagado en el país
+    expect(co.safeParse(checkoutValido({ payment_method: 'addi' })).success).toBe(false);
+  });
+
+  it('A3: checkoutInputSchemaFor acepta manual solo si el país no tiene métodos activos', () => {
+    const ec = checkoutInputSchemaFor([]);
+    const pedido = checkoutValido({
+      country_code: 'EC',
+      contact: { first_name: 'Ana', last_name: 'Ruiz', phone: '0991234567', email: null },
+      document: { type: 'CEDULA', number: '1712345678' },
+      payment_method: 'manual',
+    });
+    expect(ec.safeParse(pedido).success).toBe(true);
+    expect(ec.safeParse({ ...pedido, payment_method: 'wompi' }).success).toBe(false);
+    expect(checkoutInputSchemaFor(['wompi']).safeParse(pedido).success).toBe(false);
   });
 
   it('código de descuento opcional', () => {
