@@ -14,7 +14,8 @@ export type CarrierPaymentKind = 'cod' | 'wompi' | 'addi' | 'sistecredito';
 /**
  * Modo de cuadre del total (`country_settings.carrier_discount_mode`, D-010):
  * - `additional_charge` (Opción A): precios reales y un cargo negativo "descuento".
- * - `prorate` (Opción B): la reducción se reparte entre las líneas.
+ * - `prorate` (Opción B): cada línea va a su valor menos su `line_discount`, y el abono
+ *   se reparte sobre el valor neto de las líneas.
  */
 export type CarrierDiscountMode = 'additional_charge' | 'prorate';
 
@@ -184,16 +185,19 @@ export function buildCarrierLines<T extends CarrierLineSource>(
     };
   }
 
-  // Opción B: reducción en proporción al valor de cada línea; residuo a la de mayor valor
-  // (empate: menor índice). `allocate` nunca da a una línea más que su valor.
-  const shares =
-    reduction === 0n
-      ? lineValues.map(() => 0n)
-      : allocate(money(reduction, currency), lineValues).map((m) => m.amount);
+  // Opción B (M1, §11.2: `line_discount` es la fuente para costos, reportes y MasterShop):
+  // cada línea conserva su propio descuento; solo el abono se prorratea, en proporción al
+  // valor NETO de cada línea, con residuo a la de mayor valor neto (empate: menor índice).
+  // `allocate` nunca da a una línea más que su peso, así que ningún precio queda negativo.
+  const netValues = items.map((it, i) => lineValues[i]! - it.lineDiscount);
+  const depositShares =
+    codDeposit === 0n
+      ? netValues.map(() => 0n)
+      : allocate(money(codDeposit, currency), netValues).map((m) => m.amount);
 
   const lines: CarrierLine<T>[] = [];
   items.forEach((source, sourceIndex) => {
-    const lineTotal = lineValues[sourceIndex]! - shares[sourceIndex]!;
+    const lineTotal = netValues[sourceIndex]! - depositShares[sourceIndex]!;
     const qty = BigInt(source.quantity);
     if (lineTotal % qty === 0n) {
       lines.push({ source, sourceIndex, quantity: source.quantity, price: lineTotal / qty });

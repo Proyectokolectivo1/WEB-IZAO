@@ -152,6 +152,47 @@ describe('buildCarrierLines — casos de §11.3 y §14.4', () => {
   });
 });
 
+describe('buildCarrierLines — modo B respeta line_discount (M1, §11.2)', () => {
+  it('caso 8: descuento solo en la categoría X (A) y abono prorrateado sobre el valor neto', () => {
+    // A 100.000 con descuento 10.000 (neto 90.000) + B 50.000 (neto 50.000), abono 10.000.
+    // allocate(10.000, [90.000, 50.000]) = [6.428 + 1 de residuo, 3.571] = [6.429, 3.571].
+    const r = buildCarrierLines({
+      currency: 'COP',
+      paymentKind: 'cod',
+      mode: 'prorate',
+      codDeposit: 10_000n,
+      items: [item('A', 100_000n, 1, 10_000n), item('B', 50_000n)],
+    });
+    expect(r.total).toBe(130_000n);
+    expect(r.lines.map((l) => [l.source.sku, l.quantity, l.price])).toEqual([
+      ['A', 1, 83_571n],
+      ['B', 1, 46_429n],
+    ]);
+    checkInvariant(r);
+  });
+
+  it('caso 8 con Wompi: cada línea va a su valor menos su propio descuento', () => {
+    const r = buildCarrierLines({
+      currency: 'COP',
+      paymentKind: 'wompi',
+      mode: 'prorate',
+      items: [item('A', 100_000n, 1, 10_000n), item('B', 50_000n)],
+    });
+    expect(r.lines.map((l) => l.price)).toEqual([90_000n, 50_000n]);
+  });
+
+  it('un descuento concentrado en una línea no se reparte a las demás', () => {
+    const r = buildCarrierLines({
+      currency: 'COP',
+      paymentKind: 'wompi',
+      mode: 'prorate',
+      items: [item('A', 10_000n, 1, 9_000n), item('B', 90_000n)],
+    });
+    // Sobre el valor bruto daría 1.000 + 9.000 de descuento → 9.000 y 81.000.
+    expect(r.lines.map((l) => l.price)).toEqual([1_000n, 90_000n]);
+  });
+});
+
 describe('buildCarrierLines — bordes del prorrateo (modo B)', () => {
   it('una sola línea con cantidad 3 que divide exacto conserva la línea', () => {
     const r = buildCarrierLines({
@@ -329,12 +370,24 @@ describe('buildCarrierLines — propiedad: Σ price × quantity + Σ additional_
       const subtotal = raw.reduce((a, r) => a + r.unitPrice * BigInt(r.quantity), 0n);
       if (subtotal === 0n) continue;
       const financing = paymentKind === 'addi' || paymentKind === 'sistecredito';
-      const discount = financing ? 0n : rng.big(0n, (subtotal * 6n) / 10n);
-      const parts = allocate(
-        money(discount, currency),
-        raw.map((r) => r.unitPrice * BigInt(r.quantity)),
-      );
-      const items: Item[] = raw.map((r, i) => ({ ...r, lineDiscount: parts[i]!.amount }));
+      // Mitad de los carritos con descuento proporcional; la otra mitad con descuento
+      // concentrado en algunas líneas (código por categoría, caso 8).
+      let items: Item[];
+      if (financing) {
+        items = raw.map((r) => ({ ...r, lineDiscount: 0n }));
+      } else if (rng.int(0, 1) === 0) {
+        const parts = allocate(
+          money(rng.big(0n, (subtotal * 6n) / 10n), currency),
+          raw.map((r) => r.unitPrice * BigInt(r.quantity)),
+        );
+        items = raw.map((r, i) => ({ ...r, lineDiscount: parts[i]!.amount }));
+      } else {
+        items = raw.map((r) => {
+          const value = r.unitPrice * BigInt(r.quantity);
+          return { ...r, lineDiscount: rng.int(0, 2) === 0 ? 0n : rng.big(0n, value) };
+        });
+      }
+      const discount = items.reduce((a, it) => a + it.lineDiscount, 0n);
       const afterDiscount = subtotal - discount;
       let codDeposit: bigint | undefined;
       if (paymentKind === 'cod') {
@@ -365,6 +418,16 @@ describe('buildCarrierLines — propiedad: Σ price × quantity + Σ additional_
         ).toBe(true);
       } else {
         expect(r.additionalCharges).toEqual([]);
+        // M1: cada línea respeta su line_discount; solo el abono se prorratea.
+        for (let i = 0; i < items.length; i++) {
+          const it = items[i]!;
+          const net = it.unitPrice * BigInt(it.quantity) - it.lineDiscount;
+          const sent = r.lines
+            .filter((l) => l.sourceIndex === i)
+            .reduce((a, l) => a + l.price * BigInt(l.quantity), 0n);
+          expect(sent <= net).toBe(true);
+          if (!codDeposit) expect(sent).toBe(net);
+        }
         // Una línea partida queda en cantidades de 1.
         for (let i = 0; i < items.length; i++) {
           const ls = r.lines.filter((l) => l.sourceIndex === i);
