@@ -25,6 +25,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createInterface } from 'node:readline';
 import { Writable } from 'node:stream';
 import { parseArgs } from 'node:util';
+import { metadataHabilitarEnrolamiento } from '../lib/auth/enrolamiento';
 import { esRol } from '../lib/auth/permissions';
 import { planearAdmin, type FilaActual } from './crear-admin-plan';
 
@@ -162,6 +163,7 @@ async function main() {
       password: contrasena,
       email_confirm: true,
       user_metadata: { nombre },
+      app_metadata: metadataHabilitarEnrolamiento(Date.now()),
     });
     if (!creado.data.user) {
       fallar(`No se pudo crear el usuario: ${creado.error?.message ?? 'error desconocido'}.`);
@@ -174,6 +176,12 @@ async function main() {
       const { error } = await supabase.auth.admin.updateUserById(userId, { password: contrasena });
       if (error) fallar(`No se pudo fijar la contraseña: ${error.message}.`);
       console.log('Contraseña reemplazada en Supabase Auth.');
+    }
+    if (plan.habilitarEnrolamiento) {
+      const { error } = await supabase.auth.admin.updateUserById(userId, {
+        app_metadata: metadataHabilitarEnrolamiento(Date.now()),
+      });
+      if (error) fallar(`No se pudo habilitar la activación del MFA: ${error.message}.`);
     }
   }
 
@@ -202,7 +210,8 @@ async function main() {
   }
 
   console.log(`\nListo: ${nombre} (${correo}).`);
-  console.log('Entra a /admin/login; si aún no tiene verificación en dos pasos, se le pedirá activarla.');
+  console.log('Entra a /admin/login; si aún no tiene verificación en dos pasos, podrá activarla durante las próximas 24 horas.');
+  console.log('Si esa ventana vence, vuelve a ejecutar este script para reabrirla.');
 }
 
 main().catch((e: unknown) => {

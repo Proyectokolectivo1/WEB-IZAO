@@ -6,6 +6,7 @@ import { evaluarIntento } from '@/lib/auth/bloqueo';
 import { ipDelCliente } from '@/lib/auth/cabeceras';
 import { rutaSiguienteSegura } from '@/lib/auth/decision';
 import { esquemaCodigoTotp, type EstadoFormulario } from '@/lib/auth/esquemas';
+import { cerrarVentanaEnrolamiento, ventanaEnrolamientoAbierta } from '@/lib/auth/enrolamiento-servidor';
 import { requerirSesionParcial } from '@/lib/auth/guard';
 import { crearClienteServidor } from '@/lib/auth/supabase/servidor';
 
@@ -14,6 +15,8 @@ const MAX_FALLOS_MFA = 5;
 
 const MENSAJE_CODIGO = 'El código no es correcto o ya venció. Revisa tu aplicación e inténtalo de nuevo.';
 const MENSAJE_NO_DISPONIBLE = 'No pudimos verificar el código en este momento. Inténtalo de nuevo en unos minutos.';
+const MENSAJE_SIN_VENTANA =
+  'Tu cuenta no tiene habilitada la activación de la verificación en dos pasos, o la habilitación venció. Pide al administrador que la vuelva a habilitar.';
 const MENSAJE_BLOQUEO = 'Hubo demasiados intentos. Espera 15 minutos e inténtalo de nuevo.';
 
 export type ResultadoInscripcion =
@@ -34,6 +37,10 @@ export async function iniciarInscripcionMfa(): Promise<ResultadoInscripcion> {
     // Ya hay un factor verificado: no se inscribe otro sin pasar por el MFA.
     redirect('/admin/mfa/verificar');
   }
+
+  // Solo con la ventana abierta por el servicio: la contraseña sola no basta
+  // para registrar un autenticador propio.
+  if (!(await ventanaEnrolamientoAbierta())) return { ok: false, error: MENSAJE_SIN_VENTANA };
 
   // Limpia intentos anteriores que nunca se confirmaron.
   const pendientes = (factores?.all ?? []).filter(
@@ -87,6 +94,8 @@ export async function confirmarInscripcionMfa(
   const { codigo, factorId } = lectura.data;
   const ip = await ipDelCliente();
 
+  if (!(await ventanaEnrolamientoAbierta())) return { error: MENSAJE_SIN_VENTANA };
+
   const bloqueo = await controlarIntento(userId, ip);
   if (bloqueo) return bloqueo;
 
@@ -110,6 +119,7 @@ export async function confirmarInscripcionMfa(
     diff: { tipo: 'totp' },
     ip,
   });
+  await cerrarVentanaEnrolamiento(userId);
   redirect(rutaSiguienteSegura(lectura.data.siguiente));
 }
 

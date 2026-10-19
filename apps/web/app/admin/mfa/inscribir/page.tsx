@@ -3,6 +3,7 @@ import { BotonCerrarSesion } from '@/components/admin/BotonCerrarSesion';
 import { InscripcionMfa } from '@/components/admin/InscripcionMfa';
 import { PantallaAcceso } from '@/components/admin/PantallaAcceso';
 import { rutaSiguienteSegura } from '@/lib/auth/decision';
+import { ventanaEnrolamientoAbierta } from '@/lib/auth/enrolamiento-servidor';
 import { requerirSesionParcial } from '@/lib/auth/guard';
 
 export const metadata: Metadata = { title: 'Activar verificación en dos pasos' };
@@ -12,6 +13,17 @@ type Props = { searchParams: Promise<{ siguiente?: string }> };
 export default async function PaginaInscribirMfa({ searchParams }: Props) {
   await requerirSesionParcial();
   const destino = rutaSiguienteSegura((await searchParams).siguiente);
+
+  if (!(await ventanaEnrolamientoAbierta())) {
+    return (
+      <PantallaAcceso
+        titulo="Activación no habilitada"
+        descripcion="Tu cuenta no tiene habilitada la activación de la verificación en dos pasos, o la habilitación venció. Pide al administrador que la vuelva a habilitar."
+      >
+        <BotonCerrarSesion />
+      </PantallaAcceso>
+    );
+  }
 
   return (
     <PantallaAcceso

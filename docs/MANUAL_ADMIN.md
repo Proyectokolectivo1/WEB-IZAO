@@ -35,6 +35,8 @@ El script pide la contraseña dos veces sin mostrarla (mínimo 12 caracteres). C
 1. Desde la raíz del repositorio ejecuta `pnpm --filter @izao/web dev` y abre `http://localhost:3000/admin`.
 2. Te lleva a `/admin/login`. Escribe tu correo y tu contraseña.
 3. Como aún no tienes verificación en dos pasos, aparece "Activa la verificación en dos pasos". Pulsa "Generar código QR", escanéalo con una aplicación de autenticación (Google Authenticator, Microsoft Authenticator, Aegis) y escribe el código de 6 dígitos. Guarda la clave de texto que se muestra debajo del QR en un lugar seguro: sirve para recuperar el acceso si pierdes el teléfono.
+
+   La activación solo se puede hacer durante las 24 horas siguientes a que `crear-admin` creó o actualizó la cuenta: así, alguien que solo conozca la contraseña no puede registrar su propio autenticador. Si esa ventana vence, la pantalla dice "Activación no habilitada"; vuelve a ejecutar `pnpm crear-admin` con el mismo correo (confirmando con SI) para reabrirla. La ventana se cierra sola al terminar la activación.
 4. Entras al inicio del panel. Desde ese momento, cada ingreso pide la contraseña y un código nuevo.
 
 ### 4. Qué comprobar
@@ -53,17 +55,13 @@ El script pide la contraseña dos veces sin mostrarla (mínimo 12 caracteres). C
 
 ### 5. Probar el rol de operador
 
-Ahora mismo no existe aún el módulo Usuarios. Para probar al operador:
+Ahora mismo no existe aún el módulo Usuarios. Para probar al operador, con el mismo script:
 
-1. En Supabase > Authentication > Users, crea un usuario con correo y contraseña (marca "Auto Confirm User").
-2. En Supabase > SQL Editor ejecuta, cambiando el identificador por el del usuario creado:
+```
+pnpm crear-admin -- --correo operador@ejemplo.com --nombre "Operador de prueba" --rol operator
+```
 
-   ```sql
-   insert into admin_users (auth_user_id, role, name, is_active, mfa_required)
-   values ('<id del usuario>', 'operator', 'Operador de prueba', true, true);
-   ```
-3. Ingresa con ese usuario, activa su verificación en dos pasos y comprueba que solo ve Pedidos, Garantías y Agente de impresión, y que `/admin/productos` o `/admin/usuarios` lo llevan a "No tienes permiso para esta sección".
-
+El script crea el usuario y abre una ventana de 24 horas para que active su verificación en dos pasos (ver abajo). Ingresa con ese usuario, actívala y comprueba que solo ve Pedidos, Garantías y Agente de impresión, y que `/admin/productos` o `/admin/usuarios` lo llevan a "No tienes permiso para esta sección".
 ### 6. Revisar la auditoría
 
 En Supabase > SQL Editor:

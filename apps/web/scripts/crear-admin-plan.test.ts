@@ -11,6 +11,7 @@ describe('planearAdmin: usuario nuevo', () => {
       crearUsuario: true,
       fijarContrasena: false,
       fila: { accion: 'insertar', valores: { role: 'admin', name: 'Dueña', is_active: true, mfa_required: true } },
+      habilitarEnrolamiento: true,
       avisos: [],
     });
   });
@@ -18,6 +19,15 @@ describe('planearAdmin: usuario nuevo', () => {
   it('respeta --rol operator al crear', () => {
     const p = planearAdmin({ ...base, existeEnAuth: false, filaActual: null, rol: 'operator' });
     expect(p.tipo === 'ok' && p.fila.accion === 'insertar' && p.fila.valores.role).toBe('operator');
+  });
+});
+
+describe('planearAdmin: ventana de enrolamiento MFA', () => {
+  it('se abre al crear el usuario y al confirmar un correo existente', () => {
+    const nuevo = planearAdmin({ ...base, existeEnAuth: false, filaActual: null });
+    expect(nuevo.tipo === 'ok' && nuevo.habilitarEnrolamiento).toBe(true);
+    const existente = planearAdmin({ ...base, existeEnAuth: true, confirmarExistente: true, filaActual: null });
+    expect(existente.tipo === 'ok' && existente.habilitarEnrolamiento).toBe(true);
   });
 });
 

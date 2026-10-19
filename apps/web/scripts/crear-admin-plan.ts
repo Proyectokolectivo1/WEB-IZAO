@@ -31,6 +31,8 @@ export type Plan =
       crearUsuario: boolean;
       /** Usuario existente: se fija la contraseña escrita con `updateUserById`. */
       fijarContrasena: boolean;
+      /** Abre la ventana para inscribir el TOTP (ver `lib/auth/enrolamiento.ts`). */
+      habilitarEnrolamiento: boolean;
       fila: CambioFila;
       avisos: string[];
     };
@@ -41,6 +43,7 @@ export function planearAdmin(e: EntradaPlan): Plan {
       tipo: 'ok',
       crearUsuario: true,
       fijarContrasena: false,
+      habilitarEnrolamiento: true,
       fila: {
         accion: 'insertar',
         valores: { role: e.rol ?? 'admin', name: e.nombre, is_active: true, mfa_required: true },
@@ -65,6 +68,7 @@ export function planearAdmin(e: EntradaPlan): Plan {
       tipo: 'ok',
       crearUsuario: false,
       fijarContrasena: true,
+      habilitarEnrolamiento: true,
       fila: {
         accion: 'insertar',
         valores: { role: e.rol ?? 'admin', name: e.nombre, is_active: true, mfa_required: true },
@@ -87,6 +91,7 @@ export function planearAdmin(e: EntradaPlan): Plan {
     tipo: 'ok',
     crearUsuario: false,
     fijarContrasena: true,
+    habilitarEnrolamiento: true,
     fila: Object.keys(valores).length ? { accion: 'actualizar', valores } : { accion: 'ninguna' },
     avisos,
   };
