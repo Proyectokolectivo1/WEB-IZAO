@@ -1,8 +1,8 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { contarNetos, registrarAuditoria, registrarEvento } from '@/lib/auth/auditoria';
-import { evaluarIntento } from '@/lib/auth/bloqueo';
+import { contarEventos, contarNetos, registrarAuditoria, registrarEvento } from '@/lib/auth/auditoria';
+import { evaluarIntento, registrarUnaVez } from '@/lib/auth/bloqueo';
 import { ipDelCliente } from '@/lib/auth/cabeceras';
 import { rutaSiguienteSegura } from '@/lib/auth/decision';
 import { esquemaCodigoTotp, type EstadoFormulario } from '@/lib/auth/esquemas';
@@ -180,14 +180,19 @@ async function controlarIntento(userId: string, ip: string | null): Promise<Esta
     registrar: () => registrarEvento({ actor: userId, accion: 'mfa_intento', entidadId: userId, ip }),
     contadores: [
       {
+        clave: 'usuario',
         max: MAX_FALLOS_MFA,
         netos: () => contarNetos('mfa_intento', ['mfa_verificado', 'mfa_inscrito'], { desde, actor: userId }),
       },
     ],
   });
-  if (resultado === 'error') return { error: MENSAJE_NO_DISPONIBLE };
-  if (resultado === 'bloqueado') {
-    await registrarAuditoria({ actor: userId, accion: 'mfa_bloqueado', entidadId: userId, ip });
+  if (resultado.estado === 'error') return { error: MENSAJE_NO_DISPONIBLE };
+  if (resultado.estado === 'bloqueado') {
+    // Un solo aviso de bloqueo por ventana y por usuario.
+    await registrarUnaVez({
+      contar: () => contarEventos({ acciones: ['mfa_bloqueado'], desde, actor: userId }),
+      registrar: () => registrarEvento({ actor: userId, accion: 'mfa_bloqueado', entidadId: userId, ip }),
+    });
     return { error: MENSAJE_BLOQUEO };
   }
   return null;

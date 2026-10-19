@@ -4,8 +4,8 @@ import { cerrarSesionLocal } from '@/lib/auth/cerrar-sesion';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { buscarAdminPorId } from '@/lib/auth/admin-users';
-import { contarNetos, huellaDeCorreo, registrarAuditoria, registrarEvento } from '@/lib/auth/auditoria';
-import { evaluarIntento } from '@/lib/auth/bloqueo';
+import { contarEventos, contarNetos, huellaDeCorreo, registrarAuditoria, registrarEvento } from '@/lib/auth/auditoria';
+import { evaluarIntento, registrarUnaVez } from '@/lib/auth/bloqueo';
 import { ipDelCliente } from '@/lib/auth/cabeceras';
 import { RUTA_MFA_INSCRIBIR, RUTA_MFA_VERIFICAR, rutaSiguienteSegura } from '@/lib/auth/decision';
 import { esProduccion, secretoSesion } from '@/lib/auth/env';
@@ -48,19 +48,22 @@ export async function iniciarSesion(
   const ip = await ipDelCliente();
   const huella = await huellaDeCorreo(correo);
   const desde = new Date(Date.now() - VENTANA_BLOQUEO_MS);
-  // Falla cerrado: el intento se registra ANTES de autenticar y, si no se puede
-  // registrar o contar, no se intenta el ingreso.
+  // Falla cerrado: se cuenta primero (si ya está bloqueado no se inserta nada), el
+  // intento se registra ANTES de autenticar y, si no se puede registrar o contar,
+  // no se intenta el ingreso.
   const intento = await evaluarIntento({
     registrar: () =>
       registrarEvento({ actor: 'anonimo', accion: 'login_intento', diff: { huella_correo: huella }, ip }),
     contadores: [
       {
+        clave: 'correo',
         max: MAX_FALLOS_POR_CORREO,
         netos: () => contarNetos('login_intento', ['login_exitoso'], { desde, huella }),
       },
       ...(ip
         ? [
             {
+              clave: 'ip',
               max: MAX_FALLOS_POR_IP,
               netos: () => contarNetos('login_intento', ['login_exitoso'], { desde, ip }),
             },
@@ -68,13 +71,20 @@ export async function iniciarSesion(
         : []),
     ],
   });
-  if (intento === 'error') return { error: MENSAJE_NO_DISPONIBLE };
-  if (intento === 'bloqueado') {
-    await registrarAuditoria({
-      actor: 'anonimo',
-      accion: 'login_bloqueado',
-      diff: { huella_correo: huella },
-      ip,
+  if (intento.estado === 'error') return { error: MENSAJE_NO_DISPONIBLE };
+  if (intento.estado === 'bloqueado') {
+    // Un solo aviso de bloqueo por ventana y por clave (correo o IP).
+    const porIp = intento.por === 'ip';
+    await registrarUnaVez({
+      contar: () =>
+        contarEventos({ acciones: ['login_bloqueado'], desde, ...(porIp ? { ip } : { huella }) }),
+      registrar: () =>
+        registrarEvento({
+          actor: 'anonimo',
+          accion: 'login_bloqueado',
+          diff: porIp ? { por: 'ip' } : { huella_correo: huella, por: 'correo' },
+          ip,
+        }),
     });
     return { error: MENSAJE_BLOQUEO };
   }
