@@ -132,25 +132,72 @@ export function noveltyBadge(input: { hasNovelty?: unknown; alerts?: unknown }):
 // Transición interna
 // ---------------------------------------------------------------------------
 
+/**
+ * Estados del pedido en los que la transportadora puede mover el estado interno (A1).
+ * Una notificación o el polling de MasterShop nunca saca un pedido de un estado de
+ * pago (`pendiente_pago`, `esperando_abono`, `abandonado`, `expirado`, …): eso
+ * inventaría un pago que no se verificó.
+ */
+export const CARRIER_PHASE_STATUSES: readonly OrderStatus[] = Object.freeze([
+  'pagado',
+  'abono_pagado',
+  'error_transportadora',
+  'enviado_transportadora',
+  'en_preparacion',
+  'en_transito',
+  'entregado',
+]);
+
+const CARRIER_PHASE_SET: ReadonlySet<OrderStatus> = new Set(CARRIER_PHASE_STATUSES);
+
+export type CarrierSyncAlertCode =
+  /** El pedido no está en una fase de transportadora (p. ej. sin pago verificado). */
+  | 'fuera_de_fase'
+  /** El estado de MasterShop es anterior al interno: notificación atrasada o fuera de orden. */
+  | 'retroceso'
+  /** No hay transición válida (p. ej. 9 Cancelada con el pedido en tránsito). */
+  | 'sin_camino'
+  /** `id_status` que no está en la tabla de §14.6. */
+  | 'estado_desconocido';
+
+/** Alerta para que el job la registre en `order_events` y la muestre al admin. */
+export interface CarrierSyncAlert {
+  codigo: CarrierSyncAlertCode;
+  estado_actual: OrderStatus;
+  id_status: number;
+}
+
 export type InternalTransitionPlan =
   | { kind: 'sin_cambio' }
   | { kind: 'transicion'; target: OrderStatus; path: OrderStatus[] }
-  /** El estado de MasterShop no se alcanza desde el actual (atrasado o fuera de orden). */
-  | { kind: 'no_aplicable'; target: OrderStatus }
-  | { kind: 'desconocido' };
+  | { kind: 'no_aplicable'; target: OrderStatus; alerta: CarrierSyncAlert }
+  | { kind: 'desconocido'; alerta: CarrierSyncAlert };
 
 /**
  * Qué transiciones internas aplicar al sincronizar. Si el polling se saltó estados,
- * `path` los incluye todos para registrarlos con `transicionar` uno por uno.
+ * `path` los incluye todos para registrarlos con `transicionar` uno por uno. Solo se
+ * transiciona desde una fase de transportadora y el camino solo pasa por esas fases
+ * (más el estado final mapeado: cancelado, devuelto o reclamación).
  */
 export function planInternalTransition(
   current: OrderStatus,
   statusId: number,
 ): InternalTransitionPlan {
   const info = getMasterShopStatus(statusId);
-  if (info === null) return { kind: 'desconocido' };
-  if (info.internal === current) return { kind: 'sin_cambio' };
-  const path = findTransitionPath(current, info.internal);
-  if (path === null) return { kind: 'no_aplicable', target: info.internal };
-  return { kind: 'transicion', target: info.internal, path };
+  const alerta = (codigo: CarrierSyncAlertCode): CarrierSyncAlert => ({
+    codigo,
+    estado_actual: current,
+    id_status: statusId,
+  });
+  if (info === null) return { kind: 'desconocido', alerta: alerta('estado_desconocido') };
+  const target = info.internal;
+  if (target === current) return { kind: 'sin_cambio' };
+  if (!CARRIER_PHASE_SET.has(current)) {
+    return { kind: 'no_aplicable', target, alerta: alerta('fuera_de_fase') };
+  }
+  const allowed = [...CARRIER_PHASE_STATUSES, target];
+  const path = findTransitionPath(current, target, allowed);
+  if (path !== null) return { kind: 'transicion', target, path };
+  const backwards = findTransitionPath(target, current, allowed) !== null;
+  return { kind: 'no_aplicable', target, alerta: alerta(backwards ? 'retroceso' : 'sin_camino') };
 }

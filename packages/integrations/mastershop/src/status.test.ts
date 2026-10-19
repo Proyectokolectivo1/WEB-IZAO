@@ -1,5 +1,7 @@
+import { ORDER_STATUSES } from '@izao/core/order-state';
 import { describe, expect, it } from 'vitest';
 import {
+  CARRIER_PHASE_STATUSES,
   MASTERSHOP_STATUSES,
   getMasterShopStatus,
   masterShopStatusFromName,
@@ -122,14 +124,73 @@ describe('planInternalTransition', () => {
     });
   });
 
-  it('ignora un estado que haría retroceder el pedido', () => {
+  it('un retroceso (notificación atrasada) no transiciona y da alerta "retroceso"', () => {
     expect(planInternalTransition('entregado', 6)).toEqual({
       kind: 'no_aplicable',
       target: 'en_transito',
+      alerta: { codigo: 'retroceso', estado_actual: 'entregado', id_status: 6 },
     });
   });
 
-  it('id desconocido', () => {
-    expect(planInternalTransition('enviado_transportadora', 7)).toEqual({ kind: 'desconocido' });
+  it('id desconocido da alerta tipada', () => {
+    expect(planInternalTransition('enviado_transportadora', 7)).toEqual({
+      kind: 'desconocido',
+      alerta: {
+        codigo: 'estado_desconocido',
+        estado_actual: 'enviado_transportadora',
+        id_status: 7,
+      },
+    });
+  });
+
+  it('desde pagado, abono_pagado y error_transportadora entra a la fase de transportadora', () => {
+    expect(planInternalTransition('pagado', 1)).toEqual({
+      kind: 'transicion',
+      target: 'enviado_transportadora',
+      path: ['enviado_transportadora'],
+    });
+    expect(planInternalTransition('error_transportadora', 2)).toMatchObject({
+      path: ['enviado_transportadora'],
+    });
+    expect(planInternalTransition('abono_pagado', 8)).toMatchObject({
+      path: ['enviado_transportadora', 'en_preparacion', 'en_transito', 'entregado'],
+    });
+  });
+
+  it('cancelado en MasterShop con el pedido en preparación (3-4) → cancelado', () => {
+    expect(planInternalTransition('en_preparacion', 9)).toEqual({
+      kind: 'transicion',
+      target: 'cancelado',
+      path: ['cancelado'],
+    });
+  });
+
+  // A1: una notificación de MasterShop nunca puede inventar un pago.
+  it.each([
+    ['pendiente_pago', 1, 'enviado_transportadora', 'fuera_de_fase'],
+    ['abandonado', 1, 'enviado_transportadora', 'fuera_de_fase'],
+    ['pendiente_manual', 8, 'entregado', 'fuera_de_fase'],
+    ['expirado', 9, 'cancelado', 'fuera_de_fase'],
+    ['en_transito', 9, 'cancelado', 'sin_camino'],
+  ] as const)('%s + MasterShop %i → no_aplicable con alerta', (current, id, target, codigo) => {
+    const plan = planInternalTransition(current, id);
+    expect(plan).toEqual({
+      kind: 'no_aplicable',
+      target,
+      alerta: { codigo, estado_actual: current, id_status: id },
+    });
+  });
+
+  it('ningún camino pasa por estados de pago, sea cual sea el estado actual', () => {
+    const payment = new Set(['pagado', 'abono_pagado', 'pendiente_pago', 'esperando_abono']);
+    for (const current of ORDER_STATUSES) {
+      for (const s of MASTERSHOP_STATUSES) {
+        const plan = planInternalTransition(current, s.id);
+        if (plan.kind === 'transicion') {
+          expect(CARRIER_PHASE_STATUSES).toContain(current);
+          for (const step of plan.path) expect(payment.has(step)).toBe(false);
+        }
+      }
+    }
   });
 });
