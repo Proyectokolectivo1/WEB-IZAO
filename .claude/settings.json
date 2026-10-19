@@ -1,0 +1,67 @@
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "enabledMcpjsonServers": ["contabo"],
+  "permissions": {
+    "allow": [
+      "Bash(pnpm *)",
+      "Bash(npx *)",
+      "Bash(npm *)",
+      "Bash(node *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git branch*)",
+      "Bash(git checkout *)",
+      "Bash(supabase gen types*)",
+      "Bash(supabase migration*)",
+      "Bash(supabase test*)",
+      "Bash(docker compose *)",
+      "Bash(python *)",
+      "Bash(pytest*)",
+      "Bash(ls*)",
+      "Bash(mkdir *)",
+      "mcp__contabo__vps_policy",
+      "mcp__contabo__vps_inventory",
+      "mcp__contabo__vps_exec",
+      "mcp__contabo__vps_read_file",
+      "mcp__contabo__vps_write_file",
+      "mcp__contabo__vps_docker_logs",
+      "mcp__contabo__contabo_instance",
+      "mcp__contabo__contabo_snapshots",
+      "mcp__contabo__contabo_instance",
+      "mcp__contabo__contabo_snapshots",
+      "Write(packages/**)",
+      "Edit(packages/**)",
+      "Write(apps/**)",
+      "Edit(apps/**)",
+      "Write(docs/**)",
+      "Edit(docs/**)",
+      "Write(infra/**)",
+      "Edit(infra/**)",
+      "Edit(.gitignore)",
+      "Edit(CLAUDE.md)",
+      "Edit(.claude/agents/izao-db.md)",
+      "Edit(.claude/skills/izao-supabase-db/SKILL.md)"
+    ],
+    "ask": [
+      "mcp__contabo__contabo_power_action"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(supabase db reset --linked*)",
+      "Bash(rm -rf /*)",
+      "Bash(ssh *)",
+      "Bash(scp *)",
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.production)",
+      "Read(./infra/.env)",
+      "Read(./tools/contabo-mcp/.env)",
+      "Read(~/.ssh/**)"
+    ]
+  }
+}
