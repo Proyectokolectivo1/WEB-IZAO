@@ -4,10 +4,9 @@
 **/dist
 .git
 .claude
-.env
-.env.*
-!.env.example
-infra/.env
+**/.env
+**/.env.*
+!**/.env.example
 infra/data
 43iCH7rQJ3vx*
 *_ed25519*
