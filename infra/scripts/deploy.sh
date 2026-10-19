@@ -35,6 +35,7 @@ registrar() {
   echo "$linea" >> "$LOG" 2>/dev/null || echo "(no se pudo escribir $LOG)"
 }
 
+source "$INFRA/scripts/lib.sh"
 cd "$RAIZ"
 [ "$DRY_RUN" -eq 1 ] && echo "MODO SIMULACIÓN: no se ejecuta ningún cambio."
 
@@ -70,24 +71,40 @@ paso "4/7 Construcción de imágenes"
 export IZAO_TAG="$NEW_SHA"
 run "${COMPOSE[@]}" build web worker
 
-paso "5/7 Actualización: web y luego worker"
-run "${COMPOSE[@]}" up -d --no-deps --wait --wait-timeout 120 web
-run "${COMPOSE[@]}" up -d --no-deps --wait --wait-timeout 120 worker
-
-paso "6/7 Verificación de salud"
-if [ "$DRY_RUN" -eq 1 ]; then
-  echo "[dry-run] curl --fail --retry 10 --retry-delay 3 --retry-connrefused $HEALTH_URL"
-  echo "[dry-run] si falla: IZAO_TAG=$PREV_SHA docker compose up -d --no-deps web worker (rollback)"
-else
-  if curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-connrefused "$HEALTH_URL" >/dev/null; then
-    echo "Salud OK"
-  else
-    echo "Healthcheck falló: volviendo a $PREV_SHA" >&2
-    export IZAO_TAG="$PREV_SHA"
-    "${COMPOSE[@]}" up -d --no-deps --wait web worker || true
-    registrar "ROLLBACK $NEW_SHA -> $PREV_SHA"
-    exit 1
+paso "5/7 Actualización: web y luego worker; 6/7 verificación de salud"
+revertir() {
+  echo "Revirtiendo a la versión $PREV_SHA" >&2
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[dry-run] docker image inspect izao-web:$PREV_SHA izao-worker:$PREV_SHA"
+    echo "[dry-run] IZAO_TAG=$PREV_SHA docker compose up -d --no-build --no-deps --wait web worker"
+    return 0
   fi
+  if ! docker image inspect "izao-web:$PREV_SHA" >/dev/null 2>&1 || ! docker image inspect "izao-worker:$PREV_SHA" >/dev/null 2>&1; then
+    alertar "Despliegue $NEW_SHA falló y no existe la imagen anterior $PREV_SHA: no se puede revertir"
+    echo "ERROR: no existe la imagen anterior ($PREV_SHA); sin rollback automático." >&2
+    registrar "FALLO sin rollback $PREV_SHA -> $NEW_SHA"
+    return 1
+  fi
+  IZAO_TAG="$PREV_SHA" "${COMPOSE[@]}" up -d --no-build --no-deps --wait --wait-timeout 120 web worker || {
+    alertar "El rollback a $PREV_SHA también falló"; return 1; }
+  registrar "ROLLBACK $NEW_SHA -> $PREV_SHA"
+}
+
+actualizar_y_verificar() {
+  run "${COMPOSE[@]}" up -d --no-deps --wait --wait-timeout 120 web || return 1
+  run "${COMPOSE[@]}" up -d --no-deps --wait --wait-timeout 120 worker || return 1
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[dry-run] curl --fail --retry 10 --retry-delay 3 --retry-connrefused $HEALTH_URL"
+    return 0
+  fi
+  curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-connrefused "$HEALTH_URL" >/dev/null || return 1
+  echo "Salud OK"
+}
+
+if ! actualizar_y_verificar; then
+  echo "La actualización o el healthcheck falló." >&2
+  revertir || true
+  exit 1
 fi
 
 paso "7/7 Registro"
