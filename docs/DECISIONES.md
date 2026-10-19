@@ -1,0 +1,91 @@
+# Decisiones del proyecto
+
+Registro de decisiones que ajustan o completan `docs/ESPECIFICACION.md`. Más reciente al final.
+
+## D-001 — Región de Supabase (2026-10-18)
+
+- El VPS de Contabo está en **Hub Europe**, IP `169.58.102.153` (dato dado por el dueño; sustituye el `[VERIFICAR]` de §4.1).
+- El proyecto anterior `WEB-IZAO` (`jumzyidhxspeexzozufl`, `us-west-2`) estaba vacío y fue eliminado por el dueño. Siguiendo §6.0 se creó uno nuevo, también llamado `WEB-IZAO`, en `eu-central-1` (Fráncfort), la región de Supabase más cercana al VPS. Costo 0 USD/mes.
+- **Referencia (ref) vigente: `wyxjmlgrcjclelbrluvd`** · URL `https://wyxjmlgrcjclelbrluvd.supabase.co` · Postgres 17.
+- El proyecto `My Project` (`xschakcmelcqxwxbisiq`, `sa-east-1`) es ajeno a Izao: no se toca.
+
+## D-002 — Pedidos `pendiente_manual` que vencen (2026-10-18)
+
+§5.4 reserva el stock 24 h y §16 no definía el estado al vencer. Decisión del dueño: el pedido pasa a `expirado` y **se libera el stock**. Aplica a la transición `pendiente_manual → expirado` del `check` de estados de `orders`.
+
+## D-003 — `daily_sales_stats` (2026-10-18)
+
+La referencia "sección 21.3" en §6.2 es un error de numeración: la definición vigente es **§21.4**.
+
+## D-004 — Supabase Realtime (2026-10-18)
+
+§2 lo menciona pero ningún módulo lo usa. Se ignora; no se construye nada sobre Realtime.
+
+## D-005 — F0 en dos tramos (2026-10-18)
+
+- **F0a (local):** monorepo, Docker local, migraciones, RLS, seed, tipos, login admin con MFA, scripts de backup y restauración contra una base temporal local.
+- **F0b (VPS):** despliegue con HTTPS, backup diario real y restauración de prueba. Depende del MCP `contabo`, el DNS y el `.env` en el VPS.
+- El dueño indica que `https://www.izaoperfumeria.com/` ya apunta al servidor; `izao-infra` lo verifica en F0b con el inventario del VPS.
+
+## D-006 — Esqueletos de aplicaciones (2026-10-18)
+
+`izao-infra` crea el esqueleto de `apps/web` y `apps/worker`, con un `app/layout.tsx` y una página mínimos que pasan a `izao-tienda` en la Oleada 2. Los paquetes `core`, `ui` e `integrations` los crean sus dueños en su oleada. `izao-admin` se suma a la Oleada 0 para el login con MFA.
+
+## D-007 — Acceso al VPS (2026-10-18)
+
+El dueño compartió un comando `ssh` directo como root. Se mantiene la regla de `CLAUDE.md`: el VPS se opera solo con el MCP `contabo`, y `ssh`/`scp` siguen denegados en `.claude/settings.json`. Cambiar esa política es decisión del dueño, editando ese archivo. La llave de root solo se usa una vez, a mano, para `setup-vps.sh`; el MCP usa la llave dedicada del usuario `izao`.
+
+## D-008 — Migraciones de Supabase (2026-10-18)
+
+Se prefiere el MCP de Supabase (`apply_migration`, `execute_sql`, `get_advisors`, `generate_typescript_types`) sobre la CLI. Los archivos en `packages/db/supabase/migrations/` siguen siendo la fuente de verdad y se nombran con la versión que asigna Supabase (`list_migrations`); el SQL aplicado también queda en `supabase_migrations.schema_migrations.statements`. Si hace falta la CLI (por ejemplo para `pgtap` local), se instala como dependencia de desarrollo.
+
+## D-009 — Costos del chatbot en microdólares (2026-10-18)
+
+Un mensaje del chatbot cuesta una fracción de centavo y la regla 1 prohíbe `float`. Los costos se guardan como `bigint` en **microdólares** (1 USD = 1.000.000): `chat_messages.cost_usd_micros`, `chat_usage_monthly.cost_usd_micros` y `chat_settings.monthly_budget_usd_micros` (defecto 10.000.000). Sustituyen a `cost_usd` y `monthly_budget_usd` de §6.2.
+
+## D-010 — Columnas de configuración por país (2026-10-18)
+
+Para cumplir la regla 3 (nada configurable queda en el código) `country_settings` suma columnas que §6.2 no listaba: horario silencioso de cobros (inicio y fin, defecto 21:00–07:00, §13.1), confirmación automática en MasterShop (§14.5), modo A/B del pedido en MasterShop (§14.4), ocultar agotados (§6.4), costo de envío estimado (§21.2) y vencimiento de `pendiente_manual` (defecto 24 h, D-002).
+
+## D-011 — RLS de cliente con permisos por columna (2026-10-18)
+
+Las políticas de cliente autenticado son las literales de §6.1: lee sus direcciones, lista de deseos, pedidos e ítems, y lee y actualiza su propio perfil. Además se le revocan las columnas internas del pedido (costos, comisiones, notas internas, UTM, click IDs, alertas, clave de idempotencia) para que no las vea en su propio pedido. `anon` no tiene privilegios sobre esas tablas.
+
+## D-012 — Seed sin datos del dueño (2026-10-18)
+
+Los métodos de pago se cargan desactivados hasta tener credenciales. En Ecuador, el abono, el recaudo mínimo y `fx_rate_to_cop` quedan vacíos o en 0, marcados `[COMPLETAR]`. Colombia conserva los valores por defecto de §11.2 (abono $10.000, recaudo mínimo $20.000). Los marcadores `[COMPLETAR]` de los Anexos A y B se copian tal cual; no se inventan datos.
+
+## D-013 — Repositorio (2026-10-18)
+
+Repositorio privado en GitHub: `Proyectokolectivo1/WEB-IZAO`. Rama principal `main`.
+
+## D-014 — Ubicación del proyecto (2026-10-18)
+
+D: es exFAT: no admite symlinks y rompe `pnpm build` de la web y Git ("dubious ownership"). El proyecto se movió a `C:\Proyectos\WEB-IZAO` (NTFS), donde Git funciona sin `safe.directory`. La copia en `D:\WEB IZAO REACT` queda como respaldo hasta que el dueño la elimine. La clave `43iCH7rQJ3vx` no se copió.
+
+## D-015 — Decisiones técnicas de `izao-infra` (2026-10-18)
+
+- `.npmrc` con `node-linker=hoisted`, adoptado por la limitación de exFAT; funciona igual en Linux. Puede revisarse ahora que el repo está en NTFS.
+- El worker compila con `tsc` y no con tsup.
+- El worker escribe un latido en `/tmp/worker-alive` cada 15 s y el healthcheck de Docker lo lee.
+- La CSP base de Nginx es provisional; se ajustará con los dominios de Wompi, Addi, Meta y píxeles (§26).
+- `deploy.sh` actualiza `web` y luego `worker` con `up --wait` y vuelve al tag anterior si falla el healthcheck. Las réplicas de `web` se recrean en serie.
+
+## D-016 — Cambios de contrato en la base (2026-10-18)
+
+Respecto a §6.2, `izao-db` aplicó estos cambios:
+- Tabla `number_sequences`: contador por país y tipo para `orders.number` (`IZ-CO-000001`) y `warranty_claims.number` (`GAR-CO-0001`), asignados por trigger. La app no genera el número.
+- `brands.image_id`; `content_slots.country_code` nulo significa espacio global; los snapshots del pedido usan prefijos `contact_*` y `shipping_*`.
+- `orders.payment_method` admite también `manual` (Ecuador por WhatsApp). Columnas nuevas: `orders.checkout_idempotency_key` (única) y `orders.alerts`.
+- Checks de integridad en `orders`: `total_customer = subtotal − descuento + recargo` y, en contra entrega, `cod_collect_amount = total_customer − cod_deposit_amount`.
+- `discount_codes.iza_can_offer`; `discount_codes.value` es el porcentaje entero (1–100) en `percent` y el monto en unidad menor en `fixed`.
+- `shipments.total_provider`; `print_jobs.type` admite también `packing_list` y `test_page`.
+- `warranty_settings.response_days` y `conditions_html`; `expense_categories.slug`; límites de §20.5 en `chat_settings`.
+- `daily_sales_stats`: `prepaid_sent_value`, `delivered_count` y `cod_deposits_returned`.
+- `catalog_listing`: columna `brand_slug`. Para paginar por keyset se ordena `sort_featured desc, product_id asc`.
+
+## D-017 — Datos de prueba y nombres de ciudades (2026-10-18)
+
+- Los 520 productos de prueba son ficticios, con marcas ficticias; ningún texto usa términos de originalidad, autenticidad, certificación o afiliación (regla 7). Se corrigieron 4 nombres que decían "Original Ficticio".
+- Las ciudades y regiones se cargan tal cual las publican DANE e INEC, en MAYÚSCULAS. La presentación al cliente se decide en la tienda.
+- Cundinamarca no tiene capital municipal en DIVIPOLA; su capital, Bogotá D.C., es una región propia.
