@@ -151,6 +151,7 @@ async function main() {
     confirmarExistente: confirmar,
     ...(rol ? { rol } : {}),
     ...(values.activar ? { activar: true } : {}),
+    ...(values['reiniciar-mfa'] ? { reiniciarMfa: true } : {}),
   });
   if (plan.tipo === 'error') fallar(plan.mensaje);
 
@@ -180,7 +181,7 @@ async function main() {
       if (error) fallar(`No se pudo fijar la contraseña: ${error.message}.`);
       console.log('Contraseña reemplazada en Supabase Auth.');
     }
-    if (values['reiniciar-mfa']) {
+    if (plan.reiniciarMfa) {
       const factores = await supabase.auth.admin.mfa.listFactors({ userId });
       if (factores.error) fallar(`No se pudieron listar los factores: ${factores.error.message}.`);
       for (const factor of factores.data.factors) {
@@ -226,8 +227,8 @@ async function main() {
   }
 
   console.log(`\nListo: ${nombre} (${correo}).`);
-  console.log('Entra a /admin/login; si aún no tiene verificación en dos pasos, podrá activarla durante las próximas 24 horas.');
-  console.log('Si esa ventana vence, vuelve a ejecutar este script para reabrirla.');
+  console.log('Entra a /admin/login; si aún no tiene verificación en dos pasos, podrá activarla durante las próximas 24 horas si se acaba de crear o reiniciar.');
+  console.log('Si esa ventana vence, vuelve a ejecutar este script con --reiniciar-mfa para reabrirla.');
 }
 
 main().catch((e: unknown) => {
