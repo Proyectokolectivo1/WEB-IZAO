@@ -51,7 +51,13 @@ export interface CarrierLine<T> {
   price: bigint;
 }
 
-/** Tipo de cargo del modo A. `[VERIFICAR]` contra MasterShop con un pedido de prueba. */
+/**
+ * Tipo de cargo del modo A. La colección de Postman (2026-10-19) solo dice que
+ * `type_charge` es texto y que `value` suma al total: no lista valores permitidos ni dice
+ * si `value` puede ser negativo. Por eso descuento y abono van en un solo cargo
+ * "descuento" (B3) en vez de separar "descuento" y "abono". `[VERIFICAR]` con el pedido
+ * real de prueba antes de activar el modo A.
+ */
 export const CARRIER_DISCOUNT_CHARGE_TYPE = 'descuento';
 
 export interface CarrierAdditionalCharge {
