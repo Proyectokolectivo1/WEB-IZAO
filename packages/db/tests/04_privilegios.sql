@@ -1,7 +1,7 @@
 -- Pruebas pgtap · privilegios (M7, D-011): anon sin ningún privilegio y cliente autenticado con exactamente lo previsto.
 begin;
 set local search_path = public, extensions;
-select plan(8);
+select plan(10);
 
 select is(
   (select count(*)::int from pg_class c join pg_namespace n on n.oid = c.relnamespace
@@ -61,6 +61,19 @@ select is(
   (select count(*)::int from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public' and c.relkind = 'r' and not has_table_privilege('service_role', c.oid, 'select,insert,update,delete')),
   0, 'service_role conserva acceso total a todas las tablas');
+
+-- B-3: las migraciones (apply_migration y supabase db push) se ejecutan como postgres y los objetos de public son de
+-- postgres, de modo que los privilegios por defecto de supabase_admin (que sí incluyen anon y authenticated en public)
+-- NO se aplican a objetos nuevos. Postgres no es miembro de supabase_admin, así que tampoco podría alterarlos.
+-- Si esta prueba falla, algún objeto lo creó otro rol y heredó esos grants: revocar y corregir la migración.
+select is(
+  (select count(*)::int from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind in ('r', 'p', 'S', 'v', 'm') and c.relowner <> 'postgres'::regrole),
+  0, 'todas las tablas, secuencias y vistas de public son de postgres');
+select is(
+  (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proowner <> 'postgres'::regrole),
+  0, 'todas las funciones de public son de postgres');
 
 select * from finish();
 rollback;
