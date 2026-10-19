@@ -1,0 +1,8 @@
+node_modules
+.next
+.turbo
+dist
+coverage
+pnpm-lock.yaml
+izao-claude-kit
+ESPECIFICACION_IZAO_PERFUMERIA.md
