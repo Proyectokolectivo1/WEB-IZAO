@@ -60,6 +60,20 @@ probar() { # etiqueta
   done
   csp="$(curl -sk -D - -o /dev/null -H 'Host: izaoperfumeria.com' "https://127.0.0.1/admin/mfa/enroll" | grep -i '^content-security-policy:' || true)"
   if echo "$csp" | grep -q "img-src[^;]* data:"; then echo "OK   [$1] CSP de /admin/mfa permite img-src data:"; else echo "FALLA [$1] CSP de /admin sin data:"; fallos=$((fallos+1)); fi
+  # Server Actions de Next: un POST con la cabecera Next-Action se ejecuta en CUALQUIER ruta, así que
+  # se limita por cabecera además de por ruta (evita esquivar el límite de /admin/login con POST a /).
+  n429=0; n200=0
+  for i in $(seq 1 45); do
+    c=$(curl -sk -o /dev/null -w '%{http_code}' -X POST -H 'Next-Action: abc123' -H 'Host: izaoperfumeria.com' "https://127.0.0.1/")
+    [ "$c" = 429 ] && n429=$((n429+1)); [ "$c" = 200 ] && n200=$((n200+1))
+  done
+  if [ "$n429" -ge 1 ] && [ "$n200" -ge 20 ]; then echo "OK   [$1] POST / con Next-Action limitado ($n200 pasan, $n429 con 429)"; else echo "FALLA [$1] POST / con Next-Action sin límite ($n200 pasan, $n429 con 429)"; fallos=$((fallos+1)); fi
+  n429=0
+  for i in $(seq 1 45); do
+    c=$(curl -sk -o /dev/null -w '%{http_code}' -X POST -H 'Host: izaoperfumeria.com' "https://127.0.0.1/formulario")
+    [ "$c" = 429 ] && n429=$((n429+1))
+  done
+  if [ "$n429" -eq 0 ]; then echo "OK   [$1] POST normal sin Next-Action no se limita"; else echo "FALLA [$1] POST normal limitado ($n429)"; fallos=$((fallos+1)); fi
   cab="$(curl -sk -D - -o /dev/null -H "Host: www.izaoperfumeria.com" "https://127.0.0.1/x")"
   if echo "$cab" | grep -qi "^strict-transport-security: max-age=" && echo "$cab" | grep -qi "^location: https://izaoperfumeria.com/x"; then echo "OK   [$1] www -> raíz 301"; else echo "FALLA [$1] www"; fallos=$((fallos+1)); fi
   cab="$(curl -s -D - -o /dev/null -H "Host: izaoperfumeria.com" "http://127.0.0.1/algo")"
