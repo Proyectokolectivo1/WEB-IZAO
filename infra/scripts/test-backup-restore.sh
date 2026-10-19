@@ -23,27 +23,27 @@ create role anon nologin;
 create role authenticated nologin;
 create role service_role nologin;
 create role supabase_admin nologin;
-create schema auth;
 create schema storage;
-create table auth.users (id uuid primary key default gen_random_uuid(), email text, encrypted_password text);
-create table auth.refresh_tokens (id bigserial primary key, token text, user_id uuid);
-create table auth.sessions (id uuid primary key default gen_random_uuid(), user_id uuid);
-create table auth.flow_state (id uuid primary key default gen_random_uuid(), auth_code text);
-create table auth.one_time_tokens (id uuid primary key default gen_random_uuid(), token_hash text);
-create table auth.mfa_factors (id uuid primary key default gen_random_uuid(), user_id uuid, secret text);
-create function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;
 create table storage.buckets (id text primary key, name text);
 SQL
+sql < "$(dirname "${BASH_SOURCE[0]}")/fixtures/auth-gotrue-schema.sql" >/dev/null
 # pgtap no viene en la imagen oficial; solo se usa para pruebas del esquema.
 for f in "$DB_DIR"/migrations/*.sql; do grep -vi 'pgtap' "$f" | sql >/dev/null; done
 sql < "$DB_DIR/seed.sql" >/dev/null
 sql <<'SQL'
+insert into auth.schema_migrations values ('20171026211738'), ('20171026211808'), ('20171026211834');
 insert into auth.users(email, encrypted_password) select 'u'||g||'@ejemplo.test', 'hash'||g from generate_series(1,25) g;
-insert into auth.refresh_tokens(token, user_id) select 'tok'||g, id from (select id, row_number() over () g from auth.users) s;
-insert into auth.sessions(user_id) select id from auth.users;
-insert into auth.flow_state(auth_code) values ('codigo');
-insert into auth.one_time_tokens(token_hash) values ('hash');
-insert into auth.mfa_factors(user_id, secret) select id, 's' from auth.users limit 3;
+insert into auth.identities(provider_id, user_id, identity_data, provider) select id::text, id, jsonb_build_object('email', email), 'email' from auth.users;
+insert into auth.sessions(id, user_id, created_at) select gen_random_uuid(), id, now() from auth.users;
+insert into auth.refresh_tokens(token, user_id, session_id) select 'tok'||row_number() over (), user_id, id from auth.sessions;
+insert into auth.mfa_amr_claims(session_id, created_at, updated_at, authentication_method, id) select id, now(), now(), 'password', gen_random_uuid() from auth.sessions;
+insert into auth.mfa_factors(id, user_id, factor_type, status, secret) select gen_random_uuid(), id, 'totp', 'verified', 's' from auth.users limit 3;
+insert into auth.mfa_challenges(id, factor_id, ip_address) select gen_random_uuid(), id, '127.0.0.1' from auth.mfa_factors;
+insert into auth.flow_state(id, auth_code, code_challenge_method, code_challenge, provider_type) values ('00000000-0000-0000-0000-000000000001', 'codigo', 's256', 'x', 'email');
+insert into auth.sso_providers(id) values ('00000000-0000-0000-0000-000000000002');
+insert into auth.saml_relay_states(id, sso_provider_id, request_id, flow_state_id) values (gen_random_uuid(), '00000000-0000-0000-0000-000000000002', 'r', '00000000-0000-0000-0000-000000000001');
+insert into auth.one_time_tokens(id, user_id, token_type, token_hash, relates_to) select gen_random_uuid(), id, 'recovery_token', 'h'||id, email from auth.users;
+insert into auth.audit_log_entries(id, payload) select gen_random_uuid(), '{}' from generate_series(1,5);
 insert into storage.buckets values ('media','media');
 SQL
 
@@ -91,11 +91,12 @@ table_counts "public auth storage" | tee "$TMP/origen.txt"
 echo "--- restore (contenedor temporal)"
 unset PG_DOCKER_NETWORK
 ./restore.sh "$FILE" --counts "$TMP/restaurado.txt" >/dev/null
-# Las tablas de sesiones/tokens se excluyen del backup: deben quedar vacías tras restaurar.
-awk '$1 ~ /^auth\.(refresh_tokens|sessions|flow_state|one_time_tokens)$/ {print $1, 0; next} {print}' "$TMP/origen.txt" > "$TMP/esperado.txt"
+# Solo se respaldan los datos de auth.users, auth.identities, auth.mfa_factors y auth.schema_migrations;
+# el resto de auth.* (sesiones, tokens, desafíos, auditoría...) debe quedar vacío tras restaurar.
+awk '$1 ~ /^auth\./ && $1 !~ /^auth\.(users|identities|mfa_factors|schema_migrations)$/ {print $1, 0; next} {print}' "$TMP/origen.txt" > "$TMP/esperado.txt"
 grep -E '^auth\.refresh_tokens [1-9]' "$TMP/origen.txt" >/dev/null || { echo "FALLA: el origen no tenía tokens de prueba"; exit 1; }
 diff "$TMP/esperado.txt" "$TMP/restaurado.txt" || { echo "FALLA: los conteos difieren"; exit 1; }
-echo "CONTEOS IGUALES (tokens y sesiones excluidos)"
+echo "CONTEOS IGUALES (solo users, identities, mfa_factors y schema_migrations conservan filas)"
 echo "--- el restore rechaza Supabase"
 if ./restore.sh "$FILE" --target-url "postgres://x:y@db.example.supabase.co:5432/postgres" --confirmo-base-temporal 2>&1; then
   echo "ERROR: no rechazó"; exit 1

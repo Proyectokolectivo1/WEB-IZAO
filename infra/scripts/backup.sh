@@ -41,8 +41,15 @@ if [ "$DO_DB" -eq 1 ]; then
   DESTINO="$BACKUP_DIR/db/$HOY.sql.gz.$(extension_cifrado)"
   args=(--no-owner --no-privileges)
   for s in $DUMP_SCHEMAS; do args+=(--schema="$s"); done
-  # Sesiones y tokens no se respaldan: no sirven tras una restauración y son sensibles.
-  for t in auth.refresh_tokens auth.sessions auth.flow_state auth.one_time_tokens; do args+=(--exclude-table-data="$t"); done
+  # De auth.* solo se respaldan los DATOS de users, identities, mfa_factors y schema_migrations.
+  # El resto (sesiones, tokens, desafíos MFA, estado de flujos, auditoría...) no sirve tras una
+  # restauración, es sensible y tiene llaves foráneas hacia tablas excluidas (un respaldo que
+  # incluya solo una parte no se podría restaurar). La lista se lee de la base para cubrir tablas
+  # que GoTrue agregue en el futuro.
+  if [[ " $DUMP_SCHEMAS " == *" auth "* ]]; then
+    EXCLUIR_AUTH="$(pg_run psql -X -At -c "select tablename from pg_tables where schemaname = 'auth' and tablename not in ('users','identities','mfa_factors','schema_migrations') order by 1")"
+    for t in $EXCLUIR_AUTH; do args+=(--exclude-table-data="auth.$t"); done
+  fi
   log "pg_dump (cifrado) -> $DESTINO"
   pg_run pg_dump "${args[@]}" | gzip -9 | cifrar > "$DESTINO.tmp"
   [ -s "$DESTINO.tmp" ] || { alertar "Backup de base vacío"; exit 1; }
