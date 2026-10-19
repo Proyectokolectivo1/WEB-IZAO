@@ -205,20 +205,35 @@ describe('buildCarrierLines — bordes del prorrateo (modo B)', () => {
     checkInvariant(r);
   });
 
-  it('cantidad 3 que no divide exacto se parte en 3 líneas de cantidad 1', () => {
+  it('cantidad 3 que no divide exacto se parte en dos líneas: resto × (unidad+1) y el resto × unidad (B2)', () => {
     const r = buildCarrierLines({
       currency: 'COP',
       paymentKind: 'wompi',
       mode: 'prorate',
       items: [item('A', 50_000n, 3, 10_000n)],
     });
-    // 140.000 / 3 = 46.666,67 → 46.667 + 46.667 + 46.666
+    // 140.000 / 3 = 46.666 resto 2 → 2 × 46.667 + 1 × 46.666
     expect(r.lines.map((l) => [l.source.sku, l.quantity, l.price])).toEqual([
-      ['A', 1, 46_667n],
-      ['A', 1, 46_667n],
+      ['A', 2, 46_667n],
       ['A', 1, 46_666n],
     ]);
     expect(r.lines.every((l) => l.sourceIndex === 0)).toBe(true);
+    checkInvariant(r);
+  });
+
+  it('una cantidad grande que no divide exacto da solo dos líneas, no una por unidad', () => {
+    const r = buildCarrierLines({
+      currency: 'COP',
+      paymentKind: 'cod',
+      mode: 'prorate',
+      codDeposit: 10_000n,
+      items: [item('A', 1_000n, 999)],
+    });
+    // 999.000 − 10.000 = 989.000; 989.000 / 999 = 989 resto 989 → 989 × 990 + 10 × 989
+    expect(r.lines.map((l) => [l.quantity, l.price])).toEqual([
+      [989, 990n],
+      [10, 989n],
+    ]);
     checkInvariant(r);
   });
 
@@ -428,10 +443,11 @@ describe('buildCarrierLines — propiedad: Σ price × quantity + Σ additional_
           expect(sent <= net).toBe(true);
           if (!codDeposit) expect(sent).toBe(net);
         }
-        // Una línea partida queda en cantidades de 1.
+        // B2: una línea partida da exactamente dos líneas cuyos precios difieren en 1.
         for (let i = 0; i < items.length; i++) {
           const ls = r.lines.filter((l) => l.sourceIndex === i);
-          if (ls.length > 1) expect(ls.every((l) => l.quantity === 1)).toBe(true);
+          expect(ls.length <= 2).toBe(true);
+          if (ls.length === 2) expect(ls[0]!.price - ls[1]!.price).toBe(1n);
         }
       }
       checked++;

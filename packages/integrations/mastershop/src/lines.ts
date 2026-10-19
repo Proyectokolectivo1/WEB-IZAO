@@ -15,7 +15,8 @@ export type CarrierPaymentKind = 'cod' | 'wompi' | 'addi' | 'sistecredito';
  * Modo de cuadre del total (`country_settings.carrier_discount_mode`, D-010):
  * - `additional_charge` (Opción A): precios reales y un cargo negativo "descuento".
  * - `prorate` (Opción B): cada línea va a su valor menos su `line_discount`, y el abono
- *   se reparte sobre el valor neto de las líneas.
+ *   se reparte sobre el valor neto de las líneas. Si una línea no divide exacto por
+ *   unidad, se parte en dos (`[VERIFICAR]` límite de ítems y precio 0 en MasterShop).
  */
 export type CarrierDiscountMode = 'additional_charge' | 'prorate';
 
@@ -203,13 +204,13 @@ export function buildCarrierLines<T extends CarrierLineSource>(
       lines.push({ source, sourceIndex, quantity: source.quantity, price: lineTotal / qty });
       return;
     }
-    // No divide exacto por unidad: se parte en líneas de cantidad 1. Las primeras
-    // `resto` unidades llevan un peso (o centavo) más.
+    // No divide exacto por unidad (B2): dos líneas, `resto` unidades a un peso (o
+    // centavo) más y las demás al precio base. §14.4 decía "líneas de cantidad 1"; con dos
+    // líneas el total es el mismo y una cantidad grande no genera cientos de ítems.
     const unit = lineTotal / qty;
     const rest = lineTotal % qty;
-    for (let u = 0n; u < qty; u++) {
-      lines.push({ source, sourceIndex, quantity: 1, price: u < rest ? unit + 1n : unit });
-    }
+    lines.push({ source, sourceIndex, quantity: Number(rest), price: unit + 1n });
+    lines.push({ source, sourceIndex, quantity: Number(qty - rest), price: unit });
   });
 
   return { ...base, lines, additionalCharges: [] };

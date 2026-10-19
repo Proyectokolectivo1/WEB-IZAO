@@ -332,7 +332,7 @@ describe('buildCarrierOrder — ítems', () => {
     expect(body.order_items[0]?.name).toBe('Fragancia de prueba 50 ml');
   });
 
-  it('una línea partida en el modo B conserva sku, vínculo y peso en cada unidad', () => {
+  it('una línea partida en el modo B conserva sku, vínculo y peso en cada parte', () => {
     const order = makeOrder({
       payment_method: 'wompi',
       items: [makeItem({ quantity: 3, unit_price: 50_000n, line_discount: 10_000n })],
@@ -341,8 +341,7 @@ describe('buildCarrierOrder — ítems', () => {
     expect(
       body.order_items.map((i) => [i.sku, i.quantity, i.price, i.id_product, i.weight]),
     ).toEqual([
-      ['IZ-0001-100', 1, 46_667n, 2001, 0.5],
-      ['IZ-0001-100', 1, 46_667n, 2001, 0.5],
+      ['IZ-0001-100', 2, 46_667n, 2001, 0.5],
       ['IZ-0001-100', 1, 46_666n, 2001, 0.5],
     ]);
     expect(body.order_transaction.total).toBe(140_000n);
