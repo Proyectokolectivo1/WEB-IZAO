@@ -81,12 +81,39 @@ describe('MasterShopMock reproduce las trampas documentadas', () => {
     delete body.billing_address.zip;
     const r = await call('POST', '/api/orders', body);
     expect(r.status).toBe(400);
+    // Forma de la colección: `path` es un arreglo y el mensaje es "Required".
+    expect(r.json).toMatchObject({ error: 'Datos del body inválidos', success: false });
     expect(r.json.data).toEqual(
       expect.arrayContaining([
-        { path: 'shipping_address.company', message: 'Requerido' },
-        { path: 'billing_address.zip', message: 'Requerido' },
+        { path: ['shipping_address', 'company'], message: 'Required' },
+        { path: ['billing_address', 'zip'], message: 'Required' },
       ]),
     );
+  });
+
+  it('las respuestas de éxito no llevan envoltorio y los errores sí ({ data, error, success })', async () => {
+    const { call } = setup();
+    const created = await call('POST', '/api/orders', validBody());
+    expect(Object.keys(created.json)).not.toContain('success');
+    expect(created.json).toMatchObject({ idOrder: 1001, status: 'Por Confirmar' });
+    const list = await call('POST', '/api/orders/list?page=1', { idOrder: 1001 });
+    expect(Array.isArray(list.json)).toBe(true);
+    const products = await call('GET', '/api/products?page=1');
+    expect(products.json).toEqual({ results: [], resultsCount: 0 });
+    const missing = await call('GET', '/api/orders?idOrder=999');
+    expect(missing.json).toEqual({ data: null, error: 'Orden no existe!', success: false });
+  });
+
+  it('el filtro idOrder del listado basta para salir de la ventana de 7 días', async () => {
+    const { mock, clock, call } = setup();
+    const old = mock.seed({
+      externalOrderId: 'IZ-CO-9',
+      createdAt: new Date(clock.now() - 200 * DAY),
+    });
+    const r = await call('POST', '/api/orders/list?page=1', { idOrder: old.idOrder });
+    expect(r.json.map((o: { idOrder: number }) => o.idOrder)).toEqual([old.idOrder]);
+    const ext = await call('POST', '/api/orders/list?page=1', { externalOrderId: 'IZ-CO-9' });
+    expect(ext.json).toHaveLength(1);
   });
 
   it('rechaza un total que no cuadra por 1 peso', async () => {

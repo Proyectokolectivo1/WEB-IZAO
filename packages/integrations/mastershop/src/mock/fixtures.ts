@@ -41,10 +41,11 @@ export const MS_ERRORS = {
     error: 'La plataforma rechazó la actualización. La orden no fue modificada',
     success: false,
   },
-  /** `[VERIFICAR]` el texto del 502 (documentado el caso, no el cuerpo). */
+  /** Documentado (502 en PUT). */
   notConfirmed: {
     data: null,
-    error: 'La plataforma no confirmó el resultado de la actualización',
+    error:
+      'La plataforma no confirmó el resultado de la actualización: puede haberse aplicado o no. No reintentes: consulta la orden con GET /api/orders?idOrder={idOrder} para ver su estado actual',
     success: false,
   },
   /** Documentado (sección de límites). */

@@ -287,23 +287,48 @@ describe('MasterShopClient.listOrders / listAllOrders', () => {
   });
 });
 
+describe('MasterShopClient.findOrderSummary', () => {
+  it('encuentra un pedido de hace 200 días filtrando solo por idOrder o externalOrderId', async () => {
+    const { mock, clock, client } = setup();
+    const old = mock.seed({
+      externalOrderId: 'IZ-CO-000001',
+      createdAt: new Date(clock.now() - 200 * DAY),
+      statusId: 8,
+    });
+    expect(await client.findOrderSummary({ idOrder: old.idOrder })).toMatchObject({
+      idOrder: old.idOrder,
+      statusId: 8,
+    });
+    expect(JSON.parse(mock.requests.at(-1)!.body!)).toEqual({ idOrder: old.idOrder });
+    expect(await client.findOrderSummary({ externalOrderId: 'IZ-CO-000001' })).toMatchObject({
+      idOrder: old.idOrder,
+    });
+    expect(JSON.parse(mock.requests.at(-1)!.body!)).toEqual({ externalOrderId: 'IZ-CO-000001' });
+  });
+
+  it('exige al menos un identificador', async () => {
+    const { mock, client } = setup();
+    await expectError(client.findOrderSummary({}), 'validacion');
+    expect(mock.requests).toHaveLength(0);
+  });
+});
+
 describe('MasterShopClient.updateOrderStatus (confirmar y cancelar)', () => {
   async function created() {
     const s = setup();
     const { idOrder } = await s.client.createOrder(body());
-    const since = new Date(s.clock.now() - 45 * DAY);
-    return { ...s, idOrder, since };
+    return { ...s, idOrder };
   }
 
   it('confirma con exactamente { idStatus: 2 } y cancela con exactamente { idStatus: 9 }', async () => {
-    const { mock, client, idOrder, since } = await created();
-    expect(await client.updateOrderStatus(idOrder, 2, { since })).toEqual({
+    const { mock, client, idOrder } = await created();
+    expect(await client.updateOrderStatus(idOrder, 2)).toEqual({
       applied: true,
       statusId: 2,
       via: 'respuesta',
     });
     expect(mock.requests.at(-1)!.body).toBe('{"idStatus":2}');
-    expect(await client.updateOrderStatus(idOrder, 9, { since })).toEqual({
+    expect(await client.updateOrderStatus(idOrder, 9)).toEqual({
       applied: true,
       statusId: 9,
       via: 'respuesta',
@@ -313,44 +338,38 @@ describe('MasterShopClient.updateOrderStatus (confirmar y cancelar)', () => {
   });
 
   it('409 por edición concurrente → reintenta a los 5 s', async () => {
-    const { mock, clock, client, idOrder, since } = await created();
+    const { mock, clock, client, idOrder } = await created();
     mock.inject('update', { status: 409, body: MS_ERRORS.concurrentEdit });
     const t0 = clock.now();
-    expect(await client.updateOrderStatus(idOrder, 2, { since })).toMatchObject({ applied: true });
+    expect(await client.updateOrderStatus(idOrder, 2)).toMatchObject({ applied: true });
     expect(clock.sleeps).toEqual([5_000]);
     expect(clock.now() - t0).toBe(5_000);
     expect(mock.countRequests('PUT', '/api/orders/')).toBe(2);
   });
 
   it('409 concurrente persistente → se rinde tras 3 reintentos, reintentable por el job', async () => {
-    const { mock, clock, client, idOrder, since } = await created();
+    const { mock, clock, client, idOrder } = await created();
     for (let i = 0; i < 4; i++)
       mock.inject('update', { status: 409, body: MS_ERRORS.concurrentEdit });
-    const e = await expectError(
-      client.updateOrderStatus(idOrder, 2, { since }),
-      'edicion_concurrente',
-    );
+    const e = await expectError(client.updateOrderStatus(idOrder, 2), 'edicion_concurrente');
     expect(e.retryable).toBe(true);
     expect(clock.sleeps).toEqual([5_000, 5_000, 5_000]);
     expect(mock.countRequests('PUT', '/api/orders/')).toBe(4);
   });
 
   it('409 por estado no editable no se reintenta', async () => {
-    const { mock, clock, client, idOrder, since } = await created();
+    const { mock, clock, client, idOrder } = await created();
     mock.setStatus(idOrder, 3);
-    const e = await expectError(
-      client.updateOrderStatus(idOrder, 9, { since }),
-      'estado_no_editable',
-    );
+    const e = await expectError(client.updateOrderStatus(idOrder, 9), 'estado_no_editable');
     expect(e.retryable).toBe(false);
     expect(clock.sleeps).toEqual([]);
     expect(mock.countRequests('PUT', '/api/orders/')).toBe(1);
   });
 
   it('502 que sí se aplicó: no reintenta el PUT, consulta y reporta aplicado', async () => {
-    const { mock, client, idOrder, since } = await created();
+    const { mock, client, idOrder } = await created();
     mock.inject('update', { status: 502, body: MS_ERRORS.notConfirmed, apply: true });
-    expect(await client.updateOrderStatus(idOrder, 2, { since })).toEqual({
+    expect(await client.updateOrderStatus(idOrder, 2)).toEqual({
       applied: true,
       statusId: 2,
       via: 'consulta',
@@ -358,13 +377,14 @@ describe('MasterShopClient.updateOrderStatus (confirmar y cancelar)', () => {
     expect(mock.countRequests('PUT', '/api/orders/')).toBe(1);
     const list = mock.requests.at(-1)!;
     expect(list.path).toBe('/api/orders/list');
-    expect(JSON.parse(list.body!)).toEqual({ startDate: since.toISOString(), idOrder });
+    // Un filtro cualquiera quita la ventana de 7 días: basta idOrder.
+    expect(JSON.parse(list.body!)).toEqual({ idOrder });
   });
 
   it('502 que no se aplicó: no reintenta y reporta el estado real', async () => {
-    const { mock, client, idOrder, since } = await created();
+    const { mock, client, idOrder } = await created();
     mock.inject('update', { status: 502, body: MS_ERRORS.notConfirmed, apply: false });
-    expect(await client.updateOrderStatus(idOrder, 2, { since })).toEqual({
+    expect(await client.updateOrderStatus(idOrder, 2)).toEqual({
       applied: false,
       statusId: 1,
       via: 'consulta',
@@ -373,10 +393,10 @@ describe('MasterShopClient.updateOrderStatus (confirmar y cancelar)', () => {
   });
 
   it('502 al confirmar cuando el pedido ya avanzó a 3 cuenta como aplicado', async () => {
-    const { mock, client, idOrder, since } = await created();
+    const { mock, client, idOrder } = await created();
     mock.inject('update', { status: 502, body: MS_ERRORS.notConfirmed, apply: false });
     mock.setStatus(idOrder, 3);
-    expect(await client.updateOrderStatus(idOrder, 2, { since })).toEqual({
+    expect(await client.updateOrderStatus(idOrder, 2)).toEqual({
       applied: true,
       statusId: 3,
       via: 'consulta',
@@ -386,17 +406,15 @@ describe('MasterShopClient.updateOrderStatus (confirmar y cancelar)', () => {
   it('502 y el pedido no aparece en la consulta → no_confirmado, no reintentable', async () => {
     const { mock, client, idOrder } = await created();
     mock.inject('update', { status: 502, body: MS_ERRORS.notConfirmed });
-    const e = await expectError(
-      client.updateOrderStatus(idOrder, 2, { since: new Date(Date.UTC(2030, 0, 1)) }),
-      'no_confirmado',
-    );
+    mock.inject('list', { status: 200, body: [] });
+    const e = await expectError(client.updateOrderStatus(idOrder, 2), 'no_confirmado');
     expect(e.retryable).toBe(false);
   });
 
   it('422 → rechazado', async () => {
-    const { mock, client, idOrder, since } = await created();
+    const { mock, client, idOrder } = await created();
     mock.inject('update', { status: 422, body: MS_ERRORS.rejected });
-    await expectError(client.updateOrderStatus(idOrder, 2, { since }), 'rechazado');
+    await expectError(client.updateOrderStatus(idOrder, 2), 'rechazado');
   });
 });
 

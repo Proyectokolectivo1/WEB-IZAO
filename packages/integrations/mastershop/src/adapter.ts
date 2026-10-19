@@ -19,14 +19,10 @@ import { buildCarrierOrder } from './order';
 import type { CarrierOrderOptions } from './order';
 import { getMasterShopStatus, masterShopStatusFromName } from './status';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 export interface MasterShopCarrierOptions {
   client: MasterShopClient;
   resolveOrderOptions(order: Order): CarrierOrderOptions | Promise<CarrierOrderOptions>;
   clock?: Clock;
-  /** Ventana para encontrar un pedido en el listado (estado, novedad, tarifas). */
-  lookbackDays?: number;
   /** Fábrica de clientes para "Probar conexión" con una llave nueva. */
   createClient?: (apiKey: string) => MasterShopClient;
 }
@@ -60,10 +56,6 @@ export class MasterShopCarrier implements CarrierProvider {
     this.clock = options.clock ?? systemClock;
   }
 
-  private since(): Date {
-    return new Date(this.clock.now() - (this.options.lookbackDays ?? 90) * DAY_MS);
-  }
-
   /** Arma y envía el pedido. Lanza `CarrierOrderError` (sin red) si el pedido no es válido. */
   async createOrder(order: Order): Promise<{ providerOrderId: number; statusId: number }> {
     const opts = await this.options.resolveOrderOptions(order);
@@ -73,10 +65,7 @@ export class MasterShopCarrier implements CarrierProvider {
       ? masterShopStatusFromName(created.statusName)?.id
       : undefined;
     if (statusId === undefined) {
-      const summary = await this.client.findOrderSummary(
-        { idOrder: created.idOrder },
-        this.since(),
-      );
+      const summary = await this.client.findOrderSummary({ idOrder: created.idOrder });
       statusId = summary?.statusId ?? 1;
     }
     return { providerOrderId: created.idOrder, statusId };
@@ -88,7 +77,7 @@ export class MasterShopCarrier implements CarrierProvider {
    */
   async confirmOrder(providerOrderId: number): Promise<void> {
     try {
-      const r = await this.client.updateOrderStatus(providerOrderId, 2, { since: this.since() });
+      const r = await this.client.updateOrderStatus(providerOrderId, 2);
       if (r.applied) return;
       throw this.notApplied('confirmar', r.statusId);
     } catch (e) {
@@ -103,7 +92,7 @@ export class MasterShopCarrier implements CarrierProvider {
   /** `PUT` con exactamente `{ idStatus: 9 }`. Idempotente si ya estaba cancelado. */
   async cancelOrder(providerOrderId: number): Promise<void> {
     try {
-      const r = await this.client.updateOrderStatus(providerOrderId, 9, { since: this.since() });
+      const r = await this.client.updateOrderStatus(providerOrderId, 9);
       if (r.applied) return;
       throw this.notApplied('cancelar', r.statusId);
     } catch (e) {
@@ -126,7 +115,7 @@ export class MasterShopCarrier implements CarrierProvider {
   }
 
   private async currentStatus(providerOrderId: number): Promise<number | null> {
-    const summary = await this.client.findOrderSummary({ idOrder: providerOrderId }, this.since());
+    const summary = await this.client.findOrderSummary({ idOrder: providerOrderId });
     return summary?.statusId ?? null;
   }
 
@@ -142,7 +131,7 @@ export class MasterShopCarrier implements CarrierProvider {
           ? { externalOrderId: ref.externalOrderId }
           : {},
     );
-    const summary = await this.client.findOrderSummary({ idOrder: detail.idOrder }, this.since());
+    const summary = await this.client.findOrderSummary({ idOrder: detail.idOrder });
     const statusId = detail.statusId ?? summary?.statusId ?? null;
     if (statusId === null) {
       throw new MasterShopError({

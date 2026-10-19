@@ -136,11 +136,14 @@ function isObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
-function missingKeys(obj: unknown, keys: readonly string[], path: string) {
-  if (!isObject(obj)) return [{ path, message: 'Requerido' }];
+type IssuePath = string | (string | number)[];
+
+/** Claves faltantes con la forma de la colección: `{ message: "Required", path: [...] }`. */
+function missingKeys(obj: unknown, keys: readonly string[], path: (string | number)[]) {
+  if (!isObject(obj)) return [{ path, message: 'Required' }];
   return keys
     .filter((k) => !Object.prototype.hasOwnProperty.call(obj, k))
-    .map((k) => ({ path: `${path}.${k}`, message: 'Requerido' }));
+    .map((k) => ({ path: [...path, k], message: 'Required' }));
 }
 
 export class MasterShopMock {
@@ -288,7 +291,7 @@ export class MasterShopMock {
         response = this.update(path.split('/').pop() ?? '', parsed, rl.headers);
         break;
       case 'products':
-        response = this.json(200, [], rl.headers);
+        response = this.json(200, { results: [], resultsCount: 0 }, rl.headers);
         break;
     }
     // PUT 502 que sí se aplicó: el cambio ocurrió pero la respuesta no lo confirma.
@@ -325,7 +328,7 @@ export class MasterShopMock {
 
   private badRequest(
     error: string,
-    data: { path: string; message: string }[] | null,
+    data: { path: IssuePath; message: string }[] | null,
     headers: Record<string, string>,
   ): Response {
     return this.json(400, { data, error, success: false }, headers);
@@ -338,25 +341,25 @@ export class MasterShopMock {
     headers: Record<string, string>,
   ): Response {
     const missing = [
-      ...missingKeys(parsed, TOP_KEYS, 'body'),
+      ...missingKeys(parsed, TOP_KEYS, []),
       ...(isObject(parsed)
         ? [
-            ...missingKeys(parsed.shipping_address, ADDRESS_KEYS, 'shipping_address'),
-            ...missingKeys(parsed.billing_address, ADDRESS_KEYS, 'billing_address'),
-            ...missingKeys(parsed.customer, CUSTOMER_KEYS, 'customer'),
-            ...missingKeys(parsed.order_transaction, TRANSACTION_KEYS, 'order_transaction'),
+            ...missingKeys(parsed.shipping_address, ADDRESS_KEYS, ['shipping_address']),
+            ...missingKeys(parsed.billing_address, ADDRESS_KEYS, ['billing_address']),
+            ...missingKeys(parsed.customer, CUSTOMER_KEYS, ['customer']),
+            ...missingKeys(parsed.order_transaction, TRANSACTION_KEYS, ['order_transaction']),
             ...(Array.isArray(parsed.order_items)
               ? parsed.order_items.flatMap((it, i) =>
-                  missingKeys(it, ITEM_KEYS, `order_items.${i}`),
+                  missingKeys(it, ITEM_KEYS, ['order_items', i]),
                 )
-              : [{ path: 'order_items', message: 'Requerido' }]),
+              : [{ path: ['order_items'], message: 'Required' }]),
           ]
         : []),
     ];
     if (missing.length > 0) return this.badRequest(MS_ERRORS.invalidBody, missing, headers);
     const b = parsed as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-    const formatIssues: { path: string; message: string }[] = [];
+    const formatIssues: { path: IssuePath; message: string }[] = [];
     if (typeof b.id_order !== 'string' || !/^[A-Za-z0-9_-]+$/.test(b.id_order)) {
       formatIssues.push({ path: 'id_order', message: 'Formato inválido' });
     }

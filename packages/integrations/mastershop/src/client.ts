@@ -478,9 +478,16 @@ export class MasterShopClient {
     if (filter.orderStatus !== undefined) body.orderStatus = filter.orderStatus;
     if (filter.orderStatusParent !== undefined) body.orderStatusParent = filter.orderStatusParent;
     if (filter.paymentMethod !== undefined) body.paymentMethod = filter.paymentMethod;
+    return this.listPage(body, filter.page, limit);
+  }
 
+  private async listPage(
+    body: Record<string, unknown>,
+    page: number,
+    limit: number,
+  ): Promise<MasterShopListItem[]> {
     const res = await this.send('POST', '/api/orders/list', {
-      query: { page: String(filter.page), limit: String(limit) },
+      query: { page: String(page), limit: String(limit) },
       body: JSON.stringify(body),
     });
     if (res.status !== 200) throw this.fail(res, 'POST');
@@ -533,12 +540,26 @@ export class MasterShopClient {
     });
   }
 
-  /** Resumen (estado, novedad, tarifas) de un pedido desde el listado. */
-  async findOrderSummary(
-    ref: { idOrder?: number; externalOrderId?: string },
-    since: Date,
-  ): Promise<MasterShopListItem | null> {
-    const rows = await this.listOrders({ ...ref, startDate: since, page: 1 });
+  /**
+   * Resumen (estado, novedad, tarifas) de un pedido desde el listado. Basta el filtro
+   * por `idOrder` o `externalOrderId`: la colección documenta que cualquier filtro
+   * quita la ventana de 7 días, así que no se acota por fecha (un pedido viejo sigue
+   * apareciendo).
+   */
+  async findOrderSummary(ref: {
+    idOrder?: number;
+    externalOrderId?: string;
+  }): Promise<MasterShopListItem | null> {
+    const body: Record<string, unknown> = {};
+    if (ref.idOrder !== undefined) body.idOrder = ref.idOrder;
+    if (ref.externalOrderId !== undefined) body.externalOrderId = ref.externalOrderId;
+    if (Object.keys(body).length === 0) {
+      throw new MasterShopError({
+        kind: 'validacion',
+        message: 'Se requiere idOrder o externalOrderId para buscar el pedido.',
+      });
+    }
+    const rows = await this.listPage(body, 1, MASTERSHOP_MAX_PAGE_SIZE);
     return (
       rows.find(
         (r) =>
@@ -553,11 +574,7 @@ export class MasterShopClient {
    * - `409` concurrente → espera y reintenta.
    * - `502` → no reintenta: consulta el listado y devuelve el estado real.
    */
-  async updateOrderStatus(
-    idOrder: number,
-    idStatus: 2 | 9,
-    opts: { since: Date },
-  ): Promise<UpdateStatusResult> {
+  async updateOrderStatus(idOrder: number, idStatus: 2 | 9): Promise<UpdateStatusResult> {
     if (!Number.isSafeInteger(idOrder) || idOrder <= 0) {
       throw new MasterShopError({
         kind: 'validacion',
@@ -575,7 +592,7 @@ export class MasterShopClient {
         continue;
       }
       if (error.kind === 'no_confirmado') {
-        const summary = await this.findOrderSummary({ idOrder }, opts.since);
+        const summary = await this.findOrderSummary({ idOrder });
         if (summary === null || summary.statusId === null) throw error;
         const s = summary.statusId;
         const applied = idStatus === 9 ? s === 9 : s !== 1 && s !== 9;
