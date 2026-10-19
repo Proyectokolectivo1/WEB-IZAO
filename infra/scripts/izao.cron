@@ -1,10 +1,9 @@
 # Cron de Izao (instalar en /etc/cron.d/izao, ejecutado por el usuario izao).
-# Zona horaria de negocio: Bogotá. Las variables se cargan de infra/.env.
-CRON_TZ=America/Bogota
+# Horas en UTC (Bogotá = UTC-5, sin horario de verano); no depende de CRON_TZ. Variables de infra/.env.
 SHELL=/bin/bash
-# Backup diario 03:00
-0 3 * * * izao set -a; . /srv/izao/app/infra/.env; set +a; /srv/izao/app/infra/scripts/backup.sh >> /srv/izao/backups/backup.log 2>&1
-# Keepalive de Supabase cada 3 días 04:00
-0 4 */3 * * izao set -a; . /srv/izao/app/infra/.env; set +a; /srv/izao/app/infra/scripts/keepalive.sh >> /srv/izao/backups/keepalive.log 2>&1
+# Backup diario 03:00 Bogotá = 08:00 UTC
+0 8 * * * izao set -a; . /srv/izao/app/infra/.env; set +a; /srv/izao/app/infra/scripts/backup.sh >> /srv/izao/backups/backup.log 2>&1
+# Keepalive de Supabase cada 3 días, 04:00 Bogotá = 09:00 UTC
+0 9 */3 * * izao set -a; . /srv/izao/app/infra/.env; set +a; /srv/izao/app/infra/scripts/keepalive.sh >> /srv/izao/backups/keepalive.log 2>&1
 # Alertas de base y disco cada 6 horas
 15 */6 * * * izao set -a; . /srv/izao/app/infra/.env; set +a; /srv/izao/app/infra/scripts/check-alerts.sh >> /srv/izao/backups/alerts.log 2>&1
