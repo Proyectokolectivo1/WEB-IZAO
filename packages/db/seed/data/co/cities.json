@@ -1,0 +1,6734 @@
+[
+  {
+    "code": "05001",
+    "region_code": "05",
+    "name": "MEDELLÍN",
+    "is_capital": true
+  },
+  {
+    "code": "05002",
+    "region_code": "05",
+    "name": "ABEJORRAL",
+    "is_capital": false
+  },
+  {
+    "code": "05004",
+    "region_code": "05",
+    "name": "ABRIAQUÍ",
+    "is_capital": false
+  },
+  {
+    "code": "05021",
+    "region_code": "05",
+    "name": "ALEJANDRÍA",
+    "is_capital": false
+  },
+  {
+    "code": "05030",
+    "region_code": "05",
+    "name": "AMAGÁ",
+    "is_capital": false
+  },
+  {
+    "code": "05031",
+    "region_code": "05",
+    "name": "AMALFI",
+    "is_capital": false
+  },
+  {
+    "code": "05034",
+    "region_code": "05",
+    "name": "ANDES",
+    "is_capital": false
+  },
+  {
+    "code": "05036",
+    "region_code": "05",
+    "name": "ANGELÓPOLIS",
+    "is_capital": false
+  },
+  {
+    "code": "05038",
+    "region_code": "05",
+    "name": "ANGOSTURA",
+    "is_capital": false
+  },
+  {
+    "code": "05040",
+    "region_code": "05",
+    "name": "ANORÍ",
+    "is_capital": false
+  },
+  {
+    "code": "05042",
+    "region_code": "05",
+    "name": "SANTA FÉ DE ANTIOQUIA",
+    "is_capital": false
+  },
+  {
+    "code": "05044",
+    "region_code": "05",
+    "name": "ANZÁ",
+    "is_capital": false
+  },
+  {
+    "code": "05045",
+    "region_code": "05",
+    "name": "APARTADÓ",
+    "is_capital": false
+  },
+  {
+    "code": "05051",
+    "region_code": "05",
+    "name": "ARBOLETES",
+    "is_capital": false
+  },
+  {
+    "code": "05055",
+    "region_code": "05",
+    "name": "ARGELIA",
+    "is_capital": false
+  },
+  {
+    "code": "05059",
+    "region_code": "05",
+    "name": "ARMENIA",
+    "is_capital": false
+  },
+  {
+    "code": "05079",
+    "region_code": "05",
+    "name": "BARBOSA",
+    "is_capital": false
+  },
+  {
+    "code": "05086",
+    "region_code": "05",
+    "name": "BELMIRA",
+    "is_capital": false
+  },
+  {
+    "code": "05088",
+    "region_code": "05",
+    "name": "BELLO",
+    "is_capital": false
+  },
+  {
+    "code": "05091",
+    "region_code": "05",
+    "name": "BETANIA",
+    "is_capital": false
+  },
+  {
+    "code": "05093",
+    "region_code": "05",
+    "name": "BETULIA",
+    "is_capital": false
+  },
+  {
+    "code": "05101",
+    "region_code": "05",
+    "name": "CIUDAD BOLÍVAR",
+    "is_capital": false
+  },
+  {
+    "code": "05107",
+    "region_code": "05",
+    "name": "BRICEÑO",
+    "is_capital": false
+  },
+  {
+    "code": "05113",
+    "region_code": "05",
+    "name": "BURITICÁ",
+    "is_capital": false
+  },
+  {
+    "code": "05120",
+    "region_code": "05",
+    "name": "CÁCERES",
+    "is_capital": false
+  },
+  {
+    "code": "05125",
+    "region_code": "05",
+    "name": "CAICEDO",
+    "is_capital": false
+  },
+  {
+    "code": "05129",
+    "region_code": "05",
+    "name": "CALDAS",
+    "is_capital": false
+  },
+  {
+    "code": "05134",
+    "region_code": "05",
+    "name": "CAMPAMENTO",
+    "is_capital": false
+  },
+  {
+    "code": "05138",
+    "region_code": "05",
+    "name": "CAÑASGORDAS",
+    "is_capital": false
+  },
+  {
+    "code": "05142",
+    "region_code": "05",
+    "name": "CARACOLÍ",
+    "is_capital": false
+  },
+  {
+    "code": "05145",
+    "region_code": "05",
+    "name": "CARAMANTA",
+    "is_capital": false
+  },
+  {
+    "code": "05147",
+    "region_code": "05",
+    "name": "CAREPA",
+    "is_capital": false
+  },
+  {
+    "code": "05148",
+    "region_code": "05",
+    "name": "EL CARMEN DE VIBORAL",
+    "is_capital": false
+  },
+  {
+    "code": "05150",
+    "region_code": "05",
+    "name": "CAROLINA",
+    "is_capital": false
+  },
+  {
+    "code": "05154",
+    "region_code": "05",
+    "name": "CAUCASIA",
+    "is_capital": false
+  },
+  {
+    "code": "05172",
+    "region_code": "05",
+    "name": "CHIGORODÓ",
+    "is_capital": false
+  },
+  {
+    "code": "05190",
+    "region_code": "05",
+    "name": "CISNEROS",
+    "is_capital": false
+  },
+  {
+    "code": "05197",
+    "region_code": "05",
+    "name": "COCORNÁ",
+    "is_capital": false
+  },
+  {
+    "code": "05206",
+    "region_code": "05",
+    "name": "CONCEPCIÓN",
+    "is_capital": false
+  },
+  {
+    "code": "05209",
+    "region_code": "05",
+    "name": "CONCORDIA",
+    "is_capital": false
+  },
+  {
+    "code": "05212",
+    "region_code": "05",
+    "name": "COPACABANA",
+    "is_capital": false
+  },
+  {
+    "code": "05234",
+    "region_code": "05",
+    "name": "DABEIBA",
+    "is_capital": false
+  },
+  {
+    "code": "05237",
+    "region_code": "05",
+    "name": "DONMATÍAS",
+    "is_capital": false
+  },
+  {
+    "code": "05240",
+    "region_code": "05",
+    "name": "EBÉJICO",
+    "is_capital": false
+  },
+  {
+    "code": "05250",
+    "region_code": "05",
+    "name": "EL BAGRE",
+    "is_capital": false
+  },
+  {
+    "code": "05264",
+    "region_code": "05",
+    "name": "ENTRERRÍOS",
+    "is_capital": false
+  },
+  {
+    "code": "05266",
+    "region_code": "05",
+    "name": "ENVIGADO",
+    "is_capital": false
+  },
+  {
+    "code": "05282",
+    "region_code": "05",
+    "name": "FREDONIA",
+    "is_capital": false
+  },
+  {
+    "code": "05284",
+    "region_code": "05",
+    "name": "FRONTINO",
+    "is_capital": false
+  },
+  {
+    "code": "05306",
+    "region_code": "05",
+    "name": "GIRALDO",
+    "is_capital": false
+  },
+  {
+    "code": "05308",
+    "region_code": "05",
+    "name": "GIRARDOTA",
+    "is_capital": false
+  },
+  {
+    "code": "05310",
+    "region_code": "05",
+    "name": "GÓMEZ PLATA",
+    "is_capital": false
+  },
+  {
+    "code": "05313",
+    "region_code": "05",
+    "name": "GRANADA",
+    "is_capital": false
+  },
+  {
+    "code": "05315",
+    "region_code": "05",
+    "name": "GUADALUPE",
+    "is_capital": false
+  },
+  {
+    "code": "05318",
+    "region_code": "05",
+    "name": "GUARNE",
+    "is_capital": false
+  },
+  {
+    "code": "05321",
+    "region_code": "05",
+    "name": "GUATAPÉ",
+    "is_capital": false
+  },
+  {
+    "code": "05347",
+    "region_code": "05",
+    "name": "HELICONIA",
+    "is_capital": false
+  },
+  {
+    "code": "05353",
+    "region_code": "05",
+    "name": "HISPANIA",
+    "is_capital": false
+  },
+  {
+    "code": "05360",
+    "region_code": "05",
+    "name": "ITAGÜÍ",
+    "is_capital": false
+  },
+  {
+    "code": "05361",
+    "region_code": "05",
+    "name": "ITUANGO",
+    "is_capital": false
+  },
+  {
+    "code": "05364",
+    "region_code": "05",
+    "name": "JARDÍN",
+    "is_capital": false
+  },
+  {
+    "code": "05368",
+    "region_code": "05",
+    "name": "JERICÓ",
+    "is_capital": false
+  },
+  {
+    "code": "05376",
+    "region_code": "05",
+    "name": "LA CEJA",
+    "is_capital": false
+  },
+  {
+    "code": "05380",
+    "region_code": "05",
+    "name": "LA ESTRELLA",
+    "is_capital": false
+  },
+  {
+    "code": "05390",
+    "region_code": "05",
+    "name": "LA PINTADA",
+    "is_capital": false
+  },
+  {
+    "code": "05400",
+    "region_code": "05",
+    "name": "LA UNIÓN",
+    "is_capital": false
+  },
+  {
+    "code": "05411",
+    "region_code": "05",
+    "name": "LIBORINA",
+    "is_capital": false
+  },
+  {
+    "code": "05425",
+    "region_code": "05",
+    "name": "MACEO",
+    "is_capital": false
+  },
+  {
+    "code": "05440",
+    "region_code": "05",
+    "name": "MARINILLA",
+    "is_capital": false
+  },
+  {
+    "code": "05467",
+    "region_code": "05",
+    "name": "MONTEBELLO",
+    "is_capital": false
+  },
+  {
+    "code": "05475",
+    "region_code": "05",
+    "name": "MURINDÓ",
+    "is_capital": false
+  },
+  {
+    "code": "05480",
+    "region_code": "05",
+    "name": "MUTATÁ",
+    "is_capital": false
+  },
+  {
+    "code": "05483",
+    "region_code": "05",
+    "name": "NARIÑO",
+    "is_capital": false
+  },
+  {
+    "code": "05490",
+    "region_code": "05",
+    "name": "NECOCLÍ",
+    "is_capital": false
+  },
+  {
+    "code": "05495",
+    "region_code": "05",
+    "name": "NECHÍ",
+    "is_capital": false
+  },
+  {
+    "code": "05501",
+    "region_code": "05",
+    "name": "OLAYA",
+    "is_capital": false
+  },
+  {
+    "code": "05541",
+    "region_code": "05",
+    "name": "PEÑOL",
+    "is_capital": false
+  },
+  {
+    "code": "05543",
+    "region_code": "05",
+    "name": "PEQUE",
+    "is_capital": false
+  },
+  {
+    "code": "05576",
+    "region_code": "05",
+    "name": "PUEBLORRICO",
+    "is_capital": false
+  },
+  {
+    "code": "05579",
+    "region_code": "05",
+    "name": "PUERTO BERRÍO",
+    "is_capital": false
+  },
+  {
+    "code": "05585",
+    "region_code": "05",
+    "name": "PUERTO NARE",
+    "is_capital": false
+  },
+  {
+    "code": "05591",
+    "region_code": "05",
+    "name": "PUERTO TRIUNFO",
+    "is_capital": false
+  },
+  {
+    "code": "05604",
+    "region_code": "05",
+    "name": "REMEDIOS",
+    "is_capital": false
+  },
+  {
+    "code": "05607",
+    "region_code": "05",
+    "name": "RETIRO",
+    "is_capital": false
+  },
+  {
+    "code": "05615",
+    "region_code": "05",
+    "name": "RIONEGRO",
+    "is_capital": false
+  },
+  {
+    "code": "05628",
+    "region_code": "05",
+    "name": "SABANALARGA",
+    "is_capital": false
+  },
+  {
+    "code": "05631",
+    "region_code": "05",
+    "name": "SABANETA",
+    "is_capital": false
+  },
+  {
+    "code": "05642",
+    "region_code": "05",
+    "name": "SALGAR",
+    "is_capital": false
+  },
+  {
+    "code": "05647",
+    "region_code": "05",
+    "name": "SAN ANDRÉS DE CUERQUÍA",
+    "is_capital": false
+  },
+  {
+    "code": "05649",
+    "region_code": "05",
+    "name": "SAN CARLOS",
+    "is_capital": false
+  },
+  {
+    "code": "05652",
+    "region_code": "05",
+    "name": "SAN FRANCISCO",
+    "is_capital": false
+  },
+  {
+    "code": "05656",
+    "region_code": "05",
+    "name": "SAN JERÓNIMO",
+    "is_capital": false
+  },
+  {
+    "code": "05658",
+    "region_code": "05",
+    "name": "SAN JOSÉ DE LA MONTAÑA",
+    "is_capital": false
+  },
+  {
+    "code": "05659",
+    "region_code": "05",
+    "name": "SAN JUAN DE URABÁ",
+    "is_capital": false
+  },
+  {
+    "code": "05660",
+    "region_code": "05",
+    "name": "SAN LUIS",
+    "is_capital": false
+  },
+  {
+    "code": "05664",
+    "region_code": "05",
+    "name": "SAN PEDRO DE LOS MILAGROS",
+    "is_capital": false
+  },
+  {
+    "code": "05665",
+    "region_code": "05",
+    "name": "SAN PEDRO DE URABÁ",
+    "is_capital": false
+  },
+  {
+    "code": "05667",
+    "region_code": "05",
+    "name": "SAN RAFAEL",
+    "is_capital": false
+  },
+  {
+    "code": "05670",
+    "region_code": "05",
+    "name": "SAN ROQUE",
+    "is_capital": false
+  },
+  {
+    "code": "05674",
+    "region_code": "05",
+    "name": "SAN VICENTE FERRER",
+    "is_capital": false
+  },
+  {
+    "code": "05679",
+    "region_code": "05",
+    "name": "SANTA BÁRBARA",
+    "is_capital": false
+  },
+  {
+    "code": "05686",
+    "region_code": "05",
+    "name": "SANTA ROSA DE OSOS",
+    "is_capital": false
+  },
+  {
+    "code": "05690",
+    "region_code": "05",
+    "name": "SANTO DOMINGO",
+    "is_capital": false
+  },
+  {
+    "code": "05697",
+    "region_code": "05",
+    "name": "EL SANTUARIO",
+    "is_capital": false
+  },
+  {
+    "code": "05736",
+    "region_code": "05",
+    "name": "SEGOVIA",
+    "is_capital": false
+  },
+  {
+    "code": "05756",
+    "region_code": "05",
+    "name": "SONSÓN",
+    "is_capital": false
+  },
+  {
+    "code": "05761",
+    "region_code": "05",
+    "name": "SOPETRÁN",
+    "is_capital": false
+  },
+  {
+    "code": "05789",
+    "region_code": "05",
+    "name": "TÁMESIS",
+    "is_capital": false
+  },
+  {
+    "code": "05790",
+    "region_code": "05",
+    "name": "TARAZÁ",
+    "is_capital": false
+  },
+  {
+    "code": "05792",
+    "region_code": "05",
+    "name": "TARSO",
+    "is_capital": false
+  },
+  {
+    "code": "05809",
+    "region_code": "05",
+    "name": "TITIRIBÍ",
+    "is_capital": false
+  },
+  {
+    "code": "05819",
+    "region_code": "05",
+    "name": "TOLEDO",
+    "is_capital": false
+  },
+  {
+    "code": "05837",
+    "region_code": "05",
+    "name": "TURBO",
+    "is_capital": false
+  },
+  {
+    "code": "05842",
+    "region_code": "05",
+    "name": "URAMITA",
+    "is_capital": false
+  },
+  {
+    "code": "05847",
+    "region_code": "05",
+    "name": "URRAO",
+    "is_capital": false
+  },
+  {
+    "code": "05854",
+    "region_code": "05",
+    "name": "VALDIVIA",
+    "is_capital": false
+  },
+  {
+    "code": "05856",
+    "region_code": "05",
+    "name": "VALPARAÍSO",
+    "is_capital": false
+  },
+  {
+    "code": "05858",
+    "region_code": "05",
+    "name": "VEGACHÍ",
+    "is_capital": false
+  },
+  {
+    "code": "05861",
+    "region_code": "05",
+    "name": "VENECIA",
+    "is_capital": false
+  },
+  {
+    "code": "05873",
+    "region_code": "05",
+    "name": "VIGÍA DEL FUERTE",
+    "is_capital": false
+  },
+  {
+    "code": "05885",
+    "region_code": "05",
+    "name": "YALÍ",
+    "is_capital": false
+  },
+  {
+    "code": "05887",
+    "region_code": "05",
+    "name": "YARUMAL",
+    "is_capital": false
+  },
+  {
+    "code": "05890",
+    "region_code": "05",
+    "name": "YOLOMBÓ",
+    "is_capital": false
+  },
+  {
+    "code": "05893",
+    "region_code": "05",
+    "name": "YONDÓ",
+    "is_capital": false
+  },
+  {
+    "code": "05895",
+    "region_code": "05",
+    "name": "ZARAGOZA",
+    "is_capital": false
+  },
+  {
+    "code": "08001",
+    "region_code": "08",
+    "name": "BARRANQUILLA",
+    "is_capital": true
+  },
+  {
+    "code": "08078",
+    "region_code": "08",
+    "name": "BARANOA",
+    "is_capital": false
+  },
+  {
+    "code": "08137",
+    "region_code": "08",
+    "name": "CAMPO DE LA CRUZ",
+    "is_capital": false
+  },
+  {
+    "code": "08141",
+    "region_code": "08",
+    "name": "CANDELARIA",
+    "is_capital": false
+  },
+  {
+    "code": "08296",
+    "region_code": "08",
+    "name": "GALAPA",
+    "is_capital": false
+  },
+  {
+    "code": "08372",
+    "region_code": "08",
+    "name": "JUAN DE ACOSTA",
+    "is_capital": false
+  },
+  {
+    "code": "08421",
+    "region_code": "08",
+    "name": "LURUACO",
+    "is_capital": false
+  },
+  {
+    "code": "08433",
+    "region_code": "08",
+    "name": "MALAMBO",
+    "is_capital": false
+  },
+  {
+    "code": "08436",
+    "region_code": "08",
+    "name": "MANATÍ",
+    "is_capital": false
+  },
+  {
+    "code": "08520",
+    "region_code": "08",
+    "name": "PALMAR DE VARELA",
+    "is_capital": false
+  },
+  {
+    "code": "08549",
+    "region_code": "08",
+    "name": "PIOJÓ",
+    "is_capital": false
+  },
+  {
+    "code": "08558",
+    "region_code": "08",
+    "name": "POLONUEVO",
+    "is_capital": false
+  },
+  {
+    "code": "08560",
+    "region_code": "08",
+    "name": "PONEDERA",
+    "is_capital": false
+  },
+  {
+    "code": "08573",
+    "region_code": "08",
+    "name": "PUERTO COLOMBIA",
+    "is_capital": false
+  },
+  {
+    "code": "08606",
+    "region_code": "08",
+    "name": "REPELÓN",
+    "is_capital": false
+  },
+  {
+    "code": "08634",
+    "region_code": "08",
+    "name": "SABANAGRANDE",
+    "is_capital": false
+  },
+  {
+    "code": "08638",
+    "region_code": "08",
+    "name": "SABANALARGA",
+    "is_capital": false
+  },
+  {
+    "code": "08675",
+    "region_code": "08",
+    "name": "SANTA LUCÍA",
+    "is_capital": false
+  },
+  {
+    "code": "08685",
+    "region_code": "08",
+    "name": "SANTO TOMÁS",
+    "is_capital": false
+  },
+  {
+    "code": "08758",
+    "region_code": "08",
+    "name": "SOLEDAD",
+    "is_capital": false
+  },
+  {
+    "code": "08770",
+    "region_code": "08",
+    "name": "SUAN",
+    "is_capital": false
+  },
+  {
+    "code": "08832",
+    "region_code": "08",
+    "name": "TUBARÁ",
+    "is_capital": false
+  },
+  {
+    "code": "08849",
+    "region_code": "08",
+    "name": "USIACURÍ",
+    "is_capital": false
+  },
+  {
+    "code": "11001",
+    "region_code": "11",
+    "name": "BOGOTÁ, D.C.",
+    "is_capital": true
+  },
+  {
+    "code": "13001",
+    "region_code": "13",
+    "name": "CARTAGENA DE INDIAS",
+    "is_capital": true
+  },
+  {
+    "code": "13006",
+    "region_code": "13",
+    "name": "ACHÍ",
+    "is_capital": false
+  },
+  {
+    "code": "13030",
+    "region_code": "13",
+    "name": "ALTOS DEL ROSARIO",
+    "is_capital": false
+  },
+  {
+    "code": "13042",
+    "region_code": "13",
+    "name": "ARENAL",
+    "is_capital": false
+  },
+  {
+    "code": "13052",
+    "region_code": "13",
+    "name": "ARJONA",
+    "is_capital": false
+  },
+  {
+    "code": "13062",
+    "region_code": "13",
+    "name": "ARROYOHONDO",
+    "is_capital": false
+  },
+  {
+    "code": "13074",
+    "region_code": "13",
+    "name": "BARRANCO DE LOBA",
+    "is_capital": false
+  },
+  {
+    "code": "13140",
+    "region_code": "13",
+    "name": "CALAMAR",
+    "is_capital": false
+  },
+  {
+    "code": "13160",
+    "region_code": "13",
+    "name": "CANTAGALLO",
+    "is_capital": false
+  },
+  {
+    "code": "13188",
+    "region_code": "13",
+    "name": "CICUCO",
+    "is_capital": false
+  },
+  {
+    "code": "13212",
+    "region_code": "13",
+    "name": "CÓRDOBA",
+    "is_capital": false
+  },
+  {
+    "code": "13222",
+    "region_code": "13",
+    "name": "CLEMENCIA",
+    "is_capital": false
+  },
+  {
+    "code": "13244",
+    "region_code": "13",
+    "name": "EL CARMEN DE BOLÍVAR",
+    "is_capital": false
+  },
+  {
+    "code": "13248",
+    "region_code": "13",
+    "name": "EL GUAMO",
+    "is_capital": false
+  },
+  {
+    "code": "13268",
+    "region_code": "13",
+    "name": "EL PEÑÓN",
+    "is_capital": false
+  },
+  {
+    "code": "13300",
+    "region_code": "13",
+    "name": "HATILLO DE LOBA",
+    "is_capital": false
+  },
+  {
+    "code": "13430",
+    "region_code": "13",
+    "name": "MAGANGUÉ",
+    "is_capital": false
+  },
+  {
+    "code": "13433",
+    "region_code": "13",
+    "name": "MAHATES",
+    "is_capital": false
+  },
+  {
+    "code": "13440",
+    "region_code": "13",
+    "name": "MARGARITA",
+    "is_capital": false
+  },
+  {
+    "code": "13442",
+    "region_code": "13",
+    "name": "MARÍA LA BAJA",
+    "is_capital": false
+  },
+  {
+    "code": "13458",
+    "region_code": "13",
+    "name": "MONTECRISTO",
+    "is_capital": false
+  },
+  {
+    "code": "13468",
+    "region_code": "13",
+    "name": "SANTA CRUZ DE MOMPOX",
+    "is_capital": false
+  },
+  {
+    "code": "13473",
+    "region_code": "13",
+    "name": "MORALES",
+    "is_capital": false
+  },
+  {
+    "code": "13490",
+    "region_code": "13",
+    "name": "NOROSÍ",
+    "is_capital": false
+  },
+  {
+    "code": "13549",
+    "region_code": "13",
+    "name": "PINILLOS",
+    "is_capital": false
+  },
+  {
+    "code": "13580",
+    "region_code": "13",
+    "name": "REGIDOR",
+    "is_capital": false
+  },
+  {
+    "code": "13600",
+    "region_code": "13",
+    "name": "RÍO VIEJO",
+    "is_capital": false
+  },
+  {
+    "code": "13620",
+    "region_code": "13",
+    "name": "SAN CRISTÓBAL",
+    "is_capital": false
+  },
+  {
+    "code": "13647",
+    "region_code": "13",
+    "name": "SAN ESTANISLAO",
+    "is_capital": false
+  },
+  {
+    "code": "13650",
+    "region_code": "13",
+    "name": "SAN FERNANDO",
+    "is_capital": false
+  },
+  {
+    "code": "13654",
+    "region_code": "13",
+    "name": "SAN JACINTO",
+    "is_capital": false
+  },
+  {
+    "code": "13655",
+    "region_code": "13",
+    "name": "SAN JACINTO DEL CAUCA",
+    "is_capital": false
+  },
+  {
+    "code": "13657",
+    "region_code": "13",
+    "name": "SAN JUAN NEPOMUCENO",
+    "is_capital": false
+  },
+  {
+    "code": "13667",
+    "region_code": "13",
+    "name": "SAN MARTÍN DE LOBA",
+    "is_capital": false
+  },
+  {
+    "code": "13670",
+    "region_code": "13",
+    "name": "SAN PABLO",
+    "is_capital": false
+  },
+  {
+    "code": "13673",
+    "region_code": "13",
+    "name": "SANTA CATALINA",
+    "is_capital": false
+  },
+  {
+    "code": "13683",
+    "region_code": "13",
+    "name": "SANTA ROSA",
+    "is_capital": false
+  },
+  {
+    "code": "13688",
+    "region_code": "13",
+    "name": "SANTA ROSA DEL SUR",
+    "is_capital": false
+  },
+  {
+    "code": "13744",
+    "region_code": "13",
+    "name": "SIMITÍ",
+    "is_capital": false
+  },
+  {
+    "code": "13760",
+    "region_code": "13",
+    "name": "SOPLAVIENTO",
+    "is_capital": false
+  },
+  {
+    "code": "13780",
+    "region_code": "13",
+    "name": "TALAIGUA NUEVO",
+    "is_capital": false
+  },
+  {
+    "code": "13810",
+    "region_code": "13",
+    "name": "TIQUISIO",
+    "is_capital": false
+  },
+  {
+    "code": "13836",
+    "region_code": "13",
+    "name": "TURBACO",
+    "is_capital": false
+  },
+  {
+    "code": "13838",
+    "region_code": "13",
+    "name": "TURBANÁ",
+    "is_capital": false
+  },
+  {
+    "code": "13873",
+    "region_code": "13",
+    "name": "VILLANUEVA",
+    "is_capital": false
+  },
+  {
+    "code": "13894",
+    "region_code": "13",
+    "name": "ZAMBRANO",
+    "is_capital": false
+  },
+  {
+    "code": "15001",
+    "region_code": "15",
+    "name": "TUNJA",
+    "is_capital": true
+  },
+  {
+    "code": "15022",
+    "region_code": "15",
+    "name": "ALMEIDA",
+    "is_capital": false
+  },
+  {
+    "code": "15047",
+    "region_code": "15",
+    "name": "AQUITANIA",
+    "is_capital": false
+  },
+  {
+    "code": "15051",
+    "region_code": "15",
+    "name": "ARCABUCO",
+    "is_capital": false
+  },
+  {
+    "code": "15087",
+    "region_code": "15",
+    "name": "BELÉN",
+    "is_capital": false
+  },
+  {
+    "code": "15090",
+    "region_code": "15",
+    "name": "BERBEO",
+    "is_capital": false
+  },
+  {
+    "code": "15092",
+    "region_code": "15",
+    "name": "BETÉITIVA",
+    "is_capital": false
+  },
+  {
+    "code": "15097",
+    "region_code": "15",
+    "name": "BOAVITA",
+    "is_capital": false
+  },
+  {
+    "code": "15104",
+    "region_code": "15",
+    "name": "BOYACÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15106",
+    "region_code": "15",
+    "name": "BRICEÑO",
+    "is_capital": false
+  },
+  {
+    "code": "15109",
+    "region_code": "15",
+    "name": "BUENAVISTA",
+    "is_capital": false
+  },
+  {
+    "code": "15114",
+    "region_code": "15",
+    "name": "BUSBANZÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15131",
+    "region_code": "15",
+    "name": "CALDAS",
+    "is_capital": false
+  },
+  {
+    "code": "15135",
+    "region_code": "15",
+    "name": "CAMPOHERMOSO",
+    "is_capital": false
+  },
+  {
+    "code": "15162",
+    "region_code": "15",
+    "name": "CERINZA",
+    "is_capital": false
+  },
+  {
+    "code": "15172",
+    "region_code": "15",
+    "name": "CHINAVITA",
+    "is_capital": false
+  },
+  {
+    "code": "15176",
+    "region_code": "15",
+    "name": "CHIQUINQUIRÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15180",
+    "region_code": "15",
+    "name": "CHISCAS",
+    "is_capital": false
+  },
+  {
+    "code": "15183",
+    "region_code": "15",
+    "name": "CHITA",
+    "is_capital": false
+  },
+  {
+    "code": "15185",
+    "region_code": "15",
+    "name": "CHITARAQUE",
+    "is_capital": false
+  },
+  {
+    "code": "15187",
+    "region_code": "15",
+    "name": "CHIVATÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15189",
+    "region_code": "15",
+    "name": "CIÉNEGA",
+    "is_capital": false
+  },
+  {
+    "code": "15204",
+    "region_code": "15",
+    "name": "CÓMBITA",
+    "is_capital": false
+  },
+  {
+    "code": "15212",
+    "region_code": "15",
+    "name": "COPER",
+    "is_capital": false
+  },
+  {
+    "code": "15215",
+    "region_code": "15",
+    "name": "CORRALES",
+    "is_capital": false
+  },
+  {
+    "code": "15218",
+    "region_code": "15",
+    "name": "COVARACHÍA",
+    "is_capital": false
+  },
+  {
+    "code": "15223",
+    "region_code": "15",
+    "name": "CUBARÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15224",
+    "region_code": "15",
+    "name": "CUCAITA",
+    "is_capital": false
+  },
+  {
+    "code": "15226",
+    "region_code": "15",
+    "name": "CUÍTIVA",
+    "is_capital": false
+  },
+  {
+    "code": "15232",
+    "region_code": "15",
+    "name": "CHÍQUIZA",
+    "is_capital": false
+  },
+  {
+    "code": "15236",
+    "region_code": "15",
+    "name": "CHIVOR",
+    "is_capital": false
+  },
+  {
+    "code": "15238",
+    "region_code": "15",
+    "name": "DUITAMA",
+    "is_capital": false
+  },
+  {
+    "code": "15244",
+    "region_code": "15",
+    "name": "EL COCUY",
+    "is_capital": false
+  },
+  {
+    "code": "15248",
+    "region_code": "15",
+    "name": "EL ESPINO",
+    "is_capital": false
+  },
+  {
+    "code": "15272",
+    "region_code": "15",
+    "name": "FIRAVITOBA",
+    "is_capital": false
+  },
+  {
+    "code": "15276",
+    "region_code": "15",
+    "name": "FLORESTA",
+    "is_capital": false
+  },
+  {
+    "code": "15293",
+    "region_code": "15",
+    "name": "GACHANTIVÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15296",
+    "region_code": "15",
+    "name": "GÁMEZA",
+    "is_capital": false
+  },
+  {
+    "code": "15299",
+    "region_code": "15",
+    "name": "GARAGOA",
+    "is_capital": false
+  },
+  {
+    "code": "15317",
+    "region_code": "15",
+    "name": "GUACAMAYAS",
+    "is_capital": false
+  },
+  {
+    "code": "15322",
+    "region_code": "15",
+    "name": "GUATEQUE",
+    "is_capital": false
+  },
+  {
+    "code": "15325",
+    "region_code": "15",
+    "name": "GUAYATÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15332",
+    "region_code": "15",
+    "name": "GÜICÁN DE LA SIERRA",
+    "is_capital": false
+  },
+  {
+    "code": "15362",
+    "region_code": "15",
+    "name": "IZA",
+    "is_capital": false
+  },
+  {
+    "code": "15367",
+    "region_code": "15",
+    "name": "JENESANO",
+    "is_capital": false
+  },
+  {
+    "code": "15368",
+    "region_code": "15",
+    "name": "JERICÓ",
+    "is_capital": false
+  },
+  {
+    "code": "15377",
+    "region_code": "15",
+    "name": "LABRANZAGRANDE",
+    "is_capital": false
+  },
+  {
+    "code": "15380",
+    "region_code": "15",
+    "name": "LA CAPILLA",
+    "is_capital": false
+  },
+  {
+    "code": "15401",
+    "region_code": "15",
+    "name": "LA VICTORIA",
+    "is_capital": false
+  },
+  {
+    "code": "15403",
+    "region_code": "15",
+    "name": "LA UVITA",
+    "is_capital": false
+  },
+  {
+    "code": "15407",
+    "region_code": "15",
+    "name": "VILLA DE LEYVA",
+    "is_capital": false
+  },
+  {
+    "code": "15425",
+    "region_code": "15",
+    "name": "MACANAL",
+    "is_capital": false
+  },
+  {
+    "code": "15442",
+    "region_code": "15",
+    "name": "MARIPÍ",
+    "is_capital": false
+  },
+  {
+    "code": "15455",
+    "region_code": "15",
+    "name": "MIRAFLORES",
+    "is_capital": false
+  },
+  {
+    "code": "15464",
+    "region_code": "15",
+    "name": "MONGUA",
+    "is_capital": false
+  },
+  {
+    "code": "15466",
+    "region_code": "15",
+    "name": "MONGUÍ",
+    "is_capital": false
+  },
+  {
+    "code": "15469",
+    "region_code": "15",
+    "name": "MONIQUIRÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15476",
+    "region_code": "15",
+    "name": "MOTAVITA",
+    "is_capital": false
+  },
+  {
+    "code": "15480",
+    "region_code": "15",
+    "name": "MUZO",
+    "is_capital": false
+  },
+  {
+    "code": "15491",
+    "region_code": "15",
+    "name": "NOBSA",
+    "is_capital": false
+  },
+  {
+    "code": "15494",
+    "region_code": "15",
+    "name": "NUEVO COLÓN",
+    "is_capital": false
+  },
+  {
+    "code": "15500",
+    "region_code": "15",
+    "name": "OICATÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15507",
+    "region_code": "15",
+    "name": "OTANCHE",
+    "is_capital": false
+  },
+  {
+    "code": "15511",
+    "region_code": "15",
+    "name": "PACHAVITA",
+    "is_capital": false
+  },
+  {
+    "code": "15514",
+    "region_code": "15",
+    "name": "PÁEZ",
+    "is_capital": false
+  },
+  {
+    "code": "15516",
+    "region_code": "15",
+    "name": "PAIPA",
+    "is_capital": false
+  },
+  {
+    "code": "15518",
+    "region_code": "15",
+    "name": "PAJARITO",
+    "is_capital": false
+  },
+  {
+    "code": "15522",
+    "region_code": "15",
+    "name": "PANQUEBA",
+    "is_capital": false
+  },
+  {
+    "code": "15531",
+    "region_code": "15",
+    "name": "PAUNA",
+    "is_capital": false
+  },
+  {
+    "code": "15533",
+    "region_code": "15",
+    "name": "PAYA",
+    "is_capital": false
+  },
+  {
+    "code": "15537",
+    "region_code": "15",
+    "name": "PAZ DE RÍO",
+    "is_capital": false
+  },
+  {
+    "code": "15542",
+    "region_code": "15",
+    "name": "PESCA",
+    "is_capital": false
+  },
+  {
+    "code": "15550",
+    "region_code": "15",
+    "name": "PISBA",
+    "is_capital": false
+  },
+  {
+    "code": "15572",
+    "region_code": "15",
+    "name": "PUERTO BOYACÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15580",
+    "region_code": "15",
+    "name": "QUÍPAMA",
+    "is_capital": false
+  },
+  {
+    "code": "15599",
+    "region_code": "15",
+    "name": "RAMIRIQUÍ",
+    "is_capital": false
+  },
+  {
+    "code": "15600",
+    "region_code": "15",
+    "name": "RÁQUIRA",
+    "is_capital": false
+  },
+  {
+    "code": "15621",
+    "region_code": "15",
+    "name": "RONDÓN",
+    "is_capital": false
+  },
+  {
+    "code": "15632",
+    "region_code": "15",
+    "name": "SABOYÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15638",
+    "region_code": "15",
+    "name": "SÁCHICA",
+    "is_capital": false
+  },
+  {
+    "code": "15646",
+    "region_code": "15",
+    "name": "SAMACÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15660",
+    "region_code": "15",
+    "name": "SAN EDUARDO",
+    "is_capital": false
+  },
+  {
+    "code": "15664",
+    "region_code": "15",
+    "name": "SAN JOSÉ DE PARE",
+    "is_capital": false
+  },
+  {
+    "code": "15667",
+    "region_code": "15",
+    "name": "SAN LUIS DE GACENO",
+    "is_capital": false
+  },
+  {
+    "code": "15673",
+    "region_code": "15",
+    "name": "SAN MATEO",
+    "is_capital": false
+  },
+  {
+    "code": "15676",
+    "region_code": "15",
+    "name": "SAN MIGUEL DE SEMA",
+    "is_capital": false
+  },
+  {
+    "code": "15681",
+    "region_code": "15",
+    "name": "SAN PABLO DE BORBUR",
+    "is_capital": false
+  },
+  {
+    "code": "15686",
+    "region_code": "15",
+    "name": "SANTANA",
+    "is_capital": false
+  },
+  {
+    "code": "15690",
+    "region_code": "15",
+    "name": "SANTA MARÍA",
+    "is_capital": false
+  },
+  {
+    "code": "15693",
+    "region_code": "15",
+    "name": "SANTA ROSA DE VITERBO",
+    "is_capital": false
+  },
+  {
+    "code": "15696",
+    "region_code": "15",
+    "name": "SANTA SOFÍA",
+    "is_capital": false
+  },
+  {
+    "code": "15720",
+    "region_code": "15",
+    "name": "SATIVANORTE",
+    "is_capital": false
+  },
+  {
+    "code": "15723",
+    "region_code": "15",
+    "name": "SATIVASUR",
+    "is_capital": false
+  },
+  {
+    "code": "15740",
+    "region_code": "15",
+    "name": "SIACHOQUE",
+    "is_capital": false
+  },
+  {
+    "code": "15753",
+    "region_code": "15",
+    "name": "SOATÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15755",
+    "region_code": "15",
+    "name": "SOCOTÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15757",
+    "region_code": "15",
+    "name": "SOCHA",
+    "is_capital": false
+  },
+  {
+    "code": "15759",
+    "region_code": "15",
+    "name": "SOGAMOSO",
+    "is_capital": false
+  },
+  {
+    "code": "15761",
+    "region_code": "15",
+    "name": "SOMONDOCO",
+    "is_capital": false
+  },
+  {
+    "code": "15762",
+    "region_code": "15",
+    "name": "SORA",
+    "is_capital": false
+  },
+  {
+    "code": "15763",
+    "region_code": "15",
+    "name": "SOTAQUIRÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15764",
+    "region_code": "15",
+    "name": "SORACÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15774",
+    "region_code": "15",
+    "name": "SUSACÓN",
+    "is_capital": false
+  },
+  {
+    "code": "15776",
+    "region_code": "15",
+    "name": "SUTAMARCHÁN",
+    "is_capital": false
+  },
+  {
+    "code": "15778",
+    "region_code": "15",
+    "name": "SUTATENZA",
+    "is_capital": false
+  },
+  {
+    "code": "15790",
+    "region_code": "15",
+    "name": "TASCO",
+    "is_capital": false
+  },
+  {
+    "code": "15798",
+    "region_code": "15",
+    "name": "TENZA",
+    "is_capital": false
+  },
+  {
+    "code": "15804",
+    "region_code": "15",
+    "name": "TIBANÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15806",
+    "region_code": "15",
+    "name": "TIBASOSA",
+    "is_capital": false
+  },
+  {
+    "code": "15808",
+    "region_code": "15",
+    "name": "TINJACÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15810",
+    "region_code": "15",
+    "name": "TIPACOQUE",
+    "is_capital": false
+  },
+  {
+    "code": "15814",
+    "region_code": "15",
+    "name": "TOCA",
+    "is_capital": false
+  },
+  {
+    "code": "15816",
+    "region_code": "15",
+    "name": "TOGÜÍ",
+    "is_capital": false
+  },
+  {
+    "code": "15820",
+    "region_code": "15",
+    "name": "TÓPAGA",
+    "is_capital": false
+  },
+  {
+    "code": "15822",
+    "region_code": "15",
+    "name": "TOTA",
+    "is_capital": false
+  },
+  {
+    "code": "15832",
+    "region_code": "15",
+    "name": "TUNUNGUÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15835",
+    "region_code": "15",
+    "name": "TURMEQUÉ",
+    "is_capital": false
+  },
+  {
+    "code": "15837",
+    "region_code": "15",
+    "name": "TUTA",
+    "is_capital": false
+  },
+  {
+    "code": "15839",
+    "region_code": "15",
+    "name": "TUTAZÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15842",
+    "region_code": "15",
+    "name": "ÚMBITA",
+    "is_capital": false
+  },
+  {
+    "code": "15861",
+    "region_code": "15",
+    "name": "VENTAQUEMADA",
+    "is_capital": false
+  },
+  {
+    "code": "15879",
+    "region_code": "15",
+    "name": "VIRACACHÁ",
+    "is_capital": false
+  },
+  {
+    "code": "15897",
+    "region_code": "15",
+    "name": "ZETAQUIRA",
+    "is_capital": false
+  },
+  {
+    "code": "17001",
+    "region_code": "17",
+    "name": "MANIZALES",
+    "is_capital": true
+  },
+  {
+    "code": "17013",
+    "region_code": "17",
+    "name": "AGUADAS",
+    "is_capital": false
+  },
+  {
+    "code": "17042",
+    "region_code": "17",
+    "name": "ANSERMA",
+    "is_capital": false
+  },
+  {
+    "code": "17050",
+    "region_code": "17",
+    "name": "ARANZAZU",
+    "is_capital": false
+  },
+  {
+    "code": "17088",
+    "region_code": "17",
+    "name": "BELALCÁZAR",
+    "is_capital": false
+  },
+  {
+    "code": "17174",
+    "region_code": "17",
+    "name": "CHINCHINÁ",
+    "is_capital": false
+  },
+  {
+    "code": "17272",
+    "region_code": "17",
+    "name": "FILADELFIA",
+    "is_capital": false
+  },
+  {
+    "code": "17380",
+    "region_code": "17",
+    "name": "LA DORADA",
+    "is_capital": false
+  },
+  {
+    "code": "17388",
+    "region_code": "17",
+    "name": "LA MERCED",
+    "is_capital": false
+  },
+  {
+    "code": "17433",
+    "region_code": "17",
+    "name": "MANZANARES",
+    "is_capital": false
+  },
+  {
+    "code": "17442",
+    "region_code": "17",
+    "name": "MARMATO",
+    "is_capital": false
+  },
+  {
+    "code": "17444",
+    "region_code": "17",
+    "name": "MARQUETALIA",
+    "is_capital": false
+  },
+  {
+    "code": "17446",
+    "region_code": "17",
+    "name": "MARULANDA",
+    "is_capital": false
+  },
+  {
+    "code": "17486",
+    "region_code": "17",
+    "name": "NEIRA",
+    "is_capital": false
+  },
+  {
+    "code": "17495",
+    "region_code": "17",
+    "name": "NORCASIA",
+    "is_capital": false
+  },
+  {
+    "code": "17513",
+    "region_code": "17",
+    "name": "PÁCORA",
+    "is_capital": false
+  },
+  {
+    "code": "17524",
+    "region_code": "17",
+    "name": "PALESTINA",
+    "is_capital": false
+  },
+  {
+    "code": "17541",
+    "region_code": "17",
+    "name": "PENSILVANIA",
+    "is_capital": false
+  },
+  {
+    "code": "17614",
+    "region_code": "17",
+    "name": "RIOSUCIO",
+    "is_capital": false
+  },
+  {
+    "code": "17616",
+    "region_code": "17",
+    "name": "RISARALDA",
+    "is_capital": false
+  },
+  {
+    "code": "17653",
+    "region_code": "17",
+    "name": "SALAMINA",
+    "is_capital": false
+  },
+  {
+    "code": "17662",
+    "region_code": "17",
+    "name": "SAMANÁ",
+    "is_capital": false
+  },
+  {
+    "code": "17665",
+    "region_code": "17",
+    "name": "SAN JOSÉ",
+    "is_capital": false
+  },
+  {
+    "code": "17777",
+    "region_code": "17",
+    "name": "SUPÍA",
+    "is_capital": false
+  },
+  {
+    "code": "17867",
+    "region_code": "17",
+    "name": "VICTORIA",
+    "is_capital": false
+  },
+  {
+    "code": "17873",
+    "region_code": "17",
+    "name": "VILLAMARÍA",
+    "is_capital": false
+  },
+  {
+    "code": "17877",
+    "region_code": "17",
+    "name": "VITERBO",
+    "is_capital": false
+  },
+  {
+    "code": "18001",
+    "region_code": "18",
+    "name": "FLORENCIA",
+    "is_capital": true
+  },
+  {
+    "code": "18029",
+    "region_code": "18",
+    "name": "ALBANIA",
+    "is_capital": false
+  },
+  {
+    "code": "18094",
+    "region_code": "18",
+    "name": "BELÉN DE LOS ANDAQUÍES",
+    "is_capital": false
+  },
+  {
+    "code": "18150",
+    "region_code": "18",
+    "name": "CARTAGENA DEL CHAIRÁ",
+    "is_capital": false
+  },
+  {
+    "code": "18205",
+    "region_code": "18",
+    "name": "CURILLO",
+    "is_capital": false
+  },
+  {
+    "code": "18247",
+    "region_code": "18",
+    "name": "EL DONCELLO",
+    "is_capital": false
+  },
+  {
+    "code": "18256",
+    "region_code": "18",
+    "name": "EL PAUJÍL",
+    "is_capital": false
+  },
+  {
+    "code": "18410",
+    "region_code": "18",
+    "name": "LA MONTAÑITA",
+    "is_capital": false
+  },
+  {
+    "code": "18460",
+    "region_code": "18",
+    "name": "MILÁN",
+    "is_capital": false
+  },
+  {
+    "code": "18479",
+    "region_code": "18",
+    "name": "MORELIA",
+    "is_capital": false
+  },
+  {
+    "code": "18592",
+    "region_code": "18",
+    "name": "PUERTO RICO",
+    "is_capital": false
+  },
+  {
+    "code": "18610",
+    "region_code": "18",
+    "name": "SAN JOSÉ DEL FRAGUA",
+    "is_capital": false
+  },
+  {
+    "code": "18753",
+    "region_code": "18",
+    "name": "SAN VICENTE DEL CAGUÁN",
+    "is_capital": false
+  },
+  {
+    "code": "18756",
+    "region_code": "18",
+    "name": "SOLANO",
+    "is_capital": false
+  },
+  {
+    "code": "18785",
+    "region_code": "18",
+    "name": "SOLITA",
+    "is_capital": false
+  },
+  {
+    "code": "18860",
+    "region_code": "18",
+    "name": "VALPARAÍSO",
+    "is_capital": false
+  },
+  {
+    "code": "19001",
+    "region_code": "19",
+    "name": "POPAYÁN",
+    "is_capital": true
+  },
+  {
+    "code": "19022",
+    "region_code": "19",
+    "name": "ALMAGUER",
+    "is_capital": false
+  },
+  {
+    "code": "19050",
+    "region_code": "19",
+    "name": "ARGELIA",
+    "is_capital": false
+  },
+  {
+    "code": "19075",
+    "region_code": "19",
+    "name": "BALBOA",
+    "is_capital": false
+  },
+  {
+    "code": "19100",
+    "region_code": "19",
+    "name": "BOLÍVAR",
+    "is_capital": false
+  },
+  {
+    "code": "19110",
+    "region_code": "19",
+    "name": "BUENOS AIRES",
+    "is_capital": false
+  },
+  {
+    "code": "19130",
+    "region_code": "19",
+    "name": "CAJIBÍO",
+    "is_capital": false
+  },
+  {
+    "code": "19137",
+    "region_code": "19",
+    "name": "CALDONO",
+    "is_capital": false
+  },
+  {
+    "code": "19142",
+    "region_code": "19",
+    "name": "CALOTO",
+    "is_capital": false
+  },
+  {
+    "code": "19212",
+    "region_code": "19",
+    "name": "CORINTO",
+    "is_capital": false
+  },
+  {
+    "code": "19256",
+    "region_code": "19",
+    "name": "EL TAMBO",
+    "is_capital": false
+  },
+  {
+    "code": "19290",
+    "region_code": "19",
+    "name": "FLORENCIA",
+    "is_capital": false
+  },
+  {
+    "code": "19300",
+    "region_code": "19",
+    "name": "GUACHENÉ",
+    "is_capital": false
+  },
+  {
+    "code": "19318",
+    "region_code": "19",
+    "name": "GUAPI",
+    "is_capital": false
+  },
+  {
+    "code": "19355",
+    "region_code": "19",
+    "name": "INZÁ",
+    "is_capital": false
+  },
+  {
+    "code": "19364",
+    "region_code": "19",
+    "name": "JAMBALÓ",
+    "is_capital": false
+  },
+  {
+    "code": "19392",
+    "region_code": "19",
+    "name": "LA SIERRA",
+    "is_capital": false
+  },
+  {
+    "code": "19397",
+    "region_code": "19",
+    "name": "LA VEGA",
+    "is_capital": false
+  },
+  {
+    "code": "19418",
+    "region_code": "19",
+    "name": "LÓPEZ DE MICAY",
+    "is_capital": false
+  },
+  {
+    "code": "19450",
+    "region_code": "19",
+    "name": "MERCADERES",
+    "is_capital": false
+  },
+  {
+    "code": "19455",
+    "region_code": "19",
+    "name": "MIRANDA",
+    "is_capital": false
+  },
+  {
+    "code": "19473",
+    "region_code": "19",
+    "name": "MORALES",
+    "is_capital": false
+  },
+  {
+    "code": "19513",
+    "region_code": "19",
+    "name": "PADILLA",
+    "is_capital": false
+  },
+  {
+    "code": "19517",
+    "region_code": "19",
+    "name": "PÁEZ",
+    "is_capital": false
+  },
+  {
+    "code": "19532",
+    "region_code": "19",
+    "name": "PATÍA",
+    "is_capital": false
+  },
+  {
+    "code": "19533",
+    "region_code": "19",
+    "name": "PIAMONTE",
+    "is_capital": false
+  },
+  {
+    "code": "19548",
+    "region_code": "19",
+    "name": "PIENDAMÓ - TUNÍA",
+    "is_capital": false
+  },
+  {
+    "code": "19573",
+    "region_code": "19",
+    "name": "PUERTO TEJADA",
+    "is_capital": false
+  },
+  {
+    "code": "19585",
+    "region_code": "19",
+    "name": "PURACÉ",
+    "is_capital": false
+  },
+  {
+    "code": "19622",
+    "region_code": "19",
+    "name": "ROSAS",
+    "is_capital": false
+  },
+  {
+    "code": "19693",
+    "region_code": "19",
+    "name": "SAN SEBASTIÁN",
+    "is_capital": false
+  },
+  {
+    "code": "19698",
+    "region_code": "19",
+    "name": "SANTANDER DE QUILICHAO",
+    "is_capital": false
+  },
+  {
+    "code": "19701",
+    "region_code": "19",
+    "name": "SANTA ROSA",
+    "is_capital": false
+  },
+  {
+    "code": "19743",
+    "region_code": "19",
+    "name": "SILVIA",
+    "is_capital": false
+  },
+  {
+    "code": "19760",
+    "region_code": "19",
+    "name": "SOTARÁ - PAISPAMBA",
+    "is_capital": false
+  },
+  {
+    "code": "19780",
+    "region_code": "19",
+    "name": "SUÁREZ",
+    "is_capital": false
+  },
+  {
+    "code": "19785",
+    "region_code": "19",
+    "name": "SUCRE",
+    "is_capital": false
+  },
+  {
+    "code": "19807",
+    "region_code": "19",
+    "name": "TIMBÍO",
+    "is_capital": false
+  },
+  {
+    "code": "19809",
+    "region_code": "19",
+    "name": "TIMBIQUÍ",
+    "is_capital": false
+  },
+  {
+    "code": "19821",
+    "region_code": "19",
+    "name": "TORIBÍO",
+    "is_capital": false
+  },
+  {
+    "code": "19824",
+    "region_code": "19",
+    "name": "TOTORÓ",
+    "is_capital": false
+  },
+  {
+    "code": "19845",
+    "region_code": "19",
+    "name": "VILLA RICA",
+    "is_capital": false
+  },
+  {
+    "code": "20001",
+    "region_code": "20",
+    "name": "VALLEDUPAR",
+    "is_capital": true
+  },
+  {
+    "code": "20011",
+    "region_code": "20",
+    "name": "AGUACHICA",
+    "is_capital": false
+  },
+  {
+    "code": "20013",
+    "region_code": "20",
+    "name": "AGUSTÍN CODAZZI",
+    "is_capital": false
+  },
+  {
+    "code": "20032",
+    "region_code": "20",
+    "name": "ASTREA",
+    "is_capital": false
+  },
+  {
+    "code": "20045",
+    "region_code": "20",
+    "name": "BECERRIL",
+    "is_capital": false
+  },
+  {
+    "code": "20060",
+    "region_code": "20",
+    "name": "BOSCONIA",
+    "is_capital": false
+  },
+  {
+    "code": "20175",
+    "region_code": "20",
+    "name": "CHIMICHAGUA",
+    "is_capital": false
+  },
+  {
+    "code": "20178",
+    "region_code": "20",
+    "name": "CHIRIGUANÁ",
+    "is_capital": false
+  },
+  {
+    "code": "20228",
+    "region_code": "20",
+    "name": "CURUMANÍ",
+    "is_capital": false
+  },
+  {
+    "code": "20238",
+    "region_code": "20",
+    "name": "EL COPEY",
+    "is_capital": false
+  },
+  {
+    "code": "20250",
+    "region_code": "20",
+    "name": "EL PASO",
+    "is_capital": false
+  },
+  {
+    "code": "20295",
+    "region_code": "20",
+    "name": "GAMARRA",
+    "is_capital": false
+  },
+  {
+    "code": "20310",
+    "region_code": "20",
+    "name": "GONZÁLEZ",
+    "is_capital": false
+  },
+  {
+    "code": "20383",
+    "region_code": "20",
+    "name": "LA GLORIA",
+    "is_capital": false
+  },
+  {
+    "code": "20400",
+    "region_code": "20",
+    "name": "LA JAGUA DE IBIRICO",
+    "is_capital": false
+  },
+  {
+    "code": "20443",
+    "region_code": "20",
+    "name": "MANAURE BALCÓN DEL CESAR",
+    "is_capital": false
+  },
+  {
+    "code": "20517",
+    "region_code": "20",
+    "name": "PAILITAS",
+    "is_capital": false
+  },
+  {
+    "code": "20550",
+    "region_code": "20",
+    "name": "PELAYA",
+    "is_capital": false
+  },
+  {
+    "code": "20570",
+    "region_code": "20",
+    "name": "PUEBLO BELLO",
+    "is_capital": false
+  },
+  {
+    "code": "20614",
+    "region_code": "20",
+    "name": "RÍO DE ORO",
+    "is_capital": false
+  },
+  {
+    "code": "20621",
+    "region_code": "20",
+    "name": "LA PAZ",
+    "is_capital": false
+  },
+  {
+    "code": "20710",
+    "region_code": "20",
+    "name": "SAN ALBERTO",
+    "is_capital": false
+  },
+  {
+    "code": "20750",
+    "region_code": "20",
+    "name": "SAN DIEGO",
+    "is_capital": false
+  },
+  {
+    "code": "20770",
+    "region_code": "20",
+    "name": "SAN MARTÍN",
+    "is_capital": false
+  },
+  {
+    "code": "20787",
+    "region_code": "20",
+    "name": "TAMALAMEQUE",
+    "is_capital": false
+  },
+  {
+    "code": "23001",
+    "region_code": "23",
+    "name": "MONTERÍA",
+    "is_capital": true
+  },
+  {
+    "code": "23068",
+    "region_code": "23",
+    "name": "AYAPEL",
+    "is_capital": false
+  },
+  {
+    "code": "23079",
+    "region_code": "23",
+    "name": "BUENAVISTA",
+    "is_capital": false
+  },
+  {
+    "code": "23090",
+    "region_code": "23",
+    "name": "CANALETE",
+    "is_capital": false
+  },
+  {
+    "code": "23162",
+    "region_code": "23",
+    "name": "CERETÉ",
+    "is_capital": false
+  },
+  {
+    "code": "23168",
+    "region_code": "23",
+    "name": "CHIMÁ",
+    "is_capital": false
+  },
+  {
+    "code": "23182",
+    "region_code": "23",
+    "name": "CHINÚ",
+    "is_capital": false
+  },
+  {
+    "code": "23189",
+    "region_code": "23",
+    "name": "CIÉNAGA DE ORO",
+    "is_capital": false
+  },
+  {
+    "code": "23300",
+    "region_code": "23",
+    "name": "COTORRA",
+    "is_capital": false
+  },
+  {
+    "code": "23350",
+    "region_code": "23",
+    "name": "LA APARTADA",
+    "is_capital": false
+  },
+  {
+    "code": "23417",
+    "region_code": "23",
+    "name": "LORICA",
+    "is_capital": false
+  },
+  {
+    "code": "23419",
+    "region_code": "23",
+    "name": "LOS CÓRDOBAS",
+    "is_capital": false
+  },
+  {
+    "code": "23464",
+    "region_code": "23",
+    "name": "MOMIL",
+    "is_capital": false
+  },
+  {
+    "code": "23466",
+    "region_code": "23",
+    "name": "MONTELÍBANO",
+    "is_capital": false
+  },
+  {
+    "code": "23500",
+    "region_code": "23",
+    "name": "MOÑITOS",
+    "is_capital": false
+  },
+  {
+    "code": "23555",
+    "region_code": "23",
+    "name": "PLANETA RICA",
+    "is_capital": false
+  },
+  {
+    "code": "23570",
+    "region_code": "23",
+    "name": "PUEBLO NUEVO",
+    "is_capital": false
+  },
+  {
+    "code": "23574",
+    "region_code": "23",
+    "name": "PUERTO ESCONDIDO",
+    "is_capital": false
+  },
+  {
+    "code": "23580",
+    "region_code": "23",
+    "name": "PUERTO LIBERTADOR",
+    "is_capital": false
+  },
+  {
+    "code": "23586",
+    "region_code": "23",
+    "name": "PURÍSIMA DE LA CONCEPCIÓN",
+    "is_capital": false
+  },
+  {
+    "code": "23660",
+    "region_code": "23",
+    "name": "SAHAGÚN",
+    "is_capital": false
+  },
+  {
+    "code": "23670",
+    "region_code": "23",
+    "name": "SAN ANDRÉS DE SOTAVENTO",
+    "is_capital": false
+  },
+  {
+    "code": "23672",
+    "region_code": "23",
+    "name": "SAN ANTERO",
+    "is_capital": false
+  },
+  {
+    "code": "23675",
+    "region_code": "23",
+    "name": "SAN BERNARDO DEL VIENTO",
+    "is_capital": false
+  },
+  {
+    "code": "23678",
+    "region_code": "23",
+    "name": "SAN CARLOS",
+    "is_capital": false
+  },
+  {
+    "code": "23682",
+    "region_code": "23",
+    "name": "SAN JOSÉ DE URÉ",
+    "is_capital": false
+  },
+  {
+    "code": "23686",
+    "region_code": "23",
+    "name": "SAN PELAYO",
+    "is_capital": false
+  },
+  {
+    "code": "23807",
+    "region_code": "23",
+    "name": "TIERRALTA",
+    "is_capital": false
+  },
+  {
+    "code": "23815",
+    "region_code": "23",
+    "name": "TUCHÍN",
+    "is_capital": false
+  },
+  {
+    "code": "23855",
+    "region_code": "23",
+    "name": "VALENCIA",
+    "is_capital": false
+  },
+  {
+    "code": "25001",
+    "region_code": "25",
+    "name": "AGUA DE DIOS",
+    "is_capital": false
+  },
+  {
+    "code": "25019",
+    "region_code": "25",
+    "name": "ALBÁN",
+    "is_capital": false
+  },
+  {
+    "code": "25035",
+    "region_code": "25",
+    "name": "ANAPOIMA",
+    "is_capital": false
+  },
+  {
+    "code": "25040",
+    "region_code": "25",
+    "name": "ANOLAIMA",
+    "is_capital": false
+  },
+  {
+    "code": "25053",
+    "region_code": "25",
+    "name": "ARBELÁEZ",
+    "is_capital": false
+  },
+  {
+    "code": "25086",
+    "region_code": "25",
+    "name": "BELTRÁN",
+    "is_capital": false
+  },
+  {
+    "code": "25095",
+    "region_code": "25",
+    "name": "BITUIMA",
+    "is_capital": false
+  },
+  {
+    "code": "25099",
+    "region_code": "25",
+    "name": "BOJACÁ",
+    "is_capital": false
+  },
+  {
+    "code": "25120",
+    "region_code": "25",
+    "name": "CABRERA",
+    "is_capital": false
+  },
+  {
+    "code": "25123",
+    "region_code": "25",
+    "name": "CACHIPAY",
+    "is_capital": false
+  },
+  {
+    "code": "25126",
+    "region_code": "25",
+    "name": "CAJICÁ",
+    "is_capital": false
+  },
+  {
+    "code": "25148",
+    "region_code": "25",
+    "name": "CAPARRAPÍ",
+    "is_capital": false
+  },
+  {
+    "code": "25151",
+    "region_code": "25",
+    "name": "CÁQUEZA",
+    "is_capital": false
+  },
+  {
+    "code": "25154",
+    "region_code": "25",
+    "name": "CARMEN DE CARUPA",
+    "is_capital": false
+  },
+  {
+    "code": "25168",
+    "region_code": "25",
+    "name": "CHAGUANÍ",
+    "is_capital": false
+  },
+  {
+    "code": "25175",
+    "region_code": "25",
+    "name": "CHÍA",
+    "is_capital": false
+  },
+  {
+    "code": "25178",
+    "region_code": "25",
+    "name": "CHIPAQUE",
+    "is_capital": false
+  },
+  {
+    "code": "25181",
+    "region_code": "25",
+    "name": "CHOACHÍ",
+    "is_capital": false
+  },
+  {
+    "code": "25183",
+    "region_code": "25",
+    "name": "CHOCONTÁ",
+    "is_capital": false
+  },
+  {
+    "code": "25200",
+    "region_code": "25",
+    "name": "COGUA",
+    "is_capital": false
+  },
+  {
+    "code": "25214",
+    "region_code": "25",
+    "name": "COTA",
+    "is_capital": false
+  },
+  {
+    "code": "25224",
+    "region_code": "25",
+    "name": "CUCUNUBÁ",
+    "is_capital": false
+  },
+  {
+    "code": "25245",
+    "region_code": "25",
+    "name": "EL COLEGIO",
+    "is_capital": false
+  },
+  {
+    "code": "25258",
+    "region_code": "25",
+    "name": "EL PEÑÓN",
+    "is_capital": false
+  },
+  {
+    "code": "25260",
+    "region_code": "25",
+    "name": "EL ROSAL",
+    "is_capital": false
+  },
+  {
+    "code": "25269",
+    "region_code": "25",
+    "name": "FACATATIVÁ",
+    "is_capital": false
+  },
+  {
+    "code": "25279",
+    "region_code": "25",
+    "name": "FÓMEQUE",
+    "is_capital": false
+  },
+  {
+    "code": "25281",
+    "region_code": "25",
+    "name": "FOSCA",
+    "is_capital": false
+  },
+  {
+    "code": "25286",
+    "region_code": "25",
+    "name": "FUNZA",
+    "is_capital": false
+  },
+  {
+    "code": "25288",
+    "region_code": "25",
+    "name": "FÚQUENE",
+    "is_capital": false
+  },
+  {
+    "code": "25290",
+    "region_code": "25",
+    "name": "FUSAGASUGÁ",
+    "is_capital": false
+  },
+  {
+    "code": "25293",
+    "region_code": "25",
+    "name": "GACHALÁ",
+    "is_capital": false
+  },
+  {
+    "code": "25295",
+    "region_code": "25",
+    "name": "GACHANCIPÁ",
+    "is_capital": false
+  },
+  {
+    "code": "25297",
+    "region_code": "25",
+    "name": "GACHETÁ",
+    "is_capital": false
+  },
+  {
+    "code": "25299",
+    "region_code": "25",
+    "name": "GAMA",
+    "is_capital": false
+  },
+  {
+    "code": "25307",
+    "region_code": "25",
+    "name": "GIRARDOT",
+    "is_capital": false
+  },
+  {
+    "code": "25312",
+    "region_code": "25",
+    "name": "GRANADA",
+    "is_capital": false
+  },
+  {
+    "code": "25317",
+    "region_code": "25",
+    "name": "GUACHETÁ",
+    "is_capital": false
+  },
+  {
+    "code": "25320",
+    "region_code": "25",
+    "name": "GUADUAS",
+    "is_capital": false
+  },
+  {
+    "code": "25322",
+    "region_code": "25",
+    "name": "GUASCA",
+    "is_capital": false
+  },
+  {
+    "code": "25324",
+    "region_code": "25",
+    "name": "GUATAQUÍ",
+    "is_capital": false
+  },
+  {
+    "code": "25326",
+    "region_code": "25",
+    "name": "GUATAVITA",
+    "is_capital": false
+  },
+  {
+    "code": "25328",
+    "region_code": "25",
+    "name": "GUAYABAL DE SÍQUIMA",
+    "is_capital": false
+  },
+  {
+    "code": "25335",
+    "region_code": "25",
+    "name": "GUAYABETAL",
+    "is_capital": false
+  },
+  {
+    "code": "25339",
+    "region_code": "25",
+    "name": "GUTIÉRREZ",
+    "is_capital": false
+  },
+  {
+    "code": "25368",
+    "region_code": "25",
+    "name": "JERUSALÉN",
+    "is_capital": false
+  },
+  {
+    "code": "25372",
+    "region_code": "25",
+    "name": "JUNÍN",
+    "is_capital": false
+  },
+  {
+    "code": "25377",
+    "region_code": "25",
+    "name": "LA CALERA",
+    "is_capital": false
+  },
+  {
+    "code": "25386",
+    "region_code": "25",
+    "name": "LA MESA",
+    "is_capital": false
+  },
+  {
+    "code": "25394",
+    "region_code": "25",
+    "name": "LA PALMA",
+    "is_capital": false
+  },
+  {
+    "code": "25398",
+    "region_code": "25",
+    "name": "LA PEÑA",
+    "is_capital": false
+  },
+  {
+    "code": "25402",
+    "region_code": "25",
+    "name": "LA VEGA",
+    "is_capital": false
+  },
+  {
+    "code": "25407",
+    "region_code": "25",
+    "name": "LENGUAZAQUE",
+    "is_capital": false
+  },
+  {
+    "code": "25426",
+    "region_code": "25",
+    "name": "MACHETÁ",
+    "is_capital": false
+  },
+  {
+    "code": "25430",
+    "region_code": "25",
+    "name": "MADRID",
+    "is_capital": false
+  },
+  {
+    "code": "25436",
+    "region_code": "25",
+    "name": "MANTA",
+    "is_capital": false
+  },
+  {
+    "code": "25438",
+    "region_code": "25",
+    "name": "MEDINA",
+    "is_capital": false
+  },
+  {
+    "code": "25473",
+    "region_code": "25",
+    "name": "MOSQUERA",
+    "is_capital": false
+  },
+  {
+    "code": "25483",
+    "region_code": "25",
+    "name": "NARIÑO",
+    "is_capital": false
+  },
+  {
+    "code": "25486",
+    "region_code": "25",
+    "name": "NEMOCÓN",
+    "is_capital": false
+  },
+  {
+    "code": "25488",
+    "region_code": "25",
+    "name": "NILO",
+    "is_capital": false
+  },
+  {
+    "code": "25489",
+    "region_code": "25",
+    "name": "NIMAIMA",
+    "is_capital": false
+  },
+  {
+    "code": "25491",
+    "region_code": "25",
+    "name": "NOCAIMA",
+    "is_capital": false
+  },
+  {
+    "code": "25506",
+    "region_code": "25",
+    "name": "VENECIA",
+    "is_capital": false
+  },
+  {
+    "code": "25513",
+    "region_code": "25",
+    "name": "PACHO",
+    "is_capital": false
+  },
+  {
+    "code": "25518",
+    "region_code": "25",
+    "name": "PAIME",
+    "is_capital": false
+  },
+  {
+    "code": "25524",
+    "region_code": "25",
+    "name": "PANDI",
+    "is_capital": false
+  },
+  {
+    "code": "25530",
+    "region_code": "25",
+    "name": "PARATEBUENO",
+    "is_capital": false
+  },
+  {
+    "code": "25535",
+    "region_code": "25",
+    "name": "PASCA",
+    "is_capital": false
+  },
+  {
+    "code": "25572",
+    "region_code": "25",
+    "name": "PUERTO SALGAR",
+    "is_capital": false
+  },
+  {
+    "code": "25580",
+    "region_code": "25",
+    "name": "PULÍ",
+    "is_capital": false
+  },
+  {
+    "code": "25592",
+    "region_code": "25",
+    "name": "QUEBRADANEGRA",
+    "is_capital": false
+  },
+  {
+    "code": "25594",
+    "region_code": "25",
+    "name": "QUETAME",
+    "is_capital": false
+  },
+  {
+    "code": "25596",
+    "region_code": "25",
+    "name": "QUIPILE",
+    "is_capital": false
+  },
+  {
+    "code": "25599",
+    "region_code": "25",
+    "name": "APULO",
+    "is_capital": false
+  },
+  {
+    "code": "25612",
+    "region_code": "25",
+    "name": "RICAURTE",
+    "is_capital": false
+  },
+  {
+    "code": "25645",
+    "region_code": "25",
+    "name": "SAN ANTONIO DEL TEQUENDAMA",
+    "is_capital": false
+  },
+  {
+    "code": "25649",
+    "region_code": "25",
+    "name": "SAN BERNARDO",
+    "is_capital": false
+  },
+  {
+    "code": "25653",
+    "region_code": "25",
+    "name": "SAN CAYETANO",
+    "is_capital": false
+  },
+  {
+    "code": "25658",
+    "region_code": "25",
+    "name": "SAN FRANCISCO",
+    "is_capital": false
+  },
+  {
+    "code": "25662",
+    "region_code": "25",
+    "name": "SAN JUAN DE RIOSECO",
+    "is_capital": false
+  },
+  {
+    "code": "25718",
+    "region_code": "25",
+    "name": "SASAIMA",
+    "is_capital": false
+  },
+  {
+    "code": "25736",
+    "region_code": "25",
+    "name": "SESQUILÉ",
+    "is_capital": false
+  },
+  {
+    "code": "25740",
+    "region_code": "25",
+    "name": "SIBATÉ",
+    "is_capital": false
+  },
+  {
+    "code": "25743",
+    "region_code": "25",
+    "name": "SILVANIA",
+    "is_capital": false
+  },
+  {
+    "code": "25745",
+    "region_code": "25",
+    "name": "SIMIJACA",
+    "is_capital": false
+  },
+  {
+    "code": "25754",
+    "region_code": "25",
+    "name": "SOACHA",
+    "is_capital": false
+  },
+  {
+    "code": "25758",
+    "region_code": "25",
+    "name": "SOPÓ",
+    "is_capital": false
+  },
+  {
+    "code": "25769",
+    "region_code": "25",
+    "name": "SUBACHOQUE",
+    "is_capital": false
+  },
+  {
+    "code": "25772",
+    "region_code": "25",
+    "name": "SUESCA",
+    "is_capital": false
+  },
+  {
+    "code": "25777",
+    "region_code": "25",
+    "name": "SUPATÁ",
+    "is_capital": false
+  },
+  {
+    "code": "25779",
+    "region_code": "25",
+    "name": "SUSA",
+    "is_capital": false
+  },
+  {
+    "code": "25781",
+    "region_code": "25",
+    "name": "SUTATAUSA",
+    "is_capital": false
+  },
+  {
+    "code": "25785",
+    "region_code": "25",
+    "name": "TABIO",
+    "is_capital": false
+  },
+  {
+    "code": "25793",
+    "region_code": "25",
+    "name": "TAUSA",
+    "is_capital": false
+  },
+  {
+    "code": "25797",
+    "region_code": "25",
+    "name": "TENA",
+    "is_capital": false
+  },
+  {
+    "code": "25799",
+    "region_code": "25",
+    "name": "TENJO",
+    "is_capital": false
+  },
+  {
+    "code": "25805",
+    "region_code": "25",
+    "name": "TIBACUY",
+    "is_capital": false
+  },
+  {
+    "code": "25807",
+    "region_code": "25",
+    "name": "TIBIRITA",
+    "is_capital": false
+  },
+  {
+    "code": "25815",
+    "region_code": "25",
+    "name": "TOCAIMA",
+    "is_capital": false
+  },
+  {
+    "code": "25817",
+    "region_code": "25",
+    "name": "TOCANCIPÁ",
+    "is_capital": false
+  },
+  {
+    "code": "25823",
+    "region_code": "25",
+    "name": "TOPAIPÍ",
+    "is_capital": false
+  },
+  {
+    "code": "25839",
+    "region_code": "25",
+    "name": "UBALÁ",
+    "is_capital": false
+  },
+  {
+    "code": "25841",
+    "region_code": "25",
+    "name": "UBAQUE",
+    "is_capital": false
+  },
+  {
+    "code": "25843",
+    "region_code": "25",
+    "name": "VILLA DE SAN DIEGO DE UBATÉ",
+    "is_capital": false
+  },
+  {
+    "code": "25845",
+    "region_code": "25",
+    "name": "UNE",
+    "is_capital": false
+  },
+  {
+    "code": "25851",
+    "region_code": "25",
+    "name": "ÚTICA",
+    "is_capital": false
+  },
+  {
+    "code": "25862",
+    "region_code": "25",
+    "name": "VERGARA",
+    "is_capital": false
+  },
+  {
+    "code": "25867",
+    "region_code": "25",
+    "name": "VIANÍ",
+    "is_capital": false
+  },
+  {
+    "code": "25871",
+    "region_code": "25",
+    "name": "VILLAGÓMEZ",
+    "is_capital": false
+  },
+  {
+    "code": "25873",
+    "region_code": "25",
+    "name": "VILLAPINZÓN",
+    "is_capital": false
+  },
+  {
+    "code": "25875",
+    "region_code": "25",
+    "name": "VILLETA",
+    "is_capital": false
+  },
+  {
+    "code": "25878",
+    "region_code": "25",
+    "name": "VIOTÁ",
+    "is_capital": false
+  },
+  {
+    "code": "25885",
+    "region_code": "25",
+    "name": "YACOPÍ",
+    "is_capital": false
+  },
+  {
+    "code": "25898",
+    "region_code": "25",
+    "name": "ZIPACÓN",
+    "is_capital": false
+  },
+  {
+    "code": "25899",
+    "region_code": "25",
+    "name": "ZIPAQUIRÁ",
+    "is_capital": false
+  },
+  {
+    "code": "27001",
+    "region_code": "27",
+    "name": "QUIBDÓ",
+    "is_capital": true
+  },
+  {
+    "code": "27006",
+    "region_code": "27",
+    "name": "ACANDÍ",
+    "is_capital": false
+  },
+  {
+    "code": "27025",
+    "region_code": "27",
+    "name": "ALTO BAUDÓ",
+    "is_capital": false
+  },
+  {
+    "code": "27050",
+    "region_code": "27",
+    "name": "ATRATO",
+    "is_capital": false
+  },
+  {
+    "code": "27073",
+    "region_code": "27",
+    "name": "BAGADÓ",
+    "is_capital": false
+  },
+  {
+    "code": "27075",
+    "region_code": "27",
+    "name": "BAHÍA SOLANO",
+    "is_capital": false
+  },
+  {
+    "code": "27077",
+    "region_code": "27",
+    "name": "BAJO BAUDÓ",
+    "is_capital": false
+  },
+  {
+    "code": "27099",
+    "region_code": "27",
+    "name": "BOJAYÁ",
+    "is_capital": false
+  },
+  {
+    "code": "27135",
+    "region_code": "27",
+    "name": "EL CANTÓN DEL SAN PABLO",
+    "is_capital": false
+  },
+  {
+    "code": "27150",
+    "region_code": "27",
+    "name": "CARMEN DEL DARIÉN",
+    "is_capital": false
+  },
+  {
+    "code": "27160",
+    "region_code": "27",
+    "name": "CÉRTEGUI",
+    "is_capital": false
+  },
+  {
+    "code": "27205",
+    "region_code": "27",
+    "name": "CONDOTO",
+    "is_capital": false
+  },
+  {
+    "code": "27245",
+    "region_code": "27",
+    "name": "EL CARMEN DE ATRATO",
+    "is_capital": false
+  },
+  {
+    "code": "27250",
+    "region_code": "27",
+    "name": "EL LITORAL DEL SAN JUAN",
+    "is_capital": false
+  },
+  {
+    "code": "27361",
+    "region_code": "27",
+    "name": "ISTMINA",
+    "is_capital": false
+  },
+  {
+    "code": "27372",
+    "region_code": "27",
+    "name": "JURADÓ",
+    "is_capital": false
+  },
+  {
+    "code": "27413",
+    "region_code": "27",
+    "name": "LLORÓ",
+    "is_capital": false
+  },
+  {
+    "code": "27425",
+    "region_code": "27",
+    "name": "MEDIO ATRATO",
+    "is_capital": false
+  },
+  {
+    "code": "27430",
+    "region_code": "27",
+    "name": "MEDIO BAUDÓ",
+    "is_capital": false
+  },
+  {
+    "code": "27450",
+    "region_code": "27",
+    "name": "MEDIO SAN JUAN",
+    "is_capital": false
+  },
+  {
+    "code": "27491",
+    "region_code": "27",
+    "name": "NÓVITA",
+    "is_capital": false
+  },
+  {
+    "code": "27493",
+    "region_code": "27",
+    "name": "NUEVO BELÉN DE BAJIRÁ",
+    "is_capital": false
+  },
+  {
+    "code": "27495",
+    "region_code": "27",
+    "name": "NUQUÍ",
+    "is_capital": false
+  },
+  {
+    "code": "27580",
+    "region_code": "27",
+    "name": "RÍO IRÓ",
+    "is_capital": false
+  },
+  {
+    "code": "27600",
+    "region_code": "27",
+    "name": "RÍO QUITO",
+    "is_capital": false
+  },
+  {
+    "code": "27615",
+    "region_code": "27",
+    "name": "RIOSUCIO",
+    "is_capital": false
+  },
+  {
+    "code": "27660",
+    "region_code": "27",
+    "name": "SAN JOSÉ DEL PALMAR",
+    "is_capital": false
+  },
+  {
+    "code": "27745",
+    "region_code": "27",
+    "name": "SIPÍ",
+    "is_capital": false
+  },
+  {
+    "code": "27787",
+    "region_code": "27",
+    "name": "TADÓ",
+    "is_capital": false
+  },
+  {
+    "code": "27800",
+    "region_code": "27",
+    "name": "UNGUÍA",
+    "is_capital": false
+  },
+  {
+    "code": "27810",
+    "region_code": "27",
+    "name": "UNIÓN PANAMERICANA",
+    "is_capital": false
+  },
+  {
+    "code": "41001",
+    "region_code": "41",
+    "name": "NEIVA",
+    "is_capital": true
+  },
+  {
+    "code": "41006",
+    "region_code": "41",
+    "name": "ACEVEDO",
+    "is_capital": false
+  },
+  {
+    "code": "41013",
+    "region_code": "41",
+    "name": "AGRADO",
+    "is_capital": false
+  },
+  {
+    "code": "41016",
+    "region_code": "41",
+    "name": "AIPE",
+    "is_capital": false
+  },
+  {
+    "code": "41020",
+    "region_code": "41",
+    "name": "ALGECIRAS",
+    "is_capital": false
+  },
+  {
+    "code": "41026",
+    "region_code": "41",
+    "name": "ALTAMIRA",
+    "is_capital": false
+  },
+  {
+    "code": "41078",
+    "region_code": "41",
+    "name": "BARAYA",
+    "is_capital": false
+  },
+  {
+    "code": "41132",
+    "region_code": "41",
+    "name": "CAMPOALEGRE",
+    "is_capital": false
+  },
+  {
+    "code": "41206",
+    "region_code": "41",
+    "name": "COLOMBIA",
+    "is_capital": false
+  },
+  {
+    "code": "41244",
+    "region_code": "41",
+    "name": "ELÍAS",
+    "is_capital": false
+  },
+  {
+    "code": "41298",
+    "region_code": "41",
+    "name": "GARZÓN",
+    "is_capital": false
+  },
+  {
+    "code": "41306",
+    "region_code": "41",
+    "name": "GIGANTE",
+    "is_capital": false
+  },
+  {
+    "code": "41319",
+    "region_code": "41",
+    "name": "GUADALUPE",
+    "is_capital": false
+  },
+  {
+    "code": "41349",
+    "region_code": "41",
+    "name": "HOBO",
+    "is_capital": false
+  },
+  {
+    "code": "41357",
+    "region_code": "41",
+    "name": "ÍQUIRA",
+    "is_capital": false
+  },
+  {
+    "code": "41359",
+    "region_code": "41",
+    "name": "ISNOS",
+    "is_capital": false
+  },
+  {
+    "code": "41378",
+    "region_code": "41",
+    "name": "LA ARGENTINA",
+    "is_capital": false
+  },
+  {
+    "code": "41396",
+    "region_code": "41",
+    "name": "LA PLATA",
+    "is_capital": false
+  },
+  {
+    "code": "41483",
+    "region_code": "41",
+    "name": "NÁTAGA",
+    "is_capital": false
+  },
+  {
+    "code": "41503",
+    "region_code": "41",
+    "name": "OPORAPA",
+    "is_capital": false
+  },
+  {
+    "code": "41518",
+    "region_code": "41",
+    "name": "PAICOL",
+    "is_capital": false
+  },
+  {
+    "code": "41524",
+    "region_code": "41",
+    "name": "PALERMO",
+    "is_capital": false
+  },
+  {
+    "code": "41530",
+    "region_code": "41",
+    "name": "PALESTINA",
+    "is_capital": false
+  },
+  {
+    "code": "41548",
+    "region_code": "41",
+    "name": "PITAL",
+    "is_capital": false
+  },
+  {
+    "code": "41551",
+    "region_code": "41",
+    "name": "PITALITO",
+    "is_capital": false
+  },
+  {
+    "code": "41615",
+    "region_code": "41",
+    "name": "RIVERA",
+    "is_capital": false
+  },
+  {
+    "code": "41660",
+    "region_code": "41",
+    "name": "SALADOBLANCO",
+    "is_capital": false
+  },
+  {
+    "code": "41668",
+    "region_code": "41",
+    "name": "SAN AGUSTÍN",
+    "is_capital": false
+  },
+  {
+    "code": "41676",
+    "region_code": "41",
+    "name": "SANTA MARÍA",
+    "is_capital": false
+  },
+  {
+    "code": "41770",
+    "region_code": "41",
+    "name": "SUAZA",
+    "is_capital": false
+  },
+  {
+    "code": "41791",
+    "region_code": "41",
+    "name": "TARQUI",
+    "is_capital": false
+  },
+  {
+    "code": "41797",
+    "region_code": "41",
+    "name": "TESALIA",
+    "is_capital": false
+  },
+  {
+    "code": "41799",
+    "region_code": "41",
+    "name": "TELLO",
+    "is_capital": false
+  },
+  {
+    "code": "41801",
+    "region_code": "41",
+    "name": "TERUEL",
+    "is_capital": false
+  },
+  {
+    "code": "41807",
+    "region_code": "41",
+    "name": "TIMANÁ",
+    "is_capital": false
+  },
+  {
+    "code": "41872",
+    "region_code": "41",
+    "name": "VILLAVIEJA",
+    "is_capital": false
+  },
+  {
+    "code": "41885",
+    "region_code": "41",
+    "name": "YAGUARÁ",
+    "is_capital": false
+  },
+  {
+    "code": "44001",
+    "region_code": "44",
+    "name": "RIOHACHA",
+    "is_capital": true
+  },
+  {
+    "code": "44035",
+    "region_code": "44",
+    "name": "ALBANIA",
+    "is_capital": false
+  },
+  {
+    "code": "44078",
+    "region_code": "44",
+    "name": "BARRANCAS",
+    "is_capital": false
+  },
+  {
+    "code": "44090",
+    "region_code": "44",
+    "name": "DIBULLA",
+    "is_capital": false
+  },
+  {
+    "code": "44098",
+    "region_code": "44",
+    "name": "DISTRACCIÓN",
+    "is_capital": false
+  },
+  {
+    "code": "44110",
+    "region_code": "44",
+    "name": "EL MOLINO",
+    "is_capital": false
+  },
+  {
+    "code": "44279",
+    "region_code": "44",
+    "name": "FONSECA",
+    "is_capital": false
+  },
+  {
+    "code": "44378",
+    "region_code": "44",
+    "name": "HATONUEVO",
+    "is_capital": false
+  },
+  {
+    "code": "44420",
+    "region_code": "44",
+    "name": "LA JAGUA DEL PILAR",
+    "is_capital": false
+  },
+  {
+    "code": "44430",
+    "region_code": "44",
+    "name": "MAICAO",
+    "is_capital": false
+  },
+  {
+    "code": "44560",
+    "region_code": "44",
+    "name": "MANAURE",
+    "is_capital": false
+  },
+  {
+    "code": "44650",
+    "region_code": "44",
+    "name": "SAN JUAN DEL CESAR",
+    "is_capital": false
+  },
+  {
+    "code": "44847",
+    "region_code": "44",
+    "name": "URIBIA",
+    "is_capital": false
+  },
+  {
+    "code": "44855",
+    "region_code": "44",
+    "name": "URUMITA",
+    "is_capital": false
+  },
+  {
+    "code": "44874",
+    "region_code": "44",
+    "name": "VILLANUEVA",
+    "is_capital": false
+  },
+  {
+    "code": "47001",
+    "region_code": "47",
+    "name": "SANTA MARTA",
+    "is_capital": true
+  },
+  {
+    "code": "47030",
+    "region_code": "47",
+    "name": "ALGARROBO",
+    "is_capital": false
+  },
+  {
+    "code": "47053",
+    "region_code": "47",
+    "name": "ARACATACA",
+    "is_capital": false
+  },
+  {
+    "code": "47058",
+    "region_code": "47",
+    "name": "ARIGUANÍ",
+    "is_capital": false
+  },
+  {
+    "code": "47161",
+    "region_code": "47",
+    "name": "CERRO DE SAN ANTONIO",
+    "is_capital": false
+  },
+  {
+    "code": "47170",
+    "region_code": "47",
+    "name": "CHIVOLO",
+    "is_capital": false
+  },
+  {
+    "code": "47189",
+    "region_code": "47",
+    "name": "CIÉNAGA",
+    "is_capital": false
+  },
+  {
+    "code": "47205",
+    "region_code": "47",
+    "name": "CONCORDIA",
+    "is_capital": false
+  },
+  {
+    "code": "47245",
+    "region_code": "47",
+    "name": "EL BANCO",
+    "is_capital": false
+  },
+  {
+    "code": "47258",
+    "region_code": "47",
+    "name": "EL PIÑÓN",
+    "is_capital": false
+  },
+  {
+    "code": "47268",
+    "region_code": "47",
+    "name": "EL RETÉN",
+    "is_capital": false
+  },
+  {
+    "code": "47288",
+    "region_code": "47",
+    "name": "FUNDACIÓN",
+    "is_capital": false
+  },
+  {
+    "code": "47318",
+    "region_code": "47",
+    "name": "GUAMAL",
+    "is_capital": false
+  },
+  {
+    "code": "47460",
+    "region_code": "47",
+    "name": "NUEVA GRANADA",
+    "is_capital": false
+  },
+  {
+    "code": "47541",
+    "region_code": "47",
+    "name": "PEDRAZA",
+    "is_capital": false
+  },
+  {
+    "code": "47545",
+    "region_code": "47",
+    "name": "PIJIÑO DEL CARMEN",
+    "is_capital": false
+  },
+  {
+    "code": "47551",
+    "region_code": "47",
+    "name": "PIVIJAY",
+    "is_capital": false
+  },
+  {
+    "code": "47555",
+    "region_code": "47",
+    "name": "PLATO",
+    "is_capital": false
+  },
+  {
+    "code": "47570",
+    "region_code": "47",
+    "name": "PUEBLOVIEJO",
+    "is_capital": false
+  },
+  {
+    "code": "47605",
+    "region_code": "47",
+    "name": "REMOLINO",
+    "is_capital": false
+  },
+  {
+    "code": "47660",
+    "region_code": "47",
+    "name": "SABANAS DE SAN ÁNGEL",
+    "is_capital": false
+  },
+  {
+    "code": "47675",
+    "region_code": "47",
+    "name": "SALAMINA",
+    "is_capital": false
+  },
+  {
+    "code": "47692",
+    "region_code": "47",
+    "name": "SAN SEBASTIÁN DE BUENAVISTA",
+    "is_capital": false
+  },
+  {
+    "code": "47703",
+    "region_code": "47",
+    "name": "SAN ZENÓN",
+    "is_capital": false
+  },
+  {
+    "code": "47707",
+    "region_code": "47",
+    "name": "SANTA ANA",
+    "is_capital": false
+  },
+  {
+    "code": "47720",
+    "region_code": "47",
+    "name": "SANTA BÁRBARA DE PINTO",
+    "is_capital": false
+  },
+  {
+    "code": "47745",
+    "region_code": "47",
+    "name": "SITIONUEVO",
+    "is_capital": false
+  },
+  {
+    "code": "47798",
+    "region_code": "47",
+    "name": "TENERIFE",
+    "is_capital": false
+  },
+  {
+    "code": "47960",
+    "region_code": "47",
+    "name": "ZAPAYÁN",
+    "is_capital": false
+  },
+  {
+    "code": "47980",
+    "region_code": "47",
+    "name": "ZONA BANANERA",
+    "is_capital": false
+  },
+  {
+    "code": "50001",
+    "region_code": "50",
+    "name": "VILLAVICENCIO",
+    "is_capital": true
+  },
+  {
+    "code": "50006",
+    "region_code": "50",
+    "name": "ACACÍAS",
+    "is_capital": false
+  },
+  {
+    "code": "50110",
+    "region_code": "50",
+    "name": "BARRANCA DE UPÍA",
+    "is_capital": false
+  },
+  {
+    "code": "50124",
+    "region_code": "50",
+    "name": "CABUYARO",
+    "is_capital": false
+  },
+  {
+    "code": "50150",
+    "region_code": "50",
+    "name": "CASTILLA LA NUEVA",
+    "is_capital": false
+  },
+  {
+    "code": "50223",
+    "region_code": "50",
+    "name": "CUBARRAL",
+    "is_capital": false
+  },
+  {
+    "code": "50226",
+    "region_code": "50",
+    "name": "CUMARAL",
+    "is_capital": false
+  },
+  {
+    "code": "50245",
+    "region_code": "50",
+    "name": "EL CALVARIO",
+    "is_capital": false
+  },
+  {
+    "code": "50251",
+    "region_code": "50",
+    "name": "EL CASTILLO",
+    "is_capital": false
+  },
+  {
+    "code": "50270",
+    "region_code": "50",
+    "name": "EL DORADO",
+    "is_capital": false
+  },
+  {
+    "code": "50287",
+    "region_code": "50",
+    "name": "FUENTE DE ORO",
+    "is_capital": false
+  },
+  {
+    "code": "50313",
+    "region_code": "50",
+    "name": "GRANADA",
+    "is_capital": false
+  },
+  {
+    "code": "50318",
+    "region_code": "50",
+    "name": "GUAMAL",
+    "is_capital": false
+  },
+  {
+    "code": "50325",
+    "region_code": "50",
+    "name": "MAPIRIPÁN",
+    "is_capital": false
+  },
+  {
+    "code": "50330",
+    "region_code": "50",
+    "name": "MESETAS",
+    "is_capital": false
+  },
+  {
+    "code": "50350",
+    "region_code": "50",
+    "name": "LA MACARENA",
+    "is_capital": false
+  },
+  {
+    "code": "50370",
+    "region_code": "50",
+    "name": "URIBE",
+    "is_capital": false
+  },
+  {
+    "code": "50400",
+    "region_code": "50",
+    "name": "LEJANÍAS",
+    "is_capital": false
+  },
+  {
+    "code": "50450",
+    "region_code": "50",
+    "name": "PUERTO CONCORDIA",
+    "is_capital": false
+  },
+  {
+    "code": "50568",
+    "region_code": "50",
+    "name": "PUERTO GAITÁN",
+    "is_capital": false
+  },
+  {
+    "code": "50573",
+    "region_code": "50",
+    "name": "PUERTO LÓPEZ",
+    "is_capital": false
+  },
+  {
+    "code": "50577",
+    "region_code": "50",
+    "name": "PUERTO LLERAS",
+    "is_capital": false
+  },
+  {
+    "code": "50590",
+    "region_code": "50",
+    "name": "PUERTO RICO",
+    "is_capital": false
+  },
+  {
+    "code": "50606",
+    "region_code": "50",
+    "name": "RESTREPO",
+    "is_capital": false
+  },
+  {
+    "code": "50680",
+    "region_code": "50",
+    "name": "SAN CARLOS DE GUAROA",
+    "is_capital": false
+  },
+  {
+    "code": "50683",
+    "region_code": "50",
+    "name": "SAN JUAN DE ARAMA",
+    "is_capital": false
+  },
+  {
+    "code": "50686",
+    "region_code": "50",
+    "name": "SAN JUANITO",
+    "is_capital": false
+  },
+  {
+    "code": "50689",
+    "region_code": "50",
+    "name": "SAN MARTÍN",
+    "is_capital": false
+  },
+  {
+    "code": "50711",
+    "region_code": "50",
+    "name": "VISTAHERMOSA",
+    "is_capital": false
+  },
+  {
+    "code": "52001",
+    "region_code": "52",
+    "name": "PASTO",
+    "is_capital": true
+  },
+  {
+    "code": "52019",
+    "region_code": "52",
+    "name": "ALBÁN",
+    "is_capital": false
+  },
+  {
+    "code": "52022",
+    "region_code": "52",
+    "name": "ALDANA",
+    "is_capital": false
+  },
+  {
+    "code": "52036",
+    "region_code": "52",
+    "name": "ANCUYA",
+    "is_capital": false
+  },
+  {
+    "code": "52051",
+    "region_code": "52",
+    "name": "ARBOLEDA",
+    "is_capital": false
+  },
+  {
+    "code": "52079",
+    "region_code": "52",
+    "name": "BARBACOAS",
+    "is_capital": false
+  },
+  {
+    "code": "52083",
+    "region_code": "52",
+    "name": "BELÉN",
+    "is_capital": false
+  },
+  {
+    "code": "52110",
+    "region_code": "52",
+    "name": "BUESACO",
+    "is_capital": false
+  },
+  {
+    "code": "52203",
+    "region_code": "52",
+    "name": "COLÓN",
+    "is_capital": false
+  },
+  {
+    "code": "52207",
+    "region_code": "52",
+    "name": "CONSACÁ",
+    "is_capital": false
+  },
+  {
+    "code": "52210",
+    "region_code": "52",
+    "name": "CONTADERO",
+    "is_capital": false
+  },
+  {
+    "code": "52215",
+    "region_code": "52",
+    "name": "CÓRDOBA",
+    "is_capital": false
+  },
+  {
+    "code": "52224",
+    "region_code": "52",
+    "name": "CUASPUD CARLOSAMA",
+    "is_capital": false
+  },
+  {
+    "code": "52227",
+    "region_code": "52",
+    "name": "CUMBAL",
+    "is_capital": false
+  },
+  {
+    "code": "52233",
+    "region_code": "52",
+    "name": "CUMBITARA",
+    "is_capital": false
+  },
+  {
+    "code": "52240",
+    "region_code": "52",
+    "name": "CHACHAGÜÍ",
+    "is_capital": false
+  },
+  {
+    "code": "52250",
+    "region_code": "52",
+    "name": "EL CHARCO",
+    "is_capital": false
+  },
+  {
+    "code": "52254",
+    "region_code": "52",
+    "name": "EL PEÑOL",
+    "is_capital": false
+  },
+  {
+    "code": "52256",
+    "region_code": "52",
+    "name": "EL ROSARIO",
+    "is_capital": false
+  },
+  {
+    "code": "52258",
+    "region_code": "52",
+    "name": "EL TABLÓN DE GÓMEZ",
+    "is_capital": false
+  },
+  {
+    "code": "52260",
+    "region_code": "52",
+    "name": "EL TAMBO",
+    "is_capital": false
+  },
+  {
+    "code": "52287",
+    "region_code": "52",
+    "name": "FUNES",
+    "is_capital": false
+  },
+  {
+    "code": "52317",
+    "region_code": "52",
+    "name": "GUACHUCAL",
+    "is_capital": false
+  },
+  {
+    "code": "52320",
+    "region_code": "52",
+    "name": "GUAITARILLA",
+    "is_capital": false
+  },
+  {
+    "code": "52323",
+    "region_code": "52",
+    "name": "GUALMATÁN",
+    "is_capital": false
+  },
+  {
+    "code": "52352",
+    "region_code": "52",
+    "name": "ILES",
+    "is_capital": false
+  },
+  {
+    "code": "52354",
+    "region_code": "52",
+    "name": "IMUÉS",
+    "is_capital": false
+  },
+  {
+    "code": "52356",
+    "region_code": "52",
+    "name": "IPIALES",
+    "is_capital": false
+  },
+  {
+    "code": "52378",
+    "region_code": "52",
+    "name": "LA CRUZ",
+    "is_capital": false
+  },
+  {
+    "code": "52381",
+    "region_code": "52",
+    "name": "LA FLORIDA",
+    "is_capital": false
+  },
+  {
+    "code": "52385",
+    "region_code": "52",
+    "name": "LA LLANADA",
+    "is_capital": false
+  },
+  {
+    "code": "52390",
+    "region_code": "52",
+    "name": "LA TOLA",
+    "is_capital": false
+  },
+  {
+    "code": "52399",
+    "region_code": "52",
+    "name": "LA UNIÓN",
+    "is_capital": false
+  },
+  {
+    "code": "52405",
+    "region_code": "52",
+    "name": "LEIVA",
+    "is_capital": false
+  },
+  {
+    "code": "52411",
+    "region_code": "52",
+    "name": "LINARES",
+    "is_capital": false
+  },
+  {
+    "code": "52418",
+    "region_code": "52",
+    "name": "LOS ANDES",
+    "is_capital": false
+  },
+  {
+    "code": "52427",
+    "region_code": "52",
+    "name": "MAGÜÍ",
+    "is_capital": false
+  },
+  {
+    "code": "52435",
+    "region_code": "52",
+    "name": "MALLAMA",
+    "is_capital": false
+  },
+  {
+    "code": "52473",
+    "region_code": "52",
+    "name": "MOSQUERA",
+    "is_capital": false
+  },
+  {
+    "code": "52480",
+    "region_code": "52",
+    "name": "NARIÑO",
+    "is_capital": false
+  },
+  {
+    "code": "52490",
+    "region_code": "52",
+    "name": "OLAYA HERRERA",
+    "is_capital": false
+  },
+  {
+    "code": "52506",
+    "region_code": "52",
+    "name": "OSPINA",
+    "is_capital": false
+  },
+  {
+    "code": "52520",
+    "region_code": "52",
+    "name": "FRANCISCO PIZARRO",
+    "is_capital": false
+  },
+  {
+    "code": "52540",
+    "region_code": "52",
+    "name": "POLICARPA",
+    "is_capital": false
+  },
+  {
+    "code": "52560",
+    "region_code": "52",
+    "name": "POTOSÍ",
+    "is_capital": false
+  },
+  {
+    "code": "52565",
+    "region_code": "52",
+    "name": "PROVIDENCIA",
+    "is_capital": false
+  },
+  {
+    "code": "52573",
+    "region_code": "52",
+    "name": "PUERRES",
+    "is_capital": false
+  },
+  {
+    "code": "52585",
+    "region_code": "52",
+    "name": "PUPIALES",
+    "is_capital": false
+  },
+  {
+    "code": "52612",
+    "region_code": "52",
+    "name": "RICAURTE",
+    "is_capital": false
+  },
+  {
+    "code": "52621",
+    "region_code": "52",
+    "name": "ROBERTO PAYÁN",
+    "is_capital": false
+  },
+  {
+    "code": "52678",
+    "region_code": "52",
+    "name": "SAMANIEGO",
+    "is_capital": false
+  },
+  {
+    "code": "52683",
+    "region_code": "52",
+    "name": "SANDONÁ",
+    "is_capital": false
+  },
+  {
+    "code": "52685",
+    "region_code": "52",
+    "name": "SAN BERNARDO",
+    "is_capital": false
+  },
+  {
+    "code": "52687",
+    "region_code": "52",
+    "name": "SAN LORENZO",
+    "is_capital": false
+  },
+  {
+    "code": "52693",
+    "region_code": "52",
+    "name": "SAN PABLO",
+    "is_capital": false
+  },
+  {
+    "code": "52694",
+    "region_code": "52",
+    "name": "SAN PEDRO DE CARTAGO",
+    "is_capital": false
+  },
+  {
+    "code": "52696",
+    "region_code": "52",
+    "name": "SANTA BÁRBARA",
+    "is_capital": false
+  },
+  {
+    "code": "52699",
+    "region_code": "52",
+    "name": "SANTACRUZ",
+    "is_capital": false
+  },
+  {
+    "code": "52720",
+    "region_code": "52",
+    "name": "SAPUYES",
+    "is_capital": false
+  },
+  {
+    "code": "52786",
+    "region_code": "52",
+    "name": "TAMINANGO",
+    "is_capital": false
+  },
+  {
+    "code": "52788",
+    "region_code": "52",
+    "name": "TANGUA",
+    "is_capital": false
+  },
+  {
+    "code": "52835",
+    "region_code": "52",
+    "name": "SAN ANDRÉS DE TUMACO",
+    "is_capital": false
+  },
+  {
+    "code": "52838",
+    "region_code": "52",
+    "name": "TÚQUERRES",
+    "is_capital": false
+  },
+  {
+    "code": "52885",
+    "region_code": "52",
+    "name": "YACUANQUER",
+    "is_capital": false
+  },
+  {
+    "code": "54001",
+    "region_code": "54",
+    "name": "SAN JOSÉ DE CÚCUTA",
+    "is_capital": true
+  },
+  {
+    "code": "54003",
+    "region_code": "54",
+    "name": "ÁBREGO",
+    "is_capital": false
+  },
+  {
+    "code": "54051",
+    "region_code": "54",
+    "name": "ARBOLEDAS",
+    "is_capital": false
+  },
+  {
+    "code": "54099",
+    "region_code": "54",
+    "name": "BOCHALEMA",
+    "is_capital": false
+  },
+  {
+    "code": "54109",
+    "region_code": "54",
+    "name": "BUCARASICA",
+    "is_capital": false
+  },
+  {
+    "code": "54125",
+    "region_code": "54",
+    "name": "CÁCOTA",
+    "is_capital": false
+  },
+  {
+    "code": "54128",
+    "region_code": "54",
+    "name": "CÁCHIRA",
+    "is_capital": false
+  },
+  {
+    "code": "54172",
+    "region_code": "54",
+    "name": "CHINÁCOTA",
+    "is_capital": false
+  },
+  {
+    "code": "54174",
+    "region_code": "54",
+    "name": "CHITAGÁ",
+    "is_capital": false
+  },
+  {
+    "code": "54206",
+    "region_code": "54",
+    "name": "CONVENCIÓN",
+    "is_capital": false
+  },
+  {
+    "code": "54223",
+    "region_code": "54",
+    "name": "CUCUTILLA",
+    "is_capital": false
+  },
+  {
+    "code": "54239",
+    "region_code": "54",
+    "name": "DURANIA",
+    "is_capital": false
+  },
+  {
+    "code": "54245",
+    "region_code": "54",
+    "name": "EL CARMEN",
+    "is_capital": false
+  },
+  {
+    "code": "54250",
+    "region_code": "54",
+    "name": "EL TARRA",
+    "is_capital": false
+  },
+  {
+    "code": "54261",
+    "region_code": "54",
+    "name": "EL ZULIA",
+    "is_capital": false
+  },
+  {
+    "code": "54313",
+    "region_code": "54",
+    "name": "GRAMALOTE",
+    "is_capital": false
+  },
+  {
+    "code": "54344",
+    "region_code": "54",
+    "name": "HACARÍ",
+    "is_capital": false
+  },
+  {
+    "code": "54347",
+    "region_code": "54",
+    "name": "HERRÁN",
+    "is_capital": false
+  },
+  {
+    "code": "54377",
+    "region_code": "54",
+    "name": "LABATECA",
+    "is_capital": false
+  },
+  {
+    "code": "54385",
+    "region_code": "54",
+    "name": "LA ESPERANZA",
+    "is_capital": false
+  },
+  {
+    "code": "54398",
+    "region_code": "54",
+    "name": "LA PLAYA",
+    "is_capital": false
+  },
+  {
+    "code": "54405",
+    "region_code": "54",
+    "name": "LOS PATIOS",
+    "is_capital": false
+  },
+  {
+    "code": "54418",
+    "region_code": "54",
+    "name": "LOURDES",
+    "is_capital": false
+  },
+  {
+    "code": "54480",
+    "region_code": "54",
+    "name": "MUTISCUA",
+    "is_capital": false
+  },
+  {
+    "code": "54498",
+    "region_code": "54",
+    "name": "OCAÑA",
+    "is_capital": false
+  },
+  {
+    "code": "54518",
+    "region_code": "54",
+    "name": "PAMPLONA",
+    "is_capital": false
+  },
+  {
+    "code": "54520",
+    "region_code": "54",
+    "name": "PAMPLONITA",
+    "is_capital": false
+  },
+  {
+    "code": "54553",
+    "region_code": "54",
+    "name": "PUERTO SANTANDER",
+    "is_capital": false
+  },
+  {
+    "code": "54599",
+    "region_code": "54",
+    "name": "RAGONVALIA",
+    "is_capital": false
+  },
+  {
+    "code": "54660",
+    "region_code": "54",
+    "name": "SALAZAR",
+    "is_capital": false
+  },
+  {
+    "code": "54670",
+    "region_code": "54",
+    "name": "SAN CALIXTO",
+    "is_capital": false
+  },
+  {
+    "code": "54673",
+    "region_code": "54",
+    "name": "SAN CAYETANO",
+    "is_capital": false
+  },
+  {
+    "code": "54680",
+    "region_code": "54",
+    "name": "SANTIAGO",
+    "is_capital": false
+  },
+  {
+    "code": "54720",
+    "region_code": "54",
+    "name": "SARDINATA",
+    "is_capital": false
+  },
+  {
+    "code": "54743",
+    "region_code": "54",
+    "name": "SILOS",
+    "is_capital": false
+  },
+  {
+    "code": "54800",
+    "region_code": "54",
+    "name": "TEORAMA",
+    "is_capital": false
+  },
+  {
+    "code": "54810",
+    "region_code": "54",
+    "name": "TIBÚ",
+    "is_capital": false
+  },
+  {
+    "code": "54820",
+    "region_code": "54",
+    "name": "TOLEDO",
+    "is_capital": false
+  },
+  {
+    "code": "54871",
+    "region_code": "54",
+    "name": "VILLA CARO",
+    "is_capital": false
+  },
+  {
+    "code": "54874",
+    "region_code": "54",
+    "name": "VILLA DEL ROSARIO",
+    "is_capital": false
+  },
+  {
+    "code": "63001",
+    "region_code": "63",
+    "name": "ARMENIA",
+    "is_capital": true
+  },
+  {
+    "code": "63111",
+    "region_code": "63",
+    "name": "BUENAVISTA",
+    "is_capital": false
+  },
+  {
+    "code": "63130",
+    "region_code": "63",
+    "name": "CALARCÁ",
+    "is_capital": false
+  },
+  {
+    "code": "63190",
+    "region_code": "63",
+    "name": "CIRCASIA",
+    "is_capital": false
+  },
+  {
+    "code": "63212",
+    "region_code": "63",
+    "name": "CÓRDOBA",
+    "is_capital": false
+  },
+  {
+    "code": "63272",
+    "region_code": "63",
+    "name": "FILANDIA",
+    "is_capital": false
+  },
+  {
+    "code": "63302",
+    "region_code": "63",
+    "name": "GÉNOVA",
+    "is_capital": false
+  },
+  {
+    "code": "63401",
+    "region_code": "63",
+    "name": "LA TEBAIDA",
+    "is_capital": false
+  },
+  {
+    "code": "63470",
+    "region_code": "63",
+    "name": "MONTENEGRO",
+    "is_capital": false
+  },
+  {
+    "code": "63548",
+    "region_code": "63",
+    "name": "PIJAO",
+    "is_capital": false
+  },
+  {
+    "code": "63594",
+    "region_code": "63",
+    "name": "QUIMBAYA",
+    "is_capital": false
+  },
+  {
+    "code": "63690",
+    "region_code": "63",
+    "name": "SALENTO",
+    "is_capital": false
+  },
+  {
+    "code": "66001",
+    "region_code": "66",
+    "name": "PEREIRA",
+    "is_capital": true
+  },
+  {
+    "code": "66045",
+    "region_code": "66",
+    "name": "APÍA",
+    "is_capital": false
+  },
+  {
+    "code": "66075",
+    "region_code": "66",
+    "name": "BALBOA",
+    "is_capital": false
+  },
+  {
+    "code": "66088",
+    "region_code": "66",
+    "name": "BELÉN DE UMBRÍA",
+    "is_capital": false
+  },
+  {
+    "code": "66170",
+    "region_code": "66",
+    "name": "DOSQUEBRADAS",
+    "is_capital": false
+  },
+  {
+    "code": "66318",
+    "region_code": "66",
+    "name": "GUÁTICA",
+    "is_capital": false
+  },
+  {
+    "code": "66383",
+    "region_code": "66",
+    "name": "LA CELIA",
+    "is_capital": false
+  },
+  {
+    "code": "66400",
+    "region_code": "66",
+    "name": "LA VIRGINIA",
+    "is_capital": false
+  },
+  {
+    "code": "66440",
+    "region_code": "66",
+    "name": "MARSELLA",
+    "is_capital": false
+  },
+  {
+    "code": "66456",
+    "region_code": "66",
+    "name": "MISTRATÓ",
+    "is_capital": false
+  },
+  {
+    "code": "66572",
+    "region_code": "66",
+    "name": "PUEBLO RICO",
+    "is_capital": false
+  },
+  {
+    "code": "66594",
+    "region_code": "66",
+    "name": "QUINCHÍA",
+    "is_capital": false
+  },
+  {
+    "code": "66682",
+    "region_code": "66",
+    "name": "SANTA ROSA DE CABAL",
+    "is_capital": false
+  },
+  {
+    "code": "66687",
+    "region_code": "66",
+    "name": "SANTUARIO",
+    "is_capital": false
+  },
+  {
+    "code": "68001",
+    "region_code": "68",
+    "name": "BUCARAMANGA",
+    "is_capital": true
+  },
+  {
+    "code": "68013",
+    "region_code": "68",
+    "name": "AGUADA",
+    "is_capital": false
+  },
+  {
+    "code": "68020",
+    "region_code": "68",
+    "name": "ALBANIA",
+    "is_capital": false
+  },
+  {
+    "code": "68051",
+    "region_code": "68",
+    "name": "ARATOCA",
+    "is_capital": false
+  },
+  {
+    "code": "68077",
+    "region_code": "68",
+    "name": "BARBOSA",
+    "is_capital": false
+  },
+  {
+    "code": "68079",
+    "region_code": "68",
+    "name": "BARICHARA",
+    "is_capital": false
+  },
+  {
+    "code": "68081",
+    "region_code": "68",
+    "name": "BARRANCABERMEJA",
+    "is_capital": false
+  },
+  {
+    "code": "68092",
+    "region_code": "68",
+    "name": "BETULIA",
+    "is_capital": false
+  },
+  {
+    "code": "68101",
+    "region_code": "68",
+    "name": "BOLÍVAR",
+    "is_capital": false
+  },
+  {
+    "code": "68121",
+    "region_code": "68",
+    "name": "CABRERA",
+    "is_capital": false
+  },
+  {
+    "code": "68132",
+    "region_code": "68",
+    "name": "CALIFORNIA",
+    "is_capital": false
+  },
+  {
+    "code": "68147",
+    "region_code": "68",
+    "name": "CAPITANEJO",
+    "is_capital": false
+  },
+  {
+    "code": "68152",
+    "region_code": "68",
+    "name": "CARCASÍ",
+    "is_capital": false
+  },
+  {
+    "code": "68160",
+    "region_code": "68",
+    "name": "CEPITÁ",
+    "is_capital": false
+  },
+  {
+    "code": "68162",
+    "region_code": "68",
+    "name": "CERRITO",
+    "is_capital": false
+  },
+  {
+    "code": "68167",
+    "region_code": "68",
+    "name": "CHARALÁ",
+    "is_capital": false
+  },
+  {
+    "code": "68169",
+    "region_code": "68",
+    "name": "CHARTA",
+    "is_capital": false
+  },
+  {
+    "code": "68176",
+    "region_code": "68",
+    "name": "CHIMA",
+    "is_capital": false
+  },
+  {
+    "code": "68179",
+    "region_code": "68",
+    "name": "CHIPATÁ",
+    "is_capital": false
+  },
+  {
+    "code": "68190",
+    "region_code": "68",
+    "name": "CIMITARRA",
+    "is_capital": false
+  },
+  {
+    "code": "68207",
+    "region_code": "68",
+    "name": "CONCEPCIÓN",
+    "is_capital": false
+  },
+  {
+    "code": "68209",
+    "region_code": "68",
+    "name": "CONFINES",
+    "is_capital": false
+  },
+  {
+    "code": "68211",
+    "region_code": "68",
+    "name": "CONTRATACIÓN",
+    "is_capital": false
+  },
+  {
+    "code": "68217",
+    "region_code": "68",
+    "name": "COROMORO",
+    "is_capital": false
+  },
+  {
+    "code": "68229",
+    "region_code": "68",
+    "name": "CURITÍ",
+    "is_capital": false
+  },
+  {
+    "code": "68235",
+    "region_code": "68",
+    "name": "EL CARMEN DE CHUCURÍ",
+    "is_capital": false
+  },
+  {
+    "code": "68245",
+    "region_code": "68",
+    "name": "EL GUACAMAYO",
+    "is_capital": false
+  },
+  {
+    "code": "68250",
+    "region_code": "68",
+    "name": "EL PEÑÓN",
+    "is_capital": false
+  },
+  {
+    "code": "68255",
+    "region_code": "68",
+    "name": "EL PLAYÓN",
+    "is_capital": false
+  },
+  {
+    "code": "68264",
+    "region_code": "68",
+    "name": "ENCINO",
+    "is_capital": false
+  },
+  {
+    "code": "68266",
+    "region_code": "68",
+    "name": "ENCISO",
+    "is_capital": false
+  },
+  {
+    "code": "68271",
+    "region_code": "68",
+    "name": "FLORIÁN",
+    "is_capital": false
+  },
+  {
+    "code": "68276",
+    "region_code": "68",
+    "name": "FLORIDABLANCA",
+    "is_capital": false
+  },
+  {
+    "code": "68296",
+    "region_code": "68",
+    "name": "GALÁN",
+    "is_capital": false
+  },
+  {
+    "code": "68298",
+    "region_code": "68",
+    "name": "GÁMBITA",
+    "is_capital": false
+  },
+  {
+    "code": "68307",
+    "region_code": "68",
+    "name": "GIRÓN",
+    "is_capital": false
+  },
+  {
+    "code": "68318",
+    "region_code": "68",
+    "name": "GUACA",
+    "is_capital": false
+  },
+  {
+    "code": "68320",
+    "region_code": "68",
+    "name": "GUADALUPE",
+    "is_capital": false
+  },
+  {
+    "code": "68322",
+    "region_code": "68",
+    "name": "GUAPOTÁ",
+    "is_capital": false
+  },
+  {
+    "code": "68324",
+    "region_code": "68",
+    "name": "GUAVATÁ",
+    "is_capital": false
+  },
+  {
+    "code": "68327",
+    "region_code": "68",
+    "name": "GÜEPSA",
+    "is_capital": false
+  },
+  {
+    "code": "68344",
+    "region_code": "68",
+    "name": "HATO",
+    "is_capital": false
+  },
+  {
+    "code": "68368",
+    "region_code": "68",
+    "name": "JESÚS MARÍA",
+    "is_capital": false
+  },
+  {
+    "code": "68370",
+    "region_code": "68",
+    "name": "JORDÁN",
+    "is_capital": false
+  },
+  {
+    "code": "68377",
+    "region_code": "68",
+    "name": "LA BELLEZA",
+    "is_capital": false
+  },
+  {
+    "code": "68385",
+    "region_code": "68",
+    "name": "LANDÁZURI",
+    "is_capital": false
+  },
+  {
+    "code": "68397",
+    "region_code": "68",
+    "name": "LA PAZ",
+    "is_capital": false
+  },
+  {
+    "code": "68406",
+    "region_code": "68",
+    "name": "LEBRIJA",
+    "is_capital": false
+  },
+  {
+    "code": "68418",
+    "region_code": "68",
+    "name": "LOS SANTOS",
+    "is_capital": false
+  },
+  {
+    "code": "68425",
+    "region_code": "68",
+    "name": "MACARAVITA",
+    "is_capital": false
+  },
+  {
+    "code": "68432",
+    "region_code": "68",
+    "name": "MÁLAGA",
+    "is_capital": false
+  },
+  {
+    "code": "68444",
+    "region_code": "68",
+    "name": "MATANZA",
+    "is_capital": false
+  },
+  {
+    "code": "68464",
+    "region_code": "68",
+    "name": "MOGOTES",
+    "is_capital": false
+  },
+  {
+    "code": "68468",
+    "region_code": "68",
+    "name": "MOLAGAVITA",
+    "is_capital": false
+  },
+  {
+    "code": "68498",
+    "region_code": "68",
+    "name": "OCAMONTE",
+    "is_capital": false
+  },
+  {
+    "code": "68500",
+    "region_code": "68",
+    "name": "OIBA",
+    "is_capital": false
+  },
+  {
+    "code": "68502",
+    "region_code": "68",
+    "name": "ONZAGA",
+    "is_capital": false
+  },
+  {
+    "code": "68522",
+    "region_code": "68",
+    "name": "PALMAR",
+    "is_capital": false
+  },
+  {
+    "code": "68524",
+    "region_code": "68",
+    "name": "PALMAS DEL SOCORRO",
+    "is_capital": false
+  },
+  {
+    "code": "68533",
+    "region_code": "68",
+    "name": "PÁRAMO",
+    "is_capital": false
+  },
+  {
+    "code": "68547",
+    "region_code": "68",
+    "name": "PIEDECUESTA",
+    "is_capital": false
+  },
+  {
+    "code": "68549",
+    "region_code": "68",
+    "name": "PINCHOTE",
+    "is_capital": false
+  },
+  {
+    "code": "68572",
+    "region_code": "68",
+    "name": "PUENTE NACIONAL",
+    "is_capital": false
+  },
+  {
+    "code": "68573",
+    "region_code": "68",
+    "name": "PUERTO PARRA",
+    "is_capital": false
+  },
+  {
+    "code": "68575",
+    "region_code": "68",
+    "name": "PUERTO WILCHES",
+    "is_capital": false
+  },
+  {
+    "code": "68615",
+    "region_code": "68",
+    "name": "RIONEGRO",
+    "is_capital": false
+  },
+  {
+    "code": "68655",
+    "region_code": "68",
+    "name": "SABANA DE TORRES",
+    "is_capital": false
+  },
+  {
+    "code": "68669",
+    "region_code": "68",
+    "name": "SAN ANDRÉS",
+    "is_capital": false
+  },
+  {
+    "code": "68673",
+    "region_code": "68",
+    "name": "SAN BENITO",
+    "is_capital": false
+  },
+  {
+    "code": "68679",
+    "region_code": "68",
+    "name": "SAN GIL",
+    "is_capital": false
+  },
+  {
+    "code": "68682",
+    "region_code": "68",
+    "name": "SAN JOAQUÍN",
+    "is_capital": false
+  },
+  {
+    "code": "68684",
+    "region_code": "68",
+    "name": "SAN JOSÉ DE MIRANDA",
+    "is_capital": false
+  },
+  {
+    "code": "68686",
+    "region_code": "68",
+    "name": "SAN MIGUEL",
+    "is_capital": false
+  },
+  {
+    "code": "68689",
+    "region_code": "68",
+    "name": "SAN VICENTE DE CHUCURÍ",
+    "is_capital": false
+  },
+  {
+    "code": "68705",
+    "region_code": "68",
+    "name": "SANTA BÁRBARA",
+    "is_capital": false
+  },
+  {
+    "code": "68720",
+    "region_code": "68",
+    "name": "SANTA HELENA DEL OPÓN",
+    "is_capital": false
+  },
+  {
+    "code": "68745",
+    "region_code": "68",
+    "name": "SIMACOTA",
+    "is_capital": false
+  },
+  {
+    "code": "68755",
+    "region_code": "68",
+    "name": "SOCORRO",
+    "is_capital": false
+  },
+  {
+    "code": "68770",
+    "region_code": "68",
+    "name": "SUAITA",
+    "is_capital": false
+  },
+  {
+    "code": "68773",
+    "region_code": "68",
+    "name": "SUCRE",
+    "is_capital": false
+  },
+  {
+    "code": "68780",
+    "region_code": "68",
+    "name": "SURATÁ",
+    "is_capital": false
+  },
+  {
+    "code": "68820",
+    "region_code": "68",
+    "name": "TONA",
+    "is_capital": false
+  },
+  {
+    "code": "68855",
+    "region_code": "68",
+    "name": "VALLE DE SAN JOSÉ",
+    "is_capital": false
+  },
+  {
+    "code": "68861",
+    "region_code": "68",
+    "name": "VÉLEZ",
+    "is_capital": false
+  },
+  {
+    "code": "68867",
+    "region_code": "68",
+    "name": "VETAS",
+    "is_capital": false
+  },
+  {
+    "code": "68872",
+    "region_code": "68",
+    "name": "VILLANUEVA",
+    "is_capital": false
+  },
+  {
+    "code": "68895",
+    "region_code": "68",
+    "name": "ZAPATOCA",
+    "is_capital": false
+  },
+  {
+    "code": "70001",
+    "region_code": "70",
+    "name": "SINCELEJO",
+    "is_capital": true
+  },
+  {
+    "code": "70110",
+    "region_code": "70",
+    "name": "BUENAVISTA",
+    "is_capital": false
+  },
+  {
+    "code": "70124",
+    "region_code": "70",
+    "name": "CAIMITO",
+    "is_capital": false
+  },
+  {
+    "code": "70204",
+    "region_code": "70",
+    "name": "COLOSÓ",
+    "is_capital": false
+  },
+  {
+    "code": "70215",
+    "region_code": "70",
+    "name": "COROZAL",
+    "is_capital": false
+  },
+  {
+    "code": "70221",
+    "region_code": "70",
+    "name": "COVEÑAS",
+    "is_capital": false
+  },
+  {
+    "code": "70230",
+    "region_code": "70",
+    "name": "CHALÁN",
+    "is_capital": false
+  },
+  {
+    "code": "70233",
+    "region_code": "70",
+    "name": "EL ROBLE",
+    "is_capital": false
+  },
+  {
+    "code": "70235",
+    "region_code": "70",
+    "name": "GALERAS",
+    "is_capital": false
+  },
+  {
+    "code": "70265",
+    "region_code": "70",
+    "name": "GUARANDA",
+    "is_capital": false
+  },
+  {
+    "code": "70400",
+    "region_code": "70",
+    "name": "LA UNIÓN",
+    "is_capital": false
+  },
+  {
+    "code": "70418",
+    "region_code": "70",
+    "name": "LOS PALMITOS",
+    "is_capital": false
+  },
+  {
+    "code": "70429",
+    "region_code": "70",
+    "name": "MAJAGUAL",
+    "is_capital": false
+  },
+  {
+    "code": "70473",
+    "region_code": "70",
+    "name": "MORROA",
+    "is_capital": false
+  },
+  {
+    "code": "70508",
+    "region_code": "70",
+    "name": "OVEJAS",
+    "is_capital": false
+  },
+  {
+    "code": "70523",
+    "region_code": "70",
+    "name": "PALMITO",
+    "is_capital": false
+  },
+  {
+    "code": "70670",
+    "region_code": "70",
+    "name": "SAMPUÉS",
+    "is_capital": false
+  },
+  {
+    "code": "70678",
+    "region_code": "70",
+    "name": "SAN BENITO ABAD",
+    "is_capital": false
+  },
+  {
+    "code": "70702",
+    "region_code": "70",
+    "name": "SAN JUAN DE BETULIA",
+    "is_capital": false
+  },
+  {
+    "code": "70708",
+    "region_code": "70",
+    "name": "SAN MARCOS",
+    "is_capital": false
+  },
+  {
+    "code": "70713",
+    "region_code": "70",
+    "name": "SAN ONOFRE",
+    "is_capital": false
+  },
+  {
+    "code": "70717",
+    "region_code": "70",
+    "name": "SAN PEDRO",
+    "is_capital": false
+  },
+  {
+    "code": "70742",
+    "region_code": "70",
+    "name": "SAN LUIS DE SINCÉ",
+    "is_capital": false
+  },
+  {
+    "code": "70771",
+    "region_code": "70",
+    "name": "SUCRE",
+    "is_capital": false
+  },
+  {
+    "code": "70820",
+    "region_code": "70",
+    "name": "SANTIAGO DE TOLÚ",
+    "is_capital": false
+  },
+  {
+    "code": "70823",
+    "region_code": "70",
+    "name": "SAN JOSÉ DE TOLUVIEJO",
+    "is_capital": false
+  },
+  {
+    "code": "73001",
+    "region_code": "73",
+    "name": "IBAGUÉ",
+    "is_capital": true
+  },
+  {
+    "code": "73024",
+    "region_code": "73",
+    "name": "ALPUJARRA",
+    "is_capital": false
+  },
+  {
+    "code": "73026",
+    "region_code": "73",
+    "name": "ALVARADO",
+    "is_capital": false
+  },
+  {
+    "code": "73030",
+    "region_code": "73",
+    "name": "AMBALEMA",
+    "is_capital": false
+  },
+  {
+    "code": "73043",
+    "region_code": "73",
+    "name": "ANZOÁTEGUI",
+    "is_capital": false
+  },
+  {
+    "code": "73055",
+    "region_code": "73",
+    "name": "ARMERO",
+    "is_capital": false
+  },
+  {
+    "code": "73067",
+    "region_code": "73",
+    "name": "ATACO",
+    "is_capital": false
+  },
+  {
+    "code": "73124",
+    "region_code": "73",
+    "name": "CAJAMARCA",
+    "is_capital": false
+  },
+  {
+    "code": "73148",
+    "region_code": "73",
+    "name": "CARMEN DE APICALÁ",
+    "is_capital": false
+  },
+  {
+    "code": "73152",
+    "region_code": "73",
+    "name": "CASABIANCA",
+    "is_capital": false
+  },
+  {
+    "code": "73168",
+    "region_code": "73",
+    "name": "CHAPARRAL",
+    "is_capital": false
+  },
+  {
+    "code": "73200",
+    "region_code": "73",
+    "name": "COELLO",
+    "is_capital": false
+  },
+  {
+    "code": "73217",
+    "region_code": "73",
+    "name": "COYAIMA",
+    "is_capital": false
+  },
+  {
+    "code": "73226",
+    "region_code": "73",
+    "name": "CUNDAY",
+    "is_capital": false
+  },
+  {
+    "code": "73236",
+    "region_code": "73",
+    "name": "DOLORES",
+    "is_capital": false
+  },
+  {
+    "code": "73268",
+    "region_code": "73",
+    "name": "ESPINAL",
+    "is_capital": false
+  },
+  {
+    "code": "73270",
+    "region_code": "73",
+    "name": "FALAN",
+    "is_capital": false
+  },
+  {
+    "code": "73275",
+    "region_code": "73",
+    "name": "FLANDES",
+    "is_capital": false
+  },
+  {
+    "code": "73283",
+    "region_code": "73",
+    "name": "FRESNO",
+    "is_capital": false
+  },
+  {
+    "code": "73319",
+    "region_code": "73",
+    "name": "GUAMO",
+    "is_capital": false
+  },
+  {
+    "code": "73347",
+    "region_code": "73",
+    "name": "HERVEO",
+    "is_capital": false
+  },
+  {
+    "code": "73349",
+    "region_code": "73",
+    "name": "HONDA",
+    "is_capital": false
+  },
+  {
+    "code": "73352",
+    "region_code": "73",
+    "name": "ICONONZO",
+    "is_capital": false
+  },
+  {
+    "code": "73408",
+    "region_code": "73",
+    "name": "LÉRIDA",
+    "is_capital": false
+  },
+  {
+    "code": "73411",
+    "region_code": "73",
+    "name": "LÍBANO",
+    "is_capital": false
+  },
+  {
+    "code": "73443",
+    "region_code": "73",
+    "name": "SAN SEBASTIÁN DE MARIQUITA",
+    "is_capital": false
+  },
+  {
+    "code": "73449",
+    "region_code": "73",
+    "name": "MELGAR",
+    "is_capital": false
+  },
+  {
+    "code": "73461",
+    "region_code": "73",
+    "name": "MURILLO",
+    "is_capital": false
+  },
+  {
+    "code": "73483",
+    "region_code": "73",
+    "name": "NATAGAIMA",
+    "is_capital": false
+  },
+  {
+    "code": "73504",
+    "region_code": "73",
+    "name": "ORTEGA",
+    "is_capital": false
+  },
+  {
+    "code": "73520",
+    "region_code": "73",
+    "name": "PALOCABILDO",
+    "is_capital": false
+  },
+  {
+    "code": "73547",
+    "region_code": "73",
+    "name": "PIEDRAS",
+    "is_capital": false
+  },
+  {
+    "code": "73555",
+    "region_code": "73",
+    "name": "PLANADAS",
+    "is_capital": false
+  },
+  {
+    "code": "73563",
+    "region_code": "73",
+    "name": "PRADO",
+    "is_capital": false
+  },
+  {
+    "code": "73585",
+    "region_code": "73",
+    "name": "PURIFICACIÓN",
+    "is_capital": false
+  },
+  {
+    "code": "73616",
+    "region_code": "73",
+    "name": "RIOBLANCO",
+    "is_capital": false
+  },
+  {
+    "code": "73622",
+    "region_code": "73",
+    "name": "RONCESVALLES",
+    "is_capital": false
+  },
+  {
+    "code": "73624",
+    "region_code": "73",
+    "name": "ROVIRA",
+    "is_capital": false
+  },
+  {
+    "code": "73671",
+    "region_code": "73",
+    "name": "SALDAÑA",
+    "is_capital": false
+  },
+  {
+    "code": "73675",
+    "region_code": "73",
+    "name": "SAN ANTONIO",
+    "is_capital": false
+  },
+  {
+    "code": "73678",
+    "region_code": "73",
+    "name": "SAN LUIS",
+    "is_capital": false
+  },
+  {
+    "code": "73686",
+    "region_code": "73",
+    "name": "SANTA ISABEL",
+    "is_capital": false
+  },
+  {
+    "code": "73770",
+    "region_code": "73",
+    "name": "SUÁREZ",
+    "is_capital": false
+  },
+  {
+    "code": "73854",
+    "region_code": "73",
+    "name": "VALLE DE SAN JUAN",
+    "is_capital": false
+  },
+  {
+    "code": "73861",
+    "region_code": "73",
+    "name": "VENADILLO",
+    "is_capital": false
+  },
+  {
+    "code": "73870",
+    "region_code": "73",
+    "name": "VILLAHERMOSA",
+    "is_capital": false
+  },
+  {
+    "code": "73873",
+    "region_code": "73",
+    "name": "VILLARRICA",
+    "is_capital": false
+  },
+  {
+    "code": "76001",
+    "region_code": "76",
+    "name": "SANTIAGO DE CALI",
+    "is_capital": true
+  },
+  {
+    "code": "76020",
+    "region_code": "76",
+    "name": "ALCALÁ",
+    "is_capital": false
+  },
+  {
+    "code": "76036",
+    "region_code": "76",
+    "name": "ANDALUCÍA",
+    "is_capital": false
+  },
+  {
+    "code": "76041",
+    "region_code": "76",
+    "name": "ANSERMANUEVO",
+    "is_capital": false
+  },
+  {
+    "code": "76054",
+    "region_code": "76",
+    "name": "ARGELIA",
+    "is_capital": false
+  },
+  {
+    "code": "76100",
+    "region_code": "76",
+    "name": "BOLÍVAR",
+    "is_capital": false
+  },
+  {
+    "code": "76109",
+    "region_code": "76",
+    "name": "BUENAVENTURA",
+    "is_capital": false
+  },
+  {
+    "code": "76111",
+    "region_code": "76",
+    "name": "GUADALAJARA DE BUGA",
+    "is_capital": false
+  },
+  {
+    "code": "76113",
+    "region_code": "76",
+    "name": "BUGALAGRANDE",
+    "is_capital": false
+  },
+  {
+    "code": "76122",
+    "region_code": "76",
+    "name": "CAICEDONIA",
+    "is_capital": false
+  },
+  {
+    "code": "76126",
+    "region_code": "76",
+    "name": "CALIMA",
+    "is_capital": false
+  },
+  {
+    "code": "76130",
+    "region_code": "76",
+    "name": "CANDELARIA",
+    "is_capital": false
+  },
+  {
+    "code": "76147",
+    "region_code": "76",
+    "name": "CARTAGO",
+    "is_capital": false
+  },
+  {
+    "code": "76233",
+    "region_code": "76",
+    "name": "DAGUA",
+    "is_capital": false
+  },
+  {
+    "code": "76243",
+    "region_code": "76",
+    "name": "EL ÁGUILA",
+    "is_capital": false
+  },
+  {
+    "code": "76246",
+    "region_code": "76",
+    "name": "EL CAIRO",
+    "is_capital": false
+  },
+  {
+    "code": "76248",
+    "region_code": "76",
+    "name": "EL CERRITO",
+    "is_capital": false
+  },
+  {
+    "code": "76250",
+    "region_code": "76",
+    "name": "EL DOVIO",
+    "is_capital": false
+  },
+  {
+    "code": "76275",
+    "region_code": "76",
+    "name": "FLORIDA",
+    "is_capital": false
+  },
+  {
+    "code": "76306",
+    "region_code": "76",
+    "name": "GINEBRA",
+    "is_capital": false
+  },
+  {
+    "code": "76318",
+    "region_code": "76",
+    "name": "GUACARÍ",
+    "is_capital": false
+  },
+  {
+    "code": "76364",
+    "region_code": "76",
+    "name": "JAMUNDÍ",
+    "is_capital": false
+  },
+  {
+    "code": "76377",
+    "region_code": "76",
+    "name": "LA CUMBRE",
+    "is_capital": false
+  },
+  {
+    "code": "76400",
+    "region_code": "76",
+    "name": "LA UNIÓN",
+    "is_capital": false
+  },
+  {
+    "code": "76403",
+    "region_code": "76",
+    "name": "LA VICTORIA",
+    "is_capital": false
+  },
+  {
+    "code": "76497",
+    "region_code": "76",
+    "name": "OBANDO",
+    "is_capital": false
+  },
+  {
+    "code": "76520",
+    "region_code": "76",
+    "name": "PALMIRA",
+    "is_capital": false
+  },
+  {
+    "code": "76563",
+    "region_code": "76",
+    "name": "PRADERA",
+    "is_capital": false
+  },
+  {
+    "code": "76606",
+    "region_code": "76",
+    "name": "RESTREPO",
+    "is_capital": false
+  },
+  {
+    "code": "76616",
+    "region_code": "76",
+    "name": "RIOFRÍO",
+    "is_capital": false
+  },
+  {
+    "code": "76622",
+    "region_code": "76",
+    "name": "ROLDANILLO",
+    "is_capital": false
+  },
+  {
+    "code": "76670",
+    "region_code": "76",
+    "name": "SAN PEDRO",
+    "is_capital": false
+  },
+  {
+    "code": "76736",
+    "region_code": "76",
+    "name": "SEVILLA",
+    "is_capital": false
+  },
+  {
+    "code": "76823",
+    "region_code": "76",
+    "name": "TORO",
+    "is_capital": false
+  },
+  {
+    "code": "76828",
+    "region_code": "76",
+    "name": "TRUJILLO",
+    "is_capital": false
+  },
+  {
+    "code": "76834",
+    "region_code": "76",
+    "name": "TULUÁ",
+    "is_capital": false
+  },
+  {
+    "code": "76845",
+    "region_code": "76",
+    "name": "ULLOA",
+    "is_capital": false
+  },
+  {
+    "code": "76863",
+    "region_code": "76",
+    "name": "VERSALLES",
+    "is_capital": false
+  },
+  {
+    "code": "76869",
+    "region_code": "76",
+    "name": "VIJES",
+    "is_capital": false
+  },
+  {
+    "code": "76890",
+    "region_code": "76",
+    "name": "YOTOCO",
+    "is_capital": false
+  },
+  {
+    "code": "76892",
+    "region_code": "76",
+    "name": "YUMBO",
+    "is_capital": false
+  },
+  {
+    "code": "76895",
+    "region_code": "76",
+    "name": "ZARZAL",
+    "is_capital": false
+  },
+  {
+    "code": "81001",
+    "region_code": "81",
+    "name": "ARAUCA",
+    "is_capital": true
+  },
+  {
+    "code": "81065",
+    "region_code": "81",
+    "name": "ARAUQUITA",
+    "is_capital": false
+  },
+  {
+    "code": "81220",
+    "region_code": "81",
+    "name": "CRAVO NORTE",
+    "is_capital": false
+  },
+  {
+    "code": "81300",
+    "region_code": "81",
+    "name": "FORTUL",
+    "is_capital": false
+  },
+  {
+    "code": "81591",
+    "region_code": "81",
+    "name": "PUERTO RONDÓN",
+    "is_capital": false
+  },
+  {
+    "code": "81736",
+    "region_code": "81",
+    "name": "SARAVENA",
+    "is_capital": false
+  },
+  {
+    "code": "81794",
+    "region_code": "81",
+    "name": "TAME",
+    "is_capital": false
+  },
+  {
+    "code": "85001",
+    "region_code": "85",
+    "name": "YOPAL",
+    "is_capital": true
+  },
+  {
+    "code": "85010",
+    "region_code": "85",
+    "name": "AGUAZUL",
+    "is_capital": false
+  },
+  {
+    "code": "85015",
+    "region_code": "85",
+    "name": "CHÁMEZA",
+    "is_capital": false
+  },
+  {
+    "code": "85125",
+    "region_code": "85",
+    "name": "HATO COROZAL",
+    "is_capital": false
+  },
+  {
+    "code": "85136",
+    "region_code": "85",
+    "name": "LA SALINA",
+    "is_capital": false
+  },
+  {
+    "code": "85139",
+    "region_code": "85",
+    "name": "MANÍ",
+    "is_capital": false
+  },
+  {
+    "code": "85162",
+    "region_code": "85",
+    "name": "MONTERREY",
+    "is_capital": false
+  },
+  {
+    "code": "85225",
+    "region_code": "85",
+    "name": "NUNCHÍA",
+    "is_capital": false
+  },
+  {
+    "code": "85230",
+    "region_code": "85",
+    "name": "OROCUÉ",
+    "is_capital": false
+  },
+  {
+    "code": "85250",
+    "region_code": "85",
+    "name": "PAZ DE ARIPORO",
+    "is_capital": false
+  },
+  {
+    "code": "85263",
+    "region_code": "85",
+    "name": "PORE",
+    "is_capital": false
+  },
+  {
+    "code": "85279",
+    "region_code": "85",
+    "name": "RECETOR",
+    "is_capital": false
+  },
+  {
+    "code": "85300",
+    "region_code": "85",
+    "name": "SABANALARGA",
+    "is_capital": false
+  },
+  {
+    "code": "85315",
+    "region_code": "85",
+    "name": "SÁCAMA",
+    "is_capital": false
+  },
+  {
+    "code": "85325",
+    "region_code": "85",
+    "name": "SAN LUIS DE PALENQUE",
+    "is_capital": false
+  },
+  {
+    "code": "85400",
+    "region_code": "85",
+    "name": "TÁMARA",
+    "is_capital": false
+  },
+  {
+    "code": "85410",
+    "region_code": "85",
+    "name": "TAURAMENA",
+    "is_capital": false
+  },
+  {
+    "code": "85430",
+    "region_code": "85",
+    "name": "TRINIDAD",
+    "is_capital": false
+  },
+  {
+    "code": "85440",
+    "region_code": "85",
+    "name": "VILLANUEVA",
+    "is_capital": false
+  },
+  {
+    "code": "86001",
+    "region_code": "86",
+    "name": "MOCOA",
+    "is_capital": true
+  },
+  {
+    "code": "86219",
+    "region_code": "86",
+    "name": "COLÓN",
+    "is_capital": false
+  },
+  {
+    "code": "86320",
+    "region_code": "86",
+    "name": "ORITO",
+    "is_capital": false
+  },
+  {
+    "code": "86568",
+    "region_code": "86",
+    "name": "PUERTO ASÍS",
+    "is_capital": false
+  },
+  {
+    "code": "86569",
+    "region_code": "86",
+    "name": "PUERTO CAICEDO",
+    "is_capital": false
+  },
+  {
+    "code": "86571",
+    "region_code": "86",
+    "name": "PUERTO GUZMÁN",
+    "is_capital": false
+  },
+  {
+    "code": "86573",
+    "region_code": "86",
+    "name": "PUERTO LEGUÍZAMO",
+    "is_capital": false
+  },
+  {
+    "code": "86749",
+    "region_code": "86",
+    "name": "SIBUNDOY",
+    "is_capital": false
+  },
+  {
+    "code": "86755",
+    "region_code": "86",
+    "name": "SAN FRANCISCO",
+    "is_capital": false
+  },
+  {
+    "code": "86757",
+    "region_code": "86",
+    "name": "SAN MIGUEL",
+    "is_capital": false
+  },
+  {
+    "code": "86760",
+    "region_code": "86",
+    "name": "SANTIAGO",
+    "is_capital": false
+  },
+  {
+    "code": "86865",
+    "region_code": "86",
+    "name": "VALLE DEL GUAMUEZ",
+    "is_capital": false
+  },
+  {
+    "code": "86885",
+    "region_code": "86",
+    "name": "VILLAGARZÓN",
+    "is_capital": false
+  },
+  {
+    "code": "88001",
+    "region_code": "88",
+    "name": "SAN ANDRÉS",
+    "is_capital": true
+  },
+  {
+    "code": "88564",
+    "region_code": "88",
+    "name": "PROVIDENCIA",
+    "is_capital": false
+  },
+  {
+    "code": "91001",
+    "region_code": "91",
+    "name": "LETICIA",
+    "is_capital": true
+  },
+  {
+    "code": "91263",
+    "region_code": "91",
+    "name": "EL ENCANTO",
+    "is_capital": false
+  },
+  {
+    "code": "91405",
+    "region_code": "91",
+    "name": "LA CHORRERA",
+    "is_capital": false
+  },
+  {
+    "code": "91407",
+    "region_code": "91",
+    "name": "LA PEDRERA",
+    "is_capital": false
+  },
+  {
+    "code": "91430",
+    "region_code": "91",
+    "name": "LA VICTORIA",
+    "is_capital": false
+  },
+  {
+    "code": "91460",
+    "region_code": "91",
+    "name": "MIRITÍ - PARANÁ",
+    "is_capital": false
+  },
+  {
+    "code": "91530",
+    "region_code": "91",
+    "name": "PUERTO ALEGRÍA",
+    "is_capital": false
+  },
+  {
+    "code": "91536",
+    "region_code": "91",
+    "name": "PUERTO ARICA",
+    "is_capital": false
+  },
+  {
+    "code": "91540",
+    "region_code": "91",
+    "name": "PUERTO NARIÑO",
+    "is_capital": false
+  },
+  {
+    "code": "91669",
+    "region_code": "91",
+    "name": "PUERTO SANTANDER",
+    "is_capital": false
+  },
+  {
+    "code": "91798",
+    "region_code": "91",
+    "name": "TARAPACÁ",
+    "is_capital": false
+  },
+  {
+    "code": "94001",
+    "region_code": "94",
+    "name": "INÍRIDA",
+    "is_capital": true
+  },
+  {
+    "code": "94343",
+    "region_code": "94",
+    "name": "BARRANCOMINAS",
+    "is_capital": false
+  },
+  {
+    "code": "94883",
+    "region_code": "94",
+    "name": "SAN FELIPE",
+    "is_capital": false
+  },
+  {
+    "code": "94884",
+    "region_code": "94",
+    "name": "PUERTO COLOMBIA",
+    "is_capital": false
+  },
+  {
+    "code": "94885",
+    "region_code": "94",
+    "name": "LA GUADALUPE",
+    "is_capital": false
+  },
+  {
+    "code": "94886",
+    "region_code": "94",
+    "name": "CACAHUAL",
+    "is_capital": false
+  },
+  {
+    "code": "94887",
+    "region_code": "94",
+    "name": "PANA PANA",
+    "is_capital": false
+  },
+  {
+    "code": "94888",
+    "region_code": "94",
+    "name": "MORICHAL",
+    "is_capital": false
+  },
+  {
+    "code": "95001",
+    "region_code": "95",
+    "name": "SAN JOSÉ DEL GUAVIARE",
+    "is_capital": true
+  },
+  {
+    "code": "95015",
+    "region_code": "95",
+    "name": "CALAMAR",
+    "is_capital": false
+  },
+  {
+    "code": "95025",
+    "region_code": "95",
+    "name": "EL RETORNO",
+    "is_capital": false
+  },
+  {
+    "code": "95200",
+    "region_code": "95",
+    "name": "MIRAFLORES",
+    "is_capital": false
+  },
+  {
+    "code": "97001",
+    "region_code": "97",
+    "name": "MITÚ",
+    "is_capital": true
+  },
+  {
+    "code": "97161",
+    "region_code": "97",
+    "name": "CARURÚ",
+    "is_capital": false
+  },
+  {
+    "code": "97511",
+    "region_code": "97",
+    "name": "PACOA",
+    "is_capital": false
+  },
+  {
+    "code": "97666",
+    "region_code": "97",
+    "name": "TARAIRA",
+    "is_capital": false
+  },
+  {
+    "code": "97777",
+    "region_code": "97",
+    "name": "PAPUNAHUA",
+    "is_capital": false
+  },
+  {
+    "code": "97889",
+    "region_code": "97",
+    "name": "YAVARATÉ",
+    "is_capital": false
+  },
+  {
+    "code": "99001",
+    "region_code": "99",
+    "name": "PUERTO CARREÑO",
+    "is_capital": true
+  },
+  {
+    "code": "99524",
+    "region_code": "99",
+    "name": "LA PRIMAVERA",
+    "is_capital": false
+  },
+  {
+    "code": "99624",
+    "region_code": "99",
+    "name": "SANTA ROSALÍA",
+    "is_capital": false
+  },
+  {
+    "code": "99773",
+    "region_code": "99",
+    "name": "CUMARIBO",
+    "is_capital": false
+  }
+]
