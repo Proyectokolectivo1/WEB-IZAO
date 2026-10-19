@@ -252,6 +252,53 @@ describe('order-state: findTransitionPath (sincronización que se salta estados)
     expect(siguientesEstados('cancelado')).toEqual([]);
   });
 
+  const FASES_TRANSPORTADORA: OrderStatus[] = [
+    'pagado',
+    'abono_pagado',
+    'error_transportadora',
+    'enviado_transportadora',
+    'en_preparacion',
+    'en_transito',
+    'entregado',
+  ];
+
+  it('A1: con allowed, no inventa estados de pago (pendiente_pago → enviado_transportadora)', () => {
+    expect(findTransitionPath('pendiente_pago', 'enviado_transportadora')).toEqual([
+      'pagado',
+      'enviado_transportadora',
+    ]);
+    expect(
+      findTransitionPath('pendiente_pago', 'enviado_transportadora', FASES_TRANSPORTADORA),
+    ).toBeNull();
+  });
+
+  it('A1: con allowed, el origen también debe estar permitido', () => {
+    expect(findTransitionPath('esperando_abono', 'abono_pagado', FASES_TRANSPORTADORA)).toBeNull();
+  });
+
+  it('A1: con allowed, el destino también debe estar permitido', () => {
+    expect(findTransitionPath('en_transito', 'devuelto', FASES_TRANSPORTADORA)).toBeNull();
+    expect(
+      findTransitionPath('en_transito', 'devuelto', [...FASES_TRANSPORTADORA, 'devuelto']),
+    ).toEqual(['devuelto']);
+  });
+
+  it('A1: con allowed, encuentra caminos dentro de las fases de transportadora', () => {
+    expect(findTransitionPath('pagado', 'entregado', FASES_TRANSPORTADORA)).toEqual([
+      'enviado_transportadora',
+      'en_preparacion',
+      'en_transito',
+      'entregado',
+    ]);
+    expect(
+      findTransitionPath('error_transportadora', 'en_preparacion', new Set(FASES_TRANSPORTADORA)),
+    ).toEqual(['enviado_transportadora', 'en_preparacion']);
+  });
+
+  it('A1: allowed vacío nunca da camino', () => {
+    expect(findTransitionPath('pagado', 'enviado_transportadora', [])).toBeNull();
+  });
+
   it('sin camino devuelve null', () => {
     expect(findTransitionPath('entregado', 'pagado')).toBeNull();
     expect(findTransitionPath('cancelado', 'entregado')).toBeNull();

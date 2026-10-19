@@ -172,16 +172,27 @@ export function transicionar(input: TransitionInput): TransitionResult {
  * Camino más corto de transiciones válidas de `from` a `to` (sin incluir `from`).
  * Sirve a la sincronización con la transportadora cuando el polling se salta
  * estados intermedios: se registra cada paso con `transicionar`. `null` si no hay camino.
+ *
+ * `allowed` (opcional) restringe los estados por los que puede pasar el camino, incluidos
+ * el origen y el destino. La sincronización con la transportadora debe pasar solo las
+ * fases de transportadora, para no inventar estados de pago (A1): p. ej. sin `allowed`,
+ * `pendiente_pago → enviado_transportadora` pasaría por `pagado`.
  */
-export function findTransitionPath(from: OrderStatus, to: OrderStatus): OrderStatus[] | null {
+export function findTransitionPath(
+  from: OrderStatus,
+  to: OrderStatus,
+  allowed?: Iterable<OrderStatus>,
+): OrderStatus[] | null {
   if (!isOrderStatus(from) || !isOrderStatus(to) || from === to) return null;
+  const permitted = allowed === undefined ? null : new Set<OrderStatus>(allowed);
+  if (permitted && (!permitted.has(from) || !permitted.has(to))) return null;
   const prev = new Map<OrderStatus, OrderStatus>();
   const queue: OrderStatus[] = [from];
   const seen = new Set<OrderStatus>([from]);
   while (queue.length > 0) {
     const current = queue.shift()!;
     for (const next of ORDER_TRANSITIONS[current]) {
-      if (seen.has(next)) continue;
+      if (seen.has(next) || (permitted && !permitted.has(next))) continue;
       seen.add(next);
       prev.set(next, current);
       if (next === to) {
