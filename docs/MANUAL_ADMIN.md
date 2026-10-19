@@ -28,7 +28,7 @@ Desde la carpeta `apps/web`:
 pnpm crear-admin -- --correo tu-correo@ejemplo.com --nombre "Tu Nombre"
 ```
 
-El script pide la contraseña dos veces sin mostrarla (mínimo 12 caracteres). Crea el usuario en Supabase Auth, lo registra en `admin_users` como administrador activo con MFA requerido y deja una entrada en la auditoría. Si el correo ya existía en Auth, reutiliza ese usuario. Se puede ejecutar de nuevo sin riesgo.
+El script pide la contraseña dos veces sin mostrarla (mínimo 12 caracteres). Crea el usuario en Supabase Auth, lo registra en `admin_users` como administrador activo con MFA requerido y deja una entrada en la auditoría. Si el correo ya existe en Auth, el script lo avisa, muestra su rol y estado actuales y pide que escribas SI antes de reemplazar su contraseña por la que digitaste (sin interacción: `--confirmar-existente`). Nunca cambia el rol ni reactiva a un usuario desactivado por su cuenta: para eso hay que indicarlo con `--rol admin|operator` o `--activar`. Sin esos indicadores, `admin_users` queda como estaba.
 
 ### 3. Ingresar y activar la verificación en dos pasos
 
