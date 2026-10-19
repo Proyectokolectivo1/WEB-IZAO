@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Valida Nginx en un contenedor desechable, en tres variantes:
+# Valida Nginx en contenedores desechables con las versiones 1.27, 1.24 (Ubuntu 24.04) y 1.18 (Ubuntu 22.04),
+# en tres variantes:
 #   1) contenedor local (izao.local.conf + env/container)
 #   2) producción en contenedor (izao.conf con TLS + env/container)
 #   3) Nginx del HOST tipo Ubuntu (nginx.conf con `gzip on` ya declarado, sites-enabled + conf.d,
@@ -12,7 +13,9 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../nginx"
 RUTA="$(pwd -W 2>/dev/null || pwd)"
 export MSYS_NO_PATHCONV=1
 
-docker run --rm -i -v "$RUTA:/cfg:ro" nginx:1.27-alpine sh -s <<'INNER'
+for VER in ${NGINX_VERSIONS:-1.27 1.24 1.18}; do
+echo "##### nginx $VER"
+docker run --rm -i -v "$RUTA:/cfg:ro" nginx:$VER-alpine sh -s <<'INNER'
 set -eu
 apk add --no-cache openssl curl >/dev/null
 mkdir -p /srv/izao/media /srv/izao/certbot /etc/letsencrypt/live/izaoperfumeria.com /etc/nginx/sites-enabled
@@ -136,3 +139,4 @@ if [ "$(curl -s http://127.0.0.1:8081/)" = "otro" ]; then echo "OK   [host] el o
 
 [ "$fallos" -eq 0 ] && echo "NGINX OK" || { echo "NGINX CON $fallos FALLOS"; exit 1; }
 INNER
+done
