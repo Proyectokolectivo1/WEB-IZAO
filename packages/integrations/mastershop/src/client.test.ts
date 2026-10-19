@@ -288,16 +288,26 @@ describe('MasterShopClient.listOrders / listAllOrders', () => {
     });
   });
 
-  it('un monto no entero es una respuesta inválida (nunca float)', async () => {
+  it('un monto con decimales no tumba el listado: exacto si los decimales son cero, si no null con aviso (M6)', async () => {
     const { mock, clock, client } = setup();
     mock.inject('list', {
       status: 200,
-      body: [{ idOrder: 1, orderStatus: 'Pendiente', shippingRate: 12000.5 }],
+      body: [
+        { idOrder: 1, orderStatus: 'Pendiente', shippingRate: '12000.00', totalProvider: 50000 },
+        { idOrder: 2, orderStatus: 'Pendiente', shippingRate: 12000.5, totalOrder: '89.900' },
+        { idOrder: 3, orderStatus: 'Pendiente', shippingRate: 1e21, totalProvider: 'gratis' },
+      ],
     });
-    await expectError(
-      client.listOrders({ startDate: new Date(clock.now() - DAY), page: 1 }),
-      'respuesta_invalida',
-    );
+    const rows = await client.listOrders({ startDate: new Date(clock.now() - DAY), page: 1 });
+    expect(rows.map((r) => r.idOrder)).toEqual([1, 2, 3]);
+    expect(rows[0]).toMatchObject({ shippingRate: 12_000n, totalProvider: 50_000n, warnings: [] });
+    expect(rows[1]).toMatchObject({ shippingRate: null, totalOrder: null });
+    expect(rows[1]!.warnings).toEqual([
+      { code: 'monto_no_entero', field: 'shippingRate', value: '12000.5' },
+      { code: 'monto_no_entero', field: 'totalOrder', value: '89.900' },
+    ]);
+    expect(rows[2]).toMatchObject({ shippingRate: null, totalProvider: null });
+    expect(rows[2]!.warnings.map((w) => w.field)).toEqual(['shippingRate', 'totalProvider']);
   });
 });
 

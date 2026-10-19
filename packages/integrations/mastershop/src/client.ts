@@ -141,6 +141,8 @@ export interface MasterShopListItem {
   totalOrder: bigint | null;
   createdAt: string | null;
   lastCarrierStatusUpdate: string | null;
+  /** Datos de la fila que no se pudieron leer (quedaron en `null`). */
+  warnings: ListItemWarning[];
   raw: unknown;
 }
 
@@ -176,18 +178,38 @@ function text(v: unknown): string | null {
   return null;
 }
 
-/** Monto COP de la API (número entero o texto de dígitos) → bigint; `null` si no viene. */
-function amount(v: unknown): bigint | null {
+/** Aviso por fila del listado: un dato no se pudo leer y quedó en `null`. */
+export interface ListItemWarning {
+  code: 'monto_no_entero';
+  field: 'shippingRate' | 'totalProvider' | 'totalOrder';
+  /** Valor tal como llegó (texto). */
+  value: string;
+}
+
+const DECIMAL_TEXT = /^-?\d+(?:\.(\d+))?$/;
+
+/**
+ * Monto COP de la API → bigint, sin pasar por `float`. Acepta enteros y textos
+ * decimales cuyos decimales sean cero (`"12000.00"`). Cualquier otra cosa (`12000.5`,
+ * `"89.900"`, `1e21`) queda en `null` con un aviso en la fila, para que una fila rara
+ * no tumbe todo el listado. `[VERIFICAR]` el formato real: la colección solo muestra
+ * enteros.
+ */
+function amountOrWarn(
+  v: unknown,
+  field: ListItemWarning['field'],
+  warnings: ListItemWarning[],
+): bigint | null {
   if (v === null || v === undefined) return null;
-  if (typeof v !== 'number' && typeof v !== 'string' && typeof v !== 'bigint') return null;
-  try {
-    return fromDbAmount(v);
-  } catch {
-    throw new MasterShopError({
-      kind: 'respuesta_invalida',
-      message: `MasterShop devolvió un monto no entero: ${String(v)}.`,
-    });
+  if (typeof v === 'bigint') return v;
+  if (typeof v === 'number' && Number.isSafeInteger(v)) return fromDbAmount(v);
+  const textValue = typeof v === 'number' || typeof v === 'string' ? String(v).trim() : null;
+  const m = textValue === null ? null : DECIMAL_TEXT.exec(textValue);
+  if (textValue !== null && m && (m[1] === undefined || /^0+$/.test(m[1]))) {
+    return BigInt(textValue.split('.')[0]!);
   }
+  warnings.push({ code: 'monto_no_entero', field, value: textValue ?? typeof v });
+  return null;
 }
 
 function providerError(data: unknown): string | null {
@@ -520,6 +542,7 @@ export class MasterShopClient {
     const rows = this.parse(z.array(ListItemSchema), res.data, 'listar pedidos');
     return rows.map((r) => {
       const badge = noveltyBadge({ hasNovelty: r.hasNovelty, alerts: r.alerts });
+      const warnings: ListItemWarning[] = [];
       return {
         idOrder: r.idOrder,
         externalOrderId: r.externalOrderId,
@@ -533,11 +556,12 @@ export class MasterShopClient {
         alerts: badge.alerts,
         carrierName: r.carrierName,
         trackingCode: text(r.carrierTrackingCode),
-        shippingRate: amount(r.shippingRate),
-        totalProvider: amount(r.totalProvider),
-        totalOrder: amount(r.totalOrder),
+        shippingRate: amountOrWarn(r.shippingRate, 'shippingRate', warnings),
+        totalProvider: amountOrWarn(r.totalProvider, 'totalProvider', warnings),
+        totalOrder: amountOrWarn(r.totalOrder, 'totalOrder', warnings),
         createdAt: r.createdAt,
         lastCarrierStatusUpdate: r.lastCarrierStatusUpdate,
+        warnings,
         raw: r,
       };
     });
