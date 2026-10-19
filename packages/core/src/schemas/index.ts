@@ -218,13 +218,16 @@ const optionalText = (max: number) =>
       return t === '' ? null : t;
     });
 
+/** Correo opcional (D-022): ausente, `null`, `""` o solo espacios se guardan como `null`. */
 const emailSchema = z
   .string()
-  .trim()
-  .toLowerCase()
-  .pipe(z.email('El correo no es válido.').max(254))
+  .max(320)
   .nullish()
-  .transform((v) => v ?? null);
+  .transform((v) => {
+    const t = v?.trim().toLowerCase() ?? '';
+    return t === '' ? null : t;
+  })
+  .pipe(z.email('El correo no es válido.').max(254).nullable());
 
 const rawCheckoutSchema = z.strictObject({
   country_code: countryCodeSchema,

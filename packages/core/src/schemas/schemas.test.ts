@@ -269,6 +269,20 @@ describe('schemas: entrada del checkout (§10.1, §10.2)', () => {
     expect(r.success).toBe(false);
   });
 
+  it('B6: correo vacío o en blanco se guarda como null', () => {
+    for (const email of ['', '   ']) {
+      const r = checkoutInputSchema.parse(
+        checkoutValido({
+          contact: { first_name: 'Laura', last_name: 'Gómez', phone: '3001234567', email },
+        }),
+      );
+      expect(r.contact.email).toBeNull();
+    }
+    const sinCorreo = checkoutValido();
+    delete (sinCorreo.contact as Record<string, unknown>).email;
+    expect(checkoutInputSchema.parse(sinCorreo).contact.email).toBeNull();
+  });
+
   it('rechaza correo inválido, sin dirección, método desconocido y carrito vacío', () => {
     expect(
       checkoutInputSchema.safeParse(
