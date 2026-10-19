@@ -290,7 +290,8 @@ describe('schemas: entrada del checkout (§10.1, §10.2)', () => {
   });
 
   it('código de descuento opcional', () => {
-    const { discount_code: _omit, ...sinCodigo } = checkoutValido();
+    const sinCodigo: Record<string, unknown> = checkoutValido();
+    delete sinCodigo.discount_code;
     expect(checkoutInputSchema.parse(sinCodigo).discount_code).toBeNull();
   });
 });
