@@ -2134,7 +2134,7 @@ export type Database = {
           id?: string
           influencer_id?: string | null
           notes_internal?: string | null
-          number: string
+          number?: string
           paid_at?: string | null
           payment_method: string
           product_cost_total?: number
@@ -2269,6 +2269,7 @@ export type Database = {
           seo_description: string | null
           seo_title: string | null
           slug: string
+          status: string
           title: string
           updated_at: string
           updated_by: string | null
@@ -2282,6 +2283,7 @@ export type Database = {
           seo_description?: string | null
           seo_title?: string | null
           slug: string
+          status?: string
           title: string
           updated_at?: string
           updated_by?: string | null
@@ -2295,6 +2297,7 @@ export type Database = {
           seo_description?: string | null
           seo_title?: string | null
           slug?: string
+          status?: string
           title?: string
           updated_at?: string
           updated_by?: string | null
@@ -3430,7 +3433,7 @@ export type Database = {
           email?: string | null
           id?: string
           media_ids?: string[]
-          number: string
+          number?: string
           order_id?: string | null
           phone: string
           reason: string
