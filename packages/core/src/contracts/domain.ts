@@ -4,6 +4,7 @@
  */
 import type { CountryCode, CurrencyCode } from '../money';
 import type { OrderStatus } from '../order-state';
+import type { StockState } from './db-functions';
 
 export type { CountryCode, CurrencyCode } from '../money';
 export type { OrderStatus } from '../order-state';
@@ -103,7 +104,16 @@ export interface Order {
   cod_deposit_amount: bigint;
   cod_collect_amount: bigint;
 
+  /** Copia del código usado; la llena un trigger de la base al insertar. No escribirla a mano. */
+  readonly discount_code_text: string | null;
+
+  /** Consentimientos del checkout (§10.1 paso 6). */
+  terms_accepted_at: Date | null;
+  data_policy_version: string | null;
+  whatsapp_opt_in: boolean;
+
   public_token: string;
+  stock_state: StockState;
   stock_reserved_until: Date | null;
   paid_at: Date | null;
   created_at: Date;

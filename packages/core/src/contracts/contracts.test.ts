@@ -16,6 +16,10 @@ import {
   type PaymentProvider,
   type ProviderStatus,
   type RawRequest,
+  type RedemptionFunctionResult,
+  type StockFunctionResult,
+  type StockShortage,
+  type StockState,
   type VerifiedEvent,
 } from './index';
 
@@ -152,6 +156,21 @@ describe('contracts: interfaces (comprobación de tipos)', () => {
     expectTypeOf<CarrierProvider['createOrder']>().toEqualTypeOf<
       (order: Order) => Promise<{ providerOrderId: number; statusId: number }>
     >();
+  });
+
+  it('resultados de funciones de stock y canje se distinguen por ok y motivo', () => {
+    const r = { ok: false, estado: 'none', motivo: 'sin_stock', faltantes: [] } as StockFunctionResult;
+    if (!r.ok && r.motivo === 'sin_stock') expectTypeOf(r.faltantes).toEqualTypeOf<StockShortage[]>();
+    expectTypeOf<Extract<RedemptionFunctionResult, { ok: false }>['motivo']>().toEqualTypeOf<
+      | 'pedido_inexistente'
+      | 'codigo_inactivo'
+      | 'codigo_de_otro_pais'
+      | 'codigo_fuera_de_vigencia'
+      | 'limite_total'
+      | 'limite_por_cliente'
+    >();
+    expectTypeOf<Order['stock_state']>().toEqualTypeOf<StockState>();
+    expectTypeOf<Order['whatsapp_opt_in']>().toEqualTypeOf<boolean>();
   });
 
   it('un adaptador de prueba implementa CarrierProvider', async () => {
