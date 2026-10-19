@@ -1,2 +1,1 @@
-// Las exportaciones se agregan con cada módulo.
-export {};
+export * from './lines';
