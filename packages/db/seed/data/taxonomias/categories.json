@@ -1,0 +1,142 @@
+[
+  {
+    "slug": "mujer",
+    "name": "Mujer",
+    "parent_slug": null,
+    "description": null,
+    "seo_title": null,
+    "seo_description": null,
+    "sort_order": 1,
+    "show_in_menu": true,
+    "countries": {
+      "co": {
+        "is_visible": true,
+        "sort_order": 1
+      },
+      "ec": {
+        "is_visible": true,
+        "sort_order": 1
+      }
+    }
+  },
+  {
+    "slug": "hombre",
+    "name": "Hombre",
+    "parent_slug": null,
+    "description": null,
+    "seo_title": null,
+    "seo_description": null,
+    "sort_order": 2,
+    "show_in_menu": true,
+    "countries": {
+      "co": {
+        "is_visible": true,
+        "sort_order": 2
+      },
+      "ec": {
+        "is_visible": true,
+        "sort_order": 2
+      }
+    }
+  },
+  {
+    "slug": "unisex",
+    "name": "Unisex",
+    "parent_slug": null,
+    "description": null,
+    "seo_title": null,
+    "seo_description": null,
+    "sort_order": 3,
+    "show_in_menu": true,
+    "countries": {
+      "co": {
+        "is_visible": true,
+        "sort_order": 3
+      },
+      "ec": {
+        "is_visible": true,
+        "sort_order": 3
+      }
+    }
+  },
+  {
+    "slug": "disenador",
+    "name": "Diseñador",
+    "parent_slug": null,
+    "description": null,
+    "seo_title": null,
+    "seo_description": null,
+    "sort_order": 4,
+    "show_in_menu": true,
+    "countries": {
+      "co": {
+        "is_visible": true,
+        "sort_order": 4
+      },
+      "ec": {
+        "is_visible": true,
+        "sort_order": 4
+      }
+    }
+  },
+  {
+    "slug": "arabes",
+    "name": "Árabes",
+    "parent_slug": null,
+    "description": null,
+    "seo_title": null,
+    "seo_description": null,
+    "sort_order": 5,
+    "show_in_menu": true,
+    "countries": {
+      "co": {
+        "is_visible": true,
+        "sort_order": 5
+      },
+      "ec": {
+        "is_visible": true,
+        "sort_order": 5
+      }
+    }
+  },
+  {
+    "slug": "nicho",
+    "name": "Nicho",
+    "parent_slug": null,
+    "description": null,
+    "seo_title": null,
+    "seo_description": null,
+    "sort_order": 6,
+    "show_in_menu": true,
+    "countries": {
+      "co": {
+        "is_visible": true,
+        "sort_order": 6
+      },
+      "ec": {
+        "is_visible": true,
+        "sort_order": 6
+      }
+    }
+  },
+  {
+    "slug": "body-splash",
+    "name": "Body Splash",
+    "parent_slug": null,
+    "description": null,
+    "seo_title": null,
+    "seo_description": null,
+    "sort_order": 7,
+    "show_in_menu": true,
+    "countries": {
+      "co": {
+        "is_visible": true,
+        "sort_order": 7
+      },
+      "ec": {
+        "is_visible": true,
+        "sort_order": 7
+      }
+    }
+  }
+]

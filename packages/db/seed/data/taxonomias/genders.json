@@ -1,0 +1,22 @@
+[
+  {
+    "slug": "mujer",
+    "name": "Mujer",
+    "sort_order": 1
+  },
+  {
+    "slug": "hombre",
+    "name": "Hombre",
+    "sort_order": 2
+  },
+  {
+    "slug": "unisex",
+    "name": "Unisex",
+    "sort_order": 3
+  },
+  {
+    "slug": "ninos",
+    "name": "Niños",
+    "sort_order": 4
+  }
+]

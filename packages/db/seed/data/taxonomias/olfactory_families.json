@@ -1,0 +1,62 @@
+[
+  {
+    "slug": "citrica",
+    "name": "Cítrica",
+    "description": "Notas frescas de cítricos, bergamota y hojas verdes.",
+    "sort_order": 1
+  },
+  {
+    "slug": "floral",
+    "name": "Floral",
+    "description": "Ramos de flores blancas, rosas y notas polvosas.",
+    "sort_order": 2
+  },
+  {
+    "slug": "amaderada",
+    "name": "Amaderada",
+    "description": "Maderas secas, vetiver, cedro y sándalo.",
+    "sort_order": 3
+  },
+  {
+    "slug": "oriental-ambar",
+    "name": "Oriental / Ámbar",
+    "description": "Ámbar, vainilla, especias y resinas cálidas.",
+    "sort_order": 4
+  },
+  {
+    "slug": "fougere",
+    "name": "Fougère",
+    "description": "Lavanda, musgo y cumarina sobre base de heno.",
+    "sort_order": 5
+  },
+  {
+    "slug": "chipre",
+    "name": "Chipre",
+    "description": "Bergamota, musgo de roble y pachulí.",
+    "sort_order": 6
+  },
+  {
+    "slug": "gourmand",
+    "name": "Gourmand",
+    "description": "Notas dulces de vainilla, caramelo, cacao y frutos secos.",
+    "sort_order": 7
+  },
+  {
+    "slug": "acuatica",
+    "name": "Acuática",
+    "description": "Brisas marinas, pepino y notas minerales.",
+    "sort_order": 8
+  },
+  {
+    "slug": "aromatica",
+    "name": "Aromática",
+    "description": "Hierbas, lavanda, romero y menta.",
+    "sort_order": 9
+  },
+  {
+    "slug": "frutal",
+    "name": "Frutal",
+    "description": "Frutas jugosas, peras, frutos rojos y melón.",
+    "sort_order": 10
+  }
+]

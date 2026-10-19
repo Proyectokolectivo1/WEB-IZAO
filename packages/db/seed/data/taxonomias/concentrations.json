@@ -1,0 +1,22 @@
+[
+  {
+    "slug": "edc",
+    "name": "EDC"
+  },
+  {
+    "slug": "edt",
+    "name": "EDT"
+  },
+  {
+    "slug": "edp",
+    "name": "EDP"
+  },
+  {
+    "slug": "extrait",
+    "name": "Extrait"
+  },
+  {
+    "slug": "body-splash",
+    "name": "Body Splash"
+  }
+]
