@@ -11,9 +11,10 @@ import { cerrarSesionLocal } from '@/lib/auth/cerrar-sesion';
 import { NextResponse, type NextRequest } from 'next/server';
 import { cargarContexto } from '@/lib/auth/contexto';
 import { buscarAdminPorId } from '@/lib/auth/admin-users';
-import { decidirAcceso } from '@/lib/auth/decision';
+import { decidirAcceso, type Decision } from '@/lib/auth/decision';
 import { secretoSesion } from '@/lib/auth/env';
-import { NOMBRE_COOKIE_MARCA } from '@/lib/auth/marca-sesion';
+import { NOMBRE_COOKIE_MARCA, NOMBRE_COOKIE_MARCA_MFA } from '@/lib/auth/marca-sesion';
+import { registrarAuditoria } from '@/lib/auth/auditoria';
 import { tieneCookiesDeSesion } from '@/lib/auth/supabase/cookies';
 import { crearClienteMiddleware } from '@/lib/auth/supabase/middleware';
 
@@ -32,12 +33,27 @@ export async function middleware(request: NextRequest) {
         supabase,
         buscarAdmin: buscarAdminPorId,
         marca: request.cookies.get(NOMBRE_COOKIE_MARCA)?.value,
+        marcaMfa: request.cookies.get(NOMBRE_COOKIE_MARCA_MFA)?.value,
         ahoraMs: Date.now(),
         secreto: secretoSesion(),
       })
-    : { sesion: null, admin: null, sesionVigente: false, email: null };
+    : { sesion: null, admin: null, sesionVigente: false, email: null, mfaNoAprobada: false, userId: undefined };
 
-  const decision = decidirAcceso({
+  // A-3: aal2 con un factor que el servidor no aprobó. Se cierra la sesión local y se audita.
+  if (contexto.mfaNoAprobada) {
+    await registrarAuditoria({
+      actor: contexto.userId ?? 'anonimo',
+      accion: 'mfa_no_aprobado',
+      entidadId: contexto.userId ?? null,
+      ip: request.headers.get('x-real-ip')?.trim() ?? null,
+    });
+  }
+
+  const decision: Decision = contexto.mfaNoAprobada
+    ? esApi
+      ? { tipo: 'rechazar', status: 403, motivo: 'mfa-no-aprobado' }
+      : { tipo: 'redirigir', destino: '/admin/login?error=sin-acceso', cerrarSesion: true }
+    : decidirAcceso({
     pathname: pathname + search,
     esApi,
     sesion: contexto.sesion,
@@ -56,10 +72,11 @@ export async function middleware(request: NextRequest) {
   // Conserva las cookies renovadas por Supabase durante esta petición.
   for (const cookie of obtenerRespuesta().cookies.getAll()) respuesta.cookies.set(cookie);
 
-  if (decision.tipo === 'redirigir' && decision.cerrarSesion) {
+  if (contexto.mfaNoAprobada || (decision.tipo === 'redirigir' && decision.cerrarSesion)) {
     await cerrarSesionLocal(supabase);
     for (const cookie of obtenerRespuesta().cookies.getAll()) respuesta.cookies.set(cookie);
     respuesta.cookies.delete(NOMBRE_COOKIE_MARCA);
+    respuesta.cookies.delete(NOMBRE_COOKIE_MARCA_MFA);
   }
 
   respuesta.headers.set('Cache-Control', 'no-store');

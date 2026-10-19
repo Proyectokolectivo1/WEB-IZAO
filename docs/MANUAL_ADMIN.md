@@ -38,7 +38,7 @@ El script pide la contraseña dos veces sin mostrarla (mínimo 12 caracteres). C
 2. Te lleva a `/admin/login`. Escribe tu correo y tu contraseña.
 3. Como aún no tienes verificación en dos pasos, aparece "Activa la verificación en dos pasos". Pulsa "Generar código QR", escanéalo con una aplicación de autenticación (Google Authenticator, Microsoft Authenticator, Aegis) y escribe el código de 6 dígitos. Guarda la clave de texto que se muestra debajo del QR en un lugar seguro: sirve para recuperar el acceso si pierdes el teléfono.
 
-   La activación solo se puede hacer durante las 24 horas siguientes a que `crear-admin` creó o actualizó la cuenta: así, alguien que solo conozca la contraseña no puede registrar su propio autenticador. Si esa ventana vence, la pantalla dice "Activación no habilitada"; vuelve a ejecutar `pnpm crear-admin` con el mismo correo (confirmando con SI) para reabrirla. La ventana se cierra sola al terminar la activación.
+   La activación solo se puede hacer durante las 24 horas siguientes a que `crear-admin` creó o actualizó la cuenta: así, alguien que solo conozca la contraseña no puede registrar su propio autenticador. Además, el panel solo acepta el autenticador que él mismo registró y aprobó: un autenticador inscrito por otro camino (por ejemplo, llamando directo a Supabase con la contraseña) no abre el panel y deja la entrada `mfa_no_aprobado` en la auditoría. Si algún día hay que reiniciar la verificación de un usuario (perdió el teléfono, o aparece `mfa_no_aprobado` sin explicación), ejecuta `pnpm crear-admin -- --correo <correo> --nombre "<nombre>" --reiniciar-mfa` y confirma con SI: borra sus autenticadores y reabre la ventana. Si esa ventana vence, la pantalla dice "Activación no habilitada"; vuelve a ejecutar `pnpm crear-admin` con el mismo correo (confirmando con SI) para reabrirla. La ventana se cierra sola al terminar la activación.
 4. Entras al inicio del panel. Desde ese momento, cada ingreso pide la contraseña y un código nuevo.
 
 ### 4. Qué comprobar
@@ -77,7 +77,7 @@ order by created_at desc
 limit 20;
 ```
 
-Verás `login_exitoso`, `login_fallido`, `login_denegado`, `login_bloqueado`, `mfa_inscripcion_iniciada`, `mfa_inscrito`, `mfa_verificado`, `mfa_fallido`, `mfa_bloqueado` y `logout`. Nunca se guardan contraseñas ni códigos; el correo de un intento fallido se guarda solo como una huella irreversible.
+Verás `login_exitoso`, `login_fallido`, `login_denegado`, `login_bloqueado`, `mfa_inscripcion_iniciada`, `mfa_inscrito`, `mfa_verificado`, `mfa_fallido`, `mfa_no_aprobado`, `mfa_bloqueado` y `logout`. Nunca se guardan contraseñas ni códigos; el correo de un intento fallido se guarda solo como una huella irreversible.
 
 ### 7. Desactivar a un usuario
 

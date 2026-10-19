@@ -9,6 +9,8 @@
  * Indicadores opcionales:
  *   --rol admin|operator     Rol al crear; en un usuario existente, cambia el rol.
  *   --activar                Reactiva una fila de admin_users desactivada.
+ *   --reiniciar-mfa          En un usuario existente, borra sus factores TOTP y la aprobación
+ *                            guardada; abre la ventana para inscribir uno nuevo (recuperación).
  *   --confirmar-existente    Confirma sin preguntar que se reemplace la contraseña
  *                            de un correo que ya existe (para ejecuciones sin teclado).
  *
@@ -92,6 +94,7 @@ async function main() {
       nombre: { type: 'string' },
       rol: { type: 'string' },
       activar: { type: 'boolean', default: false },
+      'reiniciar-mfa': { type: 'boolean', default: false },
       'confirmar-existente': { type: 'boolean', default: false },
     },
   });
@@ -176,6 +179,19 @@ async function main() {
       const { error } = await supabase.auth.admin.updateUserById(userId, { password: contrasena });
       if (error) fallar(`No se pudo fijar la contraseña: ${error.message}.`);
       console.log('Contraseña reemplazada en Supabase Auth.');
+    }
+    if (values['reiniciar-mfa']) {
+      const factores = await supabase.auth.admin.mfa.listFactors({ userId });
+      if (factores.error) fallar(`No se pudieron listar los factores: ${factores.error.message}.`);
+      for (const factor of factores.data.factors) {
+        const { error } = await supabase.auth.admin.mfa.deleteFactor({ id: factor.id, userId });
+        if (error) fallar(`No se pudo borrar un factor: ${error.message}.`);
+      }
+      const { error } = await supabase.auth.admin.updateUserById(userId, {
+        app_metadata: { mfa_factor_aprobado: null },
+      });
+      if (error) fallar(`No se pudo limpiar la aprobación del factor: ${error.message}.`);
+      console.log(`Verificación en dos pasos reiniciada (${factores.data.factors.length} factor(es) borrado(s)).`);
     }
     if (plan.habilitarEnrolamiento) {
       const { error } = await supabase.auth.admin.updateUserById(userId, {

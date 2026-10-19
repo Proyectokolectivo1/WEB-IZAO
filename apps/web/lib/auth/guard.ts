@@ -13,7 +13,7 @@ import { cargarContexto } from './contexto';
 import { RUTA_LOGIN, RUTA_MFA_INSCRIBIR, RUTA_MFA_VERIFICAR, RUTA_SIN_PERMISO } from './decision';
 import { esRol, puede, puedeAccederModulo, type AccionId, type ModuloId, type Rol } from './permissions';
 import { secretoSesion } from './env';
-import { NOMBRE_COOKIE_MARCA } from './marca-sesion';
+import { NOMBRE_COOKIE_MARCA, NOMBRE_COOKIE_MARCA_MFA } from './marca-sesion';
 import { crearClienteServidor } from './supabase/servidor';
 
 export type ContextoAdmin = {
@@ -44,11 +44,14 @@ const cargar = cache(async (): Promise<Resultado> => {
     supabase,
     buscarAdmin: buscarAdminPorId,
     marca: almacen.get(NOMBRE_COOKIE_MARCA)?.value,
+    marcaMfa: almacen.get(NOMBRE_COOKIE_MARCA_MFA)?.value,
     ahoraMs: Date.now(),
     secreto: secretoSesion(),
   });
 
-  if (!ctx.sesion || !ctx.sesionVigente) return { estado: 'sin-sesion' };
+  // `mfaNoAprobada`: aal2 con un factor no aprobado. Falla cerrado; el middleware
+  // cierra la sesión local y lo audita.
+  if (ctx.mfaNoAprobada || !ctx.sesion || !ctx.sesionVigente) return { estado: 'sin-sesion' };
   const admin = ctx.admin;
   if (!admin || !admin.isActive || !esRol(admin.role)) return { estado: 'sin-acceso' };
   if (ctx.sesion.aal !== 'aal2') {

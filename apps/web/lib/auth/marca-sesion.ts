@@ -64,3 +64,42 @@ export function opcionesCookieMarca(produccion: boolean) {
     maxAge: Math.floor(DURACION_SESION_MS / 1000),
   };
 }
+
+/**
+ * Marca de MFA aprobado (A-3). La emite el servidor solo cuando el código TOTP
+ * se verificó con el factor que el servicio aprobó (`app_metadata.mfa_factor_aprobado`).
+ * Va ligada al usuario y al factor: una sesión aal2 conseguida con un factor
+ * inscrito por fuera (llamando directo a GoTrue con la llave publicable) no la
+ * tiene, y el middleware y los guardias la rechazan.
+ */
+export const NOMBRE_COOKIE_MARCA_MFA = 'izao_admin_mfa';
+
+const PROPOSITO_MFA = 'marca-mfa-v1';
+
+export async function crearMarcaMfa(
+  userId: string,
+  factorId: string,
+  ahoraMs: number,
+  secreto: string,
+): Promise<string> {
+  const firma = await firmarHmac(secreto, PROPOSITO_MFA, `${userId}.${factorId}.${ahoraMs}`);
+  return `${ahoraMs}.${firma}`;
+}
+
+export async function marcaMfaVigente(
+  valor: string | undefined | null,
+  userId: string,
+  factorAprobado: string | undefined | null,
+  ahoraMs: number,
+  secreto: string,
+): Promise<boolean> {
+  if (!valor || !factorAprobado) return false;
+  const [msTexto, firma, ...resto] = valor.split('.');
+  if (!msTexto || !firma || resto.length > 0 || !/^\d{10,16}$/.test(msTexto)) return false;
+  const inicio = Number(msTexto);
+  if (!Number.isSafeInteger(inicio)) return false;
+  if (inicio > ahoraMs + 60_000) return false;
+  if (ahoraMs - inicio >= DURACION_SESION_MS) return false;
+  const esperada = await firmarHmac(secreto, PROPOSITO_MFA, `${userId}.${factorAprobado}.${inicio}`);
+  return iguales(firma, esperada);
+}

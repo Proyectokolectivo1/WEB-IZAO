@@ -5,13 +5,13 @@
  * parámetro para poder probarlo con datos simulados.
  */
 import type { AdminInfo, SesionAuth } from './decision';
-import { marcaVigente } from './marca-sesion';
+import { marcaMfaVigente, marcaVigente } from './marca-sesion';
 
 /** Parte del cliente de Supabase que se necesita (permite simularlo en pruebas). */
 export type ClienteAuth = {
   auth: {
     getUser(): Promise<{
-      data: { user: { id: string; email?: string | null } | null };
+      data: { user: { id: string; email?: string | null; app_metadata?: Record<string, unknown> } | null };
       error: unknown;
     }>;
     mfa: {
@@ -29,6 +29,8 @@ export type DependenciasContexto<A extends AdminInfo = AdminInfo> = {
   buscarAdmin: (userId: string) => Promise<A | null>;
   /** Valor de la cookie de la marca de 12 h. */
   marca: string | undefined;
+  /** Valor de la cookie de MFA aprobado (ver `marca-sesion.ts`). */
+  marcaMfa: string | undefined;
   ahoraMs: number;
   secreto: string;
 };
@@ -38,6 +40,12 @@ export type ContextoCargado<A extends AdminInfo = AdminInfo> = {
   admin: A | null;
   sesionVigente: boolean;
   email: string | null;
+  /**
+   * `true` si la sesión es aal2 pero no con el factor aprobado por el servidor:
+   * el llamador debe cerrar la sesión local y auditarlo. `sesion` queda en `null`.
+   */
+  mfaNoAprobada: boolean;
+  userId?: string;
 };
 
 export async function cargarContexto<A extends AdminInfo = AdminInfo>(
@@ -46,7 +54,7 @@ export async function cargarContexto<A extends AdminInfo = AdminInfo>(
   const { data, error } = await deps.supabase.auth.getUser();
   const usuario = data.user;
   if (error || !usuario) {
-    return { sesion: null, admin: null, sesionVigente: false, email: null };
+    return { sesion: null, admin: null, sesionVigente: false, email: null, mfaNoAprobada: false };
   }
 
   const { data: nivel } = await deps.supabase.auth.mfa.getAuthenticatorAssuranceLevel();
@@ -61,5 +69,15 @@ export async function cargarContexto<A extends AdminInfo = AdminInfo>(
     marcaVigente(deps.marca, usuario.id, deps.ahoraMs, deps.secreto),
   ]);
 
-  return { sesion, admin, sesionVigente, email: usuario.email ?? null };
+  // A-3: una sesión aal2 solo vale si se verificó con el factor aprobado.
+  if (sesion.aal === 'aal2') {
+    const aprobado = usuario.app_metadata?.mfa_factor_aprobado;
+    const factorAprobado = typeof aprobado === 'string' ? aprobado : null;
+    const valida = await marcaMfaVigente(deps.marcaMfa, usuario.id, factorAprobado, deps.ahoraMs, deps.secreto);
+    if (!valida) {
+      return { sesion: null, admin, sesionVigente, email: usuario.email ?? null, mfaNoAprobada: true, userId: usuario.id };
+    }
+  }
+
+  return { sesion, admin, sesionVigente, email: usuario.email ?? null, mfaNoAprobada: false, userId: usuario.id };
 }

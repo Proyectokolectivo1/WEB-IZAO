@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 import { registrarAuditoria } from '@/lib/auth/auditoria';
 import { ipDelCliente } from '@/lib/auth/cabeceras';
 import { RUTA_LOGIN } from '@/lib/auth/decision';
-import { NOMBRE_COOKIE_MARCA } from '@/lib/auth/marca-sesion';
+import { NOMBRE_COOKIE_MARCA, NOMBRE_COOKIE_MARCA_MFA } from '@/lib/auth/marca-sesion';
 import { crearClienteServidor } from '@/lib/auth/supabase/servidor';
 
 /** Cierra la sesión del panel y vuelve al login. */
@@ -22,6 +22,8 @@ export async function cerrarSesion(): Promise<void> {
     });
   }
   await cerrarSesionLocal(supabase);
-  (await cookies()).delete(NOMBRE_COOKIE_MARCA);
+  const almacen = await cookies();
+  almacen.delete(NOMBRE_COOKIE_MARCA);
+  almacen.delete(NOMBRE_COOKIE_MARCA_MFA);
   redirect(RUTA_LOGIN);
 }

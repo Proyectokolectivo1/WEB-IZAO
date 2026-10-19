@@ -1,12 +1,20 @@
 'use server';
 
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { cerrarSesionLocal } from '@/lib/auth/cerrar-sesion';
+import { esProduccion, secretoSesion } from '@/lib/auth/env';
+import { crearMarcaMfa, NOMBRE_COOKIE_MARCA_MFA, opcionesCookieMarca } from '@/lib/auth/marca-sesion';
 import { contarEventos, contarNetos, registrarAuditoria, registrarEvento } from '@/lib/auth/auditoria';
 import { evaluarIntento, registrarUnaVez } from '@/lib/auth/bloqueo';
 import { ipDelCliente } from '@/lib/auth/cabeceras';
 import { rutaSiguienteSegura } from '@/lib/auth/decision';
 import { esquemaCodigoTotp, type EstadoFormulario } from '@/lib/auth/esquemas';
-import { cerrarVentanaEnrolamiento, ventanaEnrolamientoAbierta } from '@/lib/auth/enrolamiento-servidor';
+import {
+  aprobarFactor,
+  factorAprobadoDeLaSesion,
+  ventanaEnrolamientoAbierta,
+} from '@/lib/auth/enrolamiento-servidor';
 import { requerirSesionParcial } from '@/lib/auth/guard';
 import { crearClienteServidor } from '@/lib/auth/supabase/servidor';
 
@@ -17,6 +25,8 @@ const MENSAJE_CODIGO = 'El código no es correcto o ya venció. Revisa tu aplica
 const MENSAJE_NO_DISPONIBLE = 'No pudimos verificar el código en este momento. Inténtalo de nuevo en unos minutos.';
 const MENSAJE_SIN_VENTANA =
   'Tu cuenta no tiene habilitada la activación de la verificación en dos pasos, o la habilitación venció. Pide al administrador que la vuelva a habilitar.';
+const MENSAJE_FACTOR_NO_APROBADO =
+  'Esta cuenta no tiene un autenticador aprobado. Pide al administrador que reinicie la verificación en dos pasos.';
 const MENSAJE_BLOQUEO = 'Hubo demasiados intentos. Espera 15 minutos e inténtalo de nuevo.';
 
 export type ResultadoInscripcion =
@@ -119,7 +129,12 @@ export async function confirmarInscripcionMfa(
     diff: { tipo: 'totp' },
     ip,
   });
-  await cerrarVentanaEnrolamiento(userId);
+  // A-3: el servidor aprueba ESTE factor; solo con él se entra al panel.
+  if (!(await aprobarFactor(userId, factorId))) {
+    await supabase.auth.mfa.unenroll({ factorId });
+    return { error: MENSAJE_NO_DISPONIBLE };
+  }
+  await emitirMarcaMfa(userId, factorId);
   redirect(rutaSiguienteSegura(lectura.data.siguiente));
 }
 
@@ -143,8 +158,15 @@ export async function verificarMfa(
 
   const supabase = await crearClienteServidor();
   const { data: factores } = await supabase.auth.mfa.listFactors();
-  const factor = factores?.totp[0];
-  if (!factor) redirect('/admin/mfa/inscribir');
+  // Solo vale el factor que el servidor aprobó; uno inscrito por fuera (directo
+  // contra GoTrue) no abre el panel.
+  const aprobado = await factorAprobadoDeLaSesion();
+  const factor = aprobado ? factores?.totp.find((f) => f.id === aprobado) : undefined;
+  if (!factor) {
+    await registrarAuditoria({ actor: userId, accion: 'mfa_no_aprobado', entidadId: userId, ip });
+    await cerrarSesionLocal(supabase);
+    return { error: MENSAJE_FACTOR_NO_APROBADO };
+  }
 
   const { error } = await supabase.auth.mfa.challengeAndVerify({
     factorId: factor.id,
@@ -167,6 +189,7 @@ export async function verificarMfa(
     entidadId: userId,
     ip,
   });
+  await emitirMarcaMfa(userId, factor.id);
   redirect(rutaSiguienteSegura(lectura.data.siguiente));
 }
 
@@ -196,4 +219,14 @@ async function controlarIntento(userId: string, ip: string | null): Promise<Esta
     return { error: MENSAJE_BLOQUEO };
   }
   return null;
+}
+
+/** Cookie que prueba que el código se verificó con el factor aprobado (A-3). */
+async function emitirMarcaMfa(userId: string, factorId: string): Promise<void> {
+  const almacen = await cookies();
+  almacen.set(
+    NOMBRE_COOKIE_MARCA_MFA,
+    await crearMarcaMfa(userId, factorId, Date.now(), secretoSesion()),
+    opcionesCookieMarca(esProduccion()),
+  );
 }

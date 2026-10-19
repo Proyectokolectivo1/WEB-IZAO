@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DURACION_SESION_MS } from './decision';
-import { crearMarca, marcaVigente } from './marca-sesion';
+import { crearMarca, crearMarcaMfa, marcaMfaVigente, marcaVigente } from './marca-sesion';
 
 // Secretos de prueba, sin relación con ninguna llave real.
 const SECRETO = Buffer.alloc(32, 3).toString('base64');
@@ -44,5 +44,34 @@ describe('marca de sesión de 12 h', () => {
     expect(await marcaVigente(`${AHORA}.a.b`, 'u1', AHORA, SECRETO)).toBe(false);
     const futura = await crearMarca('u1', AHORA + 3_600_000, SECRETO);
     expect(await marcaVigente(futura, 'u1', AHORA, SECRETO)).toBe(false);
+  });
+});
+
+describe('marca de MFA aprobado (A-3)', () => {
+  it('acepta la marca del mismo usuario y factor', async () => {
+    const m = await crearMarcaMfa('u1', 'f1', AHORA, SECRETO);
+    expect(await marcaMfaVigente(m, 'u1', 'f1', AHORA + 1_000, SECRETO)).toBe(true);
+  });
+
+  it('rechaza otro factor, otro usuario, otro secreto, vencida o alterada', async () => {
+    const m = await crearMarcaMfa('u1', 'f1', AHORA, SECRETO);
+    expect(await marcaMfaVigente(m, 'u1', 'f2', AHORA, SECRETO)).toBe(false);
+    expect(await marcaMfaVigente(m, 'u2', 'f1', AHORA, SECRETO)).toBe(false);
+    expect(await marcaMfaVigente(m, 'u1', 'f1', AHORA, OTRO_SECRETO)).toBe(false);
+    expect(await marcaMfaVigente(m, 'u1', 'f1', AHORA + DURACION_SESION_MS, SECRETO)).toBe(false);
+    expect(await marcaMfaVigente(undefined, 'u1', 'f1', AHORA, SECRETO)).toBe(false);
+    expect(await marcaMfaVigente('x.y', 'u1', 'f1', AHORA, SECRETO)).toBe(false);
+  });
+
+  it('no es intercambiable con la marca de inicio de sesión', async () => {
+    const inicio = await crearMarca('u1', AHORA, SECRETO);
+    expect(await marcaMfaVigente(inicio, 'u1', 'f1', AHORA, SECRETO)).toBe(false);
+    const mfa = await crearMarcaMfa('u1', 'f1', AHORA, SECRETO);
+    expect(await marcaVigente(mfa, 'u1', AHORA, SECRETO)).toBe(false);
+  });
+
+  it('sin factor aprobado (cadena vacía) nunca es válida', async () => {
+    const m = await crearMarcaMfa('u1', '', AHORA, SECRETO);
+    expect(await marcaMfaVigente(m, 'u1', '', AHORA, SECRETO)).toBe(false);
   });
 });

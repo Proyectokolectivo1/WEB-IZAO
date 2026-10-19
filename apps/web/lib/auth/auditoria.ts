@@ -5,9 +5,9 @@
  * Nunca se guardan contraseñas, códigos TOTP ni secretos: el correo se guarda
  * solo como huella HMAC, para poder contar intentos fallidos sin exponerlo.
  */
-import { isIP } from 'node:net';
 import { netosDe } from './bloqueo';
 import { secretoSesion } from './env';
+import { esIp } from './ip';
 import { firmarHmac } from './llaves';
 import { crearClienteServicio } from './supabase/servicio';
 
@@ -22,6 +22,7 @@ export type AccionAcceso =
   | 'mfa_inscripcion_iniciada'
   | 'mfa_inscrito'
   | 'mfa_verificado'
+  | 'mfa_no_aprobado'
   | 'mfa_fallido'
   | 'mfa_bloqueado';
 
@@ -46,7 +47,7 @@ export type FilaAuditoria = {
 
 /** Construye la fila: descarta una IP inválida (la columna es `inet`). */
 export function construirFilaAuditoria(evento: EventoAuditoria): FilaAuditoria {
-  const ip = evento.ip && isIP(evento.ip) !== 0 ? evento.ip : null;
+  const ip = evento.ip && esIp(evento.ip) ? evento.ip : null;
   return {
     actor: evento.actor,
     action: evento.accion,
@@ -117,7 +118,7 @@ export async function contarEventos(filtro: FiltroConteo): Promise<number | null
       .in('action', filtro.acciones)
       .gte('created_at', filtro.desde.toISOString());
     if (filtro.huella) consulta = consulta.contains('diff', { huella_correo: filtro.huella });
-    if (filtro.ip && isIP(filtro.ip) !== 0) consulta = consulta.eq('ip', filtro.ip);
+    if (filtro.ip && esIp(filtro.ip)) consulta = consulta.eq('ip', filtro.ip);
     if (filtro.actor) consulta = consulta.eq('actor', filtro.actor);
     const { count, error } = await consulta;
     if (error || count === null) return null;
