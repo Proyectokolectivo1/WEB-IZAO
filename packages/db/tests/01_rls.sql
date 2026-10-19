@@ -49,7 +49,7 @@ select throws_ok('select unit_cost from public.order_items', '42501', null, 'ord
 select lives_ok($$update public.customers set first_name = 'Uno editado'$$, 'customers: actualiza su perfil');
 select throws_ok($$update public.customers set auth_user_id = '22222222-2222-2222-2222-222222222222'$$, '42501', null, 'customers: no puede cambiar auth_user_id');
 select throws_ok($$insert into public.addresses (customer_id, address1) values ('c1111111-1111-1111-1111-111111111111', 'X')$$, '42501', null, 'addresses: sin escritura directa');
-select is((select count(*)::int from public.integration_credentials), 0, 'integration_credentials: denegado por defecto');
+select throws_ok('select count(*) from public.integration_credentials', '42501', null, 'integration_credentials: sin privilegios para el cliente');
 -- intenta editar al otro cliente (RLS lo filtra)
 update public.customers set first_name = 'hackeado' where id = 'c2222222-2222-2222-2222-222222222222';
 reset role;
@@ -61,7 +61,7 @@ select set_config('request.jwt.claims', '{"role":"anon"}', true);
 set local role anon;
 select throws_ok('select * from public.customers', '42501', null, 'anon: sin acceso a customers');
 select throws_ok('select * from public.orders', '42501', null, 'anon: sin acceso a orders');
-select is((select count(*)::int from public.products), 0, 'anon: products denegado por RLS');
+select throws_ok('select count(*) from public.products', '42501', null, 'anon: products sin privilegios');
 reset role;
 
 select * from finish();
