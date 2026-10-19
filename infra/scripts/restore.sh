@@ -4,24 +4,25 @@
 #     Crea un contenedor postgres:17 desechable, restaura, imprime conteos por tabla y lo borra
 #     (--keep lo deja vivo para inspección; se imprime su nombre).
 #   infra/scripts/restore.sh <archivo.sql.gz> --target-url URL_TEMPORAL
-#     Restaura en una base temporal ya existente. Se rechaza si la URL parece Supabase o es
-#     igual a DATABASE_URL.
+#     Restaura en una base temporal local ya existente. Lista blanca: --confirmo-base-temporal,
+#     host localhost/127.0.0.1, base izao_restore_*, distinta de DATABASE_URL.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 ARCHIVO="${1:-}"
 if [ -n "$ARCHIVO" ]; then shift; fi
-KEEP=0; TARGET=""; COUNTS=""
+KEEP=0; TARGET=""; COUNTS=""; CONFIRMO=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --keep) KEEP=1 ;;
     --target-url) TARGET="${2:?falta URL}"; shift ;;
+    --confirmo-base-temporal) CONFIRMO=1 ;;
     --counts) COUNTS="${2:?falta archivo}"; shift ;;
     *) echo "Argumento desconocido: $1" >&2; exit 2 ;;
   esac
   shift
 done
-[ -f "$ARCHIVO" ] || { echo "Uso: restore.sh <archivo.sql.gz> [--keep] [--counts f] [--target-url URL]" >&2; exit 2; }
+[ -f "$ARCHIVO" ] || { echo "Uso: restore.sh <archivo.sql.gz> [--keep] [--counts f] [--target-url URL --confirmo-base-temporal]" >&2; exit 2; }
 gzip -t "$ARCHIVO"
 
 SCHEMAS="${DUMP_SCHEMAS:-public auth storage}"
@@ -33,10 +34,25 @@ ROLES_SQL="do \$\$ declare r text; begin foreach r in array array['anon','authen
 EXT_SQL='create schema if not exists extensions; create extension if not exists pgcrypto with schema extensions; create extension if not exists pg_trgm with schema extensions; create extension if not exists unaccent with schema extensions; create extension if not exists citext with schema extensions; create extension if not exists "uuid-ossp" with schema extensions;'
 
 if [ -n "$TARGET" ]; then
-  case "$TARGET" in
-    *supabase.co*|*supabase.com*|*pooler.*) echo "RECHAZADO: la URL parece un proyecto de Supabase." >&2; exit 3 ;;
+  # Lista blanca (el destino de esta ruta se vacía con `drop schema public cascade`):
+  #  - bandera explícita --confirmo-base-temporal
+  #  - host solo localhost / 127.0.0.1 / ::1 (normalizado)
+  #  - nombre de base que empieza por izao_restore_
+  #  - nunca el mismo host/puerto/base que DATABASE_URL
+  [ "$CONFIRMO" -eq 1 ] || { echo "RECHAZADO: falta --confirmo-base-temporal." >&2; exit 3; }
+  parse_pg_url "$TARGET" || { echo "RECHAZADO: la URL de destino no es válida." >&2; exit 3; }
+  case "$U_HOST" in
+    localhost|127.0.0.1|::1) ;;
+    *) echo "RECHAZADO: el destino debe ser localhost o 127.0.0.1." >&2; exit 3 ;;
   esac
-  if [ "$TARGET" = "${DATABASE_URL:-}" ]; then echo "RECHAZADO: el destino es DATABASE_URL." >&2; exit 3; fi
+  case "$U_DB" in
+    izao_restore_?*) ;;
+    *) echo "RECHAZADO: el nombre de la base debe empezar por izao_restore_." >&2; exit 3 ;;
+  esac
+  DEST_ID="$U_HOST:$U_PORT/$U_DB"
+  if [ -n "${DATABASE_URL:-}" ] && parse_pg_url "$DATABASE_URL" && [ "$U_HOST:$U_PORT/$U_DB" = "$DEST_ID" ]; then
+    echo "RECHAZADO: el destino coincide con DATABASE_URL." >&2; exit 3
+  fi
   export PGURL="$TARGET"
   pg_run psql -X -q -c "$ROLES_SQL"
   pg_run psql -X -q -c "$EXT_SQL"

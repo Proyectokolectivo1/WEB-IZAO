@@ -44,3 +44,31 @@ alertar() {
     curl -fsS -m 10 --get --data-urlencode "status=down" --data-urlencode "msg=$msg" "$UPTIME_PUSH_URL" >/dev/null || true
   fi
 }
+
+# Descodifica %XX de una URL.
+urldecode() { local s="${1//+/+}"; printf '%b' "${s//%/\x}"; }
+
+# Descompone postgres://usuario:clave@host:puerto/base?consulta en U_USER, U_PASS, U_HOST (en
+# minúsculas, sin corchetes), U_PORT (def. 5432), U_DB y U_QUERY. Falla si no es una URL de Postgres.
+parse_pg_url() {
+  local url="$1" rest auth
+  [[ "$url" =~ ^[Pp][Oo][Ss][Tt][Gg][Rr][Ee][Ss]([Qq][Ll])?://(.*)$ ]] || return 1
+  rest="${BASH_REMATCH[2]}"
+  U_QUERY=""; U_DB=""; U_USER=""; U_PASS=""; U_PORT=""
+  if [[ "$rest" == *\?* ]]; then U_QUERY="${rest#*\?}"; rest="${rest%%\?*}"; fi
+  if [[ "$rest" == */* ]]; then U_DB="${rest#*/}"; rest="${rest%%/*}"; fi
+  if [[ "$rest" == *@* ]]; then
+    auth="${rest%@*}"; rest="${rest##*@}"
+    U_USER="${auth%%:*}"
+    if [[ "$auth" == *:* ]]; then U_PASS="${auth#*:}"; fi
+  fi
+  if [[ "$rest" =~ ^\[(.*)\](:([0-9]+))?$ ]]; then
+    U_HOST="${BASH_REMATCH[1]}"; U_PORT="${BASH_REMATCH[3]}"
+  else
+    U_HOST="${rest%%:*}"
+    if [[ "$rest" == *:* ]]; then U_PORT="${rest##*:}"; fi
+  fi
+  U_HOST="$(printf '%s' "$U_HOST" | tr 'A-Z' 'a-z')"
+  U_PORT="${U_PORT:-5432}"
+  U_USER="$(urldecode "$U_USER")"; U_PASS="$(urldecode "$U_PASS")"; U_DB="$(urldecode "$U_DB")"
+}
