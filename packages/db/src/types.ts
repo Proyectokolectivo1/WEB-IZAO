@@ -3254,6 +3254,7 @@ export type Database = {
       }
       site_settings: {
         Row: {
+          audit_retention_days: number
           color_tokens: Json
           created_at: string
           favicon_media_id: string | null
@@ -3267,6 +3268,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          audit_retention_days?: number
           color_tokens?: Json
           created_at?: string
           favicon_media_id?: string | null
@@ -3280,6 +3282,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          audit_retention_days?: number
           color_tokens?: Json
           created_at?: string
           favicon_media_id?: string | null
