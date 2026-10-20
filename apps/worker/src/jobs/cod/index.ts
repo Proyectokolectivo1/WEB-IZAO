@@ -1,0 +1,90 @@
+/**
+ * Cola `contraentrega` del worker (dueño: izao-pagos, D-025). El arranque (izao-infra) debe:
+ *   const cola = new Queue(COLA_COD, { connection });
+ *   createWorker(COLA_COD, crearProcesadorCod(deps(programadorCod(cola))), connection)
+ * y pasar `cancelarJobsCod(cola, …)` a las dependencias del job de pagos.
+ * La cancelación es una optimización: cada job relee el estado del pedido y no hace nada si ya se pagó.
+ */
+import { DelayedError, type Job, type Processor, type Queue } from 'bullmq';
+import {
+  COLA_COD,
+  JOB_COD_ABANDONO,
+  JOB_COD_INICIAR,
+  JOB_COD_RECORDATORIO,
+  jobIdCodAbandono,
+  jobIdCodRecordatorio,
+} from '@izao/whatsapp';
+import { abandonarCod, iniciarCod, recordatorioCod, type DepsCod, type JobProgramado } from './flujo.js';
+
+export { COLA_COD };
+export { ErrorReintentableCod, abandonarCod, iniciarCod, recordatorioCod } from './flujo.js';
+
+/** Tope de recordatorios que se intentan cancelar por pedido (más que cualquier configuración razonable). */
+const MAX_RECORDATORIOS = 24;
+
+const OPCIONES = {
+  attempts: 8,
+  backoff: { type: 'exponential' as const, delay: 30_000 },
+  removeOnComplete: { age: 7 * 24 * 3600 },
+  removeOnFail: { age: 30 * 24 * 3600 },
+};
+
+export function programadorCod(cola: Queue, ahora: () => number = Date.now): DepsCod['programar'] {
+  return async (j: JobProgramado) => {
+    const delay = Math.max(0, j.en.getTime() - ahora());
+    if (j.tipo === 'abandono') {
+      await cola.add(JOB_COD_ABANDONO, { order_id: j.order_id }, { ...OPCIONES, jobId: jobIdCodAbandono(j.order_id), delay });
+    } else {
+      await cola.add(
+        JOB_COD_RECORDATORIO,
+        { order_id: j.order_id, n: j.n },
+        { ...OPCIONES, attempts: 4, jobId: jobIdCodRecordatorio(j.order_id, j.n), delay },
+      );
+    }
+  };
+}
+
+export async function cancelarJobsCod(cola: Queue, orderId: string): Promise<void> {
+  const ids = [jobIdCodAbandono(orderId)];
+  for (let n = 1; n <= MAX_RECORDATORIOS; n += 1) ids.push(jobIdCodRecordatorio(orderId, n));
+  // `remove` devuelve 0 si el job no existe o está activo (bloqueado): en ambos casos el job relee el estado.
+  await Promise.all(ids.map((id) => cola.remove(id)));
+}
+
+function uuid(d: unknown): string | null {
+  const v = (d as { order_id?: unknown } | null)?.order_id;
+  return typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v) ? v : null;
+}
+
+export function crearProcesadorCod(deps: DepsCod): Processor {
+  return async (job: Job, token?: string) => {
+    const orderId = uuid(job.data);
+    if (!orderId) return { ok: false, motivo: 'datos_invalidos' };
+    let r;
+    switch (job.name) {
+      case JOB_COD_INICIAR:
+        r = await iniciarCod(orderId, deps);
+        break;
+      case JOB_COD_RECORDATORIO: {
+        const n = (job.data as { n?: unknown }).n;
+        if (typeof n !== 'number' || !Number.isInteger(n)) return { ok: false, motivo: 'datos_invalidos' };
+        r = await recordatorioCod(orderId, n, deps);
+        break;
+      }
+      case JOB_COD_ABANDONO: {
+        // Un abandono que corre antes de tiempo se reprograma moviendo ESTE job (el id fijo no admite otro igual).
+        let en: Date | null = null;
+        r = await abandonarCod(orderId, { ...deps, programar: async (j) => void (en = j.en) });
+        if (r.accion === 'reprogramado' && en && token) {
+          await job.moveToDelayed((en as Date).getTime(), token);
+          throw new DelayedError();
+        }
+        break;
+      }
+      default:
+        return { ok: true, ignorado: job.name };
+    }
+    console.log(`[worker] ${job.name}: ${r.accion}`);
+    return r;
+  };
+}

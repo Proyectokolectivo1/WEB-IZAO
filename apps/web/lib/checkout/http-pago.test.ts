@@ -111,6 +111,48 @@ describe('checkout con Wompi: intento de pago listo', () => {
     });
     expect(intentos).toHaveLength(0);
   });
+
+  it('contra entrega encola cod.iniciar con el id del pedido y responde payment = null', async () => {
+    const mem = fuenteDePrueba();
+    const limitador = crearLimitadorMemoria({ limite: 100, ventanaMs: 60_000 });
+    const encolados: string[] = [];
+    const res = await manejarCheckout(req('/api/checkout', { ...checkout, payment_method: 'cod', consents: { terms_and_data: true, whatsapp: true } }), {
+      fuente: () => mem,
+      limitador,
+      ahora: () => AHORA,
+      encolarCod: async (id) => {
+        encolados.push(id);
+      },
+    });
+    expect(res.status).toBe(201);
+    const j = (await res.json()) as { next_step: string; payment: unknown };
+    expect(j.next_step).toBe('pay_cod_deposit');
+    expect(j.payment).toBeNull();
+    expect(encolados).toHaveLength(1);
+    expect(encolados[0]).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('contra entrega con Redis caído: el pedido se crea igual (201) y no lanza', async () => {
+    const mem = fuenteDePrueba();
+    const limitador = crearLimitadorMemoria({ limite: 100, ventanaMs: 60_000 });
+    const res = await manejarCheckout(req('/api/checkout', { ...checkout, payment_method: 'cod', consents: { terms_and_data: true, whatsapp: true } }), {
+      fuente: () => mem,
+      limitador,
+      ahora: () => AHORA,
+      encolarCod: async () => {
+        throw new Error('redis');
+      },
+    });
+    expect(res.status).toBe(201);
+  });
+
+  it('pago con Wompi no encola cod.iniciar', async () => {
+    const mem = fuenteDePrueba();
+    const limitador = crearLimitadorMemoria({ limite: 100, ventanaMs: 60_000 });
+    const encolados: string[] = [];
+    await manejarCheckout(req('/api/checkout', checkout), { fuente: () => mem, limitador, ahora: () => AHORA, encolarCod: async (id) => void encolados.push(id) });
+    expect(encolados).toEqual([]);
+  });
 });
 
 describe('POST /api/checkout/pago', () => {

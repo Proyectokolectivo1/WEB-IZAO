@@ -5,6 +5,9 @@
  * 3. Compara monto y moneda con `payments`; si no coinciden, no aprueba y alerta.
  * 4. Actualiza `payments` (nunca degrada un `approved`) con la comisión estimada.
  * 5. Transiciona el pedido solo con `transicionar` y `aplicarTransicion` condicional al estado leído.
+ * 6. Abono de contra entrega (`purpose cod_deposit`, §13.1): `esperando_abono → abono_pagado`, cancela los
+ *    recordatorios y el abandono y encola la transportadora. Un rechazo no mueve el pedido (el link admite otro
+ *    intento hasta vencer). Abono tardío sobre `abandonado`: se reactiva si hay stock; si no, `requiere_reembolso`.
  *
  * Idempotente: repetirlo con el mismo evento no duplica transiciones ni eventos; confirmar stock y canje son
  * idempotentes en la base y el job de transportadora usa id fijo. Un `ErrorReintentable` deja que BullMQ reintente.
@@ -30,6 +33,7 @@ export class ErrorReintentable extends Error {
 
 export type AccionPago =
   | 'pagado'
+  | 'abono_pagado'
   | 'ya_pagado'
   | 'pago_rechazado'
   | 'sin_cambio'
@@ -48,6 +52,8 @@ export interface DepsJobWompi {
   cliente: (c: WompiCredentials) => ClienteWompi;
   /** Encola `carrier.create` (idempotente por pedido). */
   encolarTransportadora: (orderId: string) => Promise<void>;
+  /** Quita los jobs pendientes `cod.recordatorio.*` y `cod.abandono` del pedido (idempotente). */
+  cancelarJobsCod: (orderId: string) => Promise<void>;
   ahora?: () => Date;
 }
 
@@ -100,13 +106,19 @@ export async function procesarTransaccionWompi(datos: DatosJobWompi, deps: DepsJ
   // Con varias filas de la misma referencia (carrera al crear el intento) se usa la más antigua: mismo pedido y monto.
   const pago = candidatos[0];
   if (!pago) return terminar('pago_no_encontrado', null, false);
-  // El abono de contra entrega y la financiación tienen su propio flujo (pendiente): se deja sin procesar.
-  if (pago.purpose !== 'full') return terminar('proposito_no_soportado', pago.order_id, false);
+  // La financiación (Addi/Sistecrédito) no pasa por Wompi: se deja sin procesar.
+  if (pago.purpose !== 'full' && pago.purpose !== 'cod_deposit') {
+    return terminar('proposito_no_soportado', pago.order_id, false);
+  }
 
   const pedido = await fuente.pedido(pago.order_id);
   if (!pedido) return terminar('pedido_no_encontrado', pago.order_id, false);
 
   const ref = { payment_id: pago.id, reference: tx.reference, transaction_id: tx.id };
+  if ((pago.purpose === 'cod_deposit') !== (pedido.payment_method === 'cod')) {
+    await fuente.registrarAlerta(pedido.id, 'proposito_no_coincide', { ...ref, metodo: pedido.payment_method });
+    return terminar('estado_inesperado', pedido.id, false);
+  }
   if (st.amount !== pago.amount || st.currency_code !== pago.currency_code) {
     await fuente.registrarAlerta(pedido.id, 'monto_no_coincide', {
       ...ref,
@@ -151,6 +163,7 @@ export async function procesarTransaccionWompi(datos: DatosJobWompi, deps: DepsJ
     case 'voided':
     case 'error':
     case 'expired': {
+      if (pago.purpose === 'cod_deposit') return terminar('sin_cambio', pedido.id, true);
       const pagos = await fuente.pagosDelPedido(pedido.id);
       const ultimo = pagos.filter((p) => p.purpose === 'full').at(-1);
       if (pedido.status === 'pendiente_pago' && ultimo?.id === pago.id) {
@@ -160,7 +173,83 @@ export async function procesarTransaccionWompi(datos: DatosJobWompi, deps: DepsJ
       return terminar('sin_cambio', pedido.id, true);
     }
     case 'approved':
+      if (pago.purpose === 'cod_deposit') return aprobarAbono(deps, pedido, pago, ref, paso, terminar, ahora());
       return aprobar(deps, pedido, pago, ref, paso, terminar, ahora());
+  }
+}
+
+type Paso = (from: OrderStatus, to: OrderStatus, extra?: { paid_at?: Date }) => Promise<void>;
+type Terminar = (accion: AccionPago, orderId: string | null, ok: boolean) => Promise<ResultadoJob>;
+
+/** `true` si ya hay otro pago aprobado del mismo propósito (se alerta y no se transiciona). */
+async function duplicado(deps: DepsJobWompi, pedido: PedidoFila, pago: PagoFila, ref: Record<string, string>): Promise<boolean> {
+  const pagos = await deps.fuente.pagosDelPedido(pedido.id);
+  if (!pagos.some((p) => p.id !== pago.id && p.purpose === pago.purpose && p.status === 'approved')) return false;
+  await deps.fuente.registrarAlerta(pedido.id, 'pago_duplicado', ref);
+  return true;
+}
+
+/** Canje confirmado y transportadora encolada: idempotentes, se repiten en cada reentrega. */
+async function despuesDePagar(deps: DepsJobWompi, pedido: PedidoFila, ref: Record<string, string>): Promise<void> {
+  const canje = await deps.fuente.confirmarCanje(pedido.id);
+  if (canje.ok && canje.advertencia === 'limite_superado') {
+    await deps.fuente.registrarAlerta(pedido.id, 'limite_canje_superado', ref);
+  }
+  await deps.encolarTransportadora(pedido.id);
+}
+
+async function aprobarAbono(
+  deps: DepsJobWompi,
+  pedido: PedidoFila,
+  pago: PagoFila,
+  ref: Record<string, string>,
+  paso: Paso,
+  terminar: Terminar,
+  ahora: Date,
+): Promise<ResultadoJob> {
+  const { fuente } = deps;
+  if (await duplicado(deps, pedido, pago, ref)) return terminar('pago_duplicado', pedido.id, false);
+
+  const continuar = async (accion: AccionPago): Promise<ResultadoJob> => {
+    await deps.cancelarJobsCod(pedido.id);
+    await despuesDePagar(deps, pedido, ref);
+    return terminar(accion, pedido.id, true);
+  };
+
+  switch (pedido.status) {
+    case 'esperando_abono':
+    case 'abandonado': {
+      // confirmar_stock vuelve a reservar si el abandono ya liberó el stock (abono tardío).
+      const stock = await fuente.confirmarStock(pedido.id);
+      if (!stock.ok) {
+        if (pedido.status === 'abandonado') {
+          await paso('abandonado', 'requiere_reembolso');
+          await fuente.registrarAlerta(pedido.id, 'abono_tardio_sin_stock', ref);
+          await deps.cancelarJobsCod(pedido.id);
+          return terminar('requiere_reembolso', pedido.id, true);
+        }
+        await fuente.registrarAlerta(pedido.id, 'sin_stock_al_aprobar', ref);
+        return terminar('sin_stock', pedido.id, false);
+      }
+      const desde = pedido.status;
+      await paso(desde, 'abono_pagado', { paid_at: ahora });
+      if (desde === 'abandonado') await fuente.registrarAlerta(pedido.id, 'abono_tardio_reactivado', ref);
+      return continuar('abono_pagado');
+    }
+    case 'abono_pagado': {
+      const stock = await fuente.confirmarStock(pedido.id);
+      if (!stock.ok) {
+        await fuente.registrarAlerta(pedido.id, 'sin_stock_al_aprobar', ref);
+        return terminar('sin_stock', pedido.id, false);
+      }
+      return continuar('ya_pagado');
+    }
+    case 'requiere_reembolso':
+      return terminar('sin_cambio', pedido.id, true);
+    default:
+      if (DESPUES_DEL_PAGO.has(pedido.status)) return terminar('ya_pagado', pedido.id, true);
+      await fuente.registrarAlerta(pedido.id, 'pago_en_estado_inesperado', { ...ref, estado: pedido.status });
+      return terminar('estado_inesperado', pedido.id, false);
   }
 }
 
@@ -169,24 +258,12 @@ async function aprobar(
   pedido: PedidoFila,
   pago: PagoFila,
   ref: Record<string, string>,
-  paso: (from: OrderStatus, to: OrderStatus, extra?: { paid_at?: Date }) => Promise<void>,
-  terminar: (accion: AccionPago, orderId: string | null, ok: boolean) => Promise<ResultadoJob>,
+  paso: Paso,
+  terminar: Terminar,
   ahora: Date,
 ): Promise<ResultadoJob> {
   const { fuente } = deps;
-  const pagos = await fuente.pagosDelPedido(pedido.id);
-  if (pagos.some((p) => p.id !== pago.id && p.status === 'approved')) {
-    await fuente.registrarAlerta(pedido.id, 'pago_duplicado', ref);
-    return terminar('pago_duplicado', pedido.id, false);
-  }
-
-  const despuesDePagar = async (): Promise<void> => {
-    const canje = await fuente.confirmarCanje(pedido.id);
-    if (canje.ok && canje.advertencia === 'limite_superado') {
-      await fuente.registrarAlerta(pedido.id, 'limite_canje_superado', ref);
-    }
-    await deps.encolarTransportadora(pedido.id);
-  };
+  if (await duplicado(deps, pedido, pago, ref)) return terminar('pago_duplicado', pedido.id, false);
 
   switch (pedido.status) {
     case 'pendiente_pago':
@@ -198,7 +275,7 @@ async function aprobar(
       }
       if (pedido.status === 'pago_rechazado') await paso('pago_rechazado', 'pendiente_pago');
       await paso('pendiente_pago', 'pagado', { paid_at: ahora });
-      await despuesDePagar();
+      await despuesDePagar(deps, pedido, ref);
       return terminar('pagado', pedido.id, true);
     }
     case 'pagado': {
@@ -208,7 +285,7 @@ async function aprobar(
         await fuente.registrarAlerta(pedido.id, 'sin_stock_al_aprobar', ref);
         return terminar('sin_stock', pedido.id, false);
       }
-      await despuesDePagar();
+      await despuesDePagar(deps, pedido, ref);
       return terminar('ya_pagado', pedido.id, true);
     }
     case 'expirado':

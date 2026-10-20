@@ -38,6 +38,9 @@ importers:
       '@izao/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@izao/whatsapp':
+        specifier: workspace:*
+        version: link:../../packages/integrations/whatsapp
       '@izao/wompi':
         specifier: workspace:*
         version: link:../../packages/integrations/wompi

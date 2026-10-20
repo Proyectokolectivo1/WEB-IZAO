@@ -18,6 +18,7 @@
   "dependencies": {
     "@izao/core": "workspace:*",
     "@izao/ui": "workspace:*",
+    "@izao/whatsapp": "workspace:*",
     "@izao/wompi": "workspace:*",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",

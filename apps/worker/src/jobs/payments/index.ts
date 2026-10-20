@@ -1,6 +1,7 @@
 /**
  * Cola `pagos` del worker (dueño: izao-pagos). El arranque (`queues.ts`/`index.ts`, de izao-infra) debe:
- *   createWorker(COLA_PAGOS, crearProcesadorPagos(dependenciasPagosDesdeEnv(encolarTransportadora)), conexión)
+ *   createWorker(COLA_PAGOS, crearProcesadorPagos(dependenciasPagosDesdeEnv(encolarTransportadora,
+ *     (id) => cancelarJobsCod(colaCod, id))), conexión)   // cancelarJobsCod de ./jobs/cod
  * Variables: SUPABASE_URL, SUPABASE_SECRET_KEY, APP_ENCRYPTION_KEY.
  */
 import type { Processor } from 'bullmq';
@@ -27,7 +28,11 @@ export function crearProcesadorPagos(deps: DepsJobWompi): Processor {
   };
 }
 
-export function dependenciasPagosDesdeEnv(encolarTransportadora: (orderId: string) => Promise<void>): DepsJobWompi {
+export function dependenciasPagosDesdeEnv(
+  encolarTransportadora: (orderId: string) => Promise<void>,
+  /** Optimización: sin ella los jobs de contra entrega igual se omiten al releer el estado. */
+  cancelarJobsCod: (orderId: string) => Promise<void> = async () => {},
+): DepsJobWompi {
   const supabaseUrl = process.env.SUPABASE_URL;
   const secretKey = process.env.SUPABASE_SECRET_KEY;
   const claveCifrado = process.env.APP_ENCRYPTION_KEY;
@@ -38,5 +43,6 @@ export function dependenciasPagosDesdeEnv(encolarTransportadora: (orderId: strin
     fuente: crearFuentePostgrest({ supabaseUrl, secretKey, claveCifrado }),
     cliente: (c) => crearClienteWompi({ ambiente: c.ambiente, llavePrivada: c.llavePrivada }),
     encolarTransportadora,
+    cancelarJobsCod,
   };
 }

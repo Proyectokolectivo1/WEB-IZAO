@@ -24,6 +24,11 @@ export interface DepsCheckout {
   topeCantidadVistaPrevia?: number;
   /** Si está, el checkout con Wompi deja listo el intento de pago (`payment`). */
   pagos?: DepsPagos;
+  /**
+   * Contra entrega: encola `cod.iniciar` (id fijo por pedido; repetir no duplica). El worker crea el link del abono,
+   * el token `/pagar/{token}` y envía el cobro por WhatsApp (D-025).
+   */
+  encolarCod?: (orderId: string) => Promise<void>;
 }
 
 export interface DepsPago {
@@ -107,6 +112,15 @@ export async function manejarCheckout(req: Request, deps: DepsCheckout): Promise
     r = await crearPedidoCheckout(deps.fuente(), lectura.valor, ahora);
   } catch (e) {
     return fallaInterna('checkout', e);
+  }
+  if (r.ok && r.cuerpo.next_step === 'pay_cod_deposit') {
+    // El pedido ya existe: si Redis falla, el barrido de pedidos `esperando_abono` sin link lo recupera.
+    try {
+      await deps.encolarCod?.(r.order_id);
+    } catch (e) {
+      console.error(`[checkout] cod.iniciar no encolado: ${e instanceof Error ? e.name : 'error'}`);
+    }
+    return json({ ...r.cuerpo, payment: null }, r.status);
   }
   if (!r.ok || r.cuerpo.next_step !== 'pay_wompi' || !deps.pagos) return json(r.cuerpo, r.status);
   // El pedido ya existe: si el cobro no queda listo, se informa `payment: null` y la página lo reintenta.
