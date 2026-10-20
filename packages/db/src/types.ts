@@ -3829,6 +3829,7 @@ export type Database = {
         Args: { p_country_code: string; p_kind: string }
         Returns: number
       }
+      pay_link_click: { Args: { p_token: string }; Returns: Json }
       pedido_checkout_existente:
         | { Args: { p_clave: string; p_pais: string }; Returns: Json }
         | {

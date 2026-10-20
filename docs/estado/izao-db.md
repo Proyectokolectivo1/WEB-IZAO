@@ -3,9 +3,9 @@
 ## Hecho
 - Oleadas 0 y 1 (última f63d558). T2.7 RPC catálogo: 8da6bc2, 343bfbe. T2.8 `lib/db/`: 8f33a8c. Colección y stock_bajo: 08d0a46.
 - `admin_guardar_producto` / `admin_importar_catalogo` + `lib/db/admin-catalogo`: 373d18d. T2.9 fixture de imágenes: 490cf03.
-- `crear_pedido_checkout`: 34cfe1f. Pedidos (1)(2)(3): 20261020213954, pgTAP 20/19, `lib/db/checkout.ts`: 0d237eb.
-- Pedido (4): 20261020214637, pgTAP 21, `lib/db/pedidos.ts`: cd24577.
+- `crear_pedido_checkout`: 34cfe1f. Pedidos (1-3): 20261020213954, pgTAP 20/19: 0d237eb. Pedido (4): 20261020214637, pgTAP 21: cd24577.
 - Espacios de la tienda: 20261020220958 (solo datos) + seed.sql Parte 3, pgTAP 22 (12/12 remoto). Commit «feat(db): espacios de contenido…».
+- Abono COD (pedidos 2 y 3 de izao-pagos): 20261020221412, pgTAP 23 (16/16 remoto), `lib/db/pay-links.ts` («feat(db): clic de pay_link…»). Pedido 1 (seed de plantillas): espera al dueño.
 
 ## Contratos vigentes (detalle en el commit de cada migración)
 - `crear_pedido_checkout(p jsonb)` → `{ok, estado:'creado'|'existente'|'rechazado', order|motivo}`; motivos: `idempotencia_conflicto`,
@@ -20,6 +20,9 @@
   `nota_envio` (body), `valor_envio` (title = «Gratis»), `medios_de_pago` (title = alt; imagen la sube el dueño),
   `asesoria` (imagen la sube el dueño), `busquedas_populares` (body, una por línea: familias olfativas genéricas).
   Siembra con `on conflict (key, country_code) do nothing`: nunca pisa lo que edite el panel.
+- `pay_link_click(p_token)` (service_role) → `{ok, estado:'vigente'|'pagado'|'vencido', order_id, order_number, clicks, expires_at,
+  target_url solo si vigente}` | `{ok:false, motivo:'no_existe'|'datos_invalidos'}`. Envoltorio `registrarClicPayLinkDb`.
+- `whatsapp_messages_envio_unico_key` unique (order_id, template_id, scheduled_for); NULL no choca; duplicado → 23505.
 
 ## Pendiente
 1. Rendimiento T2.7: explain (analyze, buffers) y p95 de 50 corridas por RPC.
