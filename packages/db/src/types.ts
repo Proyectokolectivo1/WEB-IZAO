@@ -3747,19 +3747,86 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_entero: { Args: { campo: string; v: Json }; Returns: number }
+      admin_guardar_producto: { Args: { p: Json }; Returns: Json }
+      admin_importar_catalogo: { Args: { p: Json }; Returns: Json }
+      admin_producto_estado: { Args: { p_product_id: string }; Returns: Json }
+      admin_sync_producto_interno: {
+        Args: { p: Json; p_completo: boolean }
+        Returns: Json
+      }
+      admin_textos: { Args: { v: Json }; Returns: string[] }
+      catalog_item_json: {
+        Args: { cl: Database["public"]["Tables"]["catalog_listing"]["Row"] }
+        Returns: Json
+      }
+      catalog_page: {
+        Args: {
+          p_country: string
+          p_cursor?: Json
+          p_filters?: Json
+          p_limit?: number
+          p_sort?: string
+        }
+        Returns: Json
+      }
+      catalog_product: {
+        Args: { p_country: string; p_slug: string }
+        Returns: Json
+      }
+      catalog_query_interno: {
+        Args: {
+          p_country: string
+          p_cursor: Json
+          p_filters: Json
+          p_limit: number
+          p_q: string
+          p_sort: string
+        }
+        Returns: Json
+      }
+      catalog_related: {
+        Args: { p_country: string; p_limit?: number; p_product_id: string }
+        Returns: Json
+      }
+      catalog_search_page: {
+        Args: {
+          p_country: string
+          p_cursor?: Json
+          p_filters?: Json
+          p_limit?: number
+          p_q: string
+          p_sort?: string
+        }
+        Returns: Json
+      }
+      catalog_suggest: {
+        Args: { p_country: string; p_limit?: number; p_q: string }
+        Returns: Json
+      }
       claves_cliente: {
         Args: { p_celular: string; p_correo: string; p_documento: string }
         Returns: string[]
       }
       confirmar_canje: { Args: { p_order_id: string }; Returns: Json }
       confirmar_stock: { Args: { p_order_id: string }; Returns: Json }
+      crear_pedido_checkout: { Args: { p: Json }; Returns: Json }
       f_unaccent: { Args: { p_text: string }; Returns: string }
       liberar_canje: { Args: { p_order_id: string }; Returns: Json }
       liberar_stock: { Args: { p_order_id: string }; Returns: Json }
+      media_json: {
+        Args: { m: Database["public"]["Tables"]["media"]["Row"] }
+        Returns: Json
+      }
       next_document_number: {
         Args: { p_country_code: string; p_kind: string }
         Returns: number
       }
+      pedido_checkout_existente: {
+        Args: { p_clave: string; p_pais: string }
+        Returns: Json
+      }
+      pedido_checkout_resumen: { Args: { p_order_id: string }; Returns: Json }
       pedidos_por_vencer: {
         Args: { p_ahora?: string; p_limite?: number }
         Returns: {
