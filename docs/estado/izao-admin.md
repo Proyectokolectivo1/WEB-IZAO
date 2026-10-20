@@ -1,24 +1,24 @@
 # Bitácora izao-admin
 
 ## Hecho
-- Oleada 0: login /admin con MFA, roles, bloqueo, cookie propia, factor aprobado (D-018, D-020, D-021).
-- T2.5 pipeline de imágenes: ver hash en `git log --grep T2.5`. `apps/web/lib/admin/media/` (validar por magic bytes, procesar con sharp, guardar, registrar) y `POST /api/admin/media` (solo admin). Dependencia nueva: `sharp`.
-- `apps/web/lib/admin/auditoria.ts`: `auditarCambio()` genérico para las acciones del panel (usar en todo CRUD).
+- Oleada 0: login /admin con MFA, roles, bloqueo, cookie propia (D-018, D-020, D-021).
+- T2.5 pipeline de imágenes (`lib/admin/media/`, `POST /api/admin/media`, sharp). Hash: `git log --grep T2.5`.
+- T2.6a atributos (marcas, familias, géneros, concentraciones): `git log --grep "T2.6"` (primer commit). Ruta `/admin/atributos/[tipo]/[id|nuevo]` (módulo `catalogo_auxiliar`).
+  Piezas reutilizables: `lib/admin/crud/{comun,servidor}.ts` (slug, errores por campo, `adminDeAccion`, `invalidarCatalogo`, `traducirErrorBd`), `components/admin/{SelectorImagen,BotonConfirmar,Campo*,Paginacion,BuscadorLista}`, `app/admin/crud.css`. Acciones nuevas `catalogo.gestionar` y `catalogo.importar` (solo admin).
 
 ## Pendiente
-- T2.6 CRUD del panel (marcas, familias, géneros, concentraciones, categorías, productos y variantes con precio/stock/visibilidad por país, vínculo MasterShop, imágenes principal/hover/galería, SEO, duplicar/archivar, colecciones y destacados).
-- T2.7 importación/exportación CSV y Excel (`exceljs`), flag `izao.skip_catalog_refresh` con refresco por lote (preguntar a izao-db cómo invocarlo desde el servidor), imágenes masivas `SKU_1.jpg`.
-- Anotar para el módulo de pagos (Oleada 3): impedir activar contra entrega en `payment_method_settings` mientras `country_settings.cod_enabled` sea falso.
+- T2.6b categorías (árbol 2 niveles, visibilidad por país, imagen) -> `/admin/categorias`.
+- T2.6c productos+variantes+imágenes+SEO+duplicar/archivar -> `/admin/productos`. BLOQUEADO por RPC atómica `admin_guardar_producto` (pedida a izao-db, ya anotada en docs/estado/izao-db.md; avisará).
+- T2.6d colecciones y destacados -> `/admin/colecciones`.
+- T2.7 import/export CSV+Excel (`exceljs`), RPC `admin_importar_catalogo` (izao-db), imágenes masivas `SKU_1.jpg`.
+- Módulo de pagos (Oleada 3): impedir `payment_method_settings` activo con `cod_enabled` falso.
 
-## Siguiente paso exacto
-1. Empezar T2.6 por el CRUD simple de marcas (`/admin/marcas`): lista paginada con filtros en la URL, formulario con zod compartido, Server Action con `requerirAdmin({modulo:'marcas'...})` (agregar 'marcas' a `permissions.ts` ya existe como `catalogo_auxiliar`), `auditarCambio`, `revalidateTag`. Reutilizar ese patrón para familias, géneros y concentraciones.
-2. Componente de subida de imagen (cliente) que llama a `POST /api/admin/media` con `kind`, `alt` obligatorio y `recorte45`.
-3. Dinero: `@izao/core/money` (`fromMajorString`).
-
-## Decisiones / avisos al líder
-- `apps/web/lib/db/` (cliente tipado de izao-db) aún no existe; hoy uso `crearClienteServicio()` (`lib/auth/supabase/servicio.ts`) con tipos locales. Cuando exista, migrar.
-- Rutas del panel nuevas: agregar sus módulos a `lib/auth/permissions.ts` (hoy solo hay `catalogo_auxiliar`, `productos`, `categorias`, `colecciones`; las rutas deben coincidir con `MODULOS[...].ruta`).
-- `MEDIA_ROOT` sin definir en desarrollo usa `apps/web/.media-dev/` (ignorada por git).
+## Decisiones / avisos
+- Sin `react-hook-form` (no está instalado): formularios con `useActionState` + zod en servidor; el esquema zod es el mismo del servidor.
+- `apps/web/lib/db/` no existe: uso `crearClienteServicio()` con tipos locales.
+- Escrituras multi-tabla (producto) requieren RPC transaccional: supabase-js no abre transacciones.
+- `MEDIA_ROOT` sin definir en desarrollo usa `apps/web/.media-dev/`. Imágenes se sirven en `/media/<ruta>`.
+- Al habilitar un módulo: `disponible: true` en `permissions.ts` y actualizar la lista en `permissions.test.ts`.
 
 ## Punto de retoma
-T2.5 cerrada y verde (lint, typecheck, test, build). Contexto agotado: retomar en T2.6 con el CRUD de marcas.
+T2.6a cerrada y verde. Seguir con categorías (reutilizar el patrón de `atributos`).
