@@ -11,7 +11,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { LOTE, medirCls, observarLotes, recorrerHastaElFinal, slugsEnPantalla } from '../support/catalogo';
 import { VISIBLES_POR_PAIS } from '../support/entorno';
 import { fijarPais, iniciarSinEstado } from '../support/pais';
-import { CLAVE_CARRITO, RUTAS, SEL } from '../support/rutas';
+import { claveCarrito, ORDENES, RUTAS, SEL } from '../support/rutas';
 import { conTildeEnNombre, sinTildes, visiblesEn, visiblesSoloEn } from '../support/semilla';
 
 const esperadosEnListado = (categoria: string) =>
@@ -56,7 +56,7 @@ test.describe('F1 listado infinito (§7.1)', () => {
   });
 
   test.fixme('§30 F1 el listado completo de CO tiene 400 productos sin duplicados (sin filtro de categoría)', async ({ page }) => {
-    await page.goto(`${RUTAS.home('co')}`);
+    await page.goto(RUTAS.catalogo('co'));
     await recorrerHastaElFinal(page, 80);
     const vistos = await slugsEnPantalla(page);
     expect(vistos).toHaveLength(VISIBLES_POR_PAIS);
@@ -128,7 +128,7 @@ test.describe('F1 visibilidad por país (§5.2, §30)', () => {
     expect((await request.get(RUTAS.ficha('co', slug))).status()).toBe(404);
     expect((await request.get(RUTAS.ficha('ec', slug))).status()).toBe(200);
     // 2. Recorriendo todo el listado de /co, el slug nunca aparece.
-    await page.goto(RUTAS.home('co'));
+    await page.goto(RUTAS.catalogo('co'));
     await recorrerHastaElFinal(page, 80);
     expect(await slugsEnPantalla(page)).not.toContain(slug);
     // 3. La API tampoco lo entrega para CO, y sí para EC (búsqueda por nombre).
@@ -184,7 +184,7 @@ test.describe('F1 filtros, orden y búsqueda (§7.2, §7.3)', () => {
 
   test.fixme('§7.2 filtrar por marca (multi) deja solo esas marcas, el estado queda en la URL y los chips lo reflejan', async ({ page }) => {
     const marcas = [...new Set(visiblesEn('co').map((p) => p.brand_slug))].slice(0, 2);
-    await page.goto(`${RUTAS.home('co')}?marca=${marcas.join(',')}`);
+    await page.goto(`${RUTAS.catalogo('co')}?marca=${marcas.join(',')}`);
     await recorrerHastaElFinal(page, 40);
     const esperados = visiblesEn('co').filter((p) => marcas.includes(p.brand_slug)).map((p) => p.slug);
     expect((await slugsEnPantalla(page)).sort()).toEqual([...esperados].sort());
@@ -206,14 +206,14 @@ test.describe('F1 filtros, orden y búsqueda (§7.2, §7.3)', () => {
     const esperados = base
       .filter((p) => p.gender_slug === genero && p.family_slug === familia && precioDe(p) >= min && precioDe(p) <= max)
       .map((p) => p.slug);
-    await page.goto(`${RUTAS.home('co')}?genero=${genero}&familia=${familia}&precio_min=${min}&precio_max=${max}`);
+    await page.goto(`${RUTAS.catalogo('co')}?genero=${genero}&familia=${familia}&precio_min=${min}&precio_max=${max}`);
     await recorrerHastaElFinal(page, 40);
     expect((await slugsEnPantalla(page)).sort()).toEqual([...esperados].sort());
   });
 
   test.fixme('§7.2 orden precio menor a mayor: los precios de todo el listado no decrecen (y mayor a menor, no crecen)', async ({ page }) => {
     const registro = observarLotes(page);
-    await page.goto(`${RUTAS.home('co')}?orden=precio_asc`);
+    await page.goto(`${RUTAS.catalogo('co')}?orden=price_asc`);
     await recorrerHastaElFinal(page, 80);
     const precios = registro.lotes.flatMap((l) => l.items.map((i) => Number(i.minPrice)));
     expect(precios.length).toBeGreaterThan(0);
@@ -224,7 +224,7 @@ test.describe('F1 filtros, orden y búsqueda (§7.2, §7.3)', () => {
   });
 
   test.fixme('§7.2 los seis órdenes responden y mantienen el cursor consistente', async ({ request }) => {
-    for (const orden of ['destacados', 'mas_vendidos', 'novedades', 'precio_asc', 'precio_desc', 'mayor_descuento']) {
+    for (const orden of ORDENES) {
       const vistos = new Set<string>();
       let cursor: string | null = null;
       do {
@@ -244,7 +244,7 @@ test.describe('F1 filtros, orden y búsqueda (§7.2, §7.3)', () => {
 
   test.fixme('§7.2 móvil: "Filtrar y ordenar" abre la hoja inferior con contador en vivo', async ({ page, isMobile }) => {
     test.skip(!isMobile, 'solo móvil');
-    await page.goto(RUTAS.home('co'));
+    await page.goto(RUTAS.catalogo('co'));
     await page.locator(SEL.filtrosAbrir).click();
     const hoja = page.getByRole('dialog');
     await expect(hoja).toBeVisible();
@@ -270,7 +270,7 @@ test.describe('F1 filtros, orden y búsqueda (§7.2, §7.3)', () => {
 
   test.fixme('§7.3 las sugerencias esperan 200 ms y cancelan la petición anterior', async ({ page }) => {
     const pedidas: number[] = [];
-    await page.route('**/api/search**', async (ruta) => {
+    await page.route('**/api/catalog/suggest**', async (ruta) => {
       pedidas.push(Date.now());
       await ruta.continue();
     });
@@ -370,7 +370,7 @@ test.describe('F1 tarjeta, vista rápida y carrito (§7.4, §7.5, §7.7)', () =>
       await page.locator(SEL.vistaRapida).locator(SEL.botonAgregar).click();
     }
     await expect(page.locator(SEL.contadorCarrito)).toHaveText('1');
-    const guardado = await page.evaluate((k) => localStorage.getItem(k), CLAVE_CARRITO);
+    const guardado = await page.evaluate((k) => localStorage.getItem(k), claveCarrito('co'));
     expect(guardado).not.toBeNull();
     expect(guardado).not.toMatch(/"price"|"precio"/i); // el cliente no es fuente de precios (el servidor recalcula)
     await page.reload();

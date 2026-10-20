@@ -19,7 +19,7 @@ export const PARAMS = {
   disponible: 'disponible',
 };
 
-export const ORDENES = ['destacados', 'mas_vendidos', 'novedades', 'precio_asc', 'precio_desc', 'mayor_descuento'];
+export const ORDENES = ['featured', 'sales', 'newest', 'price_asc', 'price_desc', 'discount'];
 
 const unicos = (campo) => [...new Set(productos.map((p) => p[campo]))];
 export const MARCAS = unicos('brand_slug');
