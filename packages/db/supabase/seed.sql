@@ -233,4 +233,25 @@ update public.pages set kind = case slug
  where kind = 'general'
    and slug in ('quienes-somos', 'politica-de-envios', 'tratamiento-de-datos', 'terminos-y-condiciones', 'devoluciones-y-garantias');
 
+-- ---------------------------------------------------------------------------
+-- Parte 3: espacios de contenido que lee la tienda (§9.4; mismo bloque que la migración 20261020220958).
+-- Sin imágenes: medios de pago y asesoría esperan la imagen del dueño (la tienda no muestra el espacio sin imagen).
+-- ---------------------------------------------------------------------------
+insert into public.content_slots (key, country_code, title, body, is_active)
+select v.key, c.code, v.title, v.body, true
+  from (values
+    ('nota_envio', 'CO', null, 'El envío es gratis a toda Colombia. El total final lo confirmamos al finalizar la compra.'),
+    ('nota_envio', 'EC', null, 'El envío es gratis a todo Ecuador. El total final lo confirmamos al finalizar la compra.'),
+    ('valor_envio', 'CO', 'Gratis', null),
+    ('valor_envio', 'EC', 'Gratis', null),
+    ('medios_de_pago', 'CO', 'Medios de pago', null),
+    ('medios_de_pago', 'EC', 'Medios de pago', null),
+    ('asesoria', 'CO', 'Asesoría personalizada', null),
+    ('asesoria', 'EC', 'Asesoría personalizada', null),
+    ('busquedas_populares', 'CO', null, E'Floral\nAmaderada\nCítrica\nGourmand\nFrutal\nAcuática'),
+    ('busquedas_populares', 'EC', null, E'Floral\nAmaderada\nCítrica\nGourmand\nFrutal\nAcuática')
+  ) as v(key, country_code, title, body)
+  join public.countries c on c.code = v.country_code
+on conflict (key, country_code) do nothing;
+
 commit;

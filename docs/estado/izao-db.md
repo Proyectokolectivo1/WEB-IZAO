@@ -1,42 +1,37 @@
 # Bitácora izao-db
 
 ## Hecho
-- Oleadas 0 y 1 (última f63d558). T2.7 RPC catálogo: 8da6bc2, 343bfbe. T2.8 `lib/db/` (cliente, catalogo): 8f33a8c. Colección y stock_bajo: 08d0a46.
+- Oleadas 0 y 1 (última f63d558). T2.7 RPC catálogo: 8da6bc2, 343bfbe. T2.8 `lib/db/`: 8f33a8c. Colección y stock_bajo: 08d0a46.
 - `admin_guardar_producto` / `admin_importar_catalogo` + `lib/db/admin-catalogo`: 373d18d. T2.9 fixture de imágenes: 490cf03.
-- `crear_pedido_checkout`: 34cfe1f. Pedidos (1)(2)(3) de izao-pagos: migración 20261020213954, pgTAP 20 (24/24 remoto) y 19 actualizada (30/30), tipos regenerados, `lib/db/checkout.ts` (7 vitest): 0d237eb.
-- Pedido (4): 20261020214637, pgTAP 21 (18/18), `lib/db/pedidos.ts` (4 vitest): cd24577.
+- `crear_pedido_checkout`: 34cfe1f. Pedidos (1)(2)(3): 20261020213954, pgTAP 20/19, `lib/db/checkout.ts`: 0d237eb.
+- Pedido (4): 20261020214637, pgTAP 21, `lib/db/pedidos.ts`: cd24577.
+- Espacios de la tienda: 20261020220958 (solo datos) + seed.sql Parte 3, pgTAP 22 (12/12 remoto). Commit «feat(db): espacios de contenido…».
 
-## Contrato `crear_pedido_checkout(p jsonb)` (envoltorio `crearPedidoCheckoutDb` de `@/lib/db/checkout`)
-- `order` = `FilaPedido` (lista blanca; `status` lo fija la base por método), `items` = `FilaItem[]`. Montos number o string entero.
-- ok: `{ok:true, estado:'creado'|'existente', repetido, order:{id, number, public_token, status, ..., lines[]}}` montos en texto.
-- ok:false 'existente': `idempotencia_conflicto` (otro país, o ambas huellas existen y difieren) → 409 IDEMPOTENCY_CONFLICT; `en_proceso` → 409.
-- ok:false 'rechazado' (nada escrito): `sin_stock`+`faltantes`; `codigo_*`/`limite_*`; `sin_items`; `totales_inconsistentes`; `datos_invalidos`+`detalle`;
-  `sin_politica_datos` (→ 503) y `politica_datos_desactualizada` + `version_vigente` (→ 409 DATA_POLICY_OUTDATED).
-## Contrato 20261020213954 (para izao-pagos, izao-tienda, izao-admin)
-- `orders.checkout_request_hash text` CHECK `^[0-9a-f]{64}$` (SHA-256 hex minúscula). Se envía en `order.checkout_request_hash`; nula no choca.
-  `pedido_checkout_existente(p_clave, p_pais, p_hash)` nueva; la de 2 argumentos delega con hash nulo.
-- `discount_codes_code_key` único sobre `code` (sirve a `.eq('code', X)`); se conserva `discount_codes_upper_code_idx`.
-- `pages.kind text not null default 'general'` CHECK in (general, quienes_somos, envios, tratamiento_datos, terminos, devoluciones).
-  Seed y migración marcan las 5 legales por slug. Índice único parcial `pages_pais_tipo_publicada_key (country_code, kind) where status='published' and kind<>'general'`
-  → publicar una segunda del mismo tipo en el país falla con 23505 (el panel debe despublicar la anterior en la misma transacción).
-- `politica_datos_vigente(p_pais) → text|null` = `version::text` de la `tratamiento_datos` publicada (envoltorio `politicaDatosVigenteDb`). Solo service_role.
-  Tienda/servidor: elegir páginas legales por `kind`, no por regex. `version` no se incrementa sola: la sube el panel al publicar cambios.
-## Contrato 20261020214637 (pedido (4) de izao-pagos)
-- `payments_provider_reference_key` único parcial `(provider, provider_reference) where provider_reference is not null` → 23505 al repetir referencia.
-- `aplicar_transicion_pedido(p jsonb)`, solo service_role, una transacción: update condicional por estado + evento `status_changed`.
-  p = `{order_id, from_status, to_status, actor, payload?, fechas?:{paid_at, abandoned_at, sent_to_carrier_at, delivered_at, cancelled_at}}`
-  (lista blanca; las fechas que vengan se fijan). Legalidad: `transicionar` de core antes de llamar.
-  → `{ok:true, order_id, from_status, to_status, event_id}` | `{ok:false, motivo:'estado_cambiado', status_actual}` (nada escrito; un reintento
-  que ve `status_actual = to_status` ya estaba aplicado) | `pedido_inexistente` | `datos_invalidos` + `detalle` (forma, mismo_estado, fechas, estado o actor; deshace el update).
-- Web: `aplicarTransicionPedidoDb` / `aplicarEventoPedidoDb(orderId, evento, fechas?)` de `@/lib/db/pedidos`. Worker (PostgREST):
-  `POST /rest/v1/rpc/aplicar_transicion_pedido` con `{p}`; reemplaza PATCH orders + POST order_events de `fuente-postgrest.ts`.
+## Contratos vigentes (detalle en el commit de cada migración)
+- `crear_pedido_checkout(p jsonb)` → `{ok, estado:'creado'|'existente'|'rechazado', order|motivo}`; motivos: `idempotencia_conflicto`,
+  `en_proceso`, `sin_stock`+`faltantes`, `codigo_*`/`limite_*`, `sin_items`, `totales_inconsistentes`, `datos_invalidos`+`detalle`,
+  `sin_politica_datos` (503), `politica_datos_desactualizada`+`version_vigente` (409). Envoltorio `crearPedidoCheckoutDb`.
+- `orders.checkout_request_hash` (SHA-256 hex); `pedido_checkout_existente(p_clave, p_pais, p_hash)`.
+- `pages.kind` (general, quienes_somos, envios, tratamiento_datos, terminos, devoluciones); única publicada por (país, kind) → 23505.
+  `politica_datos_vigente(p_pais)`; `version` la sube el panel al publicar.
+- `payments_provider_reference_key` único parcial; `aplicar_transicion_pedido(p jsonb)` atómica (web: `aplicarTransicionPedidoDb`/
+  `aplicarEventoPedidoDb`; worker: `POST /rest/v1/rpc/aplicar_transicion_pedido` con `{p}`).
+- `content_slots` por país (CO, EC), sin espacios globales; claves sembradas (activas, sin imagen):
+  `nota_envio` (body), `valor_envio` (title = «Gratis»), `medios_de_pago` (title = alt; imagen la sube el dueño),
+  `asesoria` (imagen la sube el dueño), `busquedas_populares` (body, una por línea: familias olfativas genéricas).
+  Siembra con `on conflict (key, country_code) do nothing`: nunca pisa lo que edite el panel.
 
 ## Pendiente
 1. Rendimiento T2.7: explain (analyze, buffers) y p95 de 50 corridas por RPC.
-2. Cierre: pgTAP 01–21 remoto, advisors (solo INFO hoy), lint/typecheck/test.
+2. Cierre: pgTAP 01–22 remoto, advisors (solo INFO hoy), lint/typecheck/test.
 3. Prueba de concurrencia de `crear_pedido_checkout` con dos sesiones (tests/concurrencia/run.sh, local).
 4. store_*: no se crean salvo pedido de izao-tienda.
 
+## Siguiente paso exacto
+- Pendiente 1 (explain de las RPC del catálogo) salvo nueva tarea del líder.
+
 ## Notas
-- pgTAP por el MCP: convertir la suite (aserciones → `insert into tap(l) select ...`, sin begin/rollback) y terminar con
-  `do $$ begin raise exception 'RESUMEN ...' $$` que reporta y deshace todo (el MCP corre el lote en una transacción implícita).
+- pgTAP por el MCP: aserciones → `insert into tap(l) select ...` (tabla temporal), sin begin/rollback, y terminar con
+  `do $$ begin raise exception 'RESUMEN %' ... $$` (el MCP corre el lote en una transacción: el error deshace todo).
+  Pruebas como anon: `set local role anon` dentro de un `do` que guarda el resultado con `set_config`.
+- El MCP fija la versión de la migración al aplicar: renombrar el archivo local a la versión de `list_migrations`.
