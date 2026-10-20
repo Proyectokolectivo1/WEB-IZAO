@@ -6,29 +6,16 @@
  * `aplicarTransicion` llama `aplicar_transicion_pedido` (izao-db): update condicional por estado y evento
  * `status_changed` en una sola transacción. La legalidad la decide antes `transicionar` de core.
  */
-import { byteaDesdePostgrest, descifrarCredenciales } from '@izao/core/credentials';
 import type { ConfirmRedemptionResult, PaymentPurpose, PaymentStatus, StockFunctionResult } from '@izao/core/contracts';
 import { fromDbAmount, toSafeNumber, type CountryCode, type CurrencyCode } from '@izao/core/money';
 import type { OrderStatus } from '@izao/core/order-state';
 import type { StockState } from '@izao/core/contracts';
 import { parseWompiCredentials } from '@izao/wompi';
+import { aplicarTransicionRpc, crearClientePostgrest, eq, type Fila, type OpcionesPostgrest } from '../postgrest.js';
 import type { FuentePagosWorker, PagoFila } from './fuente.js';
 
-export interface OpcionesPostgrest {
-  supabaseUrl: string;
-  secretKey: string;
-  claveCifrado: string;
-  fetchImpl?: typeof fetch;
-}
+export { ErrorPostgrest, interpretarTransicion, type OpcionesPostgrest } from '../postgrest.js';
 
-export class ErrorPostgrest extends Error {
-  constructor(operacion: string, status: number) {
-    super(`PostgREST ${operacion} respondió HTTP ${status}`);
-    this.name = 'ErrorPostgrest';
-  }
-}
-
-type Fila = Record<string, unknown>;
 const COLUMNAS_PAGO =
   'id,order_id,provider,purpose,amount,currency_code,status,provider_reference,provider_transaction_id,payment_link_id,created_at';
 
@@ -48,76 +35,18 @@ function aPago(f: Fila): PagoFila {
   };
 }
 
-const eq = (v: string) => `eq.${encodeURIComponent(v)}`;
-
-/**
- * Resultado de `aplicar_transicion_pedido`: `true` si quedó aplicada (o ya lo estaba: `estado_cambiado` con
- * `status_actual = to_status`, p. ej. un reintento), `false` si otro proceso lo movió a otro estado (nada escrito).
- * `pedido_inexistente`, `datos_invalidos` o una forma desconocida lanzan (sin detalles de la base).
- */
-export function interpretarTransicion(
-  r: { ok?: unknown; motivo?: unknown; status_actual?: unknown; event_id?: unknown } | null,
-  to: OrderStatus,
-): boolean {
-  if (r?.ok === true && typeof r.event_id === 'string') return true;
-  if (r?.ok === false && r.motivo === 'estado_cambiado') return r.status_actual === to;
-  const motivo = r?.ok === false && typeof r.motivo === 'string' ? r.motivo : 'forma';
-  throw new Error(`aplicar_transicion_pedido rechazó: ${motivo.slice(0, 40)}`);
-}
-
 export function crearFuentePostgrest(o: OpcionesPostgrest): FuentePagosWorker {
-  const base = `${o.supabaseUrl.replace(/\/+$/, '')}/rest/v1`;
-  const doFetch = o.fetchImpl ?? fetch;
-  const cabeceras = {
-    apikey: o.secretKey,
-    authorization: `Bearer ${o.secretKey}`,
-    'content-type': 'application/json',
-  };
-
-  async function pedir(operacion: string, ruta: string, init: RequestInit = {}): Promise<unknown> {
-    const res = await doFetch(`${base}/${ruta}`, {
-      ...init,
-      headers: { ...cabeceras, ...(init.headers as Record<string, string> | undefined) },
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!res.ok) throw new ErrorPostgrest(operacion, res.status);
-    if (res.status === 204) return null;
-    const texto = await res.text();
-    return texto ? (JSON.parse(texto) as unknown) : null;
-  }
-  const filas = async (operacion: string, ruta: string) => ((await pedir(operacion, ruta)) as Fila[] | null) ?? [];
-  const rpc = (nombre: string, orderId: string) =>
-    pedir(nombre, `rpc/${nombre}`, { method: 'POST', body: JSON.stringify({ p_order_id: orderId }) });
+  const c = crearClientePostgrest(o);
+  const { pedir, filas } = c;
+  const rpc = (nombre: string, orderId: string) => c.rpcPedido(nombre, orderId);
 
   return {
     async credencialesWompi() {
-      const rows = await filas(
-        'integration_credentials',
-        `integration_credentials?provider=eq.wompi&country_code=eq.CO&is_active=is.true&select=environment,data_encrypted,iv,key_version`,
-      );
-      if (rows.length !== 1) {
-        if (rows.length > 1) console.error('[pagos] hay más de una credencial activa de Wompi para CO');
-        return null;
-      }
-      const r = rows[0]!;
-      const ambiente = r.environment === 'production' ? 'production' : 'sandbox';
-      try {
-        const valores = await descifrarCredenciales(
-          o.claveCifrado,
-          { provider: 'wompi', country_code: 'CO', environment: ambiente },
-          {
-            data_encrypted: byteaDesdePostgrest(String(r.data_encrypted)),
-            iv: byteaDesdePostgrest(String(r.iv)),
-            key_version: Number(r.key_version),
-          },
-        );
-        const p = parseWompiCredentials(valores, ambiente);
-        if (!p.ok) console.error(`[pagos] credenciales de Wompi incompletas: ${p.problemas.map((x) => x.key).join(',')}`);
-        return p.ok ? p.credenciales : null;
-      } catch (e) {
-        console.error(`[pagos] no se pudieron leer las credenciales de Wompi: ${e instanceof Error ? e.name : 'error'}`);
-        return null;
-      }
+      const cred = await c.credencial('wompi', 'CO', 'pagos');
+      if (!cred) return null;
+      const p = parseWompiCredentials(cred.valores, cred.ambiente);
+      if (!p.ok) console.error(`[pagos] credenciales de Wompi incompletas: ${p.problemas.map((x) => x.key).join(',')}`);
+      return p.ok ? p.credenciales : null;
     },
     async pagosPorReferencia(referencia) {
       return (
@@ -177,19 +106,7 @@ export function crearFuentePostgrest(o: OpcionesPostgrest): FuentePagosWorker {
       return (await rpc('confirmar_canje', orderId)) as ConfirmRedemptionResult;
     },
     async aplicarTransicion(orderId, evento, opciones = {}) {
-      const p: Record<string, unknown> = {
-        order_id: orderId,
-        from_status: evento.from_status,
-        to_status: evento.to_status,
-        actor: evento.actor,
-        payload: evento.payload,
-      };
-      if (opciones.paid_at) p.fechas = { paid_at: opciones.paid_at.toISOString() };
-      const r = (await pedir('aplicar_transicion_pedido', 'rpc/aplicar_transicion_pedido', {
-        method: 'POST',
-        body: JSON.stringify({ p }),
-      })) as { ok?: unknown; motivo?: unknown; status_actual?: unknown; event_id?: unknown } | null;
-      return interpretarTransicion(r, evento.to_status);
+      return aplicarTransicionRpc(c, orderId, evento, { paid_at: opciones.paid_at });
     },
     async registrarAlerta(orderId, motivo, payload) {
       await pedir('order_events', 'order_events', {

@@ -8,15 +8,40 @@
 import { DelayedError, type Job, type Processor, type Queue } from 'bullmq';
 import {
   COLA_COD,
+  crearClienteWhatsApp,
   JOB_COD_ABANDONO,
   JOB_COD_INICIAR,
   JOB_COD_RECORDATORIO,
   jobIdCodAbandono,
   jobIdCodRecordatorio,
 } from '@izao/whatsapp';
+import { crearLinkPago } from '@izao/wompi';
 import { abandonarCod, iniciarCod, recordatorioCod, type DepsCod, type JobProgramado } from './flujo.js';
+import { crearFuenteCodPostgrest } from './fuente-postgrest.js';
 
 export { COLA_COD };
+
+/** Respaldo por correo del cobro. No hay proveedor de correo definido: el arranque lo pasa cuando exista. */
+export type CorreoRespaldo = NonNullable<DepsCod['correoRespaldo']>;
+
+/** Variables: SUPABASE_URL, SUPABASE_SECRET_KEY, APP_ENCRYPTION_KEY, SITE_URL (origen https). */
+export function dependenciasCodDesdeEnv(programar: DepsCod['programar'], correoRespaldo?: CorreoRespaldo): DepsCod {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
+  const claveCifrado = process.env.APP_ENCRYPTION_KEY;
+  const urlSitio = process.env.SITE_URL;
+  if (!supabaseUrl || !secretKey || !claveCifrado || !urlSitio) {
+    throw new Error('Faltan SUPABASE_URL, SUPABASE_SECRET_KEY, APP_ENCRYPTION_KEY o SITE_URL para la cola de contra entrega');
+  }
+  return {
+    fuente: crearFuenteCodPostgrest({ supabaseUrl, secretKey, claveCifrado }),
+    wompi: (c) => ({ crearLink: (e) => crearLinkPago({ ambiente: c.ambiente, llavePrivada: c.llavePrivada }, e) }),
+    whatsapp: (c) => crearClienteWhatsApp(c),
+    programar,
+    ...(correoRespaldo ? { correoRespaldo } : {}),
+    urlSitio,
+  };
+}
 export { ErrorReintentableCod, abandonarCod, iniciarCod, recordatorioCod } from './flujo.js';
 
 /** Tope de recordatorios que se intentan cancelar por pedido (más que cualquier configuración razonable). */

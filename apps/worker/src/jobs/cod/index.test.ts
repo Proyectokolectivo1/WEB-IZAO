@@ -1,0 +1,34 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { dependenciasCodDesdeEnv } from './index.js';
+
+const ENV = {
+  SUPABASE_URL: 'https://x.supabase.co',
+  SUPABASE_SECRET_KEY: 'llave-de-servidor-ficticia',
+  APP_ENCRYPTION_KEY: 'AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=',
+  SITE_URL: 'https://izaoperfumeria.com',
+};
+
+describe('dependenciasCodDesdeEnv', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('arma las dependencias con el programador recibido y SITE_URL', () => {
+    for (const [k, v] of Object.entries(ENV)) vi.stubEnv(k, v);
+    const programar = async () => {};
+    const d = dependenciasCodDesdeEnv(programar);
+    expect(d.programar).toBe(programar);
+    expect(d.urlSitio).toBe('https://izaoperfumeria.com');
+    expect(typeof d.fuente.pedido).toBe('function');
+    expect(d.correoRespaldo).toBeUndefined();
+  });
+
+  it('acepta un correo de respaldo detrás de la interfaz (sin proveedor fijo)', () => {
+    for (const [k, v] of Object.entries(ENV)) vi.stubEnv(k, v);
+    const correo = async () => {};
+    expect(dependenciasCodDesdeEnv(async () => {}, correo).correoRespaldo).toBe(correo);
+  });
+
+  it.each(Object.keys(ENV))('sin %s lanza sin mostrar valores', (falta) => {
+    for (const [k, v] of Object.entries(ENV)) vi.stubEnv(k, k === falta ? '' : v);
+    expect(() => dependenciasCodDesdeEnv(async () => {})).toThrow(/Faltan/);
+  });
+});

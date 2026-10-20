@@ -91,3 +91,19 @@ export interface FuenteCod {
   liberarCanje(orderId: string): Promise<{ ok: boolean }>;
   registrarAlerta(orderId: string, motivo: string, payload: Record<string, string | null>): Promise<void>;
 }
+
+/** Fila de `pedidos_por_vencer` (izao-db): reserva vencida y el estado al que debe pasar. */
+export interface PedidoPorVencer {
+  order_id: string;
+  estado_actual: OrderStatus;
+  nuevo_estado: OrderStatus;
+}
+
+/** Lecturas del barrido cron (`pedidos.barrido`). */
+export interface FuenteBarrido {
+  pedidosPorVencer(ahora: Date, limite: number): Promise<PedidoPorVencer[]>;
+  /** Contra entrega en `esperando_abono`, creados antes de `creadosAntes`, con la reserva vigente y sin `pay_links`. */
+  pedidosSinLink(creadosAntes: Date, ahora: Date, limite: number): Promise<string[]>;
+  /** `expirado`/`abandonado` con el stock aún reservado (falla entre la transición y la liberación). */
+  reservasHuerfanas(limite: number): Promise<string[]>;
+}
