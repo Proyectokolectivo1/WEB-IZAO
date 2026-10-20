@@ -10,7 +10,8 @@
  *   - `reason`: códigos de `DiscountRejectionCode`; inexistente, inactivo y de otro país llegan colapsados en `CODE_INVALID`.
  *   - `applied` es provisional: los límites por cliente solo se verifican al crear el pedido.
  *
- * Hasta que el endpoint exista, el bolso muestra el subtotal local (`calcularPrecios`) y `adaptador.ts` devuelve `null`.
+ * Implementado por izao-pagos (commit 3a7e66b). Si el servidor no responde, el bolso muestra el subtotal local (`calcularPrecios`).
+ *   - Aditivo: `payment_method?` en la entrada y `totals` en la salida (checkout); `code.status = 'withdrawn'` con Addi/Sistecrédito.
  */
 import { z } from 'zod';
 
@@ -31,12 +32,26 @@ export const RespuestaVistaPrevia = z.object({
   discount: monto,
   code: z
     .object({
-      status: z.enum(['applied', 'rejected']),
+      // `withdrawn`: solo si se pide con Addi o Sistecrédito (el código no aplica con financiación).
+      status: z.enum(['applied', 'rejected', 'withdrawn']),
       code: z.string(),
       reason: z.string().nullable(),
       missing_amount: monto.nullable(),
     })
     .nullable(),
+  // Aditivo (izao-pagos): con `payment_method` en la entrada, recargo, abono y recaudo del método.
+  totals: z
+    .object({
+      payment_method: z.string().nullable(),
+      payment_method_available: z.boolean(),
+      surcharge: monto,
+      total_customer: monto,
+      cod_deposit: monto,
+      cod_collect: monto,
+      available_methods: z.array(z.object({ method: z.string(), available: z.boolean(), reason: z.string().nullable() })),
+      manual_allowed: z.boolean(),
+    })
+    .optional(),
 });
 export const RUTA_VISTA_PREVIA = '/api/checkout/preview';
 export type RespuestaVistaPrevia = z.infer<typeof RespuestaVistaPrevia>;

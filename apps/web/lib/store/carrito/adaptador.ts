@@ -1,18 +1,19 @@
 /**
- * Adaptador de la vista previa del servidor. Hoy no hay endpoint (lo construye izao-pagos en la Oleada 3),
- * así que devuelve `null` y el bolso trabaja con el subtotal local. Para activarlo basta con poner
- * `SERVIDOR_DISPONIBLE = true`; el servidor sigue recalculando todo al crear el pedido.
+ * Adaptador de la vista previa del servidor (`POST /api/checkout/preview`, izao-pagos, commit 3a7e66b).
+ * Activo desde que la ruta está commiteada; si falla o no responde devuelve `null` y el bolso trabaja con el
+ * subtotal local. El servidor sigue recalculando todo al crear el pedido.
  */
 import { RUTA_VISTA_PREVIA, RespuestaVistaPrevia } from './contrato';
 import type { LineaCarrito } from './logica';
 
-export const SERVIDOR_DISPONIBLE = false;
+export const SERVIDOR_DISPONIBLE = true;
 
 export async function pedirVistaPrevia(
   pais: string,
   lineas: readonly LineaCarrito[],
   codigo: string | null,
   senal?: AbortSignal,
+  metodo?: string | null,
 ): Promise<RespuestaVistaPrevia | null> {
   if (!SERVIDOR_DISPONIBLE) return null;
   const res = await fetch(RUTA_VISTA_PREVIA, {
@@ -22,6 +23,7 @@ export async function pedirVistaPrevia(
       country: pais,
       items: lineas.map((l) => ({ variant_id: l.variantId, quantity: l.cantidad })),
       ...(codigo ? { code: codigo } : {}),
+      ...(metodo ? { payment_method: metodo } : {}),
     }),
     signal: senal,
   });
