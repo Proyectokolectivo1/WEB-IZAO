@@ -14,5 +14,10 @@ const limitador = crearLimitadorMemoria({
 });
 
 export async function POST(req: Request) {
-  return manejarVistaPrevia(req, { fuente: () => fuenteSupabase, limitador });
+  return manejarVistaPrevia(req, {
+    fuente: () => fuenteSupabase,
+    limitador,
+    // Tope de `max_quantity` para no revelar existencias (defecto 10; configurable sin tocar código).
+    topeCantidadVistaPrevia: enteroEnv(process.env.CHECKOUT_PREVIEW_MAX_QUANTITY, 10),
+  });
 }

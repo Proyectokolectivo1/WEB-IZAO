@@ -3,8 +3,9 @@
  * `lib/store/carrito/contrato.ts`; aquí se agrega `totals` (aditivo: el esquema de la tienda lo ignora).
  *
  * - Montos: enteros en unidad menor, en texto.
- * - `max_quantity = min(existencias vendibles, pedida)`; subtotal, descuento y `line_discount` se calculan
- *   sobre esa cantidad ajustada, nunca sobre lo pedido por encima del stock.
+ * - `max_quantity = min(existencias vendibles, pedida, tope)`; subtotal, descuento y `line_discount` se calculan
+ *   sobre esa cantidad ajustada, nunca sobre lo pedido por encima del stock. El tope (configurable) evita
+ *   revelar el inventario real pidiendo cantidades grandes.
  * - Código inexistente, inactivo, de otro país o mal escrito → `CODE_INVALID` (no se revela cuál).
  * - `applied` es provisional: el límite por cliente se verifica al crear el pedido.
  */
@@ -107,10 +108,16 @@ export function codigoDeSalida(resuelto: CodigoResuelto, r: PricingResult): Resp
   };
 }
 
+export interface OpcionesVistaPrevia {
+  /** Tope de `max_quantity` por línea (`CHECKOUT_PREVIEW_MAX_QUANTITY`, defecto 10). */
+  topeCantidad?: number;
+}
+
 export async function vistaPrevia(
   fuente: FuenteCheckout,
   entrada: EntradaVistaPrevia,
   ahora: Date,
+  opciones: OpcionesVistaPrevia = {},
 ): Promise<RespuestaVistaPreviaServidor | null> {
   const pais: CountryCode = entrada.country;
   const config = await fuente.configPais(pais);
@@ -121,7 +128,7 @@ export async function vistaPrevia(
     ids.length > 0 ? fuente.variantes(pais, ids) : Promise.resolve(new Map()),
     resolverCodigo(fuente, entrada.code),
   ]);
-  const carrito = cruzarCarrito(entrada.items, variantes);
+  const carrito = cruzarCarrito(entrada.items, variantes, opciones.topeCantidad);
 
   const r = calcularPrecios({
     items: carrito.items,

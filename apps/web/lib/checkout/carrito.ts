@@ -24,9 +24,14 @@ export interface CarritoCruzado {
   ajustado: boolean;
 }
 
+/**
+ * `tope` (solo vista previa): máximo de unidades por línea que se informa, para no revelar existencias reales
+ * cuando se piden cantidades grandes (decisión del líder, Oleada 3). Valor configurable, no quemado.
+ */
 export function cruzarCarrito(
   pedidos: readonly CartItemInput[],
   variantes: ReadonlyMap<string, VarianteCheckout>,
+  tope: number = Number.POSITIVE_INFINITY,
 ): CarritoCruzado {
   const lineas: LineaCruzada[] = [];
   const items: PricingItem[] = [];
@@ -34,7 +39,7 @@ export function cruzarCarrito(
   for (const p of pedidos) {
     const v = variantes.get(p.variant_id) ?? null;
     const vendible = v !== null && v.vendible && v.precio !== null;
-    const max = vendible ? Math.max(0, Math.min(v.disponible, p.quantity)) : 0;
+    const max = vendible ? Math.max(0, Math.min(v.disponible, p.quantity, tope)) : 0;
     if (max < p.quantity) ajustado = true;
     lineas.push({ variant_id: p.variant_id, quantity: p.quantity, max_quantity: max, variante: v });
     if (vendible && max > 0) {

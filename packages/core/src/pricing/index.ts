@@ -593,3 +593,5 @@ export function calcularPrecios(input: PricingInput): PricingResult {
     messages: freezeAll(messages),
   });
 }
+
+export { comisionPasarela, parsePercentThousandths, type ComisionConfig } from './comision';

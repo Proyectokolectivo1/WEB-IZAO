@@ -1,18 +1,17 @@
 /**
- * Fuente del checkout en memoria, solo para pruebas. Imita el comportamiento de las funciones de la base
- * (`reservar_stock`, `reservar_canje`, sus liberaciones) y la clave única de idempotencia.
+ * Fuente del checkout en memoria, solo para pruebas. Imita `crear_pedido_checkout` de la base: stock, canje
+ * y clave única de idempotencia en una sola transacción (todo o nada).
  */
 import type { CountryCode } from '@izao/core/money';
 import type { PricingDiscountCode } from '@izao/core/pricing';
 import type { OrderStatus } from '@izao/core/order-state';
 import type {
   ConfigPais,
-  EventoPedido,
   FilaItem,
   FilaPedido,
   FuenteCheckout,
   PedidoCreado,
-  ResultadoInsertarPedido,
+  ResultadoCrearPedido,
   UbicacionEnvio,
   VarianteCheckout,
 } from '../fuente';
@@ -35,8 +34,12 @@ export class FuenteMemoria implements FuenteCheckout {
   readonly codigos: (PricingDiscountCode & { usos_cliente?: Record<string, number> })[] = [];
   readonly ubicaciones: (UbicacionEnvio & { pais: CountryCode })[] = [];
   readonly pedidos = new Map<string, PedidoGuardado>();
-  readonly eventos: { orderId: string; evento: EventoPedido }[] = [];
-  readonly eliminados: string[] = [];
+  readonly eventos: {
+    orderId: string;
+    evento: { type: string; from_status: OrderStatus | null; to_status: OrderStatus; actor: 'system' };
+  }[] = [];
+  /** Simula otra petición con la misma clave a mitad de la transacción (`en_proceso`). */
+  enProceso = false;
   /** Operaciones que lanzan un error simulado. */
   readonly fallar = new Set<Operacion>();
   /** Fuerza el rechazo de `reservar_canje` con este motivo. */
@@ -114,18 +117,24 @@ export class FuenteMemoria implements FuenteCheckout {
     };
   }
 
-  async insertarPedido(fila: FilaPedido): Promise<ResultadoInsertarPedido> {
-    this.marca('insertarPedido');
+
+  /** Imita `crear_pedido_checkout`: idempotencia, restricciones de la tabla, stock y canje; todo o nada. */
+  async crearPedido(fila: FilaPedido, items: readonly FilaItem[]): Promise<ResultadoCrearPedido> {
+    this.marca('crearPedido');
     for (const p of this.pedidos.values()) {
-      if (p.fila.checkout_idempotency_key === fila.checkout_idempotency_key) return { ok: false, motivo: 'duplicado' };
+      if (p.fila.checkout_idempotency_key !== fila.checkout_idempotency_key) continue;
+      if (p.fila.country_code !== fila.country_code) return { ok: false, motivo: 'idempotencia_conflicto' };
+      return { ok: true, repetido: true, pedido: this.resumen(p) };
     }
-    this.secuencia += 1;
-    const id = ID_PEDIDO(this.secuencia);
+    if (this.enProceso) return { ok: false, motivo: 'en_proceso' };
+    if (items.length === 0) return { ok: false, motivo: 'sin_items' };
     const pais = fila.country_code as CountryCode;
+    const n = this.secuencia + 1;
     const pedido: Omit<PedidoCreado, 'lines'> = {
-      id,
-      number: `IZ-${pais}-${String(this.secuencia).padStart(6, '0')}`,
-      public_token: `tok${this.secuencia}`,
+      id: ID_PEDIDO(n),
+      number: `IZ-${pais}-${String(n).padStart(6, '0')}`,
+      public_token: `tok${n}`,
+      // La base fija el estado inicial por método; aquí se respeta el de la fila (mismo mapa).
       status: fila.status as OrderStatus,
       country_code: pais,
       currency_code: fila.currency_code as 'COP' | 'USD',
@@ -137,81 +146,38 @@ export class FuenteMemoria implements FuenteCheckout {
       cod_deposit: BigInt(fila.cod_deposit_amount as string),
       cod_collect: BigInt(fila.cod_collect_amount as string),
     };
-    // Mismas restricciones que la tabla
     if (pedido.total_customer !== pedido.subtotal - pedido.discount + pedido.surcharge) {
-      throw new Error('orders_total_check');
+      return { ok: false, motivo: 'datos_invalidos' };
     }
     if (pedido.payment_method === 'cod' && pedido.cod_collect !== pedido.total_customer - pedido.cod_deposit) {
-      throw new Error('orders_cod_check');
+      return { ok: false, motivo: 'datos_invalidos' };
     }
-    this.pedidos.set(id, { fila, pedido, items: [], stock: 'none', canje: 'none' });
-    return { ok: true, pedido };
-  }
-
-  async insertarItems(orderId: string, items: readonly FilaItem[]) {
-    this.marca('insertarItems');
-    this.pedidos.get(orderId)!.items.push(...items);
-  }
-
-  async reservarStock(orderId: string) {
-    this.marca('reservarStock');
-    const p = this.pedidos.get(orderId);
-    if (!p) return { ok: false as const, estado: null, motivo: 'pedido_inexistente' as const };
-    if (p.stock === 'reserved') return { ok: true as const, estado: 'reserved' as const, repetido: true as const };
-    const faltantes = p.items.flatMap((i) => {
-      const v = this.vars.get(i.variant_id as string);
-      const disp = v ? v.disponible : 0;
+    const faltantes = items.flatMap((i) => {
+      const disp = this.vars.get(i.variant_id as string)?.disponible ?? 0;
       return disp < (i.quantity as number)
-        ? [{ variant_id: i.variant_id as string, sku: i.sku as string, solicitado: i.quantity as number, disponible: disp, motivo: 'stock_insuficiente' as const }]
+        ? [{ variant_id: i.variant_id as string, solicitado: i.quantity as number, disponible: disp }]
         : [];
     });
-    if (faltantes.length > 0) return { ok: false as const, estado: p.stock === 'none' ? ('none' as const) : ('released' as const), motivo: 'sin_stock' as const, faltantes };
-    for (const i of p.items) this.vars.get(i.variant_id as string)!.disponible -= i.quantity as number;
-    p.stock = 'reserved';
-    return { ok: true as const, estado: 'reserved' as const };
-  }
+    if (faltantes.length > 0) return { ok: false, motivo: 'sin_stock', faltantes };
+    const codeId = fila.discount_code_id as string | null;
+    if (codeId && this.canjeRechazo) return { ok: false, motivo: this.canjeRechazo };
 
-  async liberarStock(orderId: string) {
-    this.marca('liberarStock');
-    const p = this.pedidos.get(orderId)!;
-    if (p.stock === 'reserved') {
-      for (const i of p.items) this.vars.get(i.variant_id as string)!.disponible += i.quantity as number;
-      p.stock = 'released';
-    }
-    return { ok: true as const, estado: p.stock === 'none' ? ('none' as const) : ('released' as const) };
-  }
-
-  async reservarCanje(orderId: string) {
-    this.marca('reservarCanje');
-    const p = this.pedidos.get(orderId)!;
-    const codeId = p.fila.discount_code_id as string | null;
-    if (!codeId) return { ok: true as const, estado: 'sin_codigo' as const };
-    if (this.canjeRechazo) return { ok: false as const, estado: 'none' as const, motivo: this.canjeRechazo };
-    const c = this.codigos.find((x) => x.id === codeId)!;
-    c.usage_count += 1;
-    p.canje = 'reserved';
-    return { ok: true as const, estado: 'reserved' as const };
-  }
-
-  async liberarCanje(orderId: string) {
-    this.marca('liberarCanje');
-    const p = this.pedidos.get(orderId)!;
-    if (p.canje === 'reserved') {
-      const c = this.codigos.find((x) => x.id === p.fila.discount_code_id)!;
-      c.usage_count -= 1;
-      p.canje = 'released';
-    }
-    return { ok: true as const, estado: p.canje === 'none' ? ('sin_codigo' as const) : ('released' as const) };
-  }
-
-  async registrarEvento(orderId: string, evento: EventoPedido) {
-    this.marca('registrarEvento');
-    this.eventos.push({ orderId, evento });
-  }
-
-  async eliminarPedido(orderId: string) {
-    this.marca('eliminarPedido');
-    this.pedidos.delete(orderId);
-    this.eliminados.push(orderId);
+    // Todo validado: se escribe de una vez.
+    this.secuencia = n;
+    for (const i of items) this.vars.get(i.variant_id as string)!.disponible -= i.quantity as number;
+    if (codeId) this.codigos.find((x) => x.id === codeId)!.usage_count += 1;
+    const guardado: PedidoGuardado = {
+      fila,
+      pedido,
+      items: [...items],
+      stock: 'reserved',
+      canje: codeId ? 'reserved' : 'none',
+    };
+    this.pedidos.set(pedido.id, guardado);
+    this.eventos.push({
+      orderId: pedido.id,
+      evento: { type: 'created', from_status: null, to_status: pedido.status, actor: 'system' },
+    });
+    return { ok: true, repetido: false, pedido: this.resumen(guardado) };
   }
 }

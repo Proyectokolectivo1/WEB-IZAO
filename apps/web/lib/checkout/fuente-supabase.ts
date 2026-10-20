@@ -8,13 +8,9 @@ import { z } from 'zod';
 import type { CountryCode } from '@izao/core/money';
 import type { PricingDiscountCode } from '@izao/core/pricing';
 import { ORDER_STATUSES } from '@izao/core/order-state';
-import type {
-  ReleaseRedemptionResult,
-  ReserveRedemptionResult,
-  StockFunctionResult,
-} from '@izao/core/contracts';
 import { amountSchema, checkoutPaymentMethodSchema, countryCodeSchema, currencyCodeSchema } from '@izao/core/schemas';
 import { ErrorDb, clienteDb, llamarRpc } from '@/lib/db/cliente';
+import { crearPedidoCheckoutDb, type EntradaCrearPedido } from '@/lib/db/checkout';
 import type { ConfigPais, FuenteCheckout, PedidoCreado, VarianteCheckout } from './fuente';
 
 const uuid = z.guid();
@@ -112,27 +108,6 @@ const filaItemResumen = z.object({
   line_discount: amountSchema,
 });
 
-const resultadoFuncion = z
-  .object({
-    ok: z.boolean(),
-    estado: z.string().nullable(),
-    repetido: z.boolean().optional(),
-    motivo: z.string().optional(),
-    advertencia: z.string().optional(),
-    faltantes: z
-      .array(
-        z.object({
-          variant_id: uuid.nullable(),
-          sku: z.string().nullable(),
-          solicitado: entero,
-          disponible: entero,
-          motivo: z.string(),
-        }),
-      )
-      .optional(),
-  })
-  .loose();
-
 // ── Mapeos puros (probados) ──────────────────────────────────────────────────────────────────────
 
 export function mapearVariante(
@@ -202,8 +177,6 @@ function revisar(funcion: string, error: { message: string; code?: string } | nu
   if (error) throw new ErrorDb(funcion, 'rpc', error.message, error.code ?? null);
 }
 
-const rpcPedido = <T>(funcion: string, orderId: string) =>
-  llamarRpc(funcion, { p_order_id: orderId }, resultadoFuncion) as Promise<T>;
 
 export const fuenteSupabase: FuenteCheckout = {
   async configPais(pais): Promise<ConfigPais | null> {
@@ -331,36 +304,33 @@ export const fuenteSupabase: FuenteCheckout = {
     };
   },
 
-  async insertarPedido(fila) {
-    const { data, error } = await clienteDb().from('orders').insert(fila).select(COLUMNAS_PEDIDO).single();
-    if (error?.code === '23505' && /checkout_idempotency_key/.test(error.message)) {
-      return { ok: false, motivo: 'duplicado' };
+  async crearPedido(fila, items) {
+    // Las filas se construyen en `crear-pedido.ts`; el envoltorio las valida con zod antes de llamar.
+    const r = await crearPedidoCheckoutDb({ order: fila, items } as unknown as EntradaCrearPedido);
+    if (!r.ok) {
+      return {
+        ok: false,
+        motivo: r.motivo,
+        ...(r.faltantes
+          ? { faltantes: r.faltantes.map((x) => ({ variant_id: x.variant_id, solicitado: x.solicitado, disponible: x.disponible })) }
+          : {}),
+      };
     }
-    revisar('orders.insert', error);
-    return { ok: true, pedido: mapearPedido(validar('orders.insert', filaPedido, data)) };
-  },
-
-  async insertarItems(orderId, items) {
-    const { error } = await clienteDb()
-      .from('order_items')
-      .insert(items.map((i) => ({ ...i, order_id: orderId })));
-    revisar('order_items.insert', error);
-  },
-
-  reservarStock: (id) => rpcPedido<StockFunctionResult>('reservar_stock', id),
-  liberarStock: (id) => rpcPedido<StockFunctionResult>('liberar_stock', id),
-  reservarCanje: (id) => rpcPedido<ReserveRedemptionResult>('reservar_canje', id),
-  liberarCanje: (id) => rpcPedido<ReleaseRedemptionResult>('liberar_canje', id),
-
-  async registrarEvento(orderId, evento) {
-    const { error } = await clienteDb()
-      .from('order_events')
-      .insert({ order_id: orderId, ...evento });
-    revisar('order_events.insert', error);
-  },
-
-  async eliminarPedido(orderId) {
-    const { error } = await clienteDb().from('orders').delete().eq('id', orderId);
-    revisar('orders.delete', error);
+    const o = validar('crear_pedido_checkout', filaPedido.extend({ lines: z.array(filaItemResumen) }), r.order);
+    return {
+      ok: true,
+      repetido: r.repetido,
+      pedido: {
+        ...mapearPedido(o),
+        lines: o.lines.map((i) => ({
+          variant_id: i.variant_id,
+          name: i.name_snapshot,
+          variant_label: i.variant_label,
+          quantity: i.quantity,
+          unit_price: i.unit_price,
+          line_discount: i.line_discount,
+        })),
+      },
+    };
   },
 };

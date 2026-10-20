@@ -11,11 +11,6 @@ import type {
   PricingPaymentMethodSetting,
 } from '@izao/core/pricing';
 import type { OrderStatus } from '@izao/core/order-state';
-import type {
-  ReleaseRedemptionResult,
-  ReserveRedemptionResult,
-  StockFunctionResult,
-} from '@izao/core/contracts';
 
 /** Variante leída para un país, con lo necesario para precio, stock y la línea del pedido. */
 export interface VarianteCheckout {
@@ -82,16 +77,18 @@ export interface PedidoCreado {
 export type FilaPedido = Record<string, string | number | boolean | null>;
 export type FilaItem = Record<string, string | number | boolean | null>;
 
-export type ResultadoInsertarPedido =
-  | { ok: true; pedido: Omit<PedidoCreado, 'lines'> }
-  | { ok: false; motivo: 'duplicado' };
+/**
+ * Resultado de `crear_pedido_checkout` (una transacción: pedido → líneas → reservar_stock → reservar_canje →
+ * evento `created`; todo o nada). `motivo` llega tal cual de la base (`MotivoCrearPedido` y otros).
+ */
+export type ResultadoCrearPedido =
+  | { ok: true; repetido: boolean; pedido: PedidoCreado }
+  | { ok: false; motivo: string; faltantes?: readonly StockShortageLinea[] };
 
-export interface EventoPedido {
-  type: string;
-  from_status: OrderStatus | null;
-  to_status: OrderStatus | null;
-  actor: 'system';
-  payload: Record<string, string | number | boolean | null>;
+export interface StockShortageLinea {
+  variant_id: string | null;
+  solicitado: number;
+  disponible: number;
 }
 
 export interface FuenteCheckout {
@@ -110,13 +107,6 @@ export interface FuenteCheckout {
    * reservados); si no, otra petición lo está creando o quedó a medias y lo vencerá `pedidos_por_vencer`.
    */
   pedidoPorIdempotencia(clave: string): Promise<(PedidoCreado & { completo: boolean }) | null>;
-  insertarPedido(fila: FilaPedido): Promise<ResultadoInsertarPedido>;
-  insertarItems(orderId: string, items: readonly FilaItem[]): Promise<void>;
-  reservarStock(orderId: string): Promise<StockFunctionResult>;
-  liberarStock(orderId: string): Promise<StockFunctionResult>;
-  reservarCanje(orderId: string): Promise<ReserveRedemptionResult>;
-  liberarCanje(orderId: string): Promise<ReleaseRedemptionResult>;
-  registrarEvento(orderId: string, evento: EventoPedido): Promise<void>;
-  /** Solo para un pedido que nunca llegó al cliente y ya liberó stock y canje. */
-  eliminarPedido(orderId: string): Promise<void>;
+  /** `crear_pedido_checkout` (izao-db): atómico e idempotente por `checkout_idempotency_key`. */
+  crearPedido(fila: FilaPedido, items: readonly FilaItem[]): Promise<ResultadoCrearPedido>;
 }

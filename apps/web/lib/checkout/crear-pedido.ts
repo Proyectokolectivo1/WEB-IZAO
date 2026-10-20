@@ -4,12 +4,11 @@
  * variantes, cantidades, datos del cliente, método y el texto del código.
  *
  * Orden (§10.2): validar con `checkoutInputSchemaFor(métodos activos)` → idempotencia → leer y recalcular →
- * guardar pedido y líneas → `reservar_stock` → `reservar_canje` → evento `created`. Si algo falla después de
- * guardar, se liberan canje y stock y se borra el pedido (nunca llegó al cliente). Si ni eso se puede, el
- * pedido queda sin evento `created`: no se entrega por idempotencia y `pedidos_por_vencer` lo vence.
+ * `crear_pedido_checkout` (izao-db): pedido, líneas, `reservar_stock`, `reservar_canje` y evento `created` en
+ * una sola transacción; un rechazo no deja nada escrito.
  *
- * Pendiente (fuera de esta tarea): cobro (Wompi/Addi/Sistecrédito/abono), UTM y click IDs, `customer_id`
- * y `gateway_fee_estimated`. Lo ideal es una sola función transaccional en la base (ver bitácora).
+ * El cobro de Wompi lo prepara `pago-wompi.ts` (lo llama `http.ts`). Pendiente: Addi, Sistecrédito, abono,
+ * UTM y click IDs, `customer_id` y `gateway_fee_estimated`.
  */
 import { z } from 'zod';
 import { COUNTRY_CURRENCY, type CountryCode } from '@izao/core/money';
@@ -72,10 +71,17 @@ export interface RespuestaPedido {
   /** `true` si la clave de idempotencia ya tenía pedido. */
   repeated: boolean;
   warnings: string[];
+  /**
+   * Aditivo, solo con `next_step = pay_wompi`: intento de pago listo (`checkout_url` https del Web Checkout y
+   * vencimiento ISO). `null` si no se pudo preparar (p. ej. sin credenciales): la página del pedido lo reintenta
+   * con `POST /api/checkout/pago`.
+   */
+  payment?: { checkout_url: string; expires_at: string } | null;
 }
 
 export type ResultadoCheckout =
-  | { ok: true; status: 200 | 201; cuerpo: RespuestaPedido }
+  /** `order_id` es interno (para preparar el cobro); nunca va en `cuerpo`. */
+  | { ok: true; status: 200 | 201; order_id: string; cuerpo: RespuestaPedido }
   | { ok: false; status: 400 | 409 | 422 | 503; cuerpo: ErrorCheckout };
 
 const ESTADO_INICIAL: Record<PricingPaymentMethod, OrderStatus> = {
@@ -152,6 +158,7 @@ function respuesta(p: PedidoCreado, repetido: boolean, warnings: string[]): Extr
   return {
     ok: true,
     status: repetido ? 200 : 201,
+    order_id: p.id,
     cuerpo: {
       order,
       public_token: p.public_token,
@@ -172,19 +179,6 @@ async function porIdempotencia(
   if (previo.country_code !== entrada.country_code) return falla(409, { error: 'IDEMPOTENCY_CONFLICT' });
   if (!previo.completo) return falla(409, { error: 'CHECKOUT_IN_PROGRESS' });
   return respuesta(previo, true, []);
-}
-
-/** Libera canje y stock y borra el pedido. `false` si no se pudo (queda para `pedidos_por_vencer`). */
-async function deshacer(fuente: FuenteCheckout, orderId: string): Promise<boolean> {
-  try {
-    await fuente.liberarCanje(orderId);
-    await fuente.liberarStock(orderId);
-    await fuente.eliminarPedido(orderId);
-    return true;
-  } catch (e) {
-    registrar('deshacer', e);
-    return false;
-  }
 }
 
 function filaPedido(
@@ -337,68 +331,33 @@ export async function crearPedidoCheckout(
     const costoTotal = carrito.lineas.reduce((a, l) => a + (l.variante!.costo ?? 0n) * BigInt(l.max_quantity), 0n);
     const codigoId = dc?.status === 'applied' ? dc.id : null;
 
-    // 4. Guardar antes de cualquier pasarela (§10.2)
-    const ins = await fuente.insertarPedido(filaPedido(entrada, r, ubic, codigoId, costoTotal, ahora));
-    if (!ins.ok) {
-      // Otra petición con la misma clave ganó la carrera.
-      return (await porIdempotencia(fuente, entrada)) ?? falla(409, { error: 'CHECKOUT_IN_PROGRESS' });
-    }
-    const pedido = ins.pedido;
-
-    try {
-      await fuente.insertarItems(pedido.id, items);
-
-      const stock = await fuente.reservarStock(pedido.id);
-      if (!stock.ok) {
-        if (!(await deshacer(fuente, pedido.id))) return NO_DISPONIBLE();
-        if (stock.motivo !== 'sin_stock') return NO_DISPONIBLE();
+    // 4. Guardar antes de cualquier pasarela (§10.2), en una sola transacción de la base
+    const c = await fuente.crearPedido(filaPedido(entrada, r, ubic, codigoId, costoTotal, ahora), items);
+    if (c.ok) return respuesta(c.pedido, c.repetido, c.repetido ? [] : warnings);
+    switch (c.motivo) {
+      case 'idempotencia_conflicto':
+        return falla(409, { error: 'IDEMPOTENCY_CONFLICT' });
+      case 'en_proceso':
+        return falla(409, { error: 'CHECKOUT_IN_PROGRESS' });
+      case 'sin_stock':
         return falla(409, {
           error: 'STOCK_CHANGED',
-          lines: stock.faltantes
+          lines: (c.faltantes ?? [])
             .filter((x) => x.variant_id !== null)
             .map((x) => ({ variant_id: x.variant_id!, max_quantity: Math.max(0, Math.min(x.disponible, x.solicitado)) })),
         });
-      }
-
-      const canje = await fuente.reservarCanje(pedido.id);
-      if (!canje.ok) {
-        if (!(await deshacer(fuente, pedido.id))) return NO_DISPONIBLE();
-        if (canje.motivo === 'pedido_inexistente') return NO_DISPONIBLE();
-        return falla(422, { error: 'CODE_REJECTED', reason: MOTIVO_CANJE[canje.motivo], missing_amount: null });
-      }
-
-      await fuente.registrarEvento(pedido.id, {
-        type: 'created',
-        from_status: null,
-        to_status: pedido.status,
-        actor: 'system',
-        payload: {
-          payment_method: pedido.payment_method,
-          total_customer: pedido.total_customer.toString(),
-          discount_code: dc?.status === 'applied' ? dc.code : null,
-        },
-      });
-    } catch (e) {
-      registrar('crear', e);
-      await deshacer(fuente, pedido.id);
-      return NO_DISPONIBLE();
+      default:
+        if (c.motivo in MOTIVO_CANJE) {
+          return falla(422, {
+            error: 'CODE_REJECTED',
+            reason: MOTIVO_CANJE[c.motivo as RedemptionRejectReason],
+            missing_amount: null,
+          });
+        }
+        // sin_items, totales_inconsistentes, datos_invalidos u otro: error del servidor, nada quedó escrito.
+        console.error(`[checkout] crear_pedido_checkout rechazó: ${c.motivo}`);
+        return NO_DISPONIBLE();
     }
-
-    return respuesta(
-      {
-        ...pedido,
-        lines: items.map((i) => ({
-          variant_id: i.variant_id as string,
-          name: i.name_snapshot as string,
-          variant_label: i.variant_label as string | null,
-          quantity: i.quantity as number,
-          unit_price: BigInt(i.unit_price as string),
-          line_discount: BigInt(i.line_discount as string),
-        })),
-      },
-      false,
-      warnings,
-    );
   } catch (e) {
     registrar('checkout', e);
     return NO_DISPONIBLE();

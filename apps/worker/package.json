@@ -12,6 +12,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@izao/core": "workspace:*",
+    "@izao/wompi": "workspace:*",
     "bullmq": "^5.58.0",
     "ioredis": "^5.7.0"
   },

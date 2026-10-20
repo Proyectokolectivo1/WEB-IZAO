@@ -100,26 +100,82 @@ describe('fuente Supabase del checkout: mapeos', () => {
     expect(filaVariante.safeParse({ ...fila, variant_countries: [{ ...fila.variant_countries[0], price: 1.5 }] }).success).toBe(false);
   });
 
-  it('insertarPedido: choque con la clave de idempotencia → duplicado', async () => {
-    const cadena = {
-      insert: () => cadena,
-      select: () => cadena,
-      single: async () => ({
-        data: null,
-        error: { code: '23505', message: 'duplicate key value violates unique constraint "orders_checkout_idempotency_key_key"' },
-      }),
+  const ORDEN = {
+    country_code: 'CO',
+    currency_code: 'COP',
+    contact_first_name: 'Ana',
+    contact_last_name: 'Paz',
+    contact_phone_e164: '+573001234567',
+    payment_method: 'wompi',
+    status: 'pendiente_pago',
+    subtotal: '200000',
+    total_customer: '200000',
+    checkout_idempotency_key: 'clave-1',
+  };
+  const ITEM = {
+    product_id: '00000000-0000-4000-8000-000000000011',
+    variant_id: '00000000-0000-4000-8000-000000000012',
+    sku: 'SKU-1',
+    name_snapshot: 'Bruma',
+    variant_label: null,
+    quantity: 1,
+    unit_price: '200000',
+    line_discount: '0',
+  };
+
+  it('crearPedido llama crear_pedido_checkout y mapea montos de texto a bigint', async () => {
+    let args: unknown = null;
+    const rpc = async (_f: string, a: unknown) => {
+      args = a;
+      return {
+        data: {
+          ok: true,
+          estado: 'creado',
+          repetido: false,
+          order: {
+            id: '00000000-0000-4000-8000-000000000001',
+            number: 'IZ-CO-000001',
+            public_token: 'tok',
+            status: 'pendiente_pago',
+            country_code: 'CO',
+            currency_code: 'COP',
+            payment_method: 'wompi',
+            subtotal: '200000',
+            discount_amount: '0',
+            financing_surcharge_amount: '0',
+            total_customer: '200000',
+            cod_deposit_amount: '0',
+            cod_collect_amount: '0',
+            lines: [{ variant_id: ITEM.variant_id, name_snapshot: 'Bruma', variant_label: null, quantity: 1, unit_price: '200000', line_discount: '0' }],
+          },
+        },
+        error: null,
+      };
     };
-    fijarClienteDbParaPruebas({ from: () => cadena } as never);
-    expect(await fuenteSupabase.insertarPedido({ country_code: 'CO' })).toEqual({ ok: false, motivo: 'duplicado' });
+    fijarClienteDbParaPruebas({ rpc } as never);
+    const r = await fuenteSupabase.crearPedido(ORDEN, [ITEM]);
+    expect(r.ok && r.pedido.total_customer).toBe(200000n);
+    expect(r.ok && r.pedido.lines[0]!.unit_price).toBe(200000n);
+    // `status` no viaja: lo fija la base por método
+    expect((args as { p: { order: Record<string, unknown> } }).p.order.status).toBeUndefined();
   });
 
-  it('otros errores de la base se lanzan sin datos del cliente', async () => {
-    const cadena = {
-      insert: () => cadena,
-      select: () => cadena,
-      single: async () => ({ data: null, error: { code: '23514', message: 'orders_total_check' } }),
-    };
-    fijarClienteDbParaPruebas({ from: () => cadena } as never);
-    await expect(fuenteSupabase.insertarPedido({ country_code: 'CO' })).rejects.toThrow('orders.insert');
+  it('crearPedido: rechazo de stock con faltantes', async () => {
+    const rpc = async () => ({
+      data: { ok: false, estado: 'rechazado', motivo: 'sin_stock', faltantes: [{ variant_id: ITEM.variant_id, sku: 'SKU-1', solicitado: 2, disponible: 1, motivo: 'stock_insuficiente' }] },
+      error: null,
+    });
+    fijarClienteDbParaPruebas({ rpc } as never);
+    expect(await fuenteSupabase.crearPedido(ORDEN, [ITEM])).toEqual({
+      ok: false,
+      motivo: 'sin_stock',
+      faltantes: [{ variant_id: ITEM.variant_id, solicitado: 2, disponible: 1 }],
+    });
+  });
+
+  it('error de la base se lanza sin datos del cliente', async () => {
+    const rpc = async () => ({ data: null, error: { code: '23514', message: 'orders_total_check' } });
+    fijarClienteDbParaPruebas({ rpc } as never);
+    await expect(fuenteSupabase.crearPedido(ORDEN, [ITEM])).rejects.toThrow('crear_pedido_checkout');
   });
 });

@@ -1,24 +1,28 @@
 # Bitácora izao-pagos
 
 ## Hecho
-- 3a7e66b `POST /api/checkout/preview` y `POST /api/checkout` (§7.7, §10, §11, §17.1). Código en `apps/web/lib/checkout/` (fuente.ts interfaz, fuente-supabase.ts, carrito.ts, vista-previa.ts, crear-pedido.ts, http.ts, limite-tasa.ts) y rutas en `apps/web/app/api/checkout/`. 57 pruebas nuevas (fuente en memoria que imita reservar_stock/reservar_canje); web 322 y core 779 verdes; lint y typecheck limpios.
+- 3a7e66b `POST /api/checkout/preview` y `POST /api/checkout` (§7.7, §10, §11, §17.1) en `apps/web/lib/checkout/`.
+- (este commit) Wompi pago completo (§12.2, D-024): `@izao/wompi` (credenciales, firmas, Web Checkout, eventos, cliente, mock), `@izao/core/credentials` (AES-256-GCM), `comisionPasarela` en pricing, `lib/checkout/pago-wompi.ts` + `fuente-pagos-supabase.ts`, `POST /api/checkout/pago`, `payment` aditivo en `POST /api/checkout`, webhook `app/api/webhooks/wompi/` (firma, `webhook_events`, BullMQ), job `apps/worker/src/jobs/payments/`. `crear_pedido_checkout` integrado (sin deshacer ni borrado). Tope de `max_quantity` en vista previa.
 
 ## Contrato
-- Vista previa: el de `lib/store/carrito/contrato.ts` sin cambios incompatibles. Acepta `country` en mayúsculas o minúsculas. Aditivo: `payment_method?` en la entrada y `totals {currency, payment_method, payment_method_available, surcharge, total_customer, cod_deposit, cod_collect, available_methods[], manual_allowed, messages[]}` en la salida. `code.status = 'withdrawn'` solo si se pide con addi/sistecredito (el bolso nunca lo manda). Subtotal, descuento y `line_discount` se calculan sobre `max_quantity`. Línea inexistente: `unit_price "0"`, `max_quantity 0`.
-- Checkout: cuerpo = `checkoutInputSchema` de core. 201 crea / 200 repite: `{order (forma orderSummarySchema, montos texto), public_token, next_step (pay_wompi|pay_addi|pay_sistecredito|pay_cod_deposit|manual_whatsapp), status_path, repeated, warnings[]}`. Errores `{error, issues?, lines?, reason?, missing_amount?}`: 400 INVALID_INPUT, 409 STOCK_CHANGED/IDEMPOTENCY_CONFLICT/CHECKOUT_IN_PROGRESS, 422 CODE_REJECTED/METHOD_UNAVAILABLE/SHIPPING_LOCATION_INVALID, 413, 415, 429 RATE_LIMITED (Retry-After), 503 UNAVAILABLE.
-- Estado inicial: wompi/addi/sistecredito → pendiente_pago; cod → esperando_abono; manual → pendiente_manual. Evento `created` en order_events (la creación no es transición; no pasa por `transicionar`).
+- Checkout: igual que antes + `payment: {checkout_url, expires_at} | null` solo si `next_step = pay_wompi`.
+- `POST /api/checkout/pago` `{country, token}` → 200 `{checkout_url, expires_at, reused}`; 404 NOT_FOUND; 409/410/503 `{error:'PAYMENT_NOT_AVAILABLE', reason: metodo|estado|pagado|vencido|conflicto|sin_credenciales}`; 400; 429.
+- La tienda ya lee `payments` (created/pending, https, sin vencer) en `/pedido/[token]`: no hay que cambiarla.
+- Cola `pagos`, job `wompi.transaccion` `{event_id, transaction_id}`, id `wompi.{event_id}` (constantes en `@izao/wompi`).
+- Variables nuevas: `CHECKOUT_PREVIEW_MAX_QUANTITY` (10), `CHECKOUT_PAY_RATE_LIMIT_PER_MIN` (20), `SITE_URL`, `REDIS_URL` en web; worker necesita `APP_ENCRYPTION_KEY`.
 
 ## Pendiente
-- Cobro: link de Wompi, Addi, Sistecrédito y abono de contra entrega (el checkout solo deja el pedido y `next_step`).
-- UTM y click IDs (no hay cookie de primer/último toque), `customer_id`, `gateway_fee_estimated` (queda 0).
-- Rate limit en memoria del proceso (provisional): pasar a Redis cuando exista el cliente compartido. Variables opcionales `CHECKOUT_RATE_LIMIT_PER_MIN` (10) y `CHECKOUT_PREVIEW_RATE_LIMIT_PER_MIN` (60).
-- Turnstile: no hay infraestructura (ni llave ni widget); §26.1 no lo exige en checkout. Si se quiere, cabecera `x-turnstile-token` verificada en `http.ts`.
-- `fuente-supabase.ts` sin probar contra la base real (faltan llaves en `.env.local`): verificar los `select` embebidos y la inserción de bigint como texto.
+- izao-infra: registrar la cola en `apps/worker/src/{queues,index}.ts`: `createWorker(COLA_PAGOS, crearProcesadorPagos(dependenciasPagosDesdeEnv(encolarTransportadora)), conexión)` de `jobs/payments/index.ts`; el build del worker (`tsc` con `rootDir src`) no compila paquetes del workspace: pasar a bundler (tsup/esbuild) o `tsx`.
+- izao-logistica: función `encolarTransportadora(orderId)` (job `carrier.create`, id fijo por pedido).
+- izao-db: índice único parcial `payments (provider, provider_reference) where provider_reference is not null` (hoy la carrera de dos intentos iguales se resuelve en código) y función atómica `aplicar_transicion_pedido` (hoy update condicional + insert del evento, en dos sentencias).
+- izao-admin: módulo de integraciones debe cifrar con `cifrarCredenciales` de `@izao/core/credentials` (formato en D-024) y permitir una sola credencial activa por proveedor/país.
+- Probar contra sandbox real (sin llaves en `.env.local`): un evento real para confirmar el checksum (el ejemplo de la documentación es ilustrativo) y `bytea` vía PostgREST.
+- Abono de contra entrega (`payment_links`), Addi, Sistecrédito; el job deja `cod_deposit`/`financing` sin procesar (`proposito_no_soportado`).
+- Rate limit en memoria (pasar a Redis); UTM, `customer_id`, `gateway_fee_estimated`.
 
 ## Siguiente paso exacto
-Link de pago Wompi (skill izao-wompi) a partir de `next_step = pay_wompi`, con credenciales sandbox del panel.
+Link de abono de contra entrega por `POST /v1/payment_links` + `pay_links` y su rama en el job (skill izao-contraentrega-whatsapp).
 
 ## Decisiones que necesitan al líder
-- Atomicidad: hoy son llamadas separadas (insert pedido → líneas → reservar_stock → reservar_canje) con deshacer (liberar canje, liberar stock, borrar pedido). Si deshacer falla, el pedido queda sin evento `created`, no se entrega por idempotencia y lo vence `pedidos_por_vencer`. Propuesta: pedir a izao-db `crear_pedido_checkout(p jsonb)` transaccional.
-- `max_quantity` revela existencias hasta la cantidad pedida (pedir 999 muestra el stock real hasta 999). Lo pide el contrato; mitigado con el límite por IP. ¿Acotarlo (p. ej. a 10)?
-- Pedidos fallidos se borran (no se transicionan a expirado/abandonado) para no ensuciar métricas de abandono; quedan huecos en la numeración IZ-XX-NNNNNN.
+- Lint de `apps/web` falla por las carpetas sin seguimiento `.next-tienda/` y `.next-tienda-dev/` (salida de compilación de izao-tienda): agregarlas al ignore de ESLint/git.
+- Se agregaron dependencias: `@izao/wompi`, `bullmq`, `ioredis` en `apps/web`; `@izao/core`, `@izao/wompi` en `apps/worker`; `@izao/wompi` en `transpilePackages` de `next.config.ts` (cambia `pnpm-lock.yaml`).

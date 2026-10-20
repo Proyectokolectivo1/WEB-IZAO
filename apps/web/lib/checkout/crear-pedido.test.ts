@@ -100,9 +100,9 @@ describe('POST /api/checkout: crear pedido', () => {
         evento: expect.objectContaining({ type: 'created', from_status: null, to_status: 'pendiente_pago', actor: 'system' }),
       },
     ]);
-    // Orden de las operaciones: guardar antes de reservar; código después del stock
-    const orden = f.llamadas.filter((x) => ['insertarPedido', 'insertarItems', 'reservarStock', 'reservarCanje'].includes(x));
-    expect(orden).toEqual(['insertarPedido', 'insertarItems', 'reservarStock', 'reservarCanje']);
+    // Una sola escritura: crear_pedido_checkout hace pedido, líneas, stock, canje y evento en una transacción
+    expect(f.llamadas.filter((x) => x === 'crearPedido')).toEqual(['crearPedido']);
+    expect(r.ok && r.order_id).toBe(p.pedido.id);
   });
 
   it('el navegador no puede mandar precios ni totales', async () => {
@@ -248,7 +248,7 @@ describe('POST /api/checkout: crear pedido', () => {
     expect(f.llamadas).not.toContain('insertarPedido');
   });
 
-  it('carrera por el último producto: reservar_stock falla → se deshace el pedido y responde 409', async () => {
+  it('carrera por el último producto: la base rechaza sin escribir nada y responde 409', async () => {
     const f = fuenteDePrueba();
     const leer = f.variantes.bind(f);
     f.variantes = async (pais, ids) => {
@@ -259,8 +259,7 @@ describe('POST /api/checkout: crear pedido', () => {
     const r = await crearPedidoCheckout(f, cuerpo({ items: [{ variant_id: V2, quantity: 1 }], discount_code: 'DESC10' }), AHORA);
     expect(r).toMatchObject({ ok: false, status: 409, cuerpo: { error: 'STOCK_CHANGED', lines: [{ variant_id: V2, max_quantity: 0 }] } });
     expect(f.pedidos.size).toBe(0);
-    expect(f.eliminados).toHaveLength(1);
-    expect(f.llamadas).not.toContain('reservarCanje');
+    expect(f.eventos).toHaveLength(0);
     expect(f.codigos.find((c) => c.code === 'DESC10')!.usage_count).toBe(0);
   });
 
@@ -284,7 +283,7 @@ describe('POST /api/checkout: crear pedido', () => {
     expect(f.pedidos.size).toBe(0);
   });
 
-  it('reservar_canje rechaza (cupo agotado en carrera) → libera stock, deshace y responde 422', async () => {
+  it('reservar_canje rechaza (cupo agotado en carrera) → nada escrito, stock intacto y 422', async () => {
     const f = fuenteDePrueba();
     f.canjeRechazo = 'limite_total';
     const r = await crearPedidoCheckout(f, cuerpo({ discount_code: 'DESC10' }), AHORA);
@@ -293,32 +292,36 @@ describe('POST /api/checkout: crear pedido', () => {
     expect(f.vars.get(V1)!.disponible).toBe(5);
   });
 
-  it('falla al guardar las líneas → deshace el pedido y responde 503', async () => {
+  it('error de la base al crear → 503 y nada escrito (la transacción se deshace sola)', async () => {
     const f = fuenteDePrueba();
-    f.fallar.add('insertarItems');
+    f.fallar.add('crearPedido');
     const r = await crearPedidoCheckout(f, cuerpo(), AHORA);
     expect(r).toMatchObject({ ok: false, status: 503, cuerpo: { error: 'UNAVAILABLE' } });
     expect(f.pedidos.size).toBe(0);
   });
 
-  it('si no se puede liberar, el pedido no se borra: lo vence pedidos_por_vencer', async () => {
+  it('otra petición con la misma clave a mitad de camino → 409 CHECKOUT_IN_PROGRESS', async () => {
     const f = fuenteDePrueba();
-    f.canjeRechazo = 'limite_total';
-    f.fallar.add('liberarStock');
-    const r = await crearPedidoCheckout(f, cuerpo({ discount_code: 'DESC10' }), AHORA);
-    expect(r.status).toBe(503);
-    expect(f.eliminados).toHaveLength(0);
-    expect(soloPedido(f).stock).toBe('reserved');
+    f.enProceso = true;
+    const r = await crearPedidoCheckout(f, cuerpo(), AHORA);
+    expect(r).toMatchObject({ ok: false, status: 409, cuerpo: { error: 'CHECKOUT_IN_PROGRESS' } });
   });
 
-  it('un pedido a medias con la misma clave no se entrega como creado → 409 CHECKOUT_IN_PROGRESS', async () => {
+  it('la base detecta la repetición (carrera tras la lectura de idempotencia) → 200 repeated con el mismo pedido', async () => {
     const f = fuenteDePrueba();
-    f.canjeRechazo = 'limite_total';
-    f.fallar.add('liberarStock');
-    await crearPedidoCheckout(f, cuerpo({ discount_code: 'DESC10' }), AHORA);
-    f.fallar.clear();
-    const r = await crearPedidoCheckout(f, cuerpo({ discount_code: 'DESC10' }), AHORA);
-    expect(r).toMatchObject({ ok: false, status: 409, cuerpo: { error: 'CHECKOUT_IN_PROGRESS' } });
+    await crearPedidoCheckout(f, cuerpo(), AHORA);
+    f.pedidoPorIdempotencia = async () => null; // la lectura previa no lo vio
+    const r = await crearPedidoCheckout(f, cuerpo(), AHORA);
+    expect(r.status).toBe(200);
+    expect(exito(r)).toMatchObject({ repeated: true, public_token: 'tok1' });
+    expect(f.pedidos.size).toBe(1);
+  });
+
+  it('totales rechazados por la base (totales_inconsistentes/datos_invalidos) → 503 sin detalles', async () => {
+    const f = fuenteDePrueba();
+    f.crearPedido = async () => ({ ok: false, motivo: 'totales_inconsistentes' });
+    const r = await crearPedidoCheckout(f, cuerpo(), AHORA);
+    expect(r).toEqual({ ok: false, status: 503, cuerpo: { error: 'UNAVAILABLE' } });
   });
 
   it('ciudad que no es de la región o del país → 422 SHIPPING_LOCATION_INVALID', async () => {

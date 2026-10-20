@@ -35,6 +35,20 @@ describe('vista previa del carrito (POST /api/checkout/preview)', () => {
     expect(r!.subtotal).toBe('300000');
   });
 
+  it('con tope configurable, pedir de más no revela el inventario real (hay 5, tope 3)', async () => {
+    const f = fuenteDePrueba();
+    const r = await vistaPrevia(f, entrada({ country: 'CO', items: [{ variant_id: V1, quantity: 999 }] }), AHORA, {
+      topeCantidad: 3,
+    });
+    expect(r!.lines[0]!.max_quantity).toBe(3);
+    expect(r!.subtotal).toBe('600000');
+    // Debajo del tope no cambia nada
+    const r2 = await vistaPrevia(f, entrada({ country: 'CO', items: [{ variant_id: V1, quantity: 2 }] }), AHORA, {
+      topeCantidad: 3,
+    });
+    expect(r2!.lines[0]!.max_quantity).toBe(2);
+  });
+
   it('agotado, no vendible, inexistente o de otro país llegan con max_quantity 0', async () => {
     const f = fuenteDePrueba();
     f.vars.get(V1)!.disponible = 0;

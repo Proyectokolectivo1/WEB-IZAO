@@ -18,8 +18,11 @@
   "dependencies": {
     "@izao/core": "workspace:*",
     "@izao/ui": "workspace:*",
+    "@izao/wompi": "workspace:*",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
+    "bullmq": "^5.58.0",
+    "ioredis": "^5.7.0",
     "motion": "^12.0.0",
     "next": "^15.5.0",
     "react": "^19.1.0",

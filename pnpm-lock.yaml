@@ -38,12 +38,21 @@ importers:
       '@izao/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@izao/wompi':
+        specifier: workspace:*
+        version: link:../../packages/integrations/wompi
       '@supabase/ssr':
         specifier: ^0.12.7
         version: 0.12.7(@supabase/supabase-js@2.118.0)
       '@supabase/supabase-js':
         specifier: ^2.118.0
         version: 2.118.0
+      bullmq:
+        specifier: ^5.58.0
+        version: 5.81.5
+      ioredis:
+        specifier: ^5.7.0
+        version: 5.11.1
       motion:
         specifier: ^12.0.0
         version: 12.43.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -99,6 +108,12 @@ importers:
 
   apps/worker:
     dependencies:
+      '@izao/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@izao/wompi':
+        specifier: workspace:*
+        version: link:../../packages/integrations/wompi
       bullmq:
         specifier: ^5.58.0
         version: 5.81.5
@@ -142,6 +157,25 @@ importers:
         version: 5.9.3
 
   packages/integrations/mastershop:
+    dependencies:
+      '@izao/core':
+        specifier: workspace:*
+        version: link:../../core
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.5
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.7(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)
+
+  packages/integrations/wompi:
     dependencies:
       '@izao/core':
         specifier: workspace:*
