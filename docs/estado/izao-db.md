@@ -1,20 +1,27 @@
 # Bitácora izao-db
 
 ## Hecho
-- Oleadas 0 y 1 (esquema, RLS, stock/canje/expiración, consentimientos, revisión A2/M3/B4/B5): ver commits previos; última: f63d558.
-- T2.7 (RPC catálogo): migración `20261020042322_rpc_catalogo.sql` aplicada y commit 8da6bc2. pgTAP 16 verde (23 pruebas, plan corregido a 23).
-  - `catalog_page(p_country,p_filters,p_sort,p_cursor,p_limit)`, `catalog_search_page(p_country,p_q,p_filters,p_sort,p_cursor,p_limit)`, `catalog_suggest(p_country,p_q,p_limit)`, `catalog_product(p_country,p_slug)`, `catalog_related(p_country,p_product_id,p_limit)`; todas jsonb, solo service_role.
-  - Retorno de listado: `{items[], next_cursor|null, total_estimado|null, precio_min, precio_max}`; cursor `{o,s,v,id}` opaco.
-  - Filtros: gender, brands[], families[], concentration, category(slug), availability('in_stock'), price_min, price_max, with_total. Órdenes: featured, sales, newest, price_asc, price_desc, discount (+relevance en búsqueda).
+- Oleadas 0 y 1: ver commits previos (última f63d558). T2.7 RPC catálogo: 8da6bc2, 343bfbe (pgTAP 16, 23 pruebas).
+- T2.8 `apps/web/lib/db/` (cliente.ts: clienteDb, llamarRpc, ErrorDb; catalogo.ts: catalogPage/SearchPage/Suggest/Product/Related con zod): 8f33a8c. Avisado a izao-tienda e izao-admin-2.
+- Filtro `collection` en catalog_page/search + `stock_bajo` nunca null: migración 20261020043428, pgTAP 17 (10/10): 08d0a46.
+
+## Contrato pedido por izao-admin (reenviado por izao-admin-2; no perder)
+`admin_guardar_producto(p jsonb) -> {ok, product_id, motivo?, detalle?}`. Solo service_role, search_path vacío, una transacción.
+- p = {product:{id?, name, slug, short_description, description_html, brand_id, gender_id, family_id, concentration_id, notes_top[], notes_heart[], notes_base[], occasion[], season[], longevity, sillage, seo_title, seo_description, status}, category_ids[], countries[{country_code, is_visible, is_featured, featured_rank, badges[]}], options[{id, name, sort_order, values[{id, value, sort_order}]}], variants[{id, sku, option_value_ids[], weight_kg, is_default, mastershop_product_id, mastershop_variant_id, image_id, sort_order, countries[{country_code, is_active, price, compare_at_price, cost, stock, low_stock_threshold}]}], images[{media_id, role, sort_order}]}.
+- UUID de options/values/variants los genera la app. Sin product.id = alta. Sincronización completa: lo que no venga se borra, salvo variantes con order_items => ok=false 'variante_con_pedidos'.
+- Dinero entero en unidad menor (number o string numérico). Nunca toca stock_reserved. published_at = now() la primera vez que is_visible pasa a true. Refresco normal de catalog_listing (sin skip).
+- Motivos: sin_vinculo_mastershop (variante activa en CO, producto visible en CO, sin mastershop_product_id; id_variant puede ser null según §14.3), variante_con_pedidos, sku_duplicado, slug_duplicado, sin_variante_por_defecto (0 o más de 1), datos_invalidos + detalle corto.
+`admin_importar_catalogo(p jsonb)`: p = {modo:'simular'|'aplicar', filas:[payload del punto 1 por producto, sin UUID de options/values/variants: resolver por (producto, nombre opción/valor) y sku]}.
+- Devuelve {ok, creados, actualizados, sin_cambios, errores[{indice, sku?, motivo, detalle?}], cambios[{indice, tipo:'crear'|'actualizar', campos[]}]}. simular no escribe.
+- aplicar: skip_catalog_refresh='on', al final refresh_catalog_listing_many(ids). Idempotente por sku y slug. Atómico por producto: una fila con error se reporta y no detiene el lote. Imágenes ya resueltas (media_id).
+- Envoltorios en '@/lib/db/admin-catalogo'. Al terminar: avisar a izao-admin e izao-admin-2 (lanzan T2.6c y T2.7).
 
 ## Pendiente
-1. T2.7 rendimiento: `explain (analyze, buffers)` de cada RPC (CO, 400 productos) y 50 corridas para p95 < 120 ms; confirmar uso de los índices nuevos (`set enable_seqscan=off` si el planner prefiere seq scan con 400 filas). Anotar números aquí.
-2. T2.8: `apps/web/lib/db/` (cliente server-only tipado + envoltorios `catalogPage/catalogSuggest/catalogProduct/catalogRelated` con zod). Falta añadir `@izao/db` como dependencia de apps/web (package.json lo toca otro agente; usar `pnpm install` y avisar) o importar tipos por ruta relativa. Reutilizar `crearClienteServicio()` de `lib/auth/supabase/servicio.ts`.
-3. T2.9: confirmar `media.variants`/`product_images` para §7.4 y §27.1 (ya alcanzan: roles primary/hover/gallery, variants jsonb por ancho, lqip). Falta fixture/función que asigne imágenes de prueba a ~20 productos (filas `media` con rutas de prueba, sin binarios).
-4. Peticiones de otros agentes sin atender:
-   - izao-admin: `admin_guardar_producto(p jsonb)` y `admin_importar_catalogo(p jsonb)` (contrato en su mensaje; sync transaccional del producto, no tocar stock_reserved, `variante_con_pedidos`, `sin_vinculo_mastershop`, modo simular/aplicar con skip_catalog_refresh).
-   - izao-tienda: nombres del cliente en lib/db y lecturas de contenido por país (site_settings, theme_overrides, announcements, banners vigentes, home_sections, content_slots, categories con árbol y media_json, colecciones, taxonomías con slugs usados, pages por slug). Propuesta: RPC `store_*` o que izao-tienda lea tabla por tabla con select.
-5. Al final: pgTAP 01–16 en el remoto, `get_advisors`, regenerar `src/types.ts`, `pnpm lint && pnpm typecheck && pnpm test`.
+1. admin_guardar_producto + admin_importar_catalogo (contrato arriba), pgTAP 18/19, envoltorios.
+2. store_*: no se crean salvo pedido de izao-tienda (lee con selects).
+3. T2.9 fixture de imágenes de prueba (~20 productos, rutas de prueba, sin binarios).
+4. Rendimiento T2.7: explain (analyze, buffers) y p95 de 50 corridas por RPC.
+5. Cierre: pgTAP 01–19 remoto, advisors, regenerar src/types.ts, lint/typecheck/test.
 
-## Siguiente paso exacto
-Medir rendimiento (punto 1), luego crear `apps/web/lib/db/` (punto 2).
+## Notas
+- Correr pgTAP por el MCP: pgTAP 1.3.3 no tiene __tresults__; envolver cada aserción en `insert into tap(l) select ...` (temp table) y al final resumir ok/fallos.
