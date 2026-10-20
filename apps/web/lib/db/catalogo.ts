@@ -50,7 +50,7 @@ export const cursorSchema = z
     o: z.string().max(20),
     s: z.number().int().min(0).max(1),
     v: z.string().max(200).nullable(),
-    id: z.uuid(),
+    id: z.guid(),
   })
   .strict();
 export type CursorCatalogo = z.infer<typeof cursorSchema>;
@@ -60,7 +60,7 @@ const limite = (max: number) => z.number().int().min(1).max(max);
 // ── Salidas ──────────────────────────────────────────────────────────────────────────────────────
 
 export const mediaSchema = z.object({
-  media_id: z.uuid().optional(),
+  media_id: z.guid().optional(),
   base_path: z.string().optional(),
   variants: z.record(z.string(), z.string()).nullable().optional(),
   lqip: z.string().nullable().optional(),
@@ -71,7 +71,7 @@ export const mediaSchema = z.object({
 export type MediaDb = z.infer<typeof mediaSchema>;
 
 export const itemCatalogoSchema = z.object({
-  product_id: z.uuid(),
+  product_id: z.guid(),
   slug: z.string(),
   name: z.string(),
   brand_name: z.string().nullable(),
@@ -140,10 +140,10 @@ export const fichaProductoSchema = itemCatalogoSchema.extend({
   seo_description: z.string().nullable(),
   variants: z.array(
     z.object({
-      id: z.uuid(),
+      id: z.guid(),
       sku: z.string(),
       is_default: z.boolean(),
-      option_value_ids: z.array(z.uuid()),
+      option_value_ids: z.array(z.guid()),
       price: monto,
       compare_at_price: monto.nullable(),
       stock_disponible: z.number().int().nonnegative(),
@@ -154,9 +154,9 @@ export const fichaProductoSchema = itemCatalogoSchema.extend({
   ),
   options: z.array(
     z.object({
-      id: z.uuid(),
+      id: z.guid(),
       name: z.string(),
-      values: z.array(z.object({ id: z.uuid(), value: z.string() })),
+      values: z.array(z.object({ id: z.guid(), value: z.string() })),
     }),
   ),
   images: z.array(
@@ -261,7 +261,7 @@ export async function catalogProduct(pais: PaisEntrada, slugProducto: string): P
 export async function catalogRelated(pais: PaisEntrada, productoId: string, lim = 8): Promise<ItemCatalogoDb[]> {
   return llamarRpc(
     'catalog_related',
-    { p_country: paisSchema.parse(pais), p_product_id: z.uuid().parse(productoId), p_limit: limite(24).parse(lim) },
+    { p_country: paisSchema.parse(pais), p_product_id: z.guid().parse(productoId), p_limit: limite(24).parse(lim) },
     z.array(itemCatalogoSchema),
   );
 }
