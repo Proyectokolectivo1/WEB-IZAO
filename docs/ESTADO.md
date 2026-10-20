@@ -30,6 +30,7 @@ Lo mantiene el líder. Leer esto y `CLAUDE.md` antes que cualquier otra cosa; la
 **Técnico:** `POST /api/checkout/preview` (vista previa del carrito, izao-pagos, Oleada 3: `CODE_INVALID` único, `max_quantity = min(existencias, pedida)`, `line_discount` por línea, rate limit Redis y Turnstile); F0b (HTTPS y backup real en el VPS); rate limiting con Redis; devolver stock al cancelar o devolver; panel debe impedir `payment_method_settings` activo con `cod_enabled` falso; suites pgTAP 01–12 sin repetir tras las últimas migraciones.
 
 ## Oleada en curso
+Oleada 2 (F1 catálogo; F2 contenido va después). Contratos de la tienda para el panel de contenido: claves `content_slots` `medios_de_pago`, `asesoria` y `busquedas_populares`; los beneficios y la asesoría del home salen de `home_sections.config` (`items[{icon,title,text}]` y `title/body/cta_label/cta_url`). Páginas legales: la tienda lee solo `pages.status = 'published'`. Reemplaza al texto siguiente cuando se cierre.
 Ninguna lanzada. Propuesta: Oleada 2 (F1 + F2): catálogo, ficha, carrito, panel de productos y contenido. Plan en la conversación del líder; al aprobarse se copia aquí.
 
 ## Reglas de continuidad y contexto
