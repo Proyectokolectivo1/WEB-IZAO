@@ -13,7 +13,7 @@ import { Totales, type FilaTotal } from './Totales';
 
 /** Página completa del bolso (`/{pais}/carrito`): lo mismo que el drawer, con aire y un resumen a la vista. */
 export function PaginaCarrito() {
-  const { pais, notaEnvio, lineas, listo, cambiar, quitar, unidades } = useCarrito();
+  const { pais, notaEnvio, valorEnvio, lineas, listo, cambiar, quitar, unidades } = useCarrito();
   const vista = useVistaPrevia();
   const precio = (v: bigint | string) => formatearPrecio(v, pais);
 
@@ -42,7 +42,7 @@ export function PaginaCarrito() {
   const total = vista.subtotal - vista.descuento;
   const filas: FilaTotal[] = [{ clave: 'sub', etiqueta: T.carrito.subtotal, valor: precio(vista.subtotal) }];
   if (vista.descuento > 0n) filas.push({ clave: 'desc', etiqueta: T.carrito.descuento, valor: `−${precio(vista.descuento)}`, tono: 'positivo' });
-  filas.push({ clave: 'envio', etiqueta: T.carrito.envio, valor: T.carrito.envioGratis });
+  filas.push({ clave: 'envio', etiqueta: T.carrito.envio, valor: valorEnvio });
 
   return (
     <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-16 xl:grid-cols-[minmax(0,1fr)_26rem]">

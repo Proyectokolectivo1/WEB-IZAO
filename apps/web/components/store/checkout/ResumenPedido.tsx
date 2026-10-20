@@ -22,7 +22,7 @@ interface Props {
 
 /** Resumen fijo del checkout: productos, descuento, cargo por financiación, envío, total y, en contra entrega, abono y saldo. */
 export function ResumenPedido({ lineas, resumen, esContraEntrega, precio, codigo, revisando, onAplicar, onQuitar }: Props) {
-  const { notaEnvio } = useCarrito();
+  const { notaEnvio, valorEnvio } = useCarrito();
   const filas: FilaTotal[] = [{ clave: 'sub', etiqueta: TC.resumen.subtotal, valor: precio(resumen.subtotal) }];
   if (resumen.descuento > 0n) {
     filas.push({ clave: 'desc', etiqueta: TC.resumen.descuento, valor: `−${precio(resumen.descuento)}`, tono: 'positivo' });
@@ -30,7 +30,7 @@ export function ResumenPedido({ lineas, resumen, esContraEntrega, precio, codigo
   if (resumen.recargo > 0n && resumen.recargoPct) {
     filas.push({ clave: 'rec', etiqueta: TC.resumen.recargo(resumen.recargoPct.replace('.', ',')), valor: precio(resumen.recargo) });
   }
-  filas.push({ clave: 'envio', etiqueta: TC.resumen.envio, valor: TC.resumen.envioGratis });
+  filas.push({ clave: 'envio', etiqueta: TC.resumen.envio, valor: valorEnvio });
 
   return (
     <div>

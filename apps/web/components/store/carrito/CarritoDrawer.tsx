@@ -19,7 +19,7 @@ interface Codigo {
 }
 
 export function CarritoDrawer() {
-  const { pais, notaEnvio, lineas, abierto, cerrar, cambiar, quitar, reemplazar } = useCarrito();
+  const { pais, notaEnvio, valorEnvio, lineas, abierto, cerrar, cambiar, quitar, reemplazar } = useCarrito();
   const [codigoEscrito, setCodigoEscrito] = useState('');
   const [codigo, setCodigo] = useState<Codigo | null>(null);
   const [revisando, setRevisando] = useState(false);
@@ -141,7 +141,7 @@ export function CarritoDrawer() {
               ) : null}
               <div className="flex justify-between">
                 <dt>{T.carrito.envio}</dt>
-                <dd>{T.carrito.envioGratis}</dd>
+                <dd>{valorEnvio}</dd>
               </div>
             </dl>
             <p className="text-[0.8125rem] text-ink/80">{notaEnvio}</p>

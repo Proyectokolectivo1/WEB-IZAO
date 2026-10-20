@@ -13,6 +13,7 @@ import type {
   ItemCatalogo,
   OpcionesFiltros,
   PaginaCatalogo,
+  PaginaLegal,
   VarianteProducto,
 } from './types';
 
@@ -226,6 +227,40 @@ function categoriasEjemplo(): CategoriaMenu[] {
   ];
 }
 
+// Páginas de muestra para ver el diseño y los enlaces del checkout sin base; el texto no es contenido real.
+const PAGINAS_EJEMPLO: PaginaLegal[] = [
+  {
+    slug: 'politica-de-envios',
+    kind: 'envios',
+    title: 'Política de envíos',
+    content_html: '<p>Texto de ejemplo para ver el diseño de las páginas legales.</p><h2>Cobertura</h2><ul><li>Enviamos a todo el país.</li><li>Te avisamos por WhatsApp cuando salga tu pedido.</li></ul>',
+    version: 1,
+    updated_at: '2026-10-01T00:00:00Z',
+    seo_title: null,
+    seo_description: null,
+  },
+  {
+    slug: 'terminos-y-condiciones',
+    kind: 'terminos',
+    title: 'Términos y condiciones',
+    content_html: '<p>Texto de ejemplo.</p>',
+    version: 1,
+    updated_at: '2026-10-01T00:00:00Z',
+    seo_title: null,
+    seo_description: null,
+  },
+  {
+    slug: 'tratamiento-de-datos',
+    kind: 'tratamiento_datos',
+    title: 'Tratamiento de datos personales',
+    content_html: '<p>Texto de ejemplo.</p>',
+    version: 1,
+    updated_at: '2026-10-01T00:00:00Z',
+    seo_title: null,
+    seo_description: null,
+  },
+];
+
 export const repoEjemplo: TiendaRepo = {
   async tema() {
     return { colorTokens: {}, tipografia: {}, overridePais: null };
@@ -355,16 +390,10 @@ export const repoEjemplo: TiendaRepo = {
     };
   },
   async paginaLegal(_pais, slug) {
-    if (slug !== 'politica-de-envios') return null;
-    return {
-      slug,
-      title: 'Política de envíos',
-      content_html: '<p>Texto de ejemplo para ver el diseño de las páginas legales.</p><h2>Cobertura</h2><ul><li>Enviamos a todo el país.</li><li>Te avisamos por WhatsApp cuando salga tu pedido.</li></ul>',
-      version: 1,
-      updated_at: '2026-10-01T00:00:00Z',
-      seo_title: null,
-      seo_description: null,
-    };
+    return PAGINAS_EJEMPLO.find((x) => x.slug === slug) ?? null;
+  },
+  async paginaPorTipo(_pais, kind) {
+    return PAGINAS_EJEMPLO.find((x) => x.kind === kind) ?? null;
   },
   async coleccion(_pais, slug) {
     return slug === 'hot-sale' ? { slug, name: 'Hot Sale' } : null;
@@ -373,6 +402,6 @@ export const repoEjemplo: TiendaRepo = {
     return [];
   },
   async paginas() {
-    return [];
+    return PAGINAS_EJEMPLO.map(({ slug, title, kind }) => ({ slug, title, kind }));
   },
 };

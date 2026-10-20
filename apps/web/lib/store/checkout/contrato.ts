@@ -8,7 +8,7 @@
  *              Nunca viajan precios ni totales (regla 2): el servidor recalcula todo.
  *   200 (repite) / 201 (crea): { order, public_token, next_step, status_path, repeated, warnings }
  *   error: { error, issues?: [{ path, message }], lines?: [{ variant_id, max_quantity }], reason?, missing_amount? }
- *     400 INVALID_INPUT · 409 STOCK_CHANGED | IDEMPOTENCY_CONFLICT | CHECKOUT_IN_PROGRESS ·
+ *     400 INVALID_INPUT · 409 STOCK_CHANGED | IDEMPOTENCY_CONFLICT | CHECKOUT_IN_PROGRESS | DATA_POLICY_OUTDATED (+ current_version) ·
  *     422 CODE_REJECTED | METHOD_UNAVAILABLE | SHIPPING_LOCATION_INVALID · 413 · 415 · 429 RATE_LIMITED · 503 UNAVAILABLE
  *
  * El servidor todavía no devuelve un enlace de pasarela (el cobro es la siguiente tarea de izao-pagos): tras crear el
@@ -34,6 +34,8 @@ export const ErrorCheckout = z.object({
   lines: z.array(z.object({ variant_id: z.string(), max_quantity: z.number().int().min(0) })).optional(),
   reason: z.string().nullish(),
   missing_amount: z.string().nullish(),
+  /** `DATA_POLICY_OUTDATED`: versión vigente de la política de datos (`pages.version` en texto). */
+  current_version: z.string().nullish(),
 });
 export type ErrorCheckout = z.infer<typeof ErrorCheckout>;
 

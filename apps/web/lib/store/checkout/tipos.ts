@@ -23,6 +23,13 @@ export interface EnlaceLegal {
   title: string;
 }
 
+/** Términos y política de datos vigentes; `version` es `pages.version` de la política de tratamiento de datos. */
+export interface PoliticaLegal {
+  terminos: EnlaceLegal | null;
+  datos: EnlaceLegal | null;
+  version: string;
+}
+
 /** Lo que el servidor de la página entrega al formulario. Sin secretos ni costos. */
 export interface ConfigCheckout {
   pais: CodigoPais;

@@ -20,6 +20,8 @@ import type {
   OrdenCatalogo,
   PaginaCatalogo,
   PaginaLegal,
+  PaginaListada,
+  TipoPagina,
   ResenaHome,
   SeccionHome,
   Sugerencias,
@@ -59,10 +61,12 @@ export interface TiendaRepo {
   relacionados(pais: CodigoPais, productoId: string, limite: number): Promise<ItemCatalogo[]>;
   home(pais: CodigoPais): Promise<ContenidoHome>;
   paginaLegal(pais: CodigoPais, slug: string): Promise<PaginaLegal | null>;
+  /** Página publicada de un tipo (`pages.kind`, distinto de `general`); `null` si el país no la tiene publicada. */
+  paginaPorTipo(pais: CodigoPais, kind: Exclude<TipoPagina, 'general'>): Promise<PaginaLegal | null>;
   /** Colección activa del país (nombre para el título de `/coleccion/{slug}`); `null` si no existe o está apagada. */
   coleccion(pais: CodigoPais, slug: string): Promise<{ slug: string; name: string } | null>;
   /** Imágenes y textos editables del sitio (`content_slots`), con el espacio del país por encima del global. */
   espacios(pais: CodigoPais): Promise<EspacioContenido[]>;
   /** Páginas y políticas publicadas del país, para el pie. */
-  paginas(pais: CodigoPais): Promise<{ slug: string; title: string }[]>;
+  paginas(pais: CodigoPais): Promise<PaginaListada[]>;
 }

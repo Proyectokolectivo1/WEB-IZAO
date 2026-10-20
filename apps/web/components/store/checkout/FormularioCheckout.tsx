@@ -14,6 +14,7 @@ import {
   FORMULARIO_VACIO,
   ORDEN_CAMPOS,
   armarCuerpo,
+  combinarPolitica,
   erroresDelServidor,
   metodoPorDefecto,
   resumenCheckout,
@@ -26,6 +27,7 @@ import type {
   ErroresFormulario,
   MetodoCheckout,
   OpcionGeo,
+  PoliticaLegal,
   ValoresFormulario,
 } from '@/lib/store/checkout/tipos';
 import { useCarrito } from '../carrito/CarritoProvider';
@@ -107,6 +109,8 @@ function mensajeError(e: ErrorCheckout | 'red' | 'invalida'): string {
       return E.enProceso;
     case 'IDEMPOTENCY_CONFLICT':
       return E.conflicto;
+    case 'DATA_POLICY_OUTDATED':
+      return E.politica;
     case 'UNAVAILABLE':
       return E.sinServicio;
     case 'INVALID_INPUT':
@@ -131,6 +135,9 @@ export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null);
   const [resumenAbierto, setResumenAbierto] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  // Páginas legales y versión de la política que se muestran; cambian si el servidor avisa que la política se actualizó.
+  const [legal, setLegal] = useState<PoliticaLegal>({ terminos: config.terminos, datos: config.datos, version: config.versionPoliticaDatos });
+  const [politicaNueva, setPoliticaNueva] = useState(false);
   const cacheCiudades = useRef(new Map<string, OpcionGeo[]>());
   const resumenErrores = useRef<HTMLDivElement>(null);
   const bannerError = useRef<HTMLDivElement>(null);
@@ -223,6 +230,24 @@ export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
     if (vista.ajuste) setAviso(vista.ajuste === 'agotado' ? TC.checkout.agotadoQuitado : TC.checkout.ajusteServidor);
   }, [vista.ajuste]);
 
+  /**
+   * El servidor dijo que la política de datos cambió: se toma su versión vigente, se recargan las páginas legales, se
+   * desmarca la aceptación y se pide aceptar de nuevo. El bolso y los datos del formulario no se tocan.
+   */
+  async function alinearPolitica(versionServidor: string | null) {
+    setValores((v) => ({ ...v, terminos: false }));
+    setPoliticaNueva(true);
+    setLegal((l) => combinarPolitica(l, versionServidor, null));
+    try {
+      const res = await fetch(`/${pais}/checkout/politica`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const nueva = (await res.json()) as Partial<PoliticaLegal>;
+      setLegal((l) => combinarPolitica(l, versionServidor, nueva));
+    } catch {
+      /* sin red: se conserva lo que ya había; el próximo envío vuelve a validar en el servidor */
+    }
+  }
+
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
     if (enviando || terminado) return;
@@ -242,7 +267,7 @@ export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
     }
     setEnviando(true);
     claveIdem.current ??= crypto.randomUUID();
-    const cuerpo = armarCuerpo(valores, config, lineas, vista.codigoAplicado, claveIdem.current);
+    const cuerpo = armarCuerpo(valores, { ...config, versionPoliticaDatos: legal.version }, lineas, vista.codigoAplicado, claveIdem.current);
     const r = await crearPedido(cuerpo);
 
     if (r.tipo === 'creado') {
@@ -273,6 +298,7 @@ export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
         );
       }
       if (error.error === 'CODE_REJECTED') vista.quitarCodigo();
+      if (error.error === 'DATA_POLICY_OUTDATED') void alinearPolitica(error.current_version ?? null);
       setIntentado(true);
       setErrorGeneral(mensajeError(error));
     } else {
@@ -638,15 +664,15 @@ export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
                   className="mt-0.5 size-6 shrink-0 accent-ink"
                 />
                 <span className="text-[0.9375rem]">
-                  {config.terminos && config.datos ? (
+                  {legal.terminos && legal.datos ? (
                     <>
                       {TC.checkout.terminos.antes}
-                      <a href={`/${pais}/pagina/${config.terminos.slug}`} target="_blank" rel="noopener" className="underline underline-offset-4">
+                      <a href={`/${pais}/pagina/${legal.terminos.slug}`} target="_blank" rel="noopener" className="underline underline-offset-4">
                         {TC.checkout.terminos.terminos}
                         <span className="solo-lectores"> {TC.checkout.terminos.nuevaPestana}</span>
                       </a>
                       {TC.checkout.terminos.medio}
-                      <a href={`/${pais}/pagina/${config.datos.slug}`} target="_blank" rel="noopener" className="underline underline-offset-4">
+                      <a href={`/${pais}/pagina/${legal.datos.slug}`} target="_blank" rel="noopener" className="underline underline-offset-4">
                         {TC.checkout.terminos.datos}
                         <span className="solo-lectores"> {TC.checkout.terminos.nuevaPestana}</span>
                       </a>
@@ -657,6 +683,11 @@ export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
                   )}
                 </span>
               </label>
+              {politicaNueva && !valores.terminos ? (
+                <p id="campo-terminos-nueva" role="status" className="pl-9 pt-1.5 text-[0.875rem] text-ink">
+                  {TC.checkout.terminos.actualizada}
+                </p>
+              ) : null}
               {campo('terminos') ? (
                 <p id="campo-terminos-error" className="pl-9 pt-1.5 text-[0.875rem] text-danger">
                   {campo('terminos')}

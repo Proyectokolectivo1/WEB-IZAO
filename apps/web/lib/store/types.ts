@@ -222,10 +222,22 @@ export interface ResenaHome {
 
 export interface PaginaLegal {
   slug: string;
+  kind: TipoPagina;
   title: string;
   content_html: string;
   version: number;
   updated_at: string;
   seo_title: string | null;
   seo_description: string | null;
+}
+
+/** Tipos de página de `pages.kind` (izao-db). Solo una publicada por país y tipo, salvo `general`. */
+export const TIPOS_PAGINA = ['quienes_somos', 'envios', 'tratamiento_datos', 'terminos', 'devoluciones', 'general'] as const;
+export type TipoPagina = (typeof TIPOS_PAGINA)[number];
+
+/** Entrada de la lista de páginas publicadas (pie y checkout). */
+export interface PaginaListada {
+  slug: string;
+  title: string;
+  kind: TipoPagina;
 }

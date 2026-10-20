@@ -2,12 +2,12 @@ import Link from 'next/link';
 import { IzaoImage } from '@izao/ui';
 import { T } from '@/lib/store/textos';
 import { SelectorPais } from './SelectorPais';
-import type { AjustesTienda, CodigoPais, EspacioContenido } from '@/lib/store/types';
+import type { AjustesTienda, CodigoPais, EspacioContenido, PaginaListada } from '@/lib/store/types';
 
 interface Props {
   pais: CodigoPais;
   ajustes: AjustesTienda;
-  paginas: { slug: string; title: string }[];
+  paginas: PaginaListada[];
   espacios: EspacioContenido[];
 }
 

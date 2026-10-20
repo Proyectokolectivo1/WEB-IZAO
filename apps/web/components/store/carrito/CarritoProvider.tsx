@@ -24,6 +24,8 @@ interface Contexto {
   pais: CodigoPais;
   /** Nota de envío del bolso y del resumen: sale del espacio `nota_envio` del panel (por defecto, el texto del seed). */
   notaEnvio: string;
+  /** Valor de la fila «Envío» (espacio `valor_envio`, campo título); por defecto, el del seed. */
+  valorEnvio: string;
   lineas: LineaCarrito[];
   unidades: number;
   /** Se vuelve `true` cuando ya se leyó `localStorage` (evita mostrar un bolso vacío por un instante). */
@@ -66,7 +68,17 @@ function escribirAlmacen(clave: string, valor: string): void {
   }
 }
 
-export function CarritoProvider({ pais, notaEnvio = T.carrito.notaEnvio, children }: { pais: CodigoPais; notaEnvio?: string; children: ReactNode }) {
+export function CarritoProvider({
+  pais,
+  notaEnvio = T.carrito.notaEnvio,
+  valorEnvio = T.carrito.envioGratis,
+  children,
+}: {
+  pais: CodigoPais;
+  notaEnvio?: string;
+  valorEnvio?: string;
+  children: ReactNode;
+}) {
   const [lineas, setLineas] = useState<LineaCarrito[]>([]);
   const [listo, setListo] = useState(false);
   const [abierto, setAbierto] = useState(false);
@@ -142,6 +154,7 @@ export function CarritoProvider({ pais, notaEnvio = T.carrito.notaEnvio, childre
     () => ({
       pais,
       notaEnvio,
+      valorEnvio,
       lineas,
       unidades: contarUnidades(lineas),
       listo,
@@ -156,7 +169,7 @@ export function CarritoProvider({ pais, notaEnvio = T.carrito.notaEnvio, childre
       alternarDeseo,
       reemplazar,
     }),
-    [pais, notaEnvio, lineas, listo, abierto, abrir, cerrar, agregar, cambiar, quitar, pulso, deseos, alternarDeseo, reemplazar],
+    [pais, notaEnvio, valorEnvio, lineas, listo, abierto, abrir, cerrar, agregar, cambiar, quitar, pulso, deseos, alternarDeseo, reemplazar],
   );
 
   return (

@@ -8,7 +8,7 @@ import { unstable_cache } from 'next/cache';
 import { DOCUMENT_TYPES } from '@izao/core/contracts';
 import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
 import { TOKEN_EJEMPLO } from './checkout/adaptador';
-import type { ConfigCheckout, MetodoActivo, MetodoReal, OpcionGeo } from './checkout/tipos';
+import type { ConfigCheckout, EnlaceLegal, MetodoActivo, PoliticaLegal, MetodoReal, OpcionGeo } from './checkout/tipos';
 import { aCodigoCore } from './pais';
 import { tienda } from './datos';
 import type { CodigoPais } from './types';
@@ -39,16 +39,41 @@ function ok<T>(res: { data: T | null; error: { message: string } | null }, ctx: 
 // Configuración del checkout
 // ---------------------------------------------------------------------------
 
-const REGEX_TERMINOS = /t[eé]rminos|condiciones/i;
-const REGEX_DATOS = /datos|privacidad|tratamiento/i;
+const enlace = (p: { slug: string; title: string } | null): EnlaceLegal | null => (p ? { slug: p.slug, title: p.title } : null);
 
-async function enlacesLegales(pais: CodigoPais) {
+/**
+ * Páginas legales del checkout por `pages.kind` (`terminos` y `tratamiento_datos`), no por slug ni título: izao-db garantiza
+ * una publicada por país y tipo. Con caché de la tienda (se invalida al publicar desde el panel).
+ */
+async function enlacesLegales(pais: CodigoPais): Promise<PoliticaLegal> {
   const repo = tienda();
-  const paginas = await repo.paginas(pais).catch(() => []);
-  const terminos = paginas.find((p) => REGEX_TERMINOS.test(p.slug) || REGEX_TERMINOS.test(p.title)) ?? null;
-  const datos = paginas.find((p) => REGEX_DATOS.test(p.slug) || REGEX_DATOS.test(p.title)) ?? null;
-  const pagina = datos ? await repo.paginaLegal(pais, datos.slug).catch(() => null) : null;
-  return { terminos, datos, version: pagina ? String(pagina.version) : '0' };
+  const [terminos, datos] = await Promise.all([
+    repo.paginaPorTipo(pais, 'terminos').catch(() => null),
+    repo.paginaPorTipo(pais, 'tratamiento_datos').catch(() => null),
+  ]);
+  return { terminos: enlace(terminos), datos: enlace(datos), version: datos ? String(datos.version) : '0' };
+}
+
+/**
+ * Lo mismo que `enlacesLegales` pero leído en el momento, sin caché: lo usa el checkout cuando el servidor responde
+ * `DATA_POLICY_OUTDATED`, para mostrar la política que de verdad está vigente.
+ */
+export async function politicaVigente(pais: CodigoPais): Promise<PoliticaLegal> {
+  if (!usarSupabase()) return enlacesLegales(pais);
+  const r = ok(
+    await crearClienteServicio()
+      .from('pages')
+      .select('slug,title,kind,version')
+      .eq('country_code', upper(pais))
+      .eq('status', 'published')
+      .in('kind', ['terminos', 'tratamiento_datos']),
+    'pages',
+  );
+  const filas = (r ?? []) as Fila[];
+  const de = (kind: string) => filas.find((f) => f.kind === kind) ?? null;
+  const datos = de('tratamiento_datos');
+  const nombrar = (f: Fila | null) => (f ? { slug: String(f.slug), title: String(f.title) } : null);
+  return { terminos: nombrar(de('terminos')), datos: nombrar(datos), version: datos ? String(datos.version) : '0' };
 }
 
 const leerConfigSupabase = unstable_cache(

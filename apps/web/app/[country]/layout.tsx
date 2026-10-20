@@ -8,7 +8,7 @@ import { tienda } from '@/lib/store/datos';
 import { clasesFuentes } from '@/lib/store/fuentes';
 import { esPais } from '@/lib/store/pais';
 import { alternos } from '@/lib/store/seo';
-import { T } from '@/lib/store/textos';
+import { textosEnvio } from '@/lib/store/envio';
 import { temaDePais } from '@/lib/store/tema';
 
 // Sin prerender en la compilación (no depende de la base); cada ruta se genera al pedirla y se cachea.
@@ -40,13 +40,13 @@ export default async function LayoutPais({ children, params }: { children: React
     temaDePais(pais),
   ]);
 
-  // Texto editable en el panel (espacio de contenido `nota_envio`); sin él, el del seed.
-  const notaEnvio = espacios.find((e) => e.key === 'nota_envio')?.body?.trim() || T.carrito.notaEnvio;
+  // Nota y valor del envío editables en el panel (espacios `nota_envio` y `valor_envio`); sin ellos, los del seed.
+  const envio = textosEnvio(espacios);
 
   return (
     <div id="tema-pais" className={override ? `tema-pais bg-bg text-ink ${clasesFuentes(override.par)}` : undefined}>
       {override ? <style dangerouslySetInnerHTML={{ __html: override.css }} /> : null}
-      <CarritoProvider pais={pais} notaEnvio={notaEnvio}>
+      <CarritoProvider pais={pais} notaEnvio={envio.nota} valorEnvio={envio.valor}>
         <Header pais={pais} ajustes={ajustes} anuncios={anuncios} categorias={menu} populares={populares} />
         <main id="contenido" tabIndex={-1} className="outline-none">
           {children}

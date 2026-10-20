@@ -90,6 +90,7 @@ export const TC = {
       sinEnlaces: 'Acepto los términos y condiciones y el tratamiento de mis datos personales.',
       nuevaPestana: '(se abre en una pestaña nueva)',
       etiqueta: 'Términos y tratamiento de datos',
+      actualizada: 'Cambió el tratamiento de datos. Léelo y márcalo de nuevo para confirmar.',
     },
     whatsappAutorizo: 'Autorizo recibir la información de mi pedido por WhatsApp.',
     whatsappAutorizoOpcional: 'Quiero recibir la información de mi pedido por WhatsApp.',
@@ -118,6 +119,7 @@ export const TC = {
       ubicacion: 'Esa ciudad no corresponde al departamento o la provincia elegida. Vuelve a elegirla.',
       enProceso: 'Tu pedido todavía se está procesando. Espera un momentico y vuelve a intentarlo: no lo duplicamos.',
       conflicto: 'Algo cambió en tu pedido mientras lo enviabas. Revísalo y confírmalo de nuevo.',
+      politica: 'Actualizamos el tratamiento de datos mientras comprabas. Léelo, acepta de nuevo y confirma: tu bolso sigue igual.',
     },
   },
   resumen: {

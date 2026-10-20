@@ -23,10 +23,14 @@ import type {
   OpcionesFiltros,
   PaginaCatalogo,
   PaginaLegal,
+  PaginaListada,
   ResenaHome,
   SeccionHome,
   Sugerencias,
+  TipoPagina,
 } from './types';
+import { etiquetasPagina } from './etiquetas';
+import { normalizarTipo, ordenarPaginas } from './paginas';
 
 type Fila = Record<string, unknown>;
 
@@ -46,12 +50,14 @@ const texto = (v: unknown): string | null => (typeof v === 'string' && v.length 
 const media = (v: unknown): MediaRef | null => (v && typeof v === 'object' ? (v as MediaRef) : null);
 const upper = (p: CodigoPais) => p.toUpperCase();
 
-function conCache<A extends unknown[], R>(nombre: string, segundos: number, etiquetas: (p: CodigoPais) => string[], fn: (p: CodigoPais, ...a: A) => Promise<R>) {
+function conCache<A extends unknown[], R>(nombre: string, segundos: number, etiquetas: (p: CodigoPais, ...a: NoInfer<A>) => string[], fn: (p: CodigoPais, ...a: A) => Promise<R>) {
   return (p: CodigoPais, ...a: A): Promise<R> =>
-    unstable_cache(() => fn(p, ...a), [nombre, p, ...a.map(String)], { revalidate: segundos, tags: etiquetas(p) })();
+    unstable_cache(() => fn(p, ...a), [nombre, p, ...a.map(String)], { revalidate: segundos, tags: etiquetas(p, ...a) })();
 }
-const contenido = (p: CodigoPais) => [`content:${p}`];
-const catalogo = (p: CodigoPais) => [`catalog:${p}`];
+const contenido = (p: CodigoPais, ..._a: unknown[]) => [`content:${p}`];
+const catalogo = (p: CodigoPais, ..._a: unknown[]) => [`catalog:${p}`];
+// Páginas: `content:{país}` (lo invalida el panel al guardar) y las finas de `etiquetasPagina` (ver lib/store/etiquetas.ts).
+const paginasTag = (p: CodigoPais, ..._a: unknown[]) => [...contenido(p), ...etiquetasPagina(p)];
 
 // --- Contenido ----------------------------------------------------------------------------------------------
 
@@ -213,7 +219,7 @@ const leerEspacios = conCache('espacios', 300, contenido, async (p): Promise<Esp
   return [...porClave.values()] as unknown as EspacioContenido[];
 });
 
-const leerHome = conCache('home', 300, (p) => [...contenido(p), ...catalogo(p)], async (p): Promise<ContenidoHome> => {
+const leerHome = conCache('home', 300, (p: CodigoPais, ..._a: unknown[]) => [...contenido(p), ...catalogo(p)], async (p): Promise<ContenidoHome> => {
   const ahora = new Date().toISOString();
   const [sec, ban, espacios, col, res, fam, menu] = await Promise.all([
     db().from('home_sections').select('id,type,config').eq('country_code', upper(p)).eq('is_active', true).order('sort_order'),
@@ -252,23 +258,38 @@ const leerHome = conCache('home', 300, (p) => [...contenido(p), ...catalogo(p)],
   };
 });
 
-const leerLegal = conCache('legal', 300, contenido, async (p, slug: string): Promise<PaginaLegal | null> => {
-  const r = ok(
-    await db().from('pages').select('slug,title,content_html,version,updated_at,seo_title,seo_description').eq('country_code', upper(p)).eq('slug', slug).eq('status', 'published').maybeSingle(),
-    'pages',
-  );
-  return (r as unknown as PaginaLegal | null) ?? null;
-});
+const COLUMNAS_PAGINA = 'slug,kind,title,content_html,version,updated_at,seo_title,seo_description';
+
+function aPaginaLegal(r: unknown): PaginaLegal | null {
+  if (!r || typeof r !== 'object') return null;
+  return { ...(r as Omit<PaginaLegal, 'kind'>), kind: normalizarTipo((r as Fila).kind) };
+}
+
+const leerLegal = conCache(
+  'legal',
+  300,
+  (p, slug: string) => [...paginasTag(p), ...etiquetasPagina(p, undefined, slug)],
+  async (p, slug: string): Promise<PaginaLegal | null> =>
+    aPaginaLegal(ok(await db().from('pages').select(COLUMNAS_PAGINA).eq('country_code', upper(p)).eq('slug', slug).eq('status', 'published').maybeSingle(), 'pages')),
+);
+
+/** Una sola publicada por país y tipo (índice único parcial de izao-db): se elige por `kind`, nunca por slug ni título. */
+const leerPaginaPorTipo = conCache(
+  'legal-tipo',
+  300,
+  (p, kind: Exclude<TipoPagina, 'general'>) => [...paginasTag(p), ...etiquetasPagina(p, kind)],
+  async (p, kind: Exclude<TipoPagina, 'general'>): Promise<PaginaLegal | null> =>
+    aPaginaLegal(ok(await db().from('pages').select(COLUMNAS_PAGINA).eq('country_code', upper(p)).eq('kind', kind).eq('status', 'published').maybeSingle(), 'pages')),
+);
 
 const leerColeccion = conCache('coleccion', 300, catalogo, async (p, slug: string): Promise<{ slug: string; name: string } | null> => {
   const r = ok(await db().from('collections').select('slug,name').eq('country_code', upper(p)).eq('slug', slug).eq('is_active', true).maybeSingle(), 'collections');
   return r ? { slug: String((r as Fila).slug), name: String((r as Fila).name) } : null;
 });
 
-const leerPaginas = conCache('paginas', 300, contenido, async (p): Promise<{ slug: string; title: string }[]> => {
-  const r = ok(await db().from('pages').select('slug,title').eq('country_code', upper(p)).eq('status', 'published').order('title'), 'pages');
-  return lista(r)
-    .map((x) => ({ slug: String(x.slug), title: String(x.title) }));
+const leerPaginas = conCache('paginas', 300, paginasTag, async (p): Promise<PaginaListada[]> => {
+  const r = ok(await db().from('pages').select('slug,title,kind').eq('country_code', upper(p)).eq('status', 'published').order('title'), 'pages');
+  return ordenarPaginas(lista(r).map((x) => ({ slug: String(x.slug), title: String(x.title), kind: normalizarTipo(x.kind) })));
 });
 
 // --- Catálogo (RPC) -----------------------------------------------------------------------------------------
@@ -283,6 +304,7 @@ export const repoSupabase: TiendaRepo = {
   home: leerHome,
   espacios: leerEspacios,
   paginaLegal: leerLegal,
+  paginaPorTipo: leerPaginaPorTipo,
   coleccion: leerColeccion,
   paginas: leerPaginas,
 

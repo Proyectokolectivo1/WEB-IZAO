@@ -18,6 +18,7 @@ import type { CuerpoCheckout } from './contrato';
 import type {
   CampoFormulario,
   ConfigCheckout,
+  PoliticaLegal,
   ErroresFormulario,
   MetodoCheckout,
   MetodoReal,
@@ -140,6 +141,19 @@ export function armarCuerpo(
     discount_code: codigoDescuento,
     consents: { terms_and_data: true, whatsapp: v.whatsapp },
     data_policy_version: config.versionPoliticaDatos,
+  };
+}
+
+/**
+ * Actualiza lo que se muestra de la política tras `DATA_POLICY_OUTDATED`. La versión que manda es la que dio el servidor del
+ * pedido (con ella compara); la leída después solo sirve si el servidor no la mandó. Los enlaces leídos reemplazan a los viejos.
+ */
+export function combinarPolitica(actual: PoliticaLegal, versionServidor: string | null, leida: Partial<PoliticaLegal> | null): PoliticaLegal {
+  const versionLeida = typeof leida?.version === 'string' && leida.version !== '' ? leida.version : null;
+  return {
+    terminos: leida?.terminos ?? actual.terminos,
+    datos: leida?.datos ?? actual.datos,
+    version: versionServidor ?? versionLeida ?? actual.version,
   };
 }
 

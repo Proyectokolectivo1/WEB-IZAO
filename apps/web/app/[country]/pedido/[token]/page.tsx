@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { ConfirmacionPedido } from '@/components/store/checkout/ConfirmacionPedido';
 import { pedidoPublico } from '@/lib/store/checkout-datos';
 import { tienda } from '@/lib/store/datos';
+import { textosEnvio } from '@/lib/store/envio';
 import { esPais } from '@/lib/store/pais';
 import { TC } from '@/lib/store/textos-checkout';
 
@@ -24,9 +25,11 @@ export default async function PaginaPedido({ params }: Props) {
   // Token inexistente o ajeno: 404 real (no se confirma si el pedido existe).
   if (!pedido) notFound();
 
+  const [ajustes, espacios] = await Promise.all([tienda().ajustes(pais), tienda().espacios(pais)]);
+
   return (
     <div className="mx-auto w-full max-w-[96rem] px-4 pb-24 pt-10 sm:px-8 lg:pt-16">
-      <ConfirmacionPedido pedido={pedido} whatsappAsesor={(await tienda().ajustes(pais)).whatsappAsesor} />
+      <ConfirmacionPedido pedido={pedido} whatsappAsesor={ajustes.whatsappAsesor} valorEnvio={textosEnvio(espacios).valor} />
     </div>
   );
 }

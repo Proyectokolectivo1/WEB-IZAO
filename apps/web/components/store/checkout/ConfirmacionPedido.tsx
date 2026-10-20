@@ -17,10 +17,12 @@ function numeroWhatsapp(n: string | null): string | null {
 interface Props {
   pedido: PedidoPublico;
   whatsappAsesor: string | null;
+  /** Valor de la fila «Envío» que define el panel (espacio `valor_envio`). */
+  valorEnvio?: string;
 }
 
 /** Página de estado del pedido (`/{pais}/pedido/{public_token}`, §10.2): sin sesión, con línea de tiempo y pago pendiente. */
-export function ConfirmacionPedido({ pedido, whatsappAsesor }: Props) {
+export function ConfirmacionPedido({ pedido, whatsappAsesor, valorEnvio }: Props) {
   const pais = pedido.pais;
   const precio = (v: string | bigint) => formatearPrecio(v, pais);
   const fecha = (iso: string | null) => (iso ? formatearFecha(iso, pais, { dateStyle: 'long', timeStyle: 'short' }) : null);
@@ -45,7 +47,7 @@ export function ConfirmacionPedido({ pedido, whatsappAsesor }: Props) {
       valor: precio(pedido.recargo),
     });
   }
-  filas.push({ clave: 'envio', etiqueta: TC.resumen.envio, valor: TC.resumen.envioGratis });
+  filas.push({ clave: 'envio', etiqueta: TC.resumen.envio, valor: valorEnvio ?? T.carrito.envioGratis });
 
   const wa = numeroWhatsapp(whatsappAsesor);
   const mensajeWa = TC.pedido.whatsappMensaje(

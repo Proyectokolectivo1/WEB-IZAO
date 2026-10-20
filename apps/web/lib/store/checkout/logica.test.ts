@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { LineaCarrito } from '../carrito/logica';
-import { armarCuerpo, erroresDelServidor, formatearPct, resumenCheckout, resumenConServidor, validarFormulario } from './logica';
+import { armarCuerpo, combinarPolitica, erroresDelServidor, formatearPct, resumenCheckout, resumenConServidor, validarFormulario } from './logica';
 import { FORMULARIO_VACIO } from './logica';
+import { ErrorCheckout } from './contrato';
 import type { ConfigCheckout, ValoresFormulario } from './tipos';
 
 const ahora = new Date('2026-10-20T12:00:00Z');
@@ -189,5 +190,48 @@ describe('resumenConServidor', () => {
     expect([r.recargo, r.total]).toEqual([9500n, 99500n]);
     expect(r.recargoPct).toBe('10');
     expect(r.disponibilidad.cod).toEqual({ disponible: false, motivo: 'COD_BELOW_MINIMUM' });
+  });
+});
+
+describe('combinarPolitica (DATA_POLICY_OUTDATED)', () => {
+  const actual = { terminos: { slug: 'terminos', title: 'Términos' }, datos: { slug: 'datos', title: 'Datos' }, version: '2' };
+
+  it('la versión del servidor manda y el pedido se manda con ella', () => {
+    const r = combinarPolitica(actual, '3', null);
+    expect(r.version).toBe('3');
+    expect(r.datos).toEqual(actual.datos);
+  });
+
+  it('los enlaces leídos reemplazan a los viejos, pero no la versión del servidor', () => {
+    const r = combinarPolitica(actual, '3', { datos: { slug: 'datos-2026', title: 'Datos' }, version: '4' });
+    expect(r.datos?.slug).toBe('datos-2026');
+    expect(r.version).toBe('3');
+  });
+
+  it('si el servidor no dio versión, sirve la leída; si tampoco, queda la actual', () => {
+    expect(combinarPolitica(actual, null, { version: '5' }).version).toBe('5');
+    expect(combinarPolitica(actual, null, { version: '' }).version).toBe('2');
+    expect(combinarPolitica(actual, null, null)).toEqual(actual);
+  });
+
+  it('el cuerpo del reintento lleva la versión nueva y conserva el bolso', () => {
+    const lineas = [linea()];
+    const nueva = combinarPolitica(actual, '3', null);
+    const cuerpo = armarCuerpo(
+      { ...FORMULARIO_VACIO, metodo: 'wompi', terminos: true },
+      { ...configCo, versionPoliticaDatos: nueva.version },
+      lineas,
+      null,
+      'clave-nueva',
+    );
+    expect(cuerpo.data_policy_version).toBe('3');
+    expect(cuerpo.items).toEqual([{ variant_id: lineas[0]!.variantId, quantity: 1 }]);
+  });
+});
+
+describe('ErrorCheckout con DATA_POLICY_OUTDATED', () => {
+  it('lee current_version', () => {
+    const e = ErrorCheckout.parse({ error: 'DATA_POLICY_OUTDATED', current_version: '7' });
+    expect(e.current_version).toBe('7');
   });
 });
