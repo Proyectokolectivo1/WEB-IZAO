@@ -28,6 +28,8 @@ export const filtrosCatalogoSchema = z
     families: z.array(slug).max(50).optional(),
     concentration: slug.optional(),
     category: slug.optional(),
+    /** Slug de la colección del país (manual o por regla); inexistente o inactiva: página vacía. */
+    collection: slug.optional(),
     availability: z.literal('in_stock').optional(),
     price_min: monto.optional(),
     price_max: monto.optional(),
