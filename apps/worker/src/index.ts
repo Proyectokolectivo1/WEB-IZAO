@@ -1,5 +1,6 @@
 import { writeFileSync } from 'node:fs';
-import { cancelarJobsCod } from './jobs/cod/index.js';
+import type { Worker } from 'bullmq';
+import { cancelarJobsCod, crearProcesadorCod, programadorCod } from './jobs/cod/index.js';
 import { crearProcesadorPagos, dependenciasPagosDesdeEnv } from './jobs/payments/index.js';
 import { registrarCron } from './cron.js';
 import { createConnection, createQueue, createWorker, procesarSistema, QUEUE_NAMES } from './queues.js';
@@ -24,7 +25,23 @@ async function main(): Promise<void> {
     connection,
   );
 
-  for (const w of [worker, workerPagos]) {
+  // Registro condicionado: las dependencias de COD y el job `whatsapp.evento` los termina izao-pagos.
+  // Hasta que existan sus exportaciones, la cola se crea (los productores ya encolan) pero sin consumidor.
+  const trabajadores: Worker[] = [worker, workerPagos];
+  const modCod = (await import('./jobs/cod/index.js')) as Record<string, unknown>;
+  if (typeof modCod.dependenciasCodDesdeEnv === 'function') {
+    const deps = (modCod.dependenciasCodDesdeEnv as (programar: ReturnType<typeof programadorCod>) => Parameters<typeof crearProcesadorCod>[0])(
+      programadorCod(colaCod),
+    );
+    trabajadores.push(createWorker(QUEUE_NAMES.contraentrega, crearProcesadorCod(deps), connection));
+  } else {
+    console.warn('[worker] contraentrega sin consumidor: falta dependenciasCodDesdeEnv (izao-pagos)');
+  }
+  const colaWhatsapp = createQueue(QUEUE_NAMES.whatsapp, connection);
+  // TODO(izao-pagos): al existir jobs/whatsapp/evento.ts, crear aquí createWorker(QUEUE_NAMES.whatsapp, …).
+  console.warn('[worker] whatsapp sin consumidor: falta jobs/whatsapp (izao-pagos)');
+
+  for (const w of trabajadores) {
     w.on('failed', (job, err) => {
       console.error(`[worker] ${w.name} job ${job?.id ?? '?'} falló: ${err.message}`);
     });
@@ -52,8 +69,9 @@ async function main(): Promise<void> {
     clearInterval(intervaloLatido);
     console.log(`[worker] ${senal} recibido, cerrando`);
     try {
-      await Promise.all([worker.close(), workerPagos.close()]);
+      await Promise.all(trabajadores.map((w) => w.close()));
       await colaCod.close();
+      await colaWhatsapp.close();
       await cola.close();
       await connection.quit();
     } finally {

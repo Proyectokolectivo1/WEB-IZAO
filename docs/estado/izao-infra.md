@@ -22,3 +22,8 @@ test-backup-restore, test-restore-guard, test-deploy-rollback, test-nginx (1.27/
 - Build del worker con esbuild (`apps/worker/build.mjs`, bundle ESM; bullmq/ioredis externos). Dockerfile.worker ya copia `dist` + `deploy --prod`: sin cambios.
 - `.env.example`: SITE_URL y CHECKOUT_*; compose usa env_file (cubre SUPABASE_*, APP_ENCRYPTION_KEY). Nginx: `X-Real-IP $remote_addr` confirmado.
 - Pendiente: `encolarTransportadora` es un stub con aviso (esperar contrato de izao-logistica); limitador de checkout en Redis (código de izao-pagos).
+
+## Colas contraentrega y whatsapp
+- `queues.ts`: `QUEUE_NAMES.whatsapp`. `index.ts`: worker `contraentrega` con `crearProcesadorCod(dependenciasCodDesdeEnv(programadorCod(colaCod)))` registrado solo si `jobs/cod/index.ts` exporta `dependenciasCodDesdeEnv` (import dinámico; si no, aviso). `cancelarJobsCod` ya iba como 2.º argumento de pagos.
+- Cola `whatsapp` creada sin consumidor: falta `jobs/whatsapp/evento.ts` (izao-pagos); dejar TODO en `index.ts` para el `createWorker`.
+- Firma esperada: `dependenciasCodDesdeEnv(programar)` devuelve `DepsCod`.
