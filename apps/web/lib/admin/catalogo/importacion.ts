@@ -6,6 +6,7 @@
  */
 import { COUNTRY_CURRENCY } from '@izao/core/money';
 import type { FilaImportacion } from '@/lib/db/admin-catalogo';
+import { depurarHtml } from '@/lib/store/html-seguro';
 import { slugificar } from '../crud/comun';
 import {
   PAISES_PRODUCTO,
@@ -221,8 +222,8 @@ function construirProducto(
     const texto = (c: Columna) => (v[c] ?? '').trim();
 
     if (texto('nombre')) primero('name', texto('nombre').slice(0, 200));
-    if (texto('descripcion_corta')) primero('short_description', texto('descripcion_corta'));
-    if (texto('descripcion')) primero('description_html', texto('descripcion'));
+    if (texto('descripcion_corta')) primero('short_description', depurarHtml(texto('descripcion_corta')));
+    if (texto('descripcion')) primero('description_html', depurarHtml(texto('descripcion')));
     for (const [col, clave] of [['notas_salida', 'notes_top'], ['notas_corazon', 'notes_heart'], ['notas_fondo', 'notes_base']] as const) {
       if (texto(col)) primero(clave, separarLista(texto(col)));
     }

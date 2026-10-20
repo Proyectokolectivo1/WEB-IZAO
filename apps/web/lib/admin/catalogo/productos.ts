@@ -16,6 +16,7 @@ import {
 } from '@izao/core/money';
 import { z } from 'zod';
 import type { GuardarProductoEntrada } from '@/lib/db/admin-catalogo';
+import { depurarHtml } from '@/lib/store/html-seguro';
 import { PATRON_SLUG, type ErroresCampo } from '../crud/comun';
 
 export const PAISES_PRODUCTO = ['CO', 'EC'] as const;
@@ -636,8 +637,8 @@ export function construirEntrada(form: ProductoForm): ResultadoConstruccion {
       ...(form.id ? { id: form.id } : {}),
       name: nombre,
       slug: form.slug,
-      short_description: nuloSiVacio(form.short_description),
-      description_html: nuloSiVacio(form.description_html),
+      short_description: nuloSiVacio(depurarHtml(form.short_description)),
+      description_html: nuloSiVacio(depurarHtml(form.description_html)),
       brand_id: form.brand_id || null,
       gender_id: form.gender_id || null,
       family_id: form.family_id || null,

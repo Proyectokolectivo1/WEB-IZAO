@@ -19,6 +19,14 @@ export function invalidarProducto(productId: string, paises: readonly Pais[] = P
   invalidarCatalogo(paises);
 }
 
+/**
+ * Invalida el contenido público del país (`content:{país}`): páginas y políticas, tema, home. Es la etiqueta
+ * que lee la tienda en `lib/store/repo-supabase.ts` (`leerLegal`, `leerPaginas`).
+ */
+export function invalidarContenido(paises: readonly Pais[] = PAISES): void {
+  for (const p of paises) revalidateTag(`content:${p}`);
+}
+
 export type ErrorBd = { code?: string | undefined; message: string; details?: string | undefined };
 
 /**

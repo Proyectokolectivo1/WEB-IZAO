@@ -119,6 +119,26 @@ describe('vínculo MasterShop', () => {
   });
 });
 
+describe('construirEntrada · descripciones', () => {
+  it('depura el HTML de la descripción y del resumen con la lista blanca de la tienda', () => {
+    const f = valido({
+      status: 'draft',
+      short_description: '<p>Resumen</p><script>alert(1)</script>',
+      description_html: '<h2>Notas</h2><img src=x onerror=alert(1)><a href="javascript:alert(1)" onclick="x()">enlace</a><iframe src="//m"></iframe>',
+    });
+    const r = construirEntrada(f);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.entrada.product.short_description).toBe('<p>Resumen</p>');
+    expect(r.entrada.product.description_html).toBe('<h2>Notas</h2><a>enlace</a>');
+  });
+
+  it('una descripción que queda vacía tras depurar se guarda como nula', () => {
+    const r = construirEntrada(valido({ status: 'draft', description_html: '<script>x</script>' }));
+    expect(r.ok && r.entrada.product.description_html).toBeNull();
+  });
+});
+
 describe('construirEntrada', () => {
   it('convierte dinero a unidad menor según la moneda del país', () => {
     const f = valido({ status: 'draft' });

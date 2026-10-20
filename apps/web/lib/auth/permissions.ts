@@ -83,7 +83,7 @@ export const MODULOS = {
     etiqueta: 'Contenido',
     ruta: '/admin/contenido',
     roles: SOLO_ADMIN,
-    disponible: false,
+    disponible: true,
   },
   resenas: { etiqueta: 'Reseñas', ruta: '/admin/resenas', roles: SOLO_ADMIN, disponible: false },
   descuentos: {
@@ -165,6 +165,8 @@ export const ACCIONES = {
   'catalogo.gestionar': SOLO_ADMIN,
   /** Importar y exportar el catálogo (CSV/Excel) y la carga masiva de imágenes (§24.2). */
   'catalogo.importar': SOLO_ADMIN,
+  /** Crear, editar, publicar y eliminar páginas y políticas del sitio (§9.5). */
+  'contenido.gestionar': SOLO_ADMIN,
 } as const satisfies Record<string, readonly Rol[]>;
 
 export type AccionId = keyof typeof ACCIONES;

@@ -198,3 +198,35 @@
   width: 1.25rem;
   height: 1.25rem;
 }
+
+/* Editor de páginas y políticas (§9.5): HTML sencillo con vista previa depurada. */
+.adm-editor-html {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  min-height: 18rem;
+}
+.adm-previa {
+  border: 1px solid var(--adm-borde, #d6d3d1);
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  max-width: 48rem;
+  line-height: 1.6;
+}
+.adm-previa h2,
+.adm-previa h3,
+.adm-previa h4 {
+  margin: 1.25rem 0 0.5rem;
+}
+.adm-previa ul,
+.adm-previa ol {
+  padding-left: 1.5rem;
+}
+.adm-previa table {
+  border-collapse: collapse;
+}
+.adm-previa th,
+.adm-previa td {
+  border: 1px solid var(--adm-borde, #d6d3d1);
+  padding: 0.375rem 0.5rem;
+}

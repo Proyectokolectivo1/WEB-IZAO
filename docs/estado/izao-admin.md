@@ -12,12 +12,15 @@
 - Permisos: acciones `catalogo.gestionar` y `catalogo.importar` (solo admin). Módulos habilitados: atributos, categorías, colecciones (probado en `permissions.test.ts`).
 
 ## Pendiente
-- T2.6c cerrada (a008f5d): `/admin/productos[/nuevo|/id]`, editor con variantes/imágenes/duplicar/archivar. Sin buscador MasterShop (ids a mano) hasta que izao-logistica exponga `GET /api/products`; falta editar el `alt` de una imagen ya subida; descripción HTML sin sanear (renderizado de la tienda debe sanear).
+- T2.6c cerrada (a008f5d): `/admin/productos[/nuevo|/id]`, editor con variantes/imágenes/duplicar/archivar. Sin buscador MasterShop (ids a mano) hasta que izao-logistica exponga `GET /api/products`; falta editar el `alt` de una imagen ya subida.
 - T2.7 cerrada (ver commit "T2.7"): `/admin/productos/importar`; API `/api/admin/catalogo/{importar,exportar,plantilla,imagenes}`; `lib/admin/catalogo/{csv,xlsx,zip,archivo,importacion,importacion-servidor}.ts`. Excel y ZIP sin dependencias (node:zlib) para no tocar package.json/lockfile; si se prefiere `exceljs`, solo cambia `xlsx.ts`.
+- Contenido/páginas (módulo `contenido`, acción `contenido.gestionar`, solo admin): `/admin/contenido[/paginas[/id|nueva]]`; `lib/admin/contenido/paginas{,-servidor}.ts`. Elige `kind`; al publicar un tipo legal despublica (draft) la anterior del país+tipo y, si la escritura falla, la vuelve a publicar (NO es transacción de BD); `version` +1 al publicar o cambiar título/texto publicado; bloquea marcadores [COMPLETAR..]. Invalida el tag `content:{país}` (el que lee `repo-supabase`) con `invalidarContenido`. Editor = textarea HTML + vista previa depurada (sin TipTap: no instalado).
+- Descripción y resumen de producto (`short_description`, `description_html`) se depuran con `depurarHtml` de `lib/store/html-seguro` al guardar y al importar.
 - Falta: importación en el worker con progreso (hoy síncrona por lotes de 200, `maxDuration` 300 s); probar con un .xlsx real de Excel; prueba de humo en navegador (no hay Supabase/MFA local).
 - Oleada 3 (pagos): impedir `payment_method_settings` activo con `cod_enabled` falso.
 
 ## Decisiones / avisos
+- Para izao-db (opcional): RPC `admin_publicar_pagina` que despublique+publique en una transacción; hoy es compensación en el panel. `cliente-falso` acepta lista de respuestas por operación (se consumen en orden).
 - Sin `react-hook-form` (no instalado): formularios con `useActionState` + zod del servidor.
 - `apps/web/lib/db/` no existe: uso `crearClienteServicio()` con tipos locales.
 - Categorías: guardar categoría + `category_countries` son 2 escrituras (no atómicas); un fallo del segundo se reporta y se puede reintentar.

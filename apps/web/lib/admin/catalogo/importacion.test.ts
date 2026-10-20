@@ -100,6 +100,18 @@ describe('archivo', () => {
   });
 });
 
+describe('construirImportacion · descripciones', () => {
+  it('depura el HTML de la descripción y de la descripción corta', () => {
+    const { productos, errores } = importar({
+      sku: 'A1', producto_slug: 'rosa', nombre: 'Rosa', marca: 'casa arabe', precio_co: '100000',
+      descripcion_corta: 'Fresco<script>x</script>', descripcion: '<p onclick="x()">Hola</p><a href="javascript:alert(1)">z</a>',
+    });
+    expect(errores).toEqual([]);
+    expect(productos[0]?.payload.product.short_description).toBe('Fresco');
+    expect(productos[0]?.payload.product.description_html).toBe('<p>Hola</p><a>z</a>');
+  });
+});
+
 describe('construirImportacion', () => {
   it('agrupa variantes por producto y convierte el dinero por país', () => {
     const { productos, errores } = importar(

@@ -11,13 +11,29 @@ export type Respuesta = {
   count?: number | null;
 };
 
-export function clienteFalso(respuestas: Record<string, Respuesta>) {
+/** Una respuesta, o una lista que se consume en orden (la última se repite). */
+export type RespuestaOLista = Respuesta | Respuesta[];
+
+export function clienteFalso(respuestas: Record<string, RespuestaOLista>) {
+  const turnos = new Map<string, number>();
   const llamadas: { clave: string; args: unknown[] }[] = [];
   const cliente = {
     from(tabla: string) {
       let op = 'select';
       const b: Record<string, unknown> = {};
-      const resolver = () => ({ data: null, error: null, count: null, ...(respuestas[`${tabla}.${op}`] ?? {}) });
+      const resolver = () => {
+        const clave = `${tabla}.${op}`;
+        const r = respuestas[clave];
+        let elegida: Respuesta | undefined;
+        if (Array.isArray(r)) {
+          const n = turnos.get(clave) ?? 0;
+          turnos.set(clave, n + 1);
+          elegida = r[Math.min(n, r.length - 1)];
+        } else {
+          elegida = r;
+        }
+        return { data: null, error: null, count: null, ...(elegida ?? {}) };
+      };
       for (const m of ['select', 'insert', 'update', 'upsert', 'delete']) {
         b[m] = (...args: unknown[]) => {
           if (m !== 'select' || op === 'select') op = m;
@@ -25,7 +41,7 @@ export function clienteFalso(respuestas: Record<string, Respuesta>) {
           return b;
         };
       }
-      for (const m of ['eq', 'neq', 'in', 'order', 'range', 'ilike', 'limit']) b[m] = () => b;
+      for (const m of ['eq', 'neq', 'in', 'order', 'range', 'ilike', 'limit', 'is', 'not']) b[m] = () => b;
       b.maybeSingle = async () => resolver();
       b.single = async () => resolver();
       b.then = (ok: (v: unknown) => unknown, ko?: (e: unknown) => unknown) =>
