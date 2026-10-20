@@ -39,3 +39,6 @@ next-env.d.ts
 
 # Datos locales de Docker
 infra/data/
+
+# Resultados de Lighthouse
+apps/web/.lighthouseci/
