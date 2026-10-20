@@ -103,7 +103,8 @@ export class FuenteMemoria implements FuenteCheckout {
     for (const p of this.pedidos.values()) {
       if (p.fila.checkout_idempotency_key === clave) {
         const completo = this.eventos.some((e) => e.orderId === p.pedido.id && e.evento.type === 'created');
-        return { ...this.resumen(p), completo, solicitud: this.solicitud(p) };
+        const huella = (p.fila.checkout_request_hash as string | null | undefined) ?? null;
+        return { ...this.resumen(p), completo, huella, solicitud: this.solicitud(p) };
       }
     }
     return null;
@@ -150,15 +151,27 @@ export class FuenteMemoria implements FuenteCheckout {
   }
 
 
-  /** Imita `crear_pedido_checkout`: idempotencia, restricciones de la tabla, stock y canje; todo o nada. */
+  /**
+   * Imita `crear_pedido_checkout`: idempotencia por clave y huella (ambas presentes y distintas = conflicto),
+   * política de datos vigente, restricciones de la tabla, stock y canje; todo o nada.
+   */
   async crearPedido(fila: FilaPedido, items: readonly FilaItem[]): Promise<ResultadoCrearPedido> {
     this.marca('crearPedido');
     for (const p of this.pedidos.values()) {
       if (p.fila.checkout_idempotency_key !== fila.checkout_idempotency_key) continue;
-      if (p.fila.country_code !== fila.country_code) return { ok: false, motivo: 'idempotencia_conflicto' };
+      const h1 = p.fila.checkout_request_hash ?? null;
+      const h2 = fila.checkout_request_hash ?? null;
+      if (p.fila.country_code !== fila.country_code || (h1 !== null && h2 !== null && h1 !== h2)) {
+        return { ok: false, motivo: 'idempotencia_conflicto' };
+      }
       return { ok: true, repetido: true, pedido: this.resumen(p) };
     }
     if (this.enProceso) return { ok: false, motivo: 'en_proceso' };
+    const vigente = this.politicas.get(fila.country_code as CountryCode) ?? null;
+    if (vigente === null) return { ok: false, motivo: 'sin_politica_datos' };
+    if (fila.data_policy_version !== vigente) {
+      return { ok: false, motivo: 'politica_datos_desactualizada', version_vigente: vigente };
+    }
     if (items.length === 0) return { ok: false, motivo: 'sin_items' };
     const pais = fila.country_code as CountryCode;
     const n = this.secuencia + 1;

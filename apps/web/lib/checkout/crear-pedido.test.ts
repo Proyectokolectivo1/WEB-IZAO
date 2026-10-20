@@ -371,10 +371,38 @@ describe('POST /api/checkout: crear pedido', () => {
       expect(f.vars.get(V1)!.disponible).toBe(4);
     });
 
-    it('la fila del pedido lleva la huella (checkout_request_hash) para cuando la base la guarde', async () => {
+    it('la fila del pedido lleva la huella (checkout_request_hash) que la base guarda y compara', async () => {
       const f = fuenteDePrueba();
       exito(await crearPedidoCheckout(f, cuerpo(), AHORA));
       expect(soloPedido(f).fila.checkout_request_hash).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it('la huella persistida manda: si difiere de la del reintento → 409 aunque el contenido releído coincida', async () => {
+      const f = fuenteDePrueba();
+      exito(await crearPedidoCheckout(f, cuerpo(), AHORA));
+      soloPedido(f).fila.checkout_request_hash = 'f'.repeat(64);
+      const r = await crearPedidoCheckout(f, cuerpo(), AHORA);
+      expect(r).toEqual({ ok: false, status: 409, cuerpo: { error: 'IDEMPOTENCY_CONFLICT' } });
+    });
+
+    it('pedido anterior sin huella guardada: se compara el contenido persistido (200 repeated)', async () => {
+      const f = fuenteDePrueba();
+      exito(await crearPedidoCheckout(f, cuerpo(), AHORA));
+      soloPedido(f).fila.checkout_request_hash = null;
+      const r = await crearPedidoCheckout(f, cuerpo(), AHORA);
+      expect(r.status).toBe(200);
+      const r2 = await crearPedidoCheckout(f, cuerpo({ items: [{ variant_id: V1, quantity: 2 }] }), AHORA);
+      expect(r2).toEqual({ ok: false, status: 409, cuerpo: { error: 'IDEMPOTENCY_CONFLICT' } });
+    });
+
+    it('la base rechaza idempotencia_conflicto (huellas distintas en carrera) → 409 sin escribir', async () => {
+      const f = fuenteDePrueba();
+      exito(await crearPedidoCheckout(f, cuerpo(), AHORA));
+      f.pedidoPorIdempotencia = async () => null; // la lectura previa no lo ve
+      const r = await crearPedidoCheckout(f, cuerpo({ items: [{ variant_id: V1, quantity: 2 }] }), AHORA);
+      expect(r).toEqual({ ok: false, status: 409, cuerpo: { error: 'IDEMPOTENCY_CONFLICT' } });
+      expect(f.pedidos.size).toBe(1);
+      expect(f.vars.get(V1)!.disponible).toBe(4);
     });
   });
 
@@ -403,6 +431,32 @@ describe('POST /api/checkout: crear pedido', () => {
 
     it('sin política de datos publicada en el país → 503 sin pedido (no hay consentimiento válido)', async () => {
       const f = fuenteDePrueba();
+      f.politicas.delete('CO');
+      const r = await crearPedidoCheckout(f, cuerpo(), AHORA);
+      expect(r).toEqual({ ok: false, status: 503, cuerpo: { error: 'UNAVAILABLE' } });
+      expect(f.pedidos.size).toBe(0);
+    });
+
+    it('la política cambia entre la lectura y la escritura: la base rechaza → 409 con la versión de la base, nada escrito', async () => {
+      const f = fuenteDePrueba();
+      f.versionPoliticaDatos = async () => '2026-10'; // lectura previa (vieja)
+      f.politicas.set('CO', '2026-11'); // lo que la base exige al escribir
+      const r = await crearPedidoCheckout(f, cuerpo(), AHORA);
+      expect(r).toEqual({ ok: false, status: 409, cuerpo: { error: 'DATA_POLICY_OUTDATED', current_version: '2026-11' } });
+      expect(f.pedidos.size).toBe(0);
+      expect(f.vars.get(V1)!.disponible).toBe(5);
+    });
+
+    it('politica_datos_desactualizada sin version_vigente → 503 (la versión no se inventa)', async () => {
+      const f = fuenteDePrueba();
+      f.crearPedido = async () => ({ ok: false, motivo: 'politica_datos_desactualizada' });
+      const r = await crearPedidoCheckout(f, cuerpo(), AHORA);
+      expect(r).toEqual({ ok: false, status: 503, cuerpo: { error: 'UNAVAILABLE' } });
+    });
+
+    it('la política se despublica entre la lectura y la escritura: la base responde sin_politica_datos → 503', async () => {
+      const f = fuenteDePrueba();
+      f.versionPoliticaDatos = async () => '2026-10';
       f.politicas.delete('CO');
       const r = await crearPedidoCheckout(f, cuerpo(), AHORA);
       expect(r).toEqual({ ok: false, status: 503, cuerpo: { error: 'UNAVAILABLE' } });

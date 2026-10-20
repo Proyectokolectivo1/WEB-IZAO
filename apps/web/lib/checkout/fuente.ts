@@ -84,7 +84,13 @@ export type FilaItem = Record<string, string | number | boolean | null>;
  */
 export type ResultadoCrearPedido =
   | { ok: true; repetido: boolean; pedido: PedidoCreado }
-  | { ok: false; motivo: string; faltantes?: readonly StockShortageLinea[] };
+  | {
+      ok: false;
+      motivo: string;
+      faltantes?: readonly StockShortageLinea[];
+      /** Solo con `politica_datos_desactualizada`: versión publicada que la base exige. */
+      version_vigente?: string;
+    };
 
 export interface StockShortageLinea {
   variant_id: string | null;
@@ -106,12 +112,15 @@ export interface FuenteCheckout {
   /**
    * Pedido con esa clave de idempotencia. `completo` = ya tiene el evento `created` (stock y canje
    * reservados); si no, otra petición lo está creando o quedó a medias y lo vencerá `pedidos_por_vencer`.
-   * `solicitud` = lo que el pedido guardado pidió (para comparar la huella con la de un reintento).
+   * `huella` = `checkout_request_hash` guardado (`null` en pedidos anteriores a la columna); si falta, se compara
+   * con `solicitud`, lo que el pedido guardado pidió.
    */
-  pedidoPorIdempotencia(clave: string): Promise<(PedidoCreado & { completo: boolean; solicitud: DatosSolicitud }) | null>;
+  pedidoPorIdempotencia(
+    clave: string,
+  ): Promise<(PedidoCreado & { completo: boolean; huella: string | null; solicitud: DatosSolicitud }) | null>;
   /**
-   * Versión vigente de la política de tratamiento de datos del país (página publicada; mismo criterio que la
-   * tienda usa para mostrarla). `null` si el país no tiene una publicada.
+   * Versión vigente de la política de tratamiento de datos del país: `politica_datos_vigente(país)` (página
+   * `pages.kind = 'tratamiento_datos'` publicada), la misma que exige `crear_pedido_checkout`. `null` si no hay.
    */
   versionPoliticaDatos(pais: CountryCode): Promise<string | null>;
   /** `crear_pedido_checkout` (izao-db): atómico e idempotente por `checkout_idempotency_key`. */

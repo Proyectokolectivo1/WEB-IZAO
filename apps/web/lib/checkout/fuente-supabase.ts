@@ -10,7 +10,7 @@ import type { PricingDiscountCode } from '@izao/core/pricing';
 import { ORDER_STATUSES } from '@izao/core/order-state';
 import { amountSchema, checkoutPaymentMethodSchema, countryCodeSchema, currencyCodeSchema } from '@izao/core/schemas';
 import { ErrorDb, clienteDb, llamarRpc } from '@/lib/db/cliente';
-import { crearPedidoCheckoutDb, type EntradaCrearPedido } from '@/lib/db/checkout';
+import { crearPedidoCheckoutDb, politicaDatosVigenteDb, type EntradaCrearPedido } from '@/lib/db/checkout';
 import type { ConfigPais, FuenteCheckout, PedidoCreado, VarianteCheckout } from './fuente';
 import type { DatosSolicitud } from './huella';
 
@@ -195,17 +195,6 @@ export function solicitudDePedido(f: z.infer<typeof filaSolicitud>): DatosSolici
   };
 }
 
-/**
- * Mismo criterio que la tienda (`lib/store/checkout-datos.ts`, `enlacesLegales`) para saber cuál página es la
- * de tratamiento de datos: la primera, por título, cuyo slug o título coincida. Pendiente izao-db: marcarla
- * explícitamente (p. ej. `pages.kind`) para no depender del nombre.
- */
-const REGEX_DATOS = /datos|privacidad|tratamiento/i;
-export function elegirVersionPolitica(paginas: readonly { slug: string; title: string; version: number }[]): string | null {
-  const p = paginas.find((x) => REGEX_DATOS.test(x.slug) || REGEX_DATOS.test(x.title));
-  return p ? String(p.version) : null;
-}
-
 /** Mismo patrón de `discountCodeInputSchema` y del CHECK de `discount_codes.code`. */
 const PATRON_CODIGO = /^[A-Z0-9_-]{1,40}$/;
 
@@ -222,7 +211,6 @@ function validar<S extends z.ZodType>(funcion: string, esquema: S, data: unknown
 function revisar(funcion: string, error: { message: string; code?: string } | null): void {
   if (error) throw new ErrorDb(funcion, 'rpc', error.message, error.code ?? null);
 }
-
 
 export const fuenteSupabase: FuenteCheckout = {
   async configPais(pais): Promise<ConfigPais | null> {
@@ -271,7 +259,7 @@ export const fuenteSupabase: FuenteCheckout = {
 
   async codigo(texto) {
     // `discount_codes.code` siempre está en mayúsculas (CHECK code = upper(code)); se normaliza aquí también por
-    // defensa. El índice único hoy es sobre `upper(code)`: pedido a izao-db el índice sobre `code` (bitácora).
+    // defensa. `.eq('code')` usa el índice único `discount_codes_code_key`.
     const normal = texto.replace(/\s+/g, '').toUpperCase();
     if (!PATRON_CODIGO.test(normal)) return null;
     const { data, error } = await clienteDb()
@@ -330,7 +318,7 @@ export const fuenteSupabase: FuenteCheckout = {
     const { data, error } = await clienteDb()
       .from('orders')
       .select(
-        `${COLUMNAS_PEDIDO}, discount_code_text, shipping_region_id, shipping_city_id, shipping_district, ` +
+        `${COLUMNAS_PEDIDO}, checkout_request_hash, discount_code_text, shipping_region_id, shipping_city_id, shipping_district, ` +
           'shipping_address1, shipping_address2, shipping_notes, ' +
           'order_items(variant_id, name_snapshot, variant_label, quantity, unit_price, line_discount), order_events(type)',
       )
@@ -344,11 +332,13 @@ export const fuenteSupabase: FuenteCheckout = {
       filaPedido.merge(filaSolicitud.omit({ order_items: true })).extend({
         order_items: z.array(filaItemResumen),
         order_events: z.array(z.object({ type: z.string() })),
+        checkout_request_hash: z.string().regex(/^[0-9a-f]{64}$/).nullable(),
       }),
       data,
     );
     return {
       ...mapearPedido(f),
+      huella: f.checkout_request_hash,
       solicitud: solicitudDePedido(f),
       lines: f.order_items.map((i) => ({
         variant_id: i.variant_id,
@@ -363,20 +353,8 @@ export const fuenteSupabase: FuenteCheckout = {
   },
 
   async versionPoliticaDatos(pais) {
-    // Sin caché: el consentimiento se valida contra lo vigente en el momento del pedido.
-    const { data, error } = await clienteDb()
-      .from('pages')
-      .select('slug, title, version')
-      .eq('country_code', pais)
-      .eq('status', 'published')
-      .order('title');
-    revisar('pages', error);
-    const paginas = validar(
-      'pages',
-      z.array(z.object({ slug: z.string(), title: z.string(), version: entero.positive() })),
-      data ?? [],
-    );
-    return elegirVersionPolitica(paginas);
+    // Sin caché: el consentimiento se valida contra lo vigente en el momento del pedido (la base lo revalida).
+    return politicaDatosVigenteDb(pais);
   },
 
   async crearPedido(fila, items) {
@@ -389,6 +367,7 @@ export const fuenteSupabase: FuenteCheckout = {
         ...(r.faltantes
           ? { faltantes: r.faltantes.map((x) => ({ variant_id: x.variant_id, solicitado: x.solicitado, disponible: x.disponible })) }
           : {}),
+        ...(r.version_vigente !== undefined ? { version_vigente: r.version_vigente } : {}),
       };
     }
     const o = validar('crear_pedido_checkout', filaPedido.extend({ lines: z.array(filaItemResumen) }), r.order);

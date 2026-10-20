@@ -177,7 +177,8 @@ function respuesta(p: PedidoCreado, repetido: boolean, warnings: string[]): Extr
 
 /**
  * Pedido ya creado con la clave: mismo país y misma huella (líneas, método, código efectivo y dirección) →
- * reintento (200 `repeated`); otro contenido → `IDEMPOTENCY_CONFLICT`. Sin pedido → `null`.
+ * reintento (200 `repeated`); otro contenido → `IDEMPOTENCY_CONFLICT`. Sin pedido → `null`. Se compara la huella
+ * guardada (`checkout_request_hash`); un pedido anterior a la columna se compara con su contenido persistido.
  */
 async function porIdempotencia(
   fuente: FuenteCheckout,
@@ -188,7 +189,8 @@ async function porIdempotencia(
   if (!previo) return null;
   if (previo.country_code !== entrada.country_code) return falla(409, { error: 'IDEMPOTENCY_CONFLICT' });
   if (!previo.completo) return falla(409, { error: 'CHECKOUT_IN_PROGRESS' });
-  if (huellaSolicitud(previo.solicitud) !== huella) return falla(409, { error: 'IDEMPOTENCY_CONFLICT' });
+  const guardada = previo.huella ?? huellaSolicitud(previo.solicitud);
+  if (guardada !== huella) return falla(409, { error: 'IDEMPOTENCY_CONFLICT' });
   return respuesta(previo, true, []);
 }
 
@@ -232,7 +234,7 @@ function filaPedido(
     cod_collect_amount: r.cod_collect.toString(),
     product_cost_total: costoTotal.toString(),
     checkout_idempotency_key: entrada.idempotency_key,
-    // Aún sin columna: `crearPedidoCheckoutDb` la descarta hasta que izao-db la agregue (ver bitácora).
+    // La base la guarda y la compara en `pedido_checkout_existente(clave, país, hash)`.
     checkout_request_hash: huella,
     terms_accepted_at: ahora.toISOString(),
     data_policy_version: politicaVigente,
@@ -263,7 +265,8 @@ export async function crearPedidoCheckout(
     const repetido = await porIdempotencia(fuente, entrada, huella);
     if (repetido) return repetido;
 
-    // 2b. Consentimiento: solo la versión vigente de la política de datos del país (no la que diga el navegador)
+    // 2b. Consentimiento: solo la versión vigente de la política de datos del país (no la que diga el navegador).
+    // Se valida aquí para no recalcular en vano; la base la revalida al escribir (`politica_datos_*`).
     const politica = await fuente.versionPoliticaDatos(pais);
     if (politica === null) {
       console.error(`[checkout] ${pais} sin política de tratamiento de datos publicada`);
@@ -372,6 +375,14 @@ export async function crearPedidoCheckout(
         return falla(409, { error: 'IDEMPOTENCY_CONFLICT' });
       case 'en_proceso':
         return falla(409, { error: 'CHECKOUT_IN_PROGRESS' });
+      case 'politica_datos_desactualizada':
+        // Cambió entre la lectura y la escritura: la versión que manda es la de la base.
+        if (c.version_vigente) return falla(409, { error: 'DATA_POLICY_OUTDATED', current_version: c.version_vigente });
+        console.error('[checkout] politica_datos_desactualizada sin version_vigente');
+        return NO_DISPONIBLE();
+      case 'sin_politica_datos':
+        console.error(`[checkout] ${pais} sin política de tratamiento de datos publicada (al escribir)`);
+        return NO_DISPONIBLE();
       case 'sin_stock':
         return falla(409, {
           error: 'STOCK_CHANGED',

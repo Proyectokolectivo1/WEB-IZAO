@@ -8,7 +8,6 @@ vi.mock('@/lib/auth/supabase/servicio', () => ({
 
 import { fijarClienteDbParaPruebas } from '@/lib/db/cliente';
 import {
-  elegirVersionPolitica,
   filaCodigo,
   filaVariante,
   fuenteSupabase,
@@ -168,6 +167,26 @@ describe('fuente Supabase del checkout: mapeos', () => {
     expect((args as { p: { order: Record<string, unknown> } }).p.order.status).toBeUndefined();
   });
 
+  it('crearPedido envía la huella en la RPC (ya no la descarta el envoltorio)', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: { ok: false, estado: 'rechazado', motivo: 'sin_items' }, error: null });
+    fijarClienteDbParaPruebas({ rpc } as never);
+    await fuenteSupabase.crearPedido({ ...ORDEN, checkout_request_hash: 'b'.repeat(64) }, [ITEM]);
+    expect(rpc.mock.calls[0]?.[1].p.order.checkout_request_hash).toBe('b'.repeat(64));
+  });
+
+  it('crearPedido: política desactualizada trae la versión vigente de la base', async () => {
+    const rpc = async () => ({
+      data: { ok: false, estado: 'rechazado', motivo: 'politica_datos_desactualizada', version_vigente: '4' },
+      error: null,
+    });
+    fijarClienteDbParaPruebas({ rpc } as never);
+    expect(await fuenteSupabase.crearPedido(ORDEN, [ITEM])).toEqual({
+      ok: false,
+      motivo: 'politica_datos_desactualizada',
+      version_vigente: '4',
+    });
+  });
+
   it('crearPedido: rechazo de stock con faltantes', async () => {
     const rpc = async () => ({
       data: { ok: false, estado: 'rechazado', motivo: 'sin_stock', faltantes: [{ variant_id: ITEM.variant_id, sku: 'SKU-1', solicitado: 2, disponible: 1, motivo: 'stock_insuficiente' }] },
@@ -225,26 +244,48 @@ describe('fuente Supabase del checkout: consultas', () => {
     expect(q.tablas).toEqual([]);
   });
 
-  it('versión de la política: la página publicada de tratamiento de datos del país (mismo criterio de la tienda)', () => {
-    expect(
-      elegirVersionPolitica([
-        { slug: 'quienes-somos', title: 'Quiénes somos', version: 9 },
-        { slug: 'terminos', title: 'Términos y condiciones', version: 4 },
-        { slug: 'tratamiento-de-datos', title: 'Política de tratamiento de datos personales', version: 3 },
-      ]),
-    ).toBe('3');
-    expect(elegirVersionPolitica([{ slug: 'terminos', title: 'Términos', version: 1 }])).toBeNull();
-    expect(elegirVersionPolitica([])).toBeNull();
+  it('versionPoliticaDatos usa politica_datos_vigente(país) de la base (pages.kind, sin regex)', async () => {
+    const rpc = vi.fn().mockResolvedValueOnce({ data: '3', error: null }).mockResolvedValueOnce({ data: null, error: null });
+    fijarClienteDbParaPruebas({ rpc } as never);
+    expect(await fuenteSupabase.versionPoliticaDatos('EC')).toBe('3');
+    expect(rpc).toHaveBeenCalledWith('politica_datos_vigente', { p_pais: 'EC' });
+    expect(await fuenteSupabase.versionPoliticaDatos('CO')).toBeNull();
   });
 
-  it('versionPoliticaDatos consulta solo páginas publicadas del país, ordenadas por título', async () => {
-    const q = consultaFalsa({ data: [{ slug: 'privacidad', title: 'Privacidad', version: 2 }], error: null });
+  it('pedidoPorIdempotencia trae la huella persistida (checkout_request_hash)', async () => {
+    const H = 'a'.repeat(64);
+    const q = consultaFalsa({
+      data: {
+        id: '00000000-0000-4000-8000-000000000001',
+        number: 'IZ-CO-000001',
+        public_token: 'tok',
+        status: 'pendiente_pago',
+        country_code: 'CO',
+        currency_code: 'COP',
+        payment_method: 'wompi',
+        subtotal: '200000',
+        discount_amount: '0',
+        financing_surcharge_amount: '0',
+        total_customer: '200000',
+        cod_deposit_amount: '0',
+        cod_collect_amount: '0',
+        checkout_request_hash: H,
+        discount_code_text: null,
+        shipping_region_id: P,
+        shipping_city_id: C,
+        shipping_district: null,
+        shipping_address1: 'Calle 10 # 20-30',
+        shipping_address2: null,
+        shipping_notes: null,
+        order_items: [{ variant_id: V, name_snapshot: 'Bruma', variant_label: null, quantity: 1, unit_price: '200000', line_discount: '0' }],
+        order_events: [{ type: 'created' }],
+      },
+      error: null,
+    });
     fijarClienteDbParaPruebas(q.cliente as never);
-    expect(await fuenteSupabase.versionPoliticaDatos('EC')).toBe('2');
-    expect(q.tablas).toEqual(['pages']);
-    expect(q.filtros).toContainEqual(['eq', 'country_code', 'EC']);
-    expect(q.filtros).toContainEqual(['eq', 'status', 'published']);
-    expect(q.filtros).toContainEqual(['order', 'title']);
+    const r = await fuenteSupabase.pedidoPorIdempotencia('clave-1');
+    expect(r).toMatchObject({ huella: H, completo: true, total_customer: 200000n });
+    expect(String(q.filtros.find((f) => f[0] === 'select')?.[1])).toContain('checkout_request_hash');
   });
 
   it('solicitud persistida del pedido: líneas, método, código copiado y dirección', () => {
