@@ -17,6 +17,10 @@ insert into public.variant_countries (variant_id, country_code, is_active, price
 -- un solo uso en total
 insert into public.discount_codes (id, code, country_code, type, value, usage_limit_total)
   values ('c0000000-0000-0000-0000-0000000000c1', 'CHECKOUTPGTAP', 'CO', 'percent', 10, 1);
+-- Política de datos vigente de CO = '7' (desde 20261020213954 crear_pedido_checkout la exige)
+update public.pages set status = 'draft' where country_code = 'CO' and kind = 'tratamiento_datos' and status = 'published';
+insert into public.pages (country_code, slug, title, content_html, version, status, kind)
+  values ('CO', 'pgtap-datos-19', 'Datos pgtap', '<p>Política</p>', 7, 'published', 'tratamiento_datos');
 
 -- Fábrica de payloads: B x cantidad (+ A x1 si p_con_a), método, código opcional y clave
 create function pg_temp.p(p_clave text, p_metodo text default 'wompi', p_cant int default 1, p_con_a boolean default false,
@@ -42,7 +46,7 @@ returns jsonb language sql as $$
       'cod_deposit_amount', case when p_metodo = 'cod' then '20000' else '0' end,
       'cod_collect_amount', case when p_metodo = 'cod' then (t.sub - t.des - 20000)::text else '0' end,
       'product_cost_total', '20000', 'checkout_idempotency_key', p_clave, 'terms_accepted_at', now(),
-      'data_policy_version', 'v1', 'whatsapp_opt_in', true) || p_extra,
+      'data_policy_version', '7', 'whatsapp_opt_in', true) || p_extra,
     'items', case when p_con_a then jsonb_build_array(l.b, l.a) else jsonb_build_array(l.b) end)
   from l, t;
 $$;

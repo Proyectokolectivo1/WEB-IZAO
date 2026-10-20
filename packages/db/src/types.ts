@@ -2061,6 +2061,7 @@ export type Database = {
           cancelled_at: string | null
           carrier_fees: Json
           checkout_idempotency_key: string | null
+          checkout_request_hash: string | null
           click_ids: Json
           cod_collect_amount: number
           cod_deposit_amount: number
@@ -2117,6 +2118,7 @@ export type Database = {
           cancelled_at?: string | null
           carrier_fees?: Json
           checkout_idempotency_key?: string | null
+          checkout_request_hash?: string | null
           click_ids?: Json
           cod_collect_amount?: number
           cod_deposit_amount?: number
@@ -2173,6 +2175,7 @@ export type Database = {
           cancelled_at?: string | null
           carrier_fees?: Json
           checkout_idempotency_key?: string | null
+          checkout_request_hash?: string | null
           click_ids?: Json
           cod_collect_amount?: number
           cod_deposit_amount?: number
@@ -2281,6 +2284,7 @@ export type Database = {
           country_code: string
           created_at: string
           id: string
+          kind: string
           seo_description: string | null
           seo_title: string | null
           slug: string
@@ -2295,6 +2299,7 @@ export type Database = {
           country_code: string
           created_at?: string
           id?: string
+          kind?: string
           seo_description?: string | null
           seo_title?: string | null
           slug: string
@@ -2309,6 +2314,7 @@ export type Database = {
           country_code?: string
           created_at?: string
           id?: string
+          kind?: string
           seo_description?: string | null
           seo_title?: string | null
           slug?: string
@@ -3822,10 +3828,12 @@ export type Database = {
         Args: { p_country_code: string; p_kind: string }
         Returns: number
       }
-      pedido_checkout_existente: {
-        Args: { p_clave: string; p_pais: string }
-        Returns: Json
-      }
+      pedido_checkout_existente:
+        | { Args: { p_clave: string; p_pais: string }; Returns: Json }
+        | {
+            Args: { p_clave: string; p_hash: string; p_pais: string }
+            Returns: Json
+          }
       pedido_checkout_resumen: { Args: { p_order_id: string }; Returns: Json }
       pedidos_por_vencer: {
         Args: { p_ahora?: string; p_limite?: number }
@@ -3841,6 +3849,7 @@ export type Database = {
           tiene_codigo: boolean
         }[]
       }
+      politica_datos_vigente: { Args: { p_pais: string }; Returns: string }
       purgar_audit_log: { Args: { p_dias?: number }; Returns: number }
       refresh_catalog_listing: {
         Args: { p_product_id: string }

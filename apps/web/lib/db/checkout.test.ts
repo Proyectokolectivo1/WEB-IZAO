@@ -7,7 +7,7 @@ vi.mock('../auth/supabase/servicio', () => ({
 }));
 
 import { ErrorDb, fijarClienteDbParaPruebas } from './cliente';
-import { crearPedidoCheckoutDb, type EntradaCrearPedido } from './checkout';
+import { crearPedidoCheckoutDb, politicaDatosVigenteDb, type EntradaCrearPedido } from './checkout';
 
 const ID = 'd2000000-0000-0000-0000-000000000001';
 const VAR = 'f2000000-0000-0000-0000-000000000001';
@@ -94,5 +94,32 @@ describe('crearPedidoCheckoutDb', () => {
     await expect(crearPedidoCheckoutDb(entrada)).rejects.toBeInstanceOf(ErrorDb);
     clienteFalso(null, { message: 'x', code: '40001' });
     await expect(crearPedidoCheckoutDb(entrada)).rejects.toBeInstanceOf(ErrorDb);
+  });
+
+  it('envía la huella y rechaza una mal formada antes de llamar', async () => {
+    const huella = 'a'.repeat(64);
+    const rpc = clienteFalso({ ok: true, estado: 'creado', repetido: false, order: resumen });
+    await crearPedidoCheckoutDb({ ...entrada, order: { ...entrada.order, checkout_request_hash: huella } });
+    expect(rpc.mock.calls[0]?.[1].p.order.checkout_request_hash).toBe(huella);
+    rpc.mockClear();
+    await expect(
+      crearPedidoCheckoutDb({ ...entrada, order: { ...entrada.order, checkout_request_hash: 'A'.repeat(64) } }),
+    ).rejects.toThrow();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('devuelve politica_datos_desactualizada con la versión vigente', async () => {
+    clienteFalso({ ok: false, estado: 'rechazado', motivo: 'politica_datos_desactualizada', version_vigente: '3' });
+    expect(await crearPedidoCheckoutDb(entrada)).toMatchObject({ ok: false, version_vigente: '3' });
+  });
+});
+
+describe('politicaDatosVigenteDb', () => {
+  it('llama politica_datos_vigente con el país y acepta null', async () => {
+    const rpc = clienteFalso('3');
+    expect(await politicaDatosVigenteDb('CO')).toBe('3');
+    expect(rpc).toHaveBeenCalledWith('politica_datos_vigente', { p_pais: 'CO' });
+    clienteFalso(null);
+    expect(await politicaDatosVigenteDb('EC')).toBeNull();
   });
 });

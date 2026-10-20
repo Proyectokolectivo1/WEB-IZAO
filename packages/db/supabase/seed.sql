@@ -222,4 +222,15 @@ left join (values
 where p.country_code = 'CO'
 on conflict (country_code, slug) do nothing;
 
+-- Tipo de cada página legal (pages.kind): la de tratamiento de datos da la versión de la política del checkout.
+update public.pages set kind = case slug
+    when 'quienes-somos' then 'quienes_somos'
+    when 'politica-de-envios' then 'envios'
+    when 'tratamiento-de-datos' then 'tratamiento_datos'
+    when 'terminos-y-condiciones' then 'terminos'
+    when 'devoluciones-y-garantias' then 'devoluciones'
+  end
+ where kind = 'general'
+   and slug in ('quienes-somos', 'politica-de-envios', 'tratamiento-de-datos', 'terminos-y-condiciones', 'devoluciones-y-garantias');
+
 commit;

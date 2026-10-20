@@ -53,7 +53,13 @@ export const pedidoCheckoutSchema = z.object({
   utm: z.record(z.string(), z.unknown()).optional(),
   click_ids: z.record(z.string(), z.unknown()).optional(),
   checkout_idempotency_key: z.string().min(1).max(200),
+  /**
+   * Huella SHA-256 en hex minúscula de la solicitud (`lib/checkout/huella.ts`). Misma clave con huella distinta →
+   * `idempotencia_conflicto`; nula no choca.
+   */
+  checkout_request_hash: z.string().regex(/^[0-9a-f]{64}$/).nullable().optional(),
   terms_accepted_at: z.string().nullable().optional(),
+  /** Debe ser `politica_datos_vigente(country_code)`; si no, `politica_datos_desactualizada` (o `sin_politica_datos`). */
   data_policy_version: texto,
   whatsapp_opt_in: z.boolean().optional(),
 });
@@ -121,6 +127,10 @@ export const motivosCrearPedido = [
   'limite_por_cliente',
   'totales_inconsistentes',
   'datos_invalidos',
+  /** No hay página `tratamiento_datos` publicada en el país (nada escrito). */
+  'sin_politica_datos',
+  /** `data_policy_version` ≠ la vigente; trae `version_vigente` (nada escrito). */
+  'politica_datos_desactualizada',
 ] as const;
 export type MotivoCrearPedido = (typeof motivosCrearPedido)[number];
 
@@ -146,9 +156,19 @@ const resultadoSchema = z.discriminatedUnion('ok', [
     motivo: z.string(),
     detalle: z.string().optional(),
     faltantes: z.array(faltanteSchema).optional(),
+    /** Solo con `politica_datos_desactualizada`: versión publicada que debe aceptar el cliente. */
+    version_vigente: z.string().optional(),
   }),
 ]);
 export type ResultadoCrearPedido = z.infer<typeof resultadoSchema>;
+
+/**
+ * Versión vigente (texto, p. ej. "3") de la política de tratamiento de datos del país: la `version` de la única página
+ * `pages.kind = 'tratamiento_datos'` publicada. `null` si no hay. Es el valor que exige `crear_pedido_checkout`.
+ */
+export async function politicaDatosVigenteDb(pais: 'CO' | 'EC'): Promise<string | null> {
+  return llamarRpc('politica_datos_vigente', { p_pais: pais }, z.string().nullable());
+}
 
 /**
  * Crea el pedido del checkout. Valida la entrada antes de llamar (lanza `ZodError` si es inválida) y la respuesta
