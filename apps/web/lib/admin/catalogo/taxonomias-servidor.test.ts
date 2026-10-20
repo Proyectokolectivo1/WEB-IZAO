@@ -4,35 +4,9 @@ const { auditar, revalidar } = vi.hoisted(() => ({ auditar: vi.fn(async (_e: unk
 vi.mock('@/lib/admin/auditoria', () => ({ auditarCambio: auditar }));
 vi.mock('next/cache', () => ({ revalidateTag: revalidar }));
 
+import { clienteFalso } from '../crud/cliente-falso';
 import { TAXONOMIAS, esquemaTaxonomia } from './taxonomias';
-import { eliminarTaxonomiaBd, guardarTaxonomiaBd, type Cliente } from './taxonomias-servidor';
-
-type Respuesta = { data?: unknown; error?: { code?: string; message: string } | null; count?: number | null };
-
-/** Cliente falso: cada `tabla.operación` devuelve la respuesta preparada y registra la llamada. */
-function clienteFalso(respuestas: Record<string, Respuesta>) {
-  const llamadas: { clave: string; args: unknown[] }[] = [];
-  const cliente = {
-    from(tabla: string) {
-      let op = 'select';
-      const b: Record<string, unknown> = {};
-      const resolver = () => ({ data: null, error: null, count: null, ...(respuestas[`${tabla}.${op}`] ?? {}) });
-      for (const m of ['select', 'insert', 'update', 'delete']) {
-        b[m] = (...args: unknown[]) => {
-          if (m !== 'select' || op === 'select') op = m;
-          llamadas.push({ clave: `${tabla}.${m}`, args });
-          return b;
-        };
-      }
-      for (const m of ['eq', 'order', 'range', 'ilike']) b[m] = () => b;
-      b.maybeSingle = async () => resolver();
-      b.single = async () => resolver();
-      b.then = (ok: (v: unknown) => unknown) => Promise.resolve(resolver()).then(ok);
-      return b;
-    },
-  };
-  return { cliente: cliente as unknown as Cliente, llamadas };
-}
+import { eliminarTaxonomiaBd, guardarTaxonomiaBd } from './taxonomias-servidor';
 
 const datos = esquemaTaxonomia.parse({ name: 'Árabe', slug: 'arabe' });
 const comun = { actor: 'u1', ip: '1.2.3.4' };

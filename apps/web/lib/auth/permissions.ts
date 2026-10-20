@@ -64,7 +64,7 @@ export const MODULOS = {
     etiqueta: 'Categorías',
     ruta: '/admin/categorias',
     roles: SOLO_ADMIN,
-    disponible: false,
+    disponible: true,
   },
   catalogo_auxiliar: {
     etiqueta: 'Marcas y atributos',
