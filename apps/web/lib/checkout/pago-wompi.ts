@@ -58,7 +58,10 @@ export interface FuentePagos {
   credencialesWompi(): Promise<WompiCredentials | null>;
   /** `duplicado` si ya existe un pago de Wompi con esa referencia (índice único). */
   insertarIntento(n: NuevoIntento): Promise<{ ok: true; intento: IntentoPago } | { ok: false; motivo: 'duplicado' }>;
-  /** Cambia `orders.status` solo si sigue en `from_status` y registra el evento; `false` si no. */
+  /**
+   * `aplicar_transicion_pedido` (atómico): cambia `orders.status` solo si sigue en `from_status` y registra el
+   * evento. `true` también si ya estaba en `to_status`; `false` si otro proceso lo movió a otro estado.
+   */
   aplicarTransicion(orderId: string, evento: OrderStatusEvent): Promise<boolean>;
 }
 

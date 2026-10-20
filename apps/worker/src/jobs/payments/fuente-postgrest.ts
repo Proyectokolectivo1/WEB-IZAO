@@ -3,9 +3,8 @@
  * Credenciales: `integration_credentials` activa de `wompi`/`CO`, descifrada con `APP_ENCRYPTION_KEY`
  * (`@izao/core/credentials`). Nunca se registran llaves, secretos ni cuerpos de respuesta.
  *
- * `aplicarTransicion` hoy son dos sentencias (update condicional por estado + insert del evento). Si el insert
- * falla, el job lanza y el reintento ve el pedido ya en el estado nuevo; queda pedida a izao-db una función
- * atómica (`aplicar_transicion_pedido`) para cerrar ese hueco.
+ * `aplicarTransicion` llama `aplicar_transicion_pedido` (izao-db): update condicional por estado y evento
+ * `status_changed` en una sola transacción. La legalidad la decide antes `transicionar` de core.
  */
 import { byteaDesdePostgrest, descifrarCredenciales } from '@izao/core/credentials';
 import type { ConfirmRedemptionResult, PaymentPurpose, PaymentStatus, StockFunctionResult } from '@izao/core/contracts';
@@ -50,6 +49,21 @@ function aPago(f: Fila): PagoFila {
 }
 
 const eq = (v: string) => `eq.${encodeURIComponent(v)}`;
+
+/**
+ * Resultado de `aplicar_transicion_pedido`: `true` si quedó aplicada (o ya lo estaba: `estado_cambiado` con
+ * `status_actual = to_status`, p. ej. un reintento), `false` si otro proceso lo movió a otro estado (nada escrito).
+ * `pedido_inexistente`, `datos_invalidos` o una forma desconocida lanzan (sin detalles de la base).
+ */
+export function interpretarTransicion(
+  r: { ok?: unknown; motivo?: unknown; status_actual?: unknown; event_id?: unknown } | null,
+  to: OrderStatus,
+): boolean {
+  if (r?.ok === true && typeof r.event_id === 'string') return true;
+  if (r?.ok === false && r.motivo === 'estado_cambiado') return r.status_actual === to;
+  const motivo = r?.ok === false && typeof r.motivo === 'string' ? r.motivo : 'forma';
+  throw new Error(`aplicar_transicion_pedido rechazó: ${motivo.slice(0, 40)}`);
+}
 
 export function crearFuentePostgrest(o: OpcionesPostgrest): FuentePagosWorker {
   const base = `${o.supabaseUrl.replace(/\/+$/, '')}/rest/v1`;
@@ -163,27 +177,19 @@ export function crearFuentePostgrest(o: OpcionesPostgrest): FuentePagosWorker {
       return (await rpc('confirmar_canje', orderId)) as ConfirmRedemptionResult;
     },
     async aplicarTransicion(orderId, evento, opciones = {}) {
-      const cambio: Record<string, string> = { status: evento.to_status };
-      if (opciones.paid_at) cambio.paid_at = opciones.paid_at.toISOString();
-      const actualizadas = (await pedir(
-        'orders',
-        `orders?id=${eq(orderId)}&status=${eq(evento.from_status)}&select=id`,
-        { method: 'PATCH', headers: { prefer: 'return=representation' }, body: JSON.stringify(cambio) },
-      )) as Fila[] | null;
-      if (!actualizadas || actualizadas.length !== 1) return false;
-      await pedir('order_events', 'order_events', {
+      const p: Record<string, unknown> = {
+        order_id: orderId,
+        from_status: evento.from_status,
+        to_status: evento.to_status,
+        actor: evento.actor,
+        payload: evento.payload,
+      };
+      if (opciones.paid_at) p.fechas = { paid_at: opciones.paid_at.toISOString() };
+      const r = (await pedir('aplicar_transicion_pedido', 'rpc/aplicar_transicion_pedido', {
         method: 'POST',
-        headers: { prefer: 'return=minimal' },
-        body: JSON.stringify({
-          order_id: orderId,
-          type: evento.type,
-          from_status: evento.from_status,
-          to_status: evento.to_status,
-          actor: evento.actor,
-          payload: evento.payload,
-        }),
-      });
-      return true;
+        body: JSON.stringify({ p }),
+      })) as { ok?: unknown; motivo?: unknown; status_actual?: unknown; event_id?: unknown } | null;
+      return interpretarTransicion(r, evento.to_status);
     },
     async registrarAlerta(orderId, motivo, payload) {
       await pedir('order_events', 'order_events', {

@@ -60,19 +60,58 @@ describe('fuente PostgREST de pagos', () => {
     expect(await fuente.credencialesWompi()).toBeNull();
   });
 
-  it('aplicarTransicion: update condicionado al estado leído y evento; sin fila actualizada no registra evento', async () => {
+  describe('aplicarTransicion por aplicar_transicion_pedido (una transacción)', () => {
     const r = transicionar({ from: 'pendiente_pago', to: 'pagado', actor: 'webhook:wompi', payload: { payment_id: 'p1' } });
     if (!r.ok) throw new Error('transición inválida');
-    let filas: unknown[] = [{ id: 'o1' }];
-    const { f, llamadas } = fetchFalso((l) => (l.metodo === 'PATCH' ? { status: 200, cuerpo: filas } : { status: 201 }));
-    const fuente = crearFuentePostgrest({ supabaseUrl: 'https://x.supabase.co', secretKey: LLAVE_SB, claveCifrado: CLAVE, fetchImpl: f });
-    expect(await fuente.aplicarTransicion('o1', r.event, { paid_at: new Date('2026-10-20T15:00:00.000Z') })).toBe(true);
-    expect(llamadas[0]!.url).toContain('orders?id=eq.o1&status=eq.pendiente_pago');
-    expect(llamadas[0]!.cuerpo).toEqual({ status: 'pagado', paid_at: '2026-10-20T15:00:00.000Z' });
-    expect(llamadas[1]!.cuerpo).toMatchObject({ order_id: 'o1', type: 'status_changed', from_status: 'pendiente_pago', to_status: 'pagado', actor: 'webhook:wompi' });
-    filas = [];
-    expect(await fuente.aplicarTransicion('o1', r.event)).toBe(false);
-    expect(llamadas).toHaveLength(3);
+    const fuenteCon = (cuerpo: unknown, status = 200) => {
+      const { f, llamadas } = fetchFalso(() => ({ status, cuerpo }));
+      return { fuente: crearFuentePostgrest({ supabaseUrl: 'https://x.supabase.co', secretKey: LLAVE_SB, claveCifrado: CLAVE, fetchImpl: f }), llamadas };
+    };
+    const OK = { ok: true, order_id: 'o1', from_status: 'pendiente_pago', to_status: 'pagado', event_id: 'e1' };
+
+    it('una sola llamada RPC con el evento y las fechas; ok → true', async () => {
+      const { fuente, llamadas } = fuenteCon(OK);
+      expect(await fuente.aplicarTransicion('o1', r.event, { paid_at: new Date('2026-10-20T15:00:00.000Z') })).toBe(true);
+      expect(llamadas).toHaveLength(1);
+      expect(llamadas[0]!.metodo).toBe('POST');
+      expect(llamadas[0]!.url).toBe('https://x.supabase.co/rest/v1/rpc/aplicar_transicion_pedido');
+      expect(llamadas[0]!.cuerpo).toEqual({
+        p: {
+          order_id: 'o1',
+          from_status: 'pendiente_pago',
+          to_status: 'pagado',
+          actor: 'webhook:wompi',
+          payload: { payment_id: 'p1' },
+          fechas: { paid_at: '2026-10-20T15:00:00.000Z' },
+        },
+      });
+    });
+
+    it('sin fechas no envía `fechas`', async () => {
+      const { fuente, llamadas } = fuenteCon(OK);
+      await fuente.aplicarTransicion('o1', r.event);
+      expect((llamadas[0]!.cuerpo as { p: object }).p).not.toHaveProperty('fechas');
+    });
+
+    it('estado_cambiado a otro estado → false (no escribió nada)', async () => {
+      const { fuente } = fuenteCon({ ok: false, motivo: 'estado_cambiado', status_actual: 'expirado' });
+      expect(await fuente.aplicarTransicion('o1', r.event)).toBe(false);
+    });
+
+    it('estado_cambiado con status_actual = to_status → ya aplicado (true)', async () => {
+      const { fuente } = fuenteCon({ ok: false, motivo: 'estado_cambiado', status_actual: 'pagado' });
+      expect(await fuente.aplicarTransicion('o1', r.event)).toBe(true);
+    });
+
+    it.each([
+      [{ ok: false, motivo: 'pedido_inexistente' }],
+      [{ ok: false, motivo: 'datos_invalidos', detalle: 'mismo_estado' }],
+      [{ ok: true }],
+      [null],
+    ])('respuesta %j → lanza sin detalles', async (cuerpo) => {
+      const { fuente } = fuenteCon(cuerpo);
+      await expect(fuente.aplicarTransicion('o1', r.event)).rejects.toThrow(/aplicar_transicion_pedido/);
+    });
   });
 
   it('errores HTTP no incluyen la llave ni el cuerpo', async () => {

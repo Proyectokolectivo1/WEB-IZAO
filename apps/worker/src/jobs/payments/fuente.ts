@@ -63,8 +63,9 @@ export interface FuentePagosWorker {
   confirmarStock(orderId: string): Promise<StockFunctionResult>;
   confirmarCanje(orderId: string): Promise<ConfirmRedemptionResult>;
   /**
-   * Aplica un evento de `transicionar`: cambia `orders.status` solo si sigue en `from_status` y registra el
-   * evento. `false` si otro proceso lo cambió antes (no escribe nada).
+   * Aplica un evento de `transicionar` con `aplicar_transicion_pedido` (atómico): cambia `orders.status` solo si
+   * sigue en `from_status` y registra el evento. `true` también si ya estaba en `to_status` (reintento); `false`
+   * si otro proceso lo movió a otro estado (no escribe nada). Lanza si el pedido no existe o los datos no cuadran.
    */
   aplicarTransicion(orderId: string, evento: OrderStatusEvent, opciones?: { paid_at?: Date }): Promise<boolean>;
   /** Evento `alerta` en `order_events` para el panel (pago duplicado, monto distinto, sin stock…). */

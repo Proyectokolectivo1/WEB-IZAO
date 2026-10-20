@@ -11,6 +11,7 @@ import { ORDER_STATUSES } from '@izao/core/order-state';
 import { amountSchema, countryCodeSchema, currencyCodeSchema } from '@izao/core/schemas';
 import { parseWompiCredentials, type WompiCredentials } from '@izao/wompi';
 import { ErrorDb, clienteDb } from '@/lib/db/cliente';
+import { aplicarEventoPedidoDb } from '@/lib/db/pedidos';
 import type { FuentePagos, IntentoPago, PedidoParaPago } from './pago-wompi';
 
 const filaPedido = z.object({
@@ -140,24 +141,11 @@ export const fuentePagosSupabase: FuentePagos = {
     return { ok: true, intento: aIntento(data) };
   },
   async aplicarTransicion(orderId, evento) {
-    const db = clienteDb();
-    const { data, error } = await db
-      .from('orders')
-      .update({ status: evento.to_status })
-      .eq('id', orderId)
-      .eq('status', evento.from_status)
-      .select('id');
-    if (error) fallo('orders', error);
-    if (!data || data.length !== 1) return false;
-    const ev = await db.from('order_events').insert({
-      order_id: orderId,
-      type: evento.type,
-      from_status: evento.from_status,
-      to_status: evento.to_status,
-      actor: evento.actor,
-      payload: evento.payload,
-    });
-    if (ev.error) fallo('order_events', ev.error);
-    return true;
+    // Atómico en la base (update condicional + evento). La legalidad ya la decidió `transicionar`.
+    const r = await aplicarEventoPedidoDb(orderId, evento);
+    if (r.ok) return true;
+    // Un reintento que encuentra el pedido ya en el destino: estaba aplicado.
+    if (r.motivo === 'estado_cambiado') return r.status_actual === evento.to_status;
+    throw new ErrorDb('aplicar_transicion_pedido', 'rpc', r.motivo, null);
   },
 };
