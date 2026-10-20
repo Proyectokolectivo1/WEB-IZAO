@@ -1,0 +1,200 @@
+/*
+ * Módulos CRUD del panel: listas, formularios, pestañas. Usa solo los tokens
+ * --adm-* de admin.css; sin colores propios salvo los semánticos ok/aviso.
+ */
+.adm-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.adm-migas {
+  font-size: 0.9375rem;
+  color: var(--adm-texto-suave);
+}
+.adm-migas a {
+  color: inherit;
+}
+.adm-pestanas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.adm-pestanas a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--adm-alto-toque);
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--adm-borde-fuerte);
+  border-radius: var(--adm-radio);
+  background: var(--adm-superficie);
+  color: var(--adm-texto);
+  text-decoration: none;
+}
+.adm-pestanas a[aria-current='page'] {
+  background: var(--adm-primario);
+  color: var(--adm-sobre-primario);
+  border-color: var(--adm-primario);
+}
+.adm-enlace-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--adm-alto-toque);
+  padding: 0.5rem 1.25rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--adm-sobre-primario);
+  background: var(--adm-primario);
+  border: 1px solid var(--adm-primario);
+  border-radius: var(--adm-radio);
+}
+.adm-enlace-boton.adm-boton-secundario {
+  color: var(--adm-texto);
+  background: var(--adm-superficie);
+  border-color: var(--adm-borde-fuerte);
+}
+.adm-busqueda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: end;
+}
+.adm-busqueda .adm-campo {
+  flex: 1 1 14rem;
+}
+.adm-tabla-caja {
+  overflow-x: auto;
+  background: var(--adm-superficie);
+  border: 1px solid var(--adm-borde);
+  border-radius: var(--adm-radio);
+}
+.adm-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+.adm-tabla caption {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+}
+.adm-tabla th,
+.adm-tabla td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-top: 1px solid var(--adm-borde);
+  vertical-align: middle;
+}
+.adm-tabla th {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.adm-tabla td a {
+  color: var(--adm-texto);
+  font-weight: 600;
+}
+.adm-tabla .adm-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.adm-paginacion {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.adm-vacio {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--adm-texto-suave);
+}
+.adm-ok {
+  background: #f0fdf4;
+  color: #14532d;
+  border: 1px solid #166534;
+  border-radius: var(--adm-radio);
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+}
+.adm-textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+.adm-form-ancho {
+  max-width: 44rem;
+}
+.adm-fila {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+.adm-fieldset {
+  border: 1px solid var(--adm-borde);
+  border-radius: var(--adm-radio);
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+  background: var(--adm-superficie);
+  min-width: 0;
+}
+.adm-fieldset legend {
+  font-weight: 600;
+  padding: 0 0.5rem;
+}
+.adm-miniatura {
+  width: 6rem;
+  height: 7.5rem;
+  object-fit: cover;
+  border: 1px solid var(--adm-borde);
+  border-radius: var(--adm-radio);
+  background: var(--adm-aviso-fondo);
+}
+.adm-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.adm-boton-peligro {
+  color: #ffffff;
+  background: var(--adm-error);
+  border-color: var(--adm-error);
+}
+.adm-boton-peligro:hover:not(:disabled) {
+  background: #991b1b;
+}
+.adm-insignia {
+  display: inline-block;
+  padding: 0.125rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: 1px solid var(--adm-borde-fuerte);
+  background: var(--adm-aviso-fondo);
+}
+.adm-insignia-ok {
+  background: #f0fdf4;
+  border-color: #166534;
+  color: #14532d;
+}
+.adm-insignia-aviso {
+  background: #fffbeb;
+  border-color: #92400e;
+  color: #78350f;
+}
+.adm-check {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  min-height: var(--adm-alto-toque);
+}
+.adm-check input {
+  width: 1.25rem;
+  height: 1.25rem;
+}

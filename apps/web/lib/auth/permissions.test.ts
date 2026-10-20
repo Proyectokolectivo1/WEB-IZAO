@@ -35,7 +35,13 @@ describe('permisos por módulo (§24.3)', () => {
 });
 
 describe('permisos por acción (§24.3)', () => {
-  const soloAdmin: AccionId[] = ['pedidos.cancelar', 'pedidos.marcar_pagado', 'clientes.gestionar'];
+  const soloAdmin: AccionId[] = [
+    'pedidos.cancelar',
+    'pedidos.marcar_pagado',
+    'clientes.gestionar',
+    'catalogo.gestionar',
+    'catalogo.importar',
+  ];
 
   it('cancelar y marcar pagado son exclusivos del administrador', () => {
     expect(puede('admin', 'pedidos.cancelar')).toBe(true);
@@ -90,8 +96,8 @@ describe('navegación filtrada por rol', () => {
 
   it('el administrador ve los módulos que ya existen, no los futuros', () => {
     const ids = modulosVisibles('admin').map((m) => m.id);
-    expect(ids).toEqual(['inicio', 'pedidos', 'garantias', 'agente']);
-    expect(ids).not.toContain('productos');
+    expect(ids).toEqual(['inicio', 'pedidos', 'garantias', 'agente', 'catalogo_auxiliar']);
+    expect(ids).not.toContain('usuarios');
   });
 
   it('un rol desconocido no ve nada', () => {

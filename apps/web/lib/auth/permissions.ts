@@ -70,7 +70,7 @@ export const MODULOS = {
     etiqueta: 'Marcas y atributos',
     ruta: '/admin/atributos',
     roles: SOLO_ADMIN,
-    disponible: false,
+    disponible: true,
   },
   colecciones: {
     etiqueta: 'Colecciones',
@@ -161,6 +161,10 @@ export const ACCIONES = {
   /** El operador ve el contacto del cliente solo dentro del pedido (§24.3, §26.2). */
   'clientes.ver_contacto_desde_pedido': TODOS,
   'clientes.gestionar': SOLO_ADMIN,
+  /** Crear, editar, archivar y eliminar en productos, categorías, atributos y colecciones. */
+  'catalogo.gestionar': SOLO_ADMIN,
+  /** Importar y exportar el catálogo (CSV/Excel) y la carga masiva de imágenes (§24.2). */
+  'catalogo.importar': SOLO_ADMIN,
 } as const satisfies Record<string, readonly Rol[]>;
 
 export type AccionId = keyof typeof ACCIONES;

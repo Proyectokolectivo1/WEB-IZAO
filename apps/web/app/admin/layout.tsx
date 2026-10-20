@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import './admin.css';
+import './crud.css';
 
 export const metadata: Metadata = {
   title: { default: 'Panel', template: '%s · Panel Izao' },
