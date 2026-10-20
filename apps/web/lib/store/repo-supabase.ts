@@ -235,6 +235,11 @@ const leerLegal = conCache('legal', 300, contenido, async (p, slug: string): Pro
   return (r as unknown as PaginaLegal | null) ?? null;
 });
 
+const leerColeccion = conCache('coleccion', 300, catalogo, async (p, slug: string): Promise<{ slug: string; name: string } | null> => {
+  const r = ok(await db().from('collections').select('slug,name').eq('country_code', upper(p)).eq('slug', slug).eq('is_active', true).maybeSingle(), 'collections');
+  return r ? { slug: String((r as Fila).slug), name: String((r as Fila).name) } : null;
+});
+
 const leerPaginas = conCache('paginas', 300, contenido, async (p): Promise<{ slug: string; title: string }[]> => {
   const r = ok(await db().from('pages').select('slug,title').eq('country_code', upper(p)).eq('status', 'published').order('title'), 'pages');
   return lista(r)
@@ -253,6 +258,7 @@ export const repoSupabase: TiendaRepo = {
   home: leerHome,
   espacios: leerEspacios,
   paginaLegal: leerLegal,
+  coleccion: leerColeccion,
   paginas: leerPaginas,
 
   catalogo(pais, c: ConsultaCatalogo) {

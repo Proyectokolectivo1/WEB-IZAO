@@ -12,10 +12,9 @@
 - Microcopy de UI en `lib/store/textos.ts` (seed). Aún hay unos pocos aria-label sueltos en español en componentes (Hero, Pestañas, AnuncioBarra): moverlos a `T`.
 
 ## Pendiente
-- T2.3: `ListadoCatalogo` (lote infinito + IntersectionObserver 800 px + restaurar scroll/sessionStorage + `?page=N` rel=next + volver arriba + fin con Iza), filtros (panel lateral/bottom sheet, doble manija, chips, `limpiar-filtros`, `selector-orden`, contador en vivo), páginas `catalogo`, `buscar`, `categoria|marca|familia|coleccion/[slug]` (preset en `fijos`), `pagina/[slug]` (legal). testids ya puestos: tarjeta-producto, tarjeta-imagen-*, tarjeta-puntos, boton-vista-rapida, vista-rapida, boton-agregar, contador-carrito, sugerencias-busqueda; faltan centinela-scroll, fin-resultados, abrir-filtros, chip-filtro, limpiar-filtros, selector-orden, precio-min/max, esqueleto-tarjeta.
+- T2.3 hecha (listado infinito, filtros, páginas catalogo/buscar/categoria|marca|familia|coleccion/[slug], pagina/[slug] legal). Falta verificar visualmente testids del listado (centinela-scroll, fin-resultados, abrir-filtros, chip-filtro, limpiar-filtros, selector-orden, precio-min/max, esqueleto-tarjeta) y mover aria-label sueltos a `T`.
 - T2.4: ficha `perfume/[slug]` (galería+zoom, PanelCompra, pirámide olfativa, confianza desde `benefits`, reseñas, relacionados, barra fija móvil, JSON-LD sin brand, botón Iza), `error`/metadata.
-- Lighthouse móvil (≥ 90), revisión 360/768/1440, axe: sin medir. Repo `STORE_DATOS=ejemplo` para ver la tienda sin llaves.
-- izao-admin: redirect `/`→país por cookie (ya cubierto en `app/page.tsx`), claves de `content_slots`.
+- Lighthouse móvil (≥ 90), revisión 360/768/1440, axe: sin medir. `STORE_DATOS=ejemplo` para ver la tienda sin llaves.
 
 ## Punto de retoma
-Empezar T2.3: crear `apps/web/lib/store/lote.ts` (hook de lote infinito + sessionStorage), `components/store/catalogo/{ListadoCatalogo,FiltrosPanel,RangoPrecio}.tsx` y las páginas del listado; luego T2.4.
+Empezar T2.4: crear `app/[country]/perfume/[slug]/page.tsx` y componentes de ficha en `components/store/ficha/`.

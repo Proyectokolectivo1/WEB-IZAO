@@ -33,12 +33,13 @@ interface ChipQuitarProps {
   /** Texto accesible del botón de quitar, p. ej. «Quitar filtro Mujer». */
   etiquetaQuitar: string;
   onQuitar: () => void;
+  testId?: string;
 }
 
 /** Chip de filtro activo, con botón para quitarlo. */
-export function ChipQuitar({ etiqueta, etiquetaQuitar, onQuitar }: ChipQuitarProps) {
+export function ChipQuitar({ etiqueta, etiquetaQuitar, onQuitar, testId }: ChipQuitarProps) {
   return (
-    <span className="inline-flex min-h-11 items-center gap-1 rounded-md bg-surface pl-3 text-[0.875rem] text-ink">
+    <span data-testid={testId} className="inline-flex min-h-11 items-center gap-1 rounded-md bg-surface pl-3 text-[0.875rem] text-ink">
       {etiqueta}
       <button
         type="button"

@@ -341,8 +341,20 @@ export const repoEjemplo: TiendaRepo = {
       categorias: categoriasEjemplo(),
     };
   },
-  async paginaLegal() {
-    return null;
+  async paginaLegal(_pais, slug) {
+    if (slug !== 'politica-de-envios') return null;
+    return {
+      slug,
+      title: 'Política de envíos',
+      content_html: '<p>Texto de ejemplo para ver el diseño de las páginas legales.</p><h2>Cobertura</h2><ul><li>Enviamos a todo el país.</li><li>Te avisamos por WhatsApp cuando salga tu pedido.</li></ul>',
+      version: 1,
+      updated_at: '2026-10-01T00:00:00Z',
+      seo_title: null,
+      seo_description: null,
+    };
+  },
+  async coleccion(_pais, slug) {
+    return slug === 'hot-sale' ? { slug, name: 'Hot Sale' } : null;
   },
   async espacios() {
     return [];

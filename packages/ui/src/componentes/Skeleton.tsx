@@ -13,7 +13,7 @@ export const ALTURA_TEXTO_TARJETA = 'h-[7.25rem]';
 
 export function TarjetaEsqueleto() {
   return (
-    <div aria-hidden="true" className="flex flex-col">
+    <div aria-hidden="true" data-testid="esqueleto-tarjeta" className="flex flex-col">
       <Skeleton className="aspect-[4/5] w-full" />
       <div className={`flex flex-col gap-2 pt-3 ${ALTURA_TEXTO_TARJETA}`}>
         <Skeleton className="h-3 w-1/3" />

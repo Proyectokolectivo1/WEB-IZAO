@@ -43,7 +43,7 @@ export function AnuncioBarra({ anuncios, segundos }: Props) {
     <div
       className="bg-ink text-bg"
       role="region"
-      aria-label="Anuncios"
+      aria-label={T.header.anuncios}
       onMouseEnter={() => setPausa(true)}
       onMouseLeave={() => setPausa(false)}
       onFocus={() => setPausa(true)}

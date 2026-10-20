@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { Icono, clasesBoton, useMenosMovimiento } from '@izao/ui';
+import { T } from '@/lib/store/textos';
 import type { Banner } from '@/lib/store/types';
 import { ImagenResponsiva } from '../ImagenResponsiva';
 
@@ -61,7 +62,7 @@ export function Hero({ banners }: { banners: Banner[] }) {
               key={b.id}
               role="group"
               aria-roledescription="diapositiva"
-              aria-label={`${k + 1} / ${n}`}
+              aria-label={T.home.diapositivaN(k + 1, n)}
               aria-hidden={!activo}
               inert={!activo}
               className={`relative [grid-area:1/1] aspect-[4/5] transition-opacity duration-700 ease-izao md:aspect-[12/5] ${
@@ -93,14 +94,14 @@ export function Hero({ banners }: { banners: Banner[] }) {
 
       {n > 1 ? (
         <div className="absolute inset-x-0 bottom-3 flex items-center justify-center gap-1">
-          <button type="button" aria-label="Anterior" onClick={() => ir(i - 1)} className="hidden size-11 items-center justify-center md:inline-flex">
+          <button type="button" aria-label={T.home.anterior} onClick={() => ir(i - 1)} className="hidden size-11 items-center justify-center md:inline-flex">
             <Icono nombre="chevronIzquierda" />
           </button>
           {banners.map((b, k) => (
             <button
               key={b.id}
               type="button"
-              aria-label={`${k + 1} / ${n}`}
+              aria-label={T.home.diapositivaN(k + 1, n)}
               aria-current={k === i}
               onClick={() => ir(k)}
               className="group inline-flex size-11 items-center justify-center"
@@ -108,7 +109,7 @@ export function Hero({ banners }: { banners: Banner[] }) {
               <span className={`block h-[3px] rounded-sm bg-ink transition-all ${k === i ? 'w-8' : 'w-4 opacity-45'}`} />
             </button>
           ))}
-          <button type="button" aria-label="Siguiente" onClick={() => ir(i + 1)} className="hidden size-11 items-center justify-center md:inline-flex">
+          <button type="button" aria-label={T.home.siguiente} onClick={() => ir(i + 1)} className="hidden size-11 items-center justify-center md:inline-flex">
             <Icono nombre="chevronDerecha" />
           </button>
         </div>

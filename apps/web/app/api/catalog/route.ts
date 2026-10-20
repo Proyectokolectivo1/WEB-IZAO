@@ -17,19 +17,21 @@ export async function GET(req: NextRequest) {
   if (crudo && !cursor) return NextResponse.json({ error: 'cursor' }, { status: 400 });
 
   const estado = parsearEstado(p);
+  // `solo_total=1`: contador en vivo de los filtros (hoja móvil); no se manda la lista.
+  const soloTotal = p.get('solo_total') === '1' && !cursor;
   try {
     const pagina = await tienda().catalogo(pais, {
       q: estado.q || undefined,
       filtros: estado.filtros,
       orden: estado.orden,
       cursor,
-      limite: TAMANO_LOTE,
+      limite: soloTotal ? 1 : TAMANO_LOTE,
       conTotal: !cursor,
     });
     return NextResponse.json(
       {
-        items: pagina.items,
-        nextCursor: codificarCursor(pagina.next_cursor),
+        items: soloTotal ? [] : pagina.items,
+        nextCursor: soloTotal ? null : codificarCursor(pagina.next_cursor),
         total: pagina.total_estimado,
         precioMin: pagina.precio_min,
         precioMax: pagina.precio_max,

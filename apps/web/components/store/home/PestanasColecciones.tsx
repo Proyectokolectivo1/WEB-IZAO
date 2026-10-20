@@ -24,7 +24,7 @@ export function PestanasColecciones({ pais, colecciones }: { pais: CodigoPais; c
   return (
     <div>
       <div className="flex items-center justify-between gap-4">
-        <div role="tablist" aria-label="Colecciones" className="sin-scroll-visible -mx-1 flex overflow-x-auto">
+        <div role="tablist" aria-label={T.home.colecciones} className="sin-scroll-visible -mx-1 flex overflow-x-auto">
           {colecciones.map((c, k) => (
             <button
               key={c.id}

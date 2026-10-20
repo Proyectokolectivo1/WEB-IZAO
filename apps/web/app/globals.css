@@ -3,3 +3,112 @@
 
 /* Tailwind debe escanear las clases usadas dentro de @izao/ui. */
 @source '../../../packages/ui/src';
+
+/* Rango de precio de doble manija (§7.2): dos <input type=range> superpuestos; solo las manijas reciben el puntero. */
+@layer components {
+  .rango-doble {
+    position: relative;
+    height: 2.75rem;
+  }
+  .rango-doble input[type='range'] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    background: transparent;
+    pointer-events: none;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .rango-doble input[type='range']::-webkit-slider-runnable-track {
+    background: transparent;
+    height: 100%;
+  }
+  .rango-doble input[type='range']::-moz-range-track {
+    background: transparent;
+    height: 100%;
+  }
+  .rango-doble input[type='range']::-webkit-slider-thumb {
+    pointer-events: auto;
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-top: 0.625rem;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--color-bg);
+    background: var(--color-ink);
+    cursor: grab;
+  }
+  .rango-doble input[type='range']::-moz-range-thumb {
+    pointer-events: auto;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--color-bg);
+    background: var(--color-ink);
+    cursor: grab;
+  }
+  .rango-doble input[type='range']:focus-visible {
+    outline: none;
+  }
+  .rango-doble input[type='range']:focus-visible::-webkit-slider-thumb {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+  .rango-doble input[type='range']:focus-visible::-moz-range-thumb {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+
+  /* Texto de páginas legales (HTML del panel, ya depurado en el servidor). */
+  .contenido-legal {
+    max-width: 44rem;
+    line-height: 1.7;
+  }
+  .contenido-legal h2 {
+    margin-top: 2.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 1.75rem;
+  }
+  .contenido-legal h3 {
+    margin-top: 1.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.375rem;
+  }
+  .contenido-legal p,
+  .contenido-legal ul,
+  .contenido-legal ol,
+  .contenido-legal blockquote,
+  .contenido-legal table {
+    margin-bottom: 1rem;
+  }
+  .contenido-legal ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+  }
+  .contenido-legal ol {
+    list-style: decimal;
+    padding-left: 1.25rem;
+  }
+  .contenido-legal a {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .contenido-legal blockquote {
+    border-left: 1px solid var(--color-ink);
+    padding-left: 1rem;
+  }
+  .contenido-legal table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+  }
+  .contenido-legal th,
+  .contenido-legal td {
+    border: 1px solid var(--color-line);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+  }
+}

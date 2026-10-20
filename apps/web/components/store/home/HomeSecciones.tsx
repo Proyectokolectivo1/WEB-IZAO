@@ -175,7 +175,7 @@ function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; conten
           <ul className="sin-scroll-visible -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 sm:-mx-8 sm:px-8" tabIndex={0} aria-label={titulo ?? T.home.resenas}>
             {contenido.resenas.map((r) => (
               <li key={r.id} className="w-[80%] shrink-0 snap-start border border-line p-6 sm:w-[26rem]">
-                <p aria-label={`${r.rating} de 5`} className="flex gap-0.5 pb-3">
+                <p aria-label={T.home.calificacion(r.rating)} className="flex gap-0.5 pb-3">
                   {Array.from({ length: 5 }, (_, k) => (
                     <Icono key={k} nombre="estrella" tamano={16} className={k < r.rating ? 'fill-ink' : ''} />
                   ))}
