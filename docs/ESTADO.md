@@ -27,7 +27,7 @@ Lo mantiene el líder. Leer esto y `CLAUDE.md` antes que cualquier otra cosa; la
 
 ## Pendiente
 **Del dueño:** `tools/contabo-mcp/.env` y `setup-vps.sh`; llaves `age`; `apps/web/.env.local` y `crear-admin`; límites de Auth y CAPTCHA en Supabase; fotos, logo, catálogo real con IDs de MasterShop; datos legales ([COMPLETAR]); mover o borrar la clave `43iCH7rQJ3vx` de `D:\WEB IZAO REACT`; conectar `origin` y autorizar el primer `push`; credenciales de Wompi, WhatsApp, MasterShop, Addi, Sistecrédito, OpenRouter.
-**Técnico:** F0b (HTTPS y backup real en el VPS); rate limiting con Redis; devolver stock al cancelar o devolver; panel debe impedir `payment_method_settings` activo con `cod_enabled` falso; suites pgTAP 01–12 sin repetir tras las últimas migraciones.
+**Técnico:** `POST /api/checkout/preview` (vista previa del carrito, izao-pagos, Oleada 3: `CODE_INVALID` único, `max_quantity = min(existencias, pedida)`, `line_discount` por línea, rate limit Redis y Turnstile); F0b (HTTPS y backup real en el VPS); rate limiting con Redis; devolver stock al cancelar o devolver; panel debe impedir `payment_method_settings` activo con `cod_enabled` falso; suites pgTAP 01–12 sin repetir tras las últimas migraciones.
 
 ## Oleada en curso
 Ninguna lanzada. Propuesta: Oleada 2 (F1 + F2): catálogo, ficha, carrito, panel de productos y contenido. Plan en la conversación del líder; al aprobarse se copia aquí.
