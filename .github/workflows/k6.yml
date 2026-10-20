@@ -1,0 +1,58 @@
+# Pruebas de carga k6. SOLO contra staging (manual o nocturno); nunca producción.
+# La URL de staging va en la variable de repositorio STAGING_URL (no es un secreto). Sin ella, el
+# job nocturno se omite. Además los scripts abortan si BASE_URL contiene izaoperfumeria.com.
+name: k6
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'URL de staging (https://...), nunca producción'
+        required: true
+      script:
+        description: 'Script a correr'
+        type: choice
+        options: [catalogo, ficha]
+        default: catalogo
+      perfil:
+        description: 'humo = validar el script (5 req/s, 10 s); vacío = carga completa'
+        type: choice
+        options: ['', humo]
+        default: humo
+  schedule:
+    - cron: '0 7 * * *' # 02:00 Bogotá
+
+permissions:
+  contents: read
+
+jobs:
+  carga:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      BASE_URL: ${{ inputs.base_url || vars.STAGING_URL }}
+      SCRIPT: ${{ inputs.script || 'catalogo' }}
+      PERFIL: ${{ github.event_name == 'schedule' && '' || inputs.perfil }}
+    steps:
+      - name: Validar destino
+        run: |
+          if [ -z "$BASE_URL" ]; then echo "STAGING_URL no está definida: se omite."; echo "OMITIR=1" >> "$GITHUB_ENV"; exit 0; fi
+          case "$BASE_URL" in
+            *izaoperfumeria.com*) echo "Prohibido correr k6 contra producción." >&2; exit 1 ;;
+          esac
+      - uses: actions/checkout@v4
+        if: env.OMITIR != '1'
+      - name: k6
+        if: env.OMITIR != '1'
+        run: |
+          mkdir -p k6/.resultados && chmod a+w k6/.resultados
+          docker run --rm -v "$PWD/k6:/k6" -w /k6 grafana/k6:latest run \
+            -e BASE_URL="$BASE_URL" -e PERFIL="$PERFIL" \
+            --summary-export=/k6/.resultados/resumen-$SCRIPT.json "$SCRIPT.js"
+      - uses: actions/upload-artifact@v4
+        if: always() && env.OMITIR != '1'
+        with:
+          name: resultados-k6
+          path: k6/.resultados/
+          if-no-files-found: ignore
+          retention-days: 14

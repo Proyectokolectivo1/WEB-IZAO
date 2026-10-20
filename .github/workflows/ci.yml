@@ -1,0 +1,56 @@
+# Integración continua: calidad (lint, tipos, pruebas) y e2e con Playwright.
+# Sin secretos: las pruebas usan un Supabase falso local (apps/web/tests/support/supabase-falso.mjs).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  calidad:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @izao/web exec playwright install --with-deps chromium
+      - run: pnpm --filter @izao/web build
+      - run: pnpm --filter @izao/web test:e2e
+        env:
+          CI: '1'
+      - name: Subir resultados de Playwright
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-e2e
+          path: apps/web/tests/.resultados/
+          if-no-files-found: ignore
+          retention-days: 14

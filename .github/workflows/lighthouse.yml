@@ -1,0 +1,56 @@
+# Lighthouse CI (presupuestos de §27/§30). Manual: se lanza cuando la tienda ya está publicada en la
+# rama. Usa el Supabase falso local con el seed de prueba: no necesita llaves ni toca servicios reales.
+name: Lighthouse
+
+on:
+  workflow_dispatch:
+    inputs:
+      checkout:
+        description: 'Incluir /co/checkout (CHECKOUT=1)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @izao/web build
+      - name: Supabase falso (datos de prueba)
+        working-directory: apps/web
+        run: |
+          E2E_PUERTO_SUPABASE=54399 node tests/support/supabase-falso.mjs > /tmp/supabase-falso.log 2>&1 &
+          sleep 3
+      - name: Lighthouse
+        working-directory: apps/web
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          CHECKOUT: ${{ inputs.checkout && '1' || '0' }}
+          NODE_ENV: production
+          NEXT_TELEMETRY_DISABLED: '1'
+          SUPABASE_URL: http://127.0.0.1:54399
+          SUPABASE_PUBLISHABLE_KEY: llave-publica-de-prueba
+          SUPABASE_SECRET_KEY: llave-de-servicio-de-prueba
+        run: |
+          export APP_ENCRYPTION_KEY="$(node -e "process.stdout.write(Buffer.alloc(32,'izao-e2e').toString('base64'))")"
+          pnpm lighthouse
+      - name: Subir resultados
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-lighthouse
+          path: apps/web/tests/.resultados/lighthouse/
+          if-no-files-found: ignore
+          retention-days: 14
