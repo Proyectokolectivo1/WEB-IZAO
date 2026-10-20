@@ -1,6 +1,6 @@
 # Estado del proyecto (índice vivo)
 
-Lo mantiene el líder. Leer esto y `CLAUDE.md` antes que cualquier otra cosa; la especificación solo por secciones (Grep u `offset`). Última actualización: 2026-10-19, tras cerrar la Oleada 1.
+Lo mantiene el líder. Leer esto y `CLAUDE.md` antes que cualquier otra cosa; la especificación solo por secciones (Grep u `offset`). Última actualización: 2026-10-20, a mitad de la Oleada 2/3.
 
 ## Dónde está todo
 - Repo: `C:\Proyectos\WEB-IZAO` (NTFS), rama `main`, GitHub `Proyectokolectivo1/WEB-IZAO` (remoto sin conectar, sin `push`). Git funciona sin `safe.directory`.
@@ -17,6 +17,10 @@ Lo mantiene el líder. Leer esto y `CLAUDE.md` antes que cualquier otra cosa; la
 | Login admin con MFA, roles, bloqueo de intentos | Hecho; sin prueba real (faltan llaves) | `apps/web/lib/auth`, `apps/web/app/admin` |
 | `@izao/core`: money, pricing (10 casos), order-state, schemas, contracts | Hecho | `packages/core/src/*` (import por subruta, p. ej. `@izao/core/pricing`) |
 | MasterShop sin red: líneas, pedido, estados, mock, cliente | Hecho; sin API real | `packages/integrations/mastershop/` |
+| Tienda: home, listado infinito, filtros, ficha, carrito, checkout, pedido | Hecho; sin probar con llaves reales | `apps/web/app/[country]`, `components/store`, `lib/store` |
+| Checkout servidor (preview, pedido idempotente por huella, política de datos), `crear_pedido_checkout`, `aplicar_transicion_pedido` | Hecho; probado en memoria y pgTAP | `apps/web/lib/checkout`, `packages/db` |
+| Wompi (link, webhook firmado, job) | Hecho con mock; firma sin confirmar con evento real | `packages/integrations/wompi`, `apps/worker/src/jobs/payments` |
+| Panel: productos, importación/exportación, páginas legales | Hecho; sin probar en navegador | `apps/web/app/admin`, `lib/admin` |
 
 ## Contratos que no se deben romper
 - Dinero: `bigint` en unidad menor; todo cálculo por `@izao/core/money` y `@izao/core/pricing`.
@@ -31,7 +35,7 @@ Lo mantiene el líder. Leer esto y `CLAUDE.md` antes que cualquier otra cosa; la
 
 ## Oleada en curso
 Oleada 2 (F1 catálogo; F2 contenido va después). Contratos de la tienda para el panel de contenido: claves `content_slots` `medios_de_pago`, `asesoria` y `busquedas_populares`; los beneficios y la asesoría del home salen de `home_sections.config` (`items[{icon,title,text}]` y `title/body/cta_label/cta_url`). Páginas legales: la tienda lee solo `pages.status = 'published'`. Reemplaza al texto siguiente cuando se cierre.
-Ninguna lanzada. Propuesta: Oleada 2 (F1 + F2): catálogo, ficha, carrito, panel de productos y contenido. Plan en la conversación del líder; al aprobarse se copia aquí.
+En curso: abono de contra entrega + WhatsApp (izao-pagos). Siguiente: izao-logistica (MasterShop), Addi/Sistecrédito, reseñas (POST /api/reviews), widget Iza, métricas. Espacios `nota_envio`/`valor_envio` ya sembrados.
 
 ## Reglas de continuidad y contexto
 1. **Lectura mínima:** `CLAUDE.md`, este archivo, tu definición en `.claude/agents/`, tu skill y SOLO las secciones de la especificación de tu tarea.
