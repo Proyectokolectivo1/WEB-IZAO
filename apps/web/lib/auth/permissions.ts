@@ -76,7 +76,7 @@ export const MODULOS = {
     etiqueta: 'Colecciones',
     ruta: '/admin/colecciones',
     roles: SOLO_ADMIN,
-    disponible: false,
+    disponible: true,
   },
   home: { etiqueta: 'Home', ruta: '/admin/home', roles: SOLO_ADMIN, disponible: false },
   contenido: {

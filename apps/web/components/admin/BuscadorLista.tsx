@@ -4,11 +4,14 @@ export function BuscadorLista({
   etiqueta = 'Buscar',
   ocultos = {},
   limpiarHref,
+  parametro = 'q',
 }: {
   q: string;
   etiqueta?: string;
   ocultos?: Record<string, string>;
   limpiarHref: string;
+  /** Nombre del parámetro en la URL. */
+  parametro?: string;
 }) {
   return (
     <form className="adm-busqueda" role="search" method="get">
@@ -16,10 +19,10 @@ export function BuscadorLista({
         <input key={k} type="hidden" name={k} value={v} />
       ))}
       <div className="adm-campo">
-        <label htmlFor="q" className="adm-etiqueta">
+        <label htmlFor={`buscar-${parametro}`} className="adm-etiqueta">
           {etiqueta}
         </label>
-        <input id="q" name="q" type="search" className="adm-input" defaultValue={q} maxLength={100} />
+        <input id={`buscar-${parametro}`} name={parametro} type="search" className="adm-input" defaultValue={q} maxLength={100} />
       </div>
       <button type="submit" className="adm-boton">
         Buscar
