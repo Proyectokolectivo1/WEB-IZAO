@@ -28,6 +28,14 @@ Monorepo pnpm + Turborepo: `apps/web`, `apps/worker`, `apps/print-agent`, `packa
 - Marcadores en la especificación: `[VERIFICAR]` = confirmar contra la documentación oficial antes de codificar; `[COMPLETAR]` = dato del dueño, nunca inventarlo.
 - Antes de cerrar una tarea: `pnpm lint && pnpm typecheck && pnpm test`.
 
+## Continuidad y ahorro de contexto
+
+- **Al empezar, lee solo:** este archivo, `docs/ESTADO.md` (qué está hecho, qué falta, contratos y pendientes), tu definición en `.claude/agents/`, tu skill y únicamente las secciones de `docs/ESPECIFICACION.md` que toca tu tarea (con `Grep` u `offset`). No leas la especificación completa ni archivos enteros sin necesidad.
+- **Mantén tu contexto por debajo de ~30 %:** salidas largas con `| tail -20` o `--filter`, no repitas lo que ya está en `docs/ESTADO.md`, reportes de máximo 25 líneas (archivos, hashes, resultado, dudas).
+- **Tu bitácora:** `docs/estado/<tu-agente>.md` es tuyo (máximo 40 líneas: Hecho con hashes, Pendiente, Siguiente paso exacto, Decisiones que necesitan al líder). Actualízala antes de cada reporte.
+- **Si estimas que pasaste de ~30 %:** llega a un punto seguro (pruebas verdes, commit), actualiza tu bitácora y termina con "Punto de retoma: …". El líder abrirá un chat nuevo con el prompt de retoma de `docs/ESTADO.md`; todos retoman desde su bitácora y `git log`.
+- **Commits:** `git add -- <rutas> && git commit -o -m "..." -- <rutas>`; nunca `git add -A`; con tuberías usa `set -o pipefail`.
+
 ## VPS de Contabo
 
 El VPS se opera **solo** con el MCP `contabo` (`tools/contabo-mcp/`, ver su README). `ssh` y `scp` directos están bloqueados.
