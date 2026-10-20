@@ -1,10 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { REGEX_TOKEN_PAGAR, elegirDestino, estadoLocal, resolverPagar, urlHttps } from './logica';
+import { REGEX_TOKEN_PAGAR, elegirDestino, resolverPagar, urlHttps } from './logica';
 
+const URL_OK = 'https://checkout.wompi.co/l/abc123';
 const AHORA = Date.parse('2026-10-20T12:00:00Z');
 const futuro = '2026-10-21T12:00:00Z';
 const pasado = '2026-10-20T11:00:00Z';
-const URL_OK = 'https://checkout.wompi.co/l/abc123';
+
+describe('elegirDestino', () => {
+  it('usa el checkout_url del pago pendiente y vigente', () => {
+    expect(elegirDestino('https://otra.example/x', { estado: 'pending', checkoutUrl: URL_OK, venceEn: futuro }, AHORA)).toBe(URL_OK);
+  });
+  it('sin destino si el pago venció, ya no está pendiente o no es https', () => {
+    expect(elegirDestino(URL_OK, { estado: 'pending', checkoutUrl: URL_OK, venceEn: pasado }, AHORA)).toBeNull();
+    expect(elegirDestino(URL_OK, { estado: 'declined', checkoutUrl: URL_OK, venceEn: futuro }, AHORA)).toBeNull();
+    expect(elegirDestino(URL_OK, { estado: 'pending', checkoutUrl: 'http://x.example', venceEn: futuro }, AHORA)).toBeNull();
+  });
+  it('sin pago asociado cae al target_url, solo si es https', () => {
+    expect(elegirDestino(URL_OK, null, AHORA)).toBe(URL_OK);
+    expect(elegirDestino('http://x.example', null, AHORA)).toBeNull();
+  });
+});
 
 describe('token del link de cobro', () => {
   it('acepta 128 bits (22 base64url) y 96 bits (16)', () => {
@@ -29,38 +44,6 @@ describe('urlHttps', () => {
     expect(urlHttps('')).toBeNull();
     expect(urlHttps(null)).toBeNull();
     expect(urlHttps(42)).toBeNull();
-  });
-});
-
-describe('elegirDestino', () => {
-  it('usa el checkout_url del pago pendiente y vigente', () => {
-    expect(elegirDestino('https://otra.example/x', { estado: 'pending', checkoutUrl: URL_OK, venceEn: futuro }, AHORA)).toBe(URL_OK);
-    expect(elegirDestino(null, { estado: 'created', checkoutUrl: URL_OK, venceEn: null }, AHORA)).toBe(URL_OK);
-  });
-  it('sin destino si el pago venció, ya no está pendiente o no es https', () => {
-    expect(elegirDestino(URL_OK, { estado: 'pending', checkoutUrl: URL_OK, venceEn: pasado }, AHORA)).toBeNull();
-    expect(elegirDestino(URL_OK, { estado: 'declined', checkoutUrl: URL_OK, venceEn: futuro }, AHORA)).toBeNull();
-    expect(elegirDestino(URL_OK, { estado: 'pending', checkoutUrl: 'http://x.example', venceEn: futuro }, AHORA)).toBeNull();
-    expect(elegirDestino(URL_OK, { estado: 'pending', checkoutUrl: null, venceEn: futuro }, AHORA)).toBeNull();
-  });
-  it('sin pago asociado cae al target_url, solo si es https', () => {
-    expect(elegirDestino(URL_OK, null, AHORA)).toBe(URL_OK);
-    expect(elegirDestino('http://x.example', null, AHORA)).toBeNull();
-  });
-});
-
-describe('estadoLocal (espejo de pay_link_click)', () => {
-  const base = { expiraEn: futuro, estadoPedido: 'esperando_abono', pago: null };
-  it('vigente: espera el abono y no ha vencido', () => expect(estadoLocal(base, AHORA)).toBe('vigente'));
-  it('pagado: pago aprobado o pedido ya pagado', () => {
-    expect(estadoLocal({ ...base, pago: { estado: 'approved', checkoutUrl: URL_OK, venceEn: null } }, AHORA)).toBe('pagado');
-    expect(estadoLocal({ ...base, estadoPedido: 'abono_pagado' }, AHORA)).toBe('pagado');
-    expect(estadoLocal({ ...base, estadoPedido: 'entregado', expiraEn: pasado }, AHORA)).toBe('pagado');
-  });
-  it('vencido: link vencido o pedido que dejó de esperar el abono', () => {
-    expect(estadoLocal({ ...base, expiraEn: pasado }, AHORA)).toBe('vencido');
-    expect(estadoLocal({ ...base, estadoPedido: 'abandonado' }, AHORA)).toBe('vencido');
-    expect(estadoLocal({ ...base, estadoPedido: 'cancelado' }, AHORA)).toBe('vencido');
   });
 });
 

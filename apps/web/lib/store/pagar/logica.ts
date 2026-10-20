@@ -36,9 +36,9 @@ const aMs = (iso: string | null): number | null => {
 };
 
 /**
- * Destino de la redirección. Si el link tiene su pago en `payments`, manda su `checkout_url` (https, sin vencer y en
- * `created`/`pending`); si ese pago ya no sirve, no hay destino (se muestra «vencido»). Sin pago asociado se usa el
- * `target_url` del link, también solo si es https.
+ * Destino de pago de un link: si tiene su pago en `payments`, su `checkout_url` (https, sin vencer y en `created`/`pending`);
+ * si ese pago ya no sirve, no hay destino. Sin pago asociado se usa el `target_url` del link, también solo si es https.
+ * Lo usa la confirmación del pedido para saber si ofrece «Pagar abono»; la visita a /pagar la decide `pay_link_click`.
  */
 export function elegirDestino(targetUrl: unknown, pago: PagoEnlace | null, ahoraMs: number): string | null {
   if (!pago) return urlHttps(targetUrl);
@@ -46,33 +46,6 @@ export function elegirDestino(targetUrl: unknown, pago: PagoEnlace | null, ahora
   const vence = aMs(pago.venceEn);
   if (vence !== null && vence <= ahoraMs) return null;
   return urlHttps(pago.checkoutUrl);
-}
-
-const ESTADOS_PAGADOS: ReadonlySet<string> = new Set([
-  'pagado',
-  'abono_pagado',
-  'error_transportadora',
-  'enviado_transportadora',
-  'en_preparacion',
-  'en_transito',
-  'entregado',
-]);
-
-export interface DatosEstado {
-  expiraEn: string;
-  estadoPedido: string;
-  pago: PagoEnlace | null;
-}
-
-/**
- * Estado del link calculado en memoria. Es el espejo de `pay_link_click` y solo se usa cuando esa función aún no existe
- * en la base; con la función, manda lo que ella responde.
- */
-export function estadoLocal(d: DatosEstado, ahoraMs: number): EstadoEnlace {
-  if (d.pago?.estado === 'approved' || ESTADOS_PAGADOS.has(d.estadoPedido)) return 'pagado';
-  const vence = aMs(d.expiraEn);
-  if ((vence !== null && vence <= ahoraMs) || d.estadoPedido !== 'esperando_abono') return 'vencido';
-  return 'vigente';
 }
 
 export type ResultadoPagar =
