@@ -332,6 +332,19 @@ export const repoEjemplo: TiendaRepo = {
         { id: 's3', type: 'families', config: {} },
         { id: 's5', type: 'collection_tabs', config: {} },
         { id: 's8', type: 'reviews', config: {} },
+        {
+          id: 's9',
+          type: 'benefits',
+          config: {
+            title: 'Compra con tranquilidad',
+            items: [
+              { icon: 'camion', title: 'Envío gratis', text: 'A todo el país, sin monto mínimo.' },
+              { icon: 'tarjeta', title: 'Pago contra entrega', text: 'Pagas al recibir, con un pequeño abono para confirmar.' },
+              { icon: 'escudo', title: 'Garantía', text: 'Si algo no llega bien, lo resolvemos contigo.' },
+              { icon: 'chat', title: 'Asesoría por WhatsApp', text: 'Te ayudamos a elegir tu aroma.' },
+            ],
+          },
+        },
       ],
       banners: [],
       espacios: [],
