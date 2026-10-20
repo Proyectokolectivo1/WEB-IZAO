@@ -9,6 +9,10 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
+    "test:e2e": "playwright test -c tests/playwright.config.ts",
+    "test:e2e:humo": "playwright test -c tests/playwright.config.ts e2e/humo datos/",
+    "test:a11y": "playwright test -c tests/playwright.config.ts a11y/",
+    "lighthouse": "lhci autorun --config=tests/lighthouse/lighthouserc.cjs",
     "crear-admin": "tsx --env-file=.env.local scripts/crear-admin.ts"
   },
   "dependencies": {
