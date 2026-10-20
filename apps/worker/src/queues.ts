@@ -1,5 +1,7 @@
 import { Queue, Worker, type Processor } from 'bullmq';
 import { Redis } from 'ioredis';
+import { COLA_COD } from '@izao/whatsapp';
+import { COLA_PAGOS } from '@izao/wompi';
 import { JOB_PURGAR_AUDIT_LOG, purgarAuditLog } from './jobs/purgar-audit-log.js';
 
 /** Conexión compartida; BullMQ exige `maxRetriesPerRequest: null` en workers. */
@@ -11,6 +13,8 @@ export function createConnection(url = process.env.REDIS_URL): Redis {
 /** Nombres de colas. Los dueños de cada integración agregan las suyas aquí. */
 export const QUEUE_NAMES = {
   sistema: 'sistema',
+  pagos: COLA_PAGOS,
+  contraentrega: COLA_COD,
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

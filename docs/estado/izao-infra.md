@@ -16,3 +16,9 @@ test-backup-restore, test-restore-guard, test-deploy-rollback, test-nginx (1.27/
 
 ## Notas
 - El build de web en el árbol de trabajo falla hoy por WIP de la tienda (`lib/store/fuentes.ts`); mi cambio se verificó en copia limpia de HEAD.
+
+## Cola pagos y build del worker
+- Cola `pagos` registrada en `apps/worker/src/{queues,index}.ts` (+ cola `contraentrega` solo para `cancelarJobsCod`; su worker falta: izao-pagos debe dar `dependenciasCodDesdeEnv`).
+- Build del worker con esbuild (`apps/worker/build.mjs`, bundle ESM; bullmq/ioredis externos). Dockerfile.worker ya copia `dist` + `deploy --prod`: sin cambios.
+- `.env.example`: SITE_URL y CHECKOUT_*; compose usa env_file (cubre SUPABASE_*, APP_ENCRYPTION_KEY). Nginx: `X-Real-IP $remote_addr` confirmado.
+- Pendiente: `encolarTransportadora` es un stub con aviso (esperar contrato de izao-logistica); limitador de checkout en Redis (código de izao-pagos).

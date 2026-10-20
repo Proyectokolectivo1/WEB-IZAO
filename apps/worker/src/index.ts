@@ -1,4 +1,6 @@
 import { writeFileSync } from 'node:fs';
+import { cancelarJobsCod } from './jobs/cod/index.js';
+import { crearProcesadorPagos, dependenciasPagosDesdeEnv } from './jobs/payments/index.js';
 import { registrarCron } from './cron.js';
 import { createConnection, createQueue, createWorker, procesarSistema, QUEUE_NAMES } from './queues.js';
 
@@ -7,9 +9,26 @@ async function main(): Promise<void> {
   const cola = createQueue(QUEUE_NAMES.sistema, connection);
   const worker = createWorker(QUEUE_NAMES.sistema, procesarSistema, connection);
 
-  worker.on('failed', (job, err) => {
-    console.error(`[worker] job ${job?.id ?? '?'} falló: ${err.message}`);
-  });
+  const colaCod = createQueue(QUEUE_NAMES.contraentrega, connection);
+  const workerPagos = createWorker(
+    QUEUE_NAMES.pagos,
+    crearProcesadorPagos(
+      dependenciasPagosDesdeEnv(
+        // TODO(izao-logistica): reemplazar por la cola de la transportadora cuando exista su contrato.
+        async (orderId) => {
+          console.warn(`[worker] encolarTransportadora pendiente de izao-logistica (pedido ${orderId})`);
+        },
+        (orderId) => cancelarJobsCod(colaCod, orderId),
+      ),
+    ),
+    connection,
+  );
+
+  for (const w of [worker, workerPagos]) {
+    w.on('failed', (job, err) => {
+      console.error(`[worker] ${w.name} job ${job?.id ?? '?'} falló: ${err.message}`);
+    });
+  }
 
   await connection.ping();
   await registrarCron(cola);
@@ -33,7 +52,8 @@ async function main(): Promise<void> {
     clearInterval(intervaloLatido);
     console.log(`[worker] ${senal} recibido, cerrando`);
     try {
-      await worker.close();
+      await Promise.all([worker.close(), workerPagos.close()]);
+      await colaCod.close();
       await cola.close();
       await connection.quit();
     } finally {
