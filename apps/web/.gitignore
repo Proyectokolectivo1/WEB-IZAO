@@ -1,0 +1,2 @@
+# Carpeta de medios en desarrollo (cuando MEDIA_ROOT no está definido)
+.media-dev/
