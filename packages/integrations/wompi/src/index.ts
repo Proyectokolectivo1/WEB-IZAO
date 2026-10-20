@@ -5,3 +5,4 @@ export * from './estado';
 export * from './eventos';
 export * from './cliente';
 export * from './cola';
+export * from './link-pago';
