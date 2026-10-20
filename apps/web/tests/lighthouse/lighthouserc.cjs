@@ -15,6 +15,7 @@
  *    superior del "JS inicial"; si falla por JS diferido, se afina con `bundle analyzer` y se registra en DECISIONES.md.
  *  - Con CHECKOUT=1 se agrega el checkout (accesibilidad >= 95 también ahí).
  */
+/* eslint-disable @typescript-eslint/no-require-imports -- configuración CommonJS que exige lhci */
 const fs = require('node:fs');
 const path = require('node:path');
 
