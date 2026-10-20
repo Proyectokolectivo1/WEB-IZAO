@@ -22,6 +22,8 @@ type NuevaLinea = Omit<LineaCarrito, 'cantidad'> & { cantidad?: number };
 
 interface Contexto {
   pais: CodigoPais;
+  /** Nota de envío del bolso y del resumen: sale del espacio `nota_envio` del panel (por defecto, el texto del seed). */
+  notaEnvio: string;
   lineas: LineaCarrito[];
   unidades: number;
   /** Se vuelve `true` cuando ya se leyó `localStorage` (evita mostrar un bolso vacío por un instante). */
@@ -64,7 +66,7 @@ function escribirAlmacen(clave: string, valor: string): void {
   }
 }
 
-export function CarritoProvider({ pais, children }: { pais: CodigoPais; children: ReactNode }) {
+export function CarritoProvider({ pais, notaEnvio = T.carrito.notaEnvio, children }: { pais: CodigoPais; notaEnvio?: string; children: ReactNode }) {
   const [lineas, setLineas] = useState<LineaCarrito[]>([]);
   const [listo, setListo] = useState(false);
   const [abierto, setAbierto] = useState(false);
@@ -139,6 +141,7 @@ export function CarritoProvider({ pais, children }: { pais: CodigoPais; children
   const valor = useMemo<Contexto>(
     () => ({
       pais,
+      notaEnvio,
       lineas,
       unidades: contarUnidades(lineas),
       listo,
@@ -153,7 +156,7 @@ export function CarritoProvider({ pais, children }: { pais: CodigoPais; children
       alternarDeseo,
       reemplazar,
     }),
-    [pais, lineas, listo, abierto, abrir, cerrar, agregar, cambiar, quitar, pulso, deseos, alternarDeseo, reemplazar],
+    [pais, notaEnvio, lineas, listo, abierto, abrir, cerrar, agregar, cambiar, quitar, pulso, deseos, alternarDeseo, reemplazar],
   );
 
   return (

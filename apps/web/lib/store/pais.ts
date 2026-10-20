@@ -21,6 +21,26 @@ export function hreflangDe(p: CodigoPais): string {
   return p === 'co' ? 'es-CO' : 'es-EC';
 }
 
+/** Zona horaria del país para mostrar fechas y horas. */
+export function zonaHorariaDe(p: CodigoPais): string {
+  return p === 'co' ? 'America/Bogota' : 'America/Guayaquil';
+}
+
+/** Número con los separadores del país (`es-CO` / `es-EC`). */
+export function formatearNumero(n: number, pais: CodigoPais, opciones?: Intl.NumberFormatOptions): string {
+  return n.toLocaleString(hreflangDe(pais), opciones);
+}
+
+/** Calificación promedio con un decimal. */
+export function formatearPromedio(n: number, pais: CodigoPais): string {
+  return formatearNumero(n, pais, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
+/** Fecha y hora del país. */
+export function formatearFecha(iso: string | Date, pais: CodigoPais, opciones: Intl.DateTimeFormatOptions = { dateStyle: 'long' }): string {
+  return new Intl.DateTimeFormat(hreflangDe(pais), { timeZone: zonaHorariaDe(pais), ...opciones }).format(typeof iso === 'string' ? new Date(iso) : iso);
+}
+
 /**
  * Formato de precio del país. Recibe el entero en unidad menor tal como sale del RPC (o un `bigint`).
  * Nunca se opera con `Number`: solo se convierte para mostrar.

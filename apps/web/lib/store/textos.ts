@@ -1,3 +1,6 @@
+import { formatearFecha, formatearNumero } from './pais';
+import type { CodigoPais } from './types';
+
 /**
  * Microcopy de la interfaz (§8.6): valores por defecto del seed. Son textos de interacción
  * (botones, estados vacíos, errores), no de negocio; los de negocio (anuncios, beneficios,
@@ -67,7 +70,7 @@ export const T = {
     barraPrecioMin: 'Precio mínimo',
     barraPrecioMax: 'Precio máximo',
     contando: 'Contando…',
-    contador: (n: number | null) => (n === null ? 'Aromas' : n === 1 ? '1 aroma' : `${n.toLocaleString('es-CO')} aromas`),
+    contador: (n: number | null, pais: CodigoPais) => (n === null ? 'Aromas' : n === 1 ? '1 aroma' : `${formatearNumero(n, pais)} aromas`),
     filtrarYOrdenarN: (n: number) => (n > 0 ? `Filtrar y ordenar (${n})` : 'Filtrar y ordenar'),
     mostrarFiltros: 'Mostrar filtros',
     ocultarFiltros: 'Ocultar filtros',
@@ -182,7 +185,7 @@ export const T = {
     barraCompra: 'Compra rápida',
     relacionadosError: 'No pudimos traer más aromas ahora.',
     cargandoRelacionados: 'Buscando aromas parecidos',
-    fechaResena: (iso: string) => new Intl.DateTimeFormat('es-CO', { dateStyle: 'long', timeZone: 'America/Bogota' }).format(new Date(iso)),
+    fechaResena: (iso: string, pais: CodigoPais) => formatearFecha(iso, pais),
   },
   carrito: {
     titulo: 'Tu bolso',

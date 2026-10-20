@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { tienda } from '@/lib/store/datos';
 import { depurarHtml } from '@/lib/store/html-seguro';
-import { esPais } from '@/lib/store/pais';
+import { esPais, formatearFecha } from '@/lib/store/pais';
 import { T } from '@/lib/store/textos';
 
 type Props = { params: Promise<{ country: string; slug: string }> };
@@ -28,7 +28,7 @@ export default async function PaginaTexto({ params }: Props) {
   // `paginaLegal` solo devuelve páginas con status = 'published'.
   const pagina = await tienda().paginaLegal(pais, slug);
   if (!pagina) notFound();
-  const fecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'long', timeZone: 'America/Bogota' }).format(new Date(pagina.updated_at));
+  const fecha = formatearFecha(pagina.updated_at, pais);
 
   return (
     <article className="mx-auto w-full max-w-[96rem] px-4 pb-24 pt-10 sm:px-8 lg:pt-16">

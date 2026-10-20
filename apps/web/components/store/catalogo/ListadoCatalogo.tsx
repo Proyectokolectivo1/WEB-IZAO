@@ -181,7 +181,7 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
   const borradorIgual = clave(borrador) === clave(consulta);
   const conteo = useConteoEnVivo(pais, hoja && !borradorIgual ? borrador : null, fijos);
   const totalHoja = borradorIgual ? lote.total : conteo.total;
-  const textoTotalHoja = !borradorIgual && conteo.contando && conteo.total === null ? T.listado.contando : T.listado.contador(totalHoja);
+  const textoTotalHoja = !borradorIgual && conteo.contando && conteo.total === null ? T.listado.contando : T.listado.contador(totalHoja, pais);
 
   const cargando = estado === 'cargandoMas';
   const recargando = estado === 'recargando';
@@ -220,7 +220,7 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
             {nFiltros > 0 ? ` (${nFiltros})` : ''}
           </button>
           <p role="status" aria-live="polite" data-testid="total-resultados" className="text-[0.9375rem] text-ink/80">
-            {recargando ? T.listado.contando : T.listado.contador(lote.total)}
+            {recargando ? T.listado.contando : T.listado.contador(lote.total, pais)}
           </p>
         </div>
         <div className="hidden items-center gap-3 lg:flex">

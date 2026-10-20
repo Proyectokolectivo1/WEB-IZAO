@@ -1,14 +1,13 @@
 import Link from 'next/link';
 import { Icono, clasesBoton } from '@izao/ui';
 import type { PedidoPublico } from '@/lib/store/checkout-datos';
-import { formatearPrecio } from '@/lib/store/pais';
+import { formatearFecha, formatearPrecio } from '@/lib/store/pais';
 import { TC } from '@/lib/store/textos-checkout';
 import { T } from '@/lib/store/textos';
 import { RefrescarEstado } from './RefrescarEstado';
 import { Totales, type FilaTotal } from './Totales';
 
 const ESTADOS_EN_ESPERA = new Set(['pendiente_pago', 'esperando_abono', 'pago_rechazado']);
-const ZONA = { co: 'America/Bogota', ec: 'America/Guayaquil' } as const;
 
 function numeroWhatsapp(n: string | null): string | null {
   const d = (n ?? '').replace(/\D/g, '');
@@ -24,8 +23,7 @@ interface Props {
 export function ConfirmacionPedido({ pedido, whatsappAsesor }: Props) {
   const pais = pedido.pais;
   const precio = (v: string | bigint) => formatearPrecio(v, pais);
-  const fmt = new Intl.DateTimeFormat('es-CO', { dateStyle: 'long', timeStyle: 'short', timeZone: ZONA[pais] });
-  const fecha = (iso: string | null) => (iso ? fmt.format(new Date(iso)) : null);
+  const fecha = (iso: string | null) => (iso ? formatearFecha(iso, pais, { dateStyle: 'long', timeStyle: 'short' }) : null);
   const esContraEntrega = pedido.metodo === 'cod';
   const titulo = TC.pedido.titulos[pedido.estado] ?? TC.pedido.titulos.pendiente_pago;
   const texto = TC.pedido.textos[pedido.estado] ?? '';

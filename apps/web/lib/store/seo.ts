@@ -18,9 +18,17 @@ export function alternos(pais: CodigoPais, ruta: string) {
   };
 }
 
-/** JSON-LD seguro para incrustar en `<script>` (evita cerrar la etiqueta con `</`). */
+/**
+ * JSON-LD seguro para incrustar en `<script>`: escapa `<`, `>` y `&` (no se puede cerrar la etiqueta ni abrir un comentario)
+ * y los separadores de línea U+2028/U+2029. La barra va doble a propósito: el resultado sigue siendo JSON válido.
+ */
 export function jsonLd(obj: unknown): string {
-  return JSON.stringify(obj).replace(/</g, '\u003c');
+  return JSON.stringify(obj)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
 }
 
 /**

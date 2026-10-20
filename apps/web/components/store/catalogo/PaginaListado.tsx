@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { cargarInicial } from '@/lib/store/listado-servidor';
 import { tienda } from '@/lib/store/datos';
-import { parsearEstado } from '@/lib/store/filtros';
+import { TAMANO_LOTE, parsearEstado } from '@/lib/store/filtros';
 import { hrefListado } from '@/lib/store/lote';
 import { SITIO, jsonLd } from '@/lib/store/seo';
 import type { CodigoPais, FiltrosCatalogo } from '@/lib/store/types';
@@ -39,7 +39,7 @@ export async function PaginaListado({ pais, titulo, descripcion, base, fijos = {
       '@type': 'ItemList',
       itemListElement: inicial.items.map((p, i) => ({
         '@type': 'ListItem',
-        position: (estado.pagina - 1) * 25 + i + 1,
+        position: (estado.pagina - 1) * TAMANO_LOTE + i + 1,
         url: `${SITIO}/${pais}/perfume/${p.slug}`,
         name: p.name,
       })),

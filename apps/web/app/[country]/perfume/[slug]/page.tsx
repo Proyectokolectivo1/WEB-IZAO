@@ -14,7 +14,7 @@ import { leerBeneficios } from '@/components/store/home/HomeSecciones';
 import { tienda } from '@/lib/store/datos';
 import { descripcionCorta, imagenesDe, jsonLdMigas, jsonLdProducto, rutaDeMedio } from '@/lib/store/ficha-seo';
 import { depurarHtml } from '@/lib/store/html-seguro';
-import { esPais } from '@/lib/store/pais';
+import { esPais, formatearPromedio } from '@/lib/store/pais';
 import { SITIO, jsonLd } from '@/lib/store/seo';
 import { T } from '@/lib/store/textos';
 import type { CodigoPais, FichaProducto } from '@/lib/store/types';
@@ -121,7 +121,7 @@ export default async function FichaPerfume({ params }: Props) {
             {detalles.length > 0 ? <p className="text-[0.9375rem]">{detalles.join(' · ')}</p> : null}
             {ficha.reviews.count > 0 && ficha.reviews.avg !== null ? (
               <a href="#resenas" className="inline-flex min-h-11 w-fit items-center text-[0.9375rem] underline underline-offset-4">
-                {T.ficha.resenasPromedio(ficha.reviews.avg.toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), ficha.reviews.count)}
+                {T.ficha.resenasPromedio(formatearPromedio(ficha.reviews.avg, pais), ficha.reviews.count)}
               </a>
             ) : null}
             {resumen ? <div className="contenido-legal max-w-prose text-lg" dangerouslySetInnerHTML={{ __html: resumen }} /> : null}
@@ -148,7 +148,7 @@ export default async function FichaPerfume({ params }: Props) {
       <Revelar como="section" className="pt-20">
         <div id="resenas" className="scroll-mt-24">
           <EncabezadoSeccion n={siguiente()} titulo={T.ficha.resenas} />
-          <Resenas resenas={ficha.reviews} />
+          <Resenas resenas={ficha.reviews} pais={pais} />
         </div>
       </Revelar>
 

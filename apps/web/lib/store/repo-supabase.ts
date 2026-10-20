@@ -132,23 +132,48 @@ const leerMenu = conCache('menu', 300, contenido, async (p): Promise<CategoriaMe
   return raices;
 });
 
+/**
+ * Marcas con producto visible en el país. PostgREST no agrupa y limita las respuestas (Supabase: 1.000 filas), así que se
+ * recorre `catalog_listing` por marca con paginación por clave (`brand_slug` mayor al último visto): no depende de un tope
+ * de filas y cada página salta lo que le queda a la última marca.
+ */
+const PAGINA_MARCAS = 1000;
+async function leerMarcas(p: CodigoPais): Promise<Map<string, string>> {
+  const marcas = new Map<string, string>();
+  let ultimo: string | null = null;
+  for (let vuelta = 0; vuelta < 100; vuelta++) {
+    let consulta = db()
+      .from('catalog_listing')
+      .select('brand_slug,brand_name')
+      .eq('country_code', upper(p))
+      .eq('is_visible', true)
+      .not('brand_slug', 'is', null)
+      .order('brand_slug')
+      .limit(PAGINA_MARCAS);
+    if (ultimo !== null) consulta = consulta.gt('brand_slug', ultimo);
+    const filas = lista(ok(await consulta, 'marcas'));
+    for (const m of filas) marcas.set(String(m.brand_slug), String(m.brand_name));
+    if (filas.length < PAGINA_MARCAS) break;
+    ultimo = String(filas[filas.length - 1]?.brand_slug);
+  }
+  return marcas;
+}
+
 const leerOpciones = conCache('opciones', 300, catalogo, async (p): Promise<OpcionesFiltros> => {
-  const cl = db().from('catalog_listing');
-  const [generos, familias, conc, marcas, pmin, pmax, cats] = await Promise.all([
+  const [generos, familias, conc, marcasUnicas, pmin, pmax, cats] = await Promise.all([
     db().from('genders').select('slug,name').order('sort_order'),
     db().from('olfactory_families').select('slug,name').order('sort_order'),
     db().from('concentrations').select('slug,name').order('sort_order'),
-    cl.select('brand_slug,brand_name').eq('country_code', upper(p)).eq('is_visible', true).not('brand_slug', 'is', null).limit(2000),
-    db().from('catalog_listing').select('min_price').eq('country_code', upper(p)).eq('is_visible', true).order('min_price').limit(1),
-    db().from('catalog_listing').select('max_price').eq('country_code', upper(p)).eq('is_visible', true).order('max_price', { ascending: false }).limit(1),
+    leerMarcas(p),
+    // Sin precio (null) no cuenta: en orden descendente Postgres pondría los null primero.
+    db().from('catalog_listing').select('min_price').eq('country_code', upper(p)).eq('is_visible', true).not('min_price', 'is', null).order('min_price', { nullsFirst: false }).limit(1),
+    db().from('catalog_listing').select('max_price').eq('country_code', upper(p)).eq('is_visible', true).not('max_price', 'is', null).order('max_price', { ascending: false, nullsFirst: false }).limit(1),
     db()
       .from('category_countries')
       .select('category:categories!inner(slug,name,sort_order)')
       .eq('country_code', upper(p))
       .eq('is_visible', true),
   ]);
-  const marcasUnicas = new Map<string, string>();
-  for (const m of lista(ok(marcas, 'marcas'))) marcasUnicas.set(String(m.brand_slug), String(m.brand_name));
   const slugName = (r: unknown) => lista(r).map((x) => ({ slug: String(x.slug), name: String(x.name) }));
   return {
     generos: slugName(ok(generos, 'genders')),

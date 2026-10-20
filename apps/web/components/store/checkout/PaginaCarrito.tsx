@@ -13,7 +13,7 @@ import { Totales, type FilaTotal } from './Totales';
 
 /** Página completa del bolso (`/{pais}/carrito`): lo mismo que el drawer, con aire y un resumen a la vista. */
 export function PaginaCarrito() {
-  const { pais, lineas, listo, cambiar, quitar, unidades } = useCarrito();
+  const { pais, notaEnvio, lineas, listo, cambiar, quitar, unidades } = useCarrito();
   const vista = useVistaPrevia();
   const precio = (v: bigint | string) => formatearPrecio(v, pais);
 
@@ -105,7 +105,7 @@ export function PaginaCarrito() {
             01 · {TC.carrito.resumen} · {TC.carrito.unidades(unidades)}
           </p>
           <Totales filas={filas} total etiquetaTotal={TC.resumen.total} valorTotal={precio(total)} />
-          <p className="pt-4 text-[0.875rem] text-ink/80">{T.carrito.notaEnvio}</p>
+          <p className="pt-4 text-[0.875rem] text-ink/80">{notaEnvio}</p>
           <div className="mt-6 border-t border-line pt-5">
             <CodigoDescuento
               id="codigo-bolso"

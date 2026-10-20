@@ -16,7 +16,7 @@ function escapar(t: string): string {
   return t.replace(/&(?!(?:[a-zA-Z]{2,8}|#\d{1,6}|#x[0-9a-fA-F]{1,5});)/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-/** Solo enlaces web, correo, teléfono o rutas del sitio. Los entes numéricos y los espacios no esconden `javascript:`. */
+/** Solo enlaces web, correo, teléfono o rutas del sitio (`//` y `/\` serían de otro dominio: el navegador trata la barra invertida como `/`). Los entes numéricos y los espacios no esconden `javascript:`. */
 function hrefSeguro(crudo: string): string | null {
   const sinEntes = crudo
     .replace(/&#x([0-9a-f]+);?/gi, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
@@ -24,7 +24,7 @@ function hrefSeguro(crudo: string): string | null {
     .replace(/&colon;/gi, ':')
     // eslint-disable-next-line no-control-regex -- se eliminan a propósito los caracteres de control
     .replace(/[\u0000- \u007f-\u009f]/g, '');
-  if (/^(https?:|mailto:|tel:)/i.test(sinEntes) || /^(\/(?!\/)|#)/.test(sinEntes)) return escapar(crudo.trim());
+  if (/^(https?:|mailto:|tel:)/i.test(sinEntes) || /^(\/(?![/\\])|#)/.test(sinEntes)) return escapar(crudo.trim());
   return null;
 }
 

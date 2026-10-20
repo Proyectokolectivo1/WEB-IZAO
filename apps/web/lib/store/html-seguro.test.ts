@@ -25,6 +25,10 @@ describe('depurarHtml', () => {
     expect(depurarHtml('<a href="  JaVaScRiPt:alert(1)">x</a>')).toBe('<a>x</a>');
     expect(depurarHtml('<a href="jav&#x61;script:alert(1)">x</a>')).toBe('<a>x</a>');
     expect(depurarHtml('<a href="//malo.com">x</a>')).toBe('<a>x</a>');
+    expect(depurarHtml('<a href="/\\malo.com">x</a>')).toBe('<a>x</a>');
+    expect(depurarHtml('<a href="/&#92;malo.com">x</a>')).toBe('<a>x</a>');
+    expect(depurarHtml('<a href="/\\/malo.com">x</a>')).toBe('<a>x</a>');
+    expect(depurarHtml('<a href="/perfume/x">x</a>')).toBe('<a href="/perfume/x">x</a>');
     expect(depurarHtml('<a href="data:text/html,<script>">x</a>')).toBe('<a>x</a>');
   });
 

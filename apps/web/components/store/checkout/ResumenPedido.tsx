@@ -4,7 +4,7 @@ import { IzaoImage } from '@izao/ui';
 import type { LineaCarrito } from '@/lib/store/carrito/logica';
 import type { ResumenCheckout } from '@/lib/store/checkout/logica';
 import { TC } from '@/lib/store/textos-checkout';
-import { T } from '@/lib/store/textos';
+import { useCarrito } from '../carrito/CarritoProvider';
 import type { EstadoCodigo } from '../carrito/useVistaPrevia';
 import { CodigoDescuento } from './CodigoDescuento';
 import { Totales, type FilaTotal } from './Totales';
@@ -22,6 +22,7 @@ interface Props {
 
 /** Resumen fijo del checkout: productos, descuento, cargo por financiación, envío, total y, en contra entrega, abono y saldo. */
 export function ResumenPedido({ lineas, resumen, esContraEntrega, precio, codigo, revisando, onAplicar, onQuitar }: Props) {
+  const { notaEnvio } = useCarrito();
   const filas: FilaTotal[] = [{ clave: 'sub', etiqueta: TC.resumen.subtotal, valor: precio(resumen.subtotal) }];
   if (resumen.descuento > 0n) {
     filas.push({ clave: 'desc', etiqueta: TC.resumen.descuento, valor: `−${precio(resumen.descuento)}`, tono: 'positivo' });
@@ -75,7 +76,7 @@ export function ResumenPedido({ lineas, resumen, esContraEntrega, precio, codigo
             </div>
           </dl>
         ) : null}
-        <p className="pt-4 text-[0.875rem] text-ink/80">{T.carrito.notaEnvio}</p>
+        <p className="pt-4 text-[0.875rem] text-ink/80">{notaEnvio}</p>
       </div>
     </div>
   );

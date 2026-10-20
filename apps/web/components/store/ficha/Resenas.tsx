@@ -1,6 +1,7 @@
 import { Icono } from '@izao/ui';
 import { T } from '@/lib/store/textos';
-import type { FichaProducto } from '@/lib/store/types';
+import { formatearPromedio } from '@/lib/store/pais';
+import type { CodigoPais, FichaProducto } from '@/lib/store/types';
 
 function Estrellas({ valor, tamano = 16 }: { valor: number; tamano?: number }) {
   return (
@@ -12,10 +13,8 @@ function Estrellas({ valor, tamano = 16 }: { valor: number; tamano?: number }) {
   );
 }
 
-const promedioTexto = (n: number) => n.toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-
 /** Promedio, distribución y últimas reseñas aprobadas (§7.6, §9.6). Los nombres ya llegan abreviados («Andrea M.»). */
-export function Resenas({ resenas }: { resenas: FichaProducto['reviews'] }) {
+export function Resenas({ resenas, pais }: { resenas: FichaProducto['reviews']; pais: CodigoPais }) {
   if (resenas.count === 0 || resenas.avg === null) {
     return <p className="text-lg">{T.ficha.resenasSinNinguna}</p>;
   }
@@ -25,10 +24,10 @@ export function Resenas({ resenas }: { resenas: FichaProducto['reviews'] }) {
     <div className="grid gap-10 md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] md:gap-16">
       <div className="flex flex-col gap-5">
         <div className="flex items-end gap-4">
-          <p className="font-display text-7xl leading-none tabular-nums">{promedioTexto(resenas.avg)}</p>
+          <p className="font-display text-7xl leading-none tabular-nums">{formatearPromedio(resenas.avg, pais)}</p>
           <div className="flex flex-col gap-1 pb-1">
             <Estrellas valor={resenas.avg} tamano={18} />
-            <p className="text-[0.9375rem]">{T.ficha.resenasPromedio(promedioTexto(resenas.avg), resenas.count)}</p>
+            <p className="text-[0.9375rem]">{T.ficha.resenasPromedio(formatearPromedio(resenas.avg, pais), resenas.count)}</p>
           </div>
         </div>
         <ul className="flex flex-col gap-2" aria-label={T.ficha.resenas}>
@@ -67,7 +66,7 @@ export function Resenas({ resenas }: { resenas: FichaProducto['reviews'] }) {
                 <span className="px-2" aria-hidden="true">
                   ·
                 </span>
-                <time dateTime={r.created_at}>{T.ficha.fechaResena(r.created_at)}</time>
+                <time dateTime={r.created_at}>{T.ficha.fechaResena(r.created_at, pais)}</time>
               </p>
             </li>
           ))}
