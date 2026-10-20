@@ -3762,6 +3762,7 @@ export type Database = {
         Returns: Json
       }
       admin_textos: { Args: { v: Json }; Returns: string[] }
+      aplicar_transicion_pedido: { Args: { p: Json }; Returns: Json }
       catalog_item_json: {
         Args: { cl: Database["public"]["Tables"]["catalog_listing"]["Row"] }
         Returns: Json
