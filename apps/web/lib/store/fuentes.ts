@@ -1,7 +1,8 @@
 /**
  * Las seis parejas de §8.2, autohospedadas por `next/font` (se descargan al compilar; en ejecución no hay
- * dependencia de Google). Solo la pareja por defecto se precarga: las demás declaran sus `@font-face`
- * pero el navegador baja únicamente los archivos de la pareja que el panel haya elegido.
+ * dependencia de Google). `next/font` exige opciones literales y estáticas, por eso cada fuente repite las suyas.
+ * Solo la pareja por defecto se precarga: las demás declaran sus `@font-face` pero el navegador baja únicamente
+ * los archivos de la pareja que el panel haya elegido.
  */
 import {
   Bodoni_Moda,
@@ -18,21 +19,35 @@ import {
   Playfair_Display,
 } from 'next/font/google';
 
-const comun = { subsets: ['latin'] as ['latin'], display: 'swap' as const };
-const secundaria = { ...comun, preload: false };
+const p1t = Cormorant_Garamond({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
+  style: ['normal', 'italic'],
+  variable: '--font-par1-titulos',
+});
+const p1x = Manrope({ subsets: ['latin'], display: 'swap', variable: '--font-par1-texto' });
 
-const p1t = Cormorant_Garamond({ ...comun, weight: ['400', '500', '600', '700'], style: ['normal', 'italic'], variable: '--font-par1-titulos' });
-const p1x = Manrope({ ...comun, variable: '--font-par1-texto' });
-const p2t = Playfair_Display({ ...secundaria, variable: '--font-par2-titulos' });
-const p2x = Jost({ ...secundaria, variable: '--font-par2-texto' });
-const p3t = Fraunces({ ...secundaria, variable: '--font-par3-titulos' });
-const p3x = Inter_Tight({ ...secundaria, variable: '--font-par3-texto' });
-const p4t = Libre_Caslon_Display({ ...secundaria, weight: '400', variable: '--font-par4-titulos' });
-const p4x = Karla({ ...secundaria, variable: '--font-par4-texto' });
-const p5t = Marcellus({ ...secundaria, weight: '400', variable: '--font-par5-titulos' });
-const p5x = Mulish({ ...secundaria, variable: '--font-par5-texto' });
-const p6t = Bodoni_Moda({ ...secundaria, variable: '--font-par6-titulos' });
-const p6x = DM_Sans({ ...secundaria, variable: '--font-par6-texto' });
+const p2t = Playfair_Display({ subsets: ['latin'], display: 'swap', preload: false, variable: '--font-par2-titulos' });
+const p2x = Jost({ subsets: ['latin'], display: 'swap', preload: false, variable: '--font-par2-texto' });
+
+const p3t = Fraunces({ subsets: ['latin'], display: 'swap', preload: false, variable: '--font-par3-titulos' });
+const p3x = Inter_Tight({ subsets: ['latin'], display: 'swap', preload: false, variable: '--font-par3-texto' });
+
+const p4t = Libre_Caslon_Display({
+  subsets: ['latin'],
+  display: 'swap',
+  preload: false,
+  weight: '400',
+  variable: '--font-par4-titulos',
+});
+const p4x = Karla({ subsets: ['latin'], display: 'swap', preload: false, variable: '--font-par4-texto' });
+
+const p5t = Marcellus({ subsets: ['latin'], display: 'swap', preload: false, weight: '400', variable: '--font-par5-titulos' });
+const p5x = Mulish({ subsets: ['latin'], display: 'swap', preload: false, variable: '--font-par5-texto' });
+
+const p6t = Bodoni_Moda({ subsets: ['latin'], display: 'swap', preload: false, variable: '--font-par6-titulos' });
+const p6x = DM_Sans({ subsets: ['latin'], display: 'swap', preload: false, variable: '--font-par6-texto' });
 
 const PARES = {
   1: [p1t, p1x],

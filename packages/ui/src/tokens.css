@@ -26,6 +26,18 @@
     0 8px 24px -8px color-mix(in srgb, var(--color-ink) 18%, transparent);
 }
 
+/* Solo ratón con hover real (§7.4): en táctil no hay hover. */
+@custom-variant raton (@media (hover: hover) and (pointer: fine));
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @layer base {
   :root {
     --tema-base: 16px;

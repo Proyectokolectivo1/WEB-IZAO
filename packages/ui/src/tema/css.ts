@@ -77,11 +77,11 @@ export function resolverTipografia(...capas: Json[]): TipografiaTema {
 }
 
 /**
- * Bloque `:root{…}` con todos los tokens. Se inyecta en el servidor, así que no hay parpadeo.
+ * Bloque `:root{…}` (o el `selector` dado, p. ej. un envoltorio con *override* de país) con todos los tokens. Se inyecta en el servidor, así que no hay parpadeo.
  * `--font-display` y `--font-body` apuntan a las variables que define `next/font` para la pareja elegida
  * (`--font-par{N}-titulos`, `--font-par{N}-texto`).
  */
-export function construirCssTema(colores: TemaColores, tipo: TipografiaTema): string {
+export function construirCssTema(colores: TemaColores, tipo: TipografiaTema, selector = ':root'): string {
   const lineas: string[] = [];
   for (const k of CLAVES_COLOR) lineas.push(`--color-${k}:${colores.colores[k]}`);
   lineas.push(`--color-line:${colores.linea ?? LINEA_POR_DEFECTO}`);
@@ -91,5 +91,5 @@ export function construirCssTema(colores: TemaColores, tipo: TipografiaTema): st
   lineas.push(`--tema-peso-titulos:${tipo.pesoTitulos}`);
   lineas.push(`--tema-espaciado-titulos:${tipo.espaciadoTitulos}`);
   lineas.push(`--tema-espaciado-etiquetas:${tipo.espaciadoEtiquetas}`);
-  return `:root{${lineas.join(';')}}`;
+  return `${selector}{${lineas.join(';')}}`;
 }

@@ -24,6 +24,8 @@ interface Props {
   /** Pie fijo (p. ej. subtotal y botón del carrito). */
   pie?: ReactNode;
   className?: string;
+  /** `data-testid` del diálogo (pruebas e2e). */
+  testId?: string;
 }
 
 const FOCOS =
@@ -52,6 +54,7 @@ export function Sheet({
   children,
   pie,
   className = '',
+  testId,
 }: Props) {
   const [montado, setMontado] = useState(abierto);
   const panel = useRef<HTMLDivElement>(null);
@@ -138,6 +141,7 @@ export function Sheet({
       <div
         ref={panel}
         role="dialog"
+        data-testid={testId}
         aria-modal="true"
         aria-labelledby={idTitulo}
         tabIndex={-1}
@@ -160,6 +164,6 @@ export function Sheet({
         {pie ? <div className="border-t border-line bg-bg px-5 py-4">{pie}</div> : null}
       </div>
     </div>,
-    document.body,
+    document.getElementById('izao-portal') ?? document.body,
   );
 }
