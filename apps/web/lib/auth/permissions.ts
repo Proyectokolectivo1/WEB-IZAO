@@ -58,7 +58,7 @@ export const MODULOS = {
     etiqueta: 'Productos',
     ruta: '/admin/productos',
     roles: SOLO_ADMIN,
-    disponible: false,
+    disponible: true,
   },
   categorias: {
     etiqueta: 'Categorías',
