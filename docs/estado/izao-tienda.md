@@ -12,6 +12,8 @@
 
 - Legales por kind (adf36bd): checkout y pie eligen por `pages.kind` (`repo.paginaPorTipo`, `lib/store/paginas.ts`). 409 DATA_POLICY_OUTDATED: el formulario toma `current_version`, lee `GET /{pais}/checkout/politica` (sin caché), desmarca la aceptación y pide aceptar de nuevo sin tocar el bolso (clave de idempotencia nueva). Caché de páginas con tags `content:{país}` (lo dispara `invalidarContenido` del panel) y `pages:*` (`lib/store/etiquetas.ts`). Envío: espacios `nota_envio` (cuerpo) y `valor_envio` (título) editables (`lib/store/envio.ts`; izao-db/admin: sembrar las claves). Marcas: paginación por clave, sin tope. Checkout 163 kB.
 
+- Abono COD (pedido de izao-pagos):  (, 21 pruebas): token 16-64 base64url (el worker genera 96 bits; pedir a izao-pagos 16 bytes = 22 car. para 128 bits), 404 real si no existe o es de otro país, cuenta el clic con  (migración de izao-db aún sin commit/aplicar: con PGRST202/42883 usa respaldo optimista y estado en memoria), 307 al  https vigente de  o vista «pagado»/«vencido» (asesor por WhatsApp), noindex. Botón «Pagar abono ahora» en /pedido (, solo  con link vigente; ). Ejemplos sin base: tokens ejemplovigente000000, ejemplopagado0000000, ejemplovencido000000. Textos en .
+
 ## Decisiones propias
 - Sin TanStack Query (hook propio + sessionStorage). Carrito: subtotal local con `calcularPrecios`; `lib/store/carrito/adaptador.ts` (`SERVIDOR_DISPONIBLE=false`) se activa cuando izao-pagos publique `POST /api/checkout/preview` (Oleada 3; contrato en `contrato.ts`).
 - Beneficios/confianza y asesoría salen de `home_sections.config` (`items[{icon,title,text}]`, `title/body/cta_label/cta_url`); `content_slots` keys: `medios_de_pago`, `asesoria`, `busquedas_populares`. Pedir a izao-admin que el panel use esas claves.

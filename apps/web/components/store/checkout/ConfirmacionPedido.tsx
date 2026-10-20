@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Icono, clasesBoton } from '@izao/ui';
 import type { PedidoPublico } from '@/lib/store/checkout-datos';
+import { enlaceWhatsapp } from '@/lib/store/contacto';
 import { formatearFecha, formatearPrecio } from '@/lib/store/pais';
 import { TC } from '@/lib/store/textos-checkout';
 import { T } from '@/lib/store/textos';
@@ -8,11 +9,6 @@ import { RefrescarEstado } from './RefrescarEstado';
 import { Totales, type FilaTotal } from './Totales';
 
 const ESTADOS_EN_ESPERA = new Set(['pendiente_pago', 'esperando_abono', 'pago_rechazado']);
-
-function numeroWhatsapp(n: string | null): string | null {
-  const d = (n ?? '').replace(/\D/g, '');
-  return d.length >= 8 && d.length <= 15 ? d : null;
-}
 
 interface Props {
   pedido: PedidoPublico;
@@ -49,15 +45,15 @@ export function ConfirmacionPedido({ pedido, whatsappAsesor, valorEnvio }: Props
   }
   filas.push({ clave: 'envio', etiqueta: TC.resumen.envio, valor: valorEnvio ?? T.carrito.envioGratis });
 
-  const wa = numeroWhatsapp(whatsappAsesor);
   const mensajeWa = TC.pedido.whatsappMensaje(
     pedido.numero,
     pedido.lineas.map((l) => `• ${l.cantidad} × ${l.nombre}${l.presentacion ? ` (${l.presentacion})` : ''}`),
     precio(pedido.total),
   );
-  const enlaceWa = wa ? `https://wa.me/${wa}?text=${encodeURIComponent(mensajeWa)}` : null;
-  const pago = pedido.pagoPendiente;
-  const textoPago = pago?.proposito === 'cod_deposit' ? TC.pedido.pagarAbono : TC.pedido.continuarPago;
+  const enlaceWa = enlaceWhatsapp(whatsappAsesor, mensajeWa);
+  // El abono pasa siempre por el link de marca (cuenta el clic y valida la vigencia); el resto va directo a la pasarela.
+  const pago = pedido.pagoPendiente?.proposito === 'cod_deposit' ? null : pedido.pagoPendiente;
+  const enlaceAbono = pedido.estado === 'esperando_abono' && pedido.tokenAbono ? `/${pais}/pagar/${pedido.tokenAbono}` : null;
 
   return (
     <article className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_26rem] lg:gap-16">
@@ -68,9 +64,14 @@ export function ConfirmacionPedido({ pedido, whatsappAsesor, valorEnvio }: Props
         {texto ? <p className="max-w-xl pt-4 text-lg text-ink/90">{texto}</p> : null}
 
         <div className="flex flex-wrap gap-3 pt-8">
+          {enlaceAbono ? (
+            <a href={enlaceAbono} data-testid="pagar-abono" className={clasesBoton({ tamano: 'lg' })}>
+              {TC.pedido.pagarAbono}
+            </a>
+          ) : null}
           {pago ? (
             <a href={pago.url} className={clasesBoton({ tamano: 'lg' })}>
-              {textoPago}
+              {TC.pedido.continuarPago}
             </a>
           ) : null}
           {pedido.estado === 'pendiente_manual' && enlaceWa ? (

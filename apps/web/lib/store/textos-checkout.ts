@@ -214,6 +214,23 @@ export const TC = {
     whatsappMensaje: (numero: string, lineas: string[], total: string) =>
       `Hola, quiero terminar mi pedido ${numero}:\n${lineas.join('\n')}\nTotal: ${total}`,
   },
+  /** Página de marca `/pagar/{token}` a la que llega el cliente desde el link de cobro del abono. */
+  pagar: {
+    titulo: 'Pagar abono',
+    pagado: {
+      titulo: 'Ya recibimos tu abono.',
+      texto: (numero: string) => `Gracias. Tu pedido ${numero} sigue su camino y te avisamos por WhatsApp cuando salga.`,
+    },
+    vencido: {
+      titulo: 'Este enlace de pago venció.',
+      texto: (numero: string) =>
+        `Pasó el tiempo para hacer el abono del pedido ${numero}. Escríbenos y un asesor te ayuda a retomarlo.`,
+      hablarAsesor: 'Hablar con un asesor',
+      mensajeAsesor: (numero: string) => `Hola, mi enlace de pago del pedido ${numero} venció. ¿Me ayudan a retomarlo?`,
+      sinAsesor: 'Escríbenos por los canales de atención que aparecen al pie de la página.',
+    },
+    volver: 'Seguir comprando',
+  },
 } as const;
 
 /** Texto del botón principal según el método (§10.1 punto 7). */

@@ -10,12 +10,13 @@ import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
 import { TOKEN_EJEMPLO } from './checkout/adaptador';
 import type { ConfigCheckout, EnlaceLegal, MetodoActivo, PoliticaLegal, MetodoReal, OpcionGeo } from './checkout/tipos';
 import { aCodigoCore } from './pais';
+import { elegirDestino } from './pagar/logica';
 import { tienda } from './datos';
 import type { CodigoPais } from './types';
 
 type Fila = Record<string, unknown>;
 
-function usarSupabase(): boolean {
+export function usarSupabase(): boolean {
   const forzado = process.env.STORE_DATOS;
   if (forzado === 'ejemplo' && process.env.NODE_ENV !== 'production') return false;
   if (forzado === 'supabase' || process.env.NODE_ENV === 'production') return true;
@@ -222,6 +223,8 @@ export interface PedidoPublico {
   cancelado: string | null;
   /** Enlace https de un pago pendiente (abono o pago completo) que aún no venció. */
   pagoPendiente: { url: string; proposito: 'full' | 'cod_deposit' | 'financing' } | null;
+  /** Token del link de marca `/pagar/{token}` del abono; solo si el pedido espera el abono y el link sigue vigente. */
+  tokenAbono: string | null;
 }
 
 export const REGEX_TOKEN = /^[A-Za-z0-9]{8,64}$/;
@@ -251,6 +254,7 @@ function ejemplo(pais: CodigoPais): PedidoPublico {
     entregado: null,
     cancelado: null,
     pagoPendiente: null,
+    tokenAbono: pais === 'co' ? 'ejemplovigente000000' : null,
   };
 }
 
@@ -273,7 +277,8 @@ export async function pedidoPublico(pais: CodigoPais, token: string): Promise<Pe
   ) as Fila | null;
   if (!o) return null;
   const id = String(o.id);
-  const [items, pagos] = await Promise.all([
+  const esperaAbono = o.status === 'esperando_abono';
+  const [items, pagos, links] = await Promise.all([
     db.from('order_items').select('name_snapshot,variant_label,quantity,unit_price,line_discount').eq('order_id', id).order('created_at'),
     db
       .from('payments')
@@ -282,8 +287,28 @@ export async function pedidoPublico(pais: CodigoPais, token: string): Promise<Pe
       .in('status', ['created', 'pending'])
       .order('created_at', { ascending: false })
       .limit(3),
+    esperaAbono
+      ? db
+          .from('pay_links')
+          .select('token,target_url,payments(status,checkout_url,expires_at)')
+          .eq('order_id', id)
+          .gt('expires_at', new Date().toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+      : Promise.resolve(null),
   ]);
   const ahora = Date.now();
+  const link = links ? (((ok(links, 'pay_links') ?? []) as Fila[])[0] ?? null) : null;
+  const pagoLink = link ? ((Array.isArray(link.payments) ? link.payments[0] : link.payments) as Fila | null | undefined) : null;
+  const tokenAbono =
+    link &&
+    elegirDestino(
+      link.target_url,
+      pagoLink ? { estado: String(pagoLink.status), checkoutUrl: texto(pagoLink.checkout_url), venceEn: fecha(pagoLink.expires_at) } : null,
+      ahora,
+    )
+      ? String(link.token)
+      : null;
   const pago = ((ok(pagos, 'payments') ?? []) as Fila[]).find((p) => {
     const url = texto(p.checkout_url);
     const vence = fecha(p.expires_at);
@@ -321,5 +346,6 @@ export async function pedidoPublico(pais: CodigoPais, token: string): Promise<Pe
     pagoPendiente: pago
       ? { url: String(pago.checkout_url), proposito: pago.purpose as 'full' | 'cod_deposit' | 'financing' }
       : null,
+    tokenAbono,
   };
 }
