@@ -47,6 +47,21 @@ El workflow (`.github/`, de izao-infra) debe: `pnpm install --frozen-lockfile` -
 -> `pnpm build` -> `pnpm --filter @izao/web test:e2e` con `CI=1`; subir `apps/web/tests/.resultados/` como artefacto.
 Lighthouse CI y k6 van en jobs aparte (ver `lighthouse/` y `k6/LEEME.md`).
 
+## Lighthouse y carga
+
+- `pnpm lighthouse` (desde `apps/web`, tras `pnpm build`): `lighthouse/lighthouserc.cjs` con los presupuestos de §27
+  (rendimiento >= 90, accesibilidad >= 95, LCP < 2,5 s, CLS < 0,1, TBT < 200 ms como proxy de INP, JS < 170 KB gzip).
+  Necesita Chrome (o `CHROME_PATH`) y el seed aplicado; mide home, listado y ficha de CO y EC. `CHECKOUT=1` suma el checkout.
+  Verificado el mecanismo contra `/admin/login` (pasa rendimiento, accesibilidad, LCP, CLS, TBT y peso de JS).
+  `lhci` crea `apps/web/.lighthouseci/` (temporal; falta ignorarlo en el `.gitignore` raíz, de izao-infra).
+- Carga: ver `k6/LEEME.md`.
+
+## Advertencia: un solo `.next`
+
+`pnpm build` y `next dev` escriben en la misma carpeta `apps/web/.next`. Si alguien corre `next dev` (o compila con errores
+de tipos de otro agente) mientras corres `test:e2e`, el build se corrompe. Para pruebas reproducibles, corre desde una copia
+limpia (`git worktree add`) o en CI. Propuesta a izao-infra: `distDir: process.env.NEXT_DIST_DIR ?? '.next'` en `next.config.ts`.
+
 ## Reloj simulado
 
 Flujos con tiempo (contra entrega, expiraciones): `page.clock.install()` / `page.clock.fastForward()`; nunca esperas reales.
