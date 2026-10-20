@@ -410,6 +410,24 @@ test.describe('F1 estabilidad visual (§27, §30)', () => {
     expect(await leer()).toBeLessThan(0.1);
   });
 
+  test.fixme('§27 INP < 200 ms al filtrar, abrir la vista rápida y agregar al carrito', async ({ page, context }) => {
+    await fijarPais(context, 'co');
+    await page.addInitScript(() => {
+      const w = window as unknown as { __maxEvento: number };
+      w.__maxEvento = 0;
+      new PerformanceObserver((lista) => {
+        for (const e of lista.getEntries()) w.__maxEvento = Math.max(w.__maxEvento, e.duration);
+      }).observe({ type: 'event', durationThreshold: 16, buffered: true } as PerformanceObserverInit);
+    });
+    await abrirListado(page, 'co');
+    // Interacciones típicas: abrir y cerrar la vista rápida, agregar y abrir el carrito.
+    await page.locator(SEL.botonVistaRapida).first().click();
+    await page.keyboard.press('Escape');
+    await page.locator(SEL.tarjeta).first().locator(SEL.botonAgregar).click();
+    const maximo = await page.evaluate(() => (window as unknown as { __maxEvento: number }).__maxEvento);
+    expect(maximo).toBeLessThan(200);
+  });
+
   test.fixme('§7.1 los esqueletos tienen la proporción 4:5 de la tarjeta', async ({ page }) => {
     await page.route('**/api/catalog**', async (ruta) => {
       await new Promise((r) => setTimeout(r, 1500)); // retraso del mock para ver los esqueletos
