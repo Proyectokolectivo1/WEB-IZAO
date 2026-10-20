@@ -71,7 +71,7 @@ const checkout = {
   payment_method: 'wompi',
   discount_code: null,
   consents: { terms_and_data: true, whatsapp: false },
-  data_policy_version: 'v1',
+  data_policy_version: '2026-10',
 };
 
 describe('checkout con Wompi: intento de pago listo', () => {

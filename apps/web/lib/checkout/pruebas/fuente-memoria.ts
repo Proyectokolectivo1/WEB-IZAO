@@ -15,6 +15,7 @@ import type {
   UbicacionEnvio,
   VarianteCheckout,
 } from '../fuente';
+import type { DatosSolicitud } from '../huella';
 
 type Operacion = keyof FuenteCheckout;
 
@@ -46,6 +47,11 @@ export class FuenteMemoria implements FuenteCheckout {
   canjeRechazo: 'limite_por_cliente' | 'limite_total' | 'codigo_fuera_de_vigencia' | null = null;
   /** Usos previos del cliente que devuelve `usosDelCliente`. */
   usosPrevios = 0;
+  /** Versión vigente de la política de datos por país (sin entrada = no hay política publicada). */
+  readonly politicas = new Map<CountryCode, string>([
+    ['CO', '2026-10'],
+    ['EC', '2026-10'],
+  ]);
   llamadas: Operacion[] = [];
   private secuencia = 0;
 
@@ -97,10 +103,36 @@ export class FuenteMemoria implements FuenteCheckout {
     for (const p of this.pedidos.values()) {
       if (p.fila.checkout_idempotency_key === clave) {
         const completo = this.eventos.some((e) => e.orderId === p.pedido.id && e.evento.type === 'created');
-        return { ...this.resumen(p), completo };
+        return { ...this.resumen(p), completo, solicitud: this.solicitud(p) };
       }
     }
     return null;
+  }
+
+  async versionPoliticaDatos(pais: CountryCode) {
+    this.marca('versionPoliticaDatos');
+    return this.politicas.get(pais) ?? null;
+  }
+
+  /** Lo que la base guarda del pedido (como `solicitudDePedido`): el código es la copia `discount_code_text`. */
+  private solicitud(p: PedidoGuardado): DatosSolicitud {
+    const f = p.fila;
+    const s = (k: string) => (f[k] as string | null) ?? null;
+    const codeId = s('discount_code_id');
+    return {
+      country_code: f.country_code as CountryCode,
+      payment_method: f.payment_method as DatosSolicitud['payment_method'],
+      discount_code: codeId ? (this.codigos.find((c) => c.id === codeId)?.code ?? null) : null,
+      items: p.items.map((i) => ({ variant_id: i.variant_id as string, quantity: i.quantity as number })),
+      shipping: {
+        region_id: s('shipping_region_id')!,
+        city_id: s('shipping_city_id')!,
+        district: s('shipping_district'),
+        address1: s('shipping_address1')!,
+        address2: s('shipping_address2'),
+        notes: s('shipping_notes'),
+      },
+    };
   }
 
   private resumen(p: PedidoGuardado): PedidoCreado {

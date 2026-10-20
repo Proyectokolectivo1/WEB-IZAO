@@ -31,7 +31,7 @@ const checkout = {
   payment_method: 'wompi',
   discount_code: null,
   consents: { terms_and_data: true, whatsapp: false },
-  data_policy_version: 'v1',
+  data_policy_version: '2026-10',
 };
 
 describe('rutas HTTP del checkout', () => {
@@ -104,12 +104,52 @@ describe('utilidades del límite', () => {
     l.consumir('a', 0);
     l.consumir('b', 0);
     expect(l.consumir('c', 0).permitido).toBe(true);
+    expect(l.tamano()).toBeLessThanOrEqual(2);
   });
 
-  it('IP: X-Real-IP primero, luego el primer salto de X-Forwarded-For', () => {
-    expect(ipCliente(new Headers({ 'x-real-ip': '1.1.1.1', 'x-forwarded-for': '2.2.2.2' }))).toBe('1.1.1.1');
-    expect(ipCliente(new Headers({ 'x-forwarded-for': '2.2.2.2, 3.3.3.3' }))).toBe('2.2.2.2');
-    expect(ipCliente(new Headers())).toBe('desconocida');
+  it('lleno: purga primero las ventanas vencidas y conserva las vigentes', () => {
+    const l = crearLimitadorMemoria({ limite: 1, ventanaMs: 1_000, maxClaves: 2 });
+    l.consumir('vieja', 0);
+    l.consumir('vigente', 600);
+    // 'vieja' venció en 1000; 'vigente' sigue en su ventana
+    expect(l.consumir('nueva', 1_200).permitido).toBe(true);
+    expect(l.consumir('vigente', 1_300).permitido).toBe(false);
+  });
+
+  it('lleno sin vencidas: expulsa solo la más antigua, nunca vacía todo', () => {
+    const l = crearLimitadorMemoria({ limite: 1, ventanaMs: 10_000, maxClaves: 3 });
+    l.consumir('a', 0);
+    l.consumir('b', 100);
+    l.consumir('c', 200);
+    expect(l.consumir('d', 300).permitido).toBe(true);
+    expect(l.tamano()).toBe(3);
+    // b y c conservan su conteo: siguen bloqueadas
+    expect(l.consumir('b', 400).permitido).toBe(false);
+    expect(l.consumir('c', 400).permitido).toBe(false);
+    expect(l.consumir('d', 400).permitido).toBe(false);
+  });
+
+  it('una ventana renovada pasa al final del orden de expulsión', () => {
+    const l = crearLimitadorMemoria({ limite: 1, ventanaMs: 1_000, maxClaves: 2 });
+    l.consumir('a', 0);
+    l.consumir('b', 500);
+    l.consumir('a', 1_000); // a renueva su ventana (inicio 1000)
+    // b vence en 1500; con el mapa lleno se purga b, no a
+    expect(l.consumir('c', 1_600).permitido).toBe(true);
+    expect(l.consumir('a', 1_700).permitido).toBe(false);
+  });
+
+  it('IP fuera de producción: X-Real-IP primero, luego el primer salto de X-Forwarded-For', () => {
+    expect(ipCliente(new Headers({ 'x-real-ip': '1.1.1.1', 'x-forwarded-for': '2.2.2.2' }), false)).toBe('1.1.1.1');
+    expect(ipCliente(new Headers({ 'x-forwarded-for': '2.2.2.2, 3.3.3.3' }), false)).toBe('2.2.2.2');
+    expect(ipCliente(new Headers(), false)).toBe('desconocida');
+  });
+
+  it('IP en producción: solo X-Real-IP (lo fija Nginx); X-Forwarded-For no se usa', () => {
+    expect(ipCliente(new Headers({ 'x-real-ip': '2001:db8::1', 'x-forwarded-for': '9.9.9.9' }), true)).toBe('2001:db8::1');
+    expect(ipCliente(new Headers({ 'x-forwarded-for': '9.9.9.9' }), true)).toBe('sin-x-real-ip');
+    // Valor que no es una IP: no se usa como clave
+    expect(ipCliente(new Headers({ 'x-real-ip': 'abc; drop' }), true)).toBe('sin-x-real-ip');
   });
 
   it('enteroEnv solo acepta enteros positivos', () => {

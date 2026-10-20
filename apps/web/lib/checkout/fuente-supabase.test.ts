@@ -7,7 +7,15 @@ vi.mock('@/lib/auth/supabase/servicio', () => ({
 }));
 
 import { fijarClienteDbParaPruebas } from '@/lib/db/cliente';
-import { filaCodigo, filaVariante, fuenteSupabase, mapearCodigo, mapearVariante } from './fuente-supabase';
+import {
+  elegirVersionPolitica,
+  filaCodigo,
+  filaVariante,
+  fuenteSupabase,
+  mapearCodigo,
+  mapearVariante,
+  solicitudDePedido,
+} from './fuente-supabase';
 
 const V = '11111111-1111-4111-8111-111111111111';
 const P = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -177,5 +185,95 @@ describe('fuente Supabase del checkout: mapeos', () => {
     const rpc = async () => ({ data: null, error: { code: '23514', message: 'orders_total_check' } });
     fijarClienteDbParaPruebas({ rpc } as never);
     await expect(fuenteSupabase.crearPedido(ORDEN, [ITEM])).rejects.toThrow('crear_pedido_checkout');
+  });
+});
+
+/** Constructor de consultas falso: registra los filtros y resuelve con `resultado`. */
+function consultaFalsa(resultado: { data: unknown; error: null }) {
+  const filtros: [string, ...unknown[]][] = [];
+  const tablas: string[] = [];
+  const b: Record<string, unknown> = {};
+  for (const m of ['select', 'eq', 'in', 'order', 'limit', 'overlaps']) {
+    b[m] = (...a: unknown[]) => {
+      filtros.push([m, ...a]);
+      return b;
+    };
+  }
+  b.maybeSingle = async () => resultado;
+  b.then = (ok: (v: unknown) => unknown, ko: (e: unknown) => unknown) => Promise.resolve(resultado).then(ok, ko);
+  const cliente = {
+    from: (t: string) => {
+      tablas.push(t);
+      return b;
+    },
+  };
+  return { cliente, filtros, tablas };
+}
+
+describe('fuente Supabase del checkout: consultas', () => {
+  it('código: siempre en mayúsculas y sin espacios contra la columna (única vía índice)', async () => {
+    const q = consultaFalsa({ data: null, error: null });
+    fijarClienteDbParaPruebas(q.cliente as never);
+    expect(await fuenteSupabase.codigo(' desc10 ')).toBeNull();
+    expect(q.filtros).toContainEqual(['eq', 'code', 'DESC10']);
+  });
+
+  it('código con caracteres fuera del patrón: no consulta', async () => {
+    const q = consultaFalsa({ data: null, error: null });
+    fijarClienteDbParaPruebas(q.cliente as never);
+    expect(await fuenteSupabase.codigo('a,b')).toBeNull();
+    expect(q.tablas).toEqual([]);
+  });
+
+  it('versión de la política: la página publicada de tratamiento de datos del país (mismo criterio de la tienda)', () => {
+    expect(
+      elegirVersionPolitica([
+        { slug: 'quienes-somos', title: 'Quiénes somos', version: 9 },
+        { slug: 'terminos', title: 'Términos y condiciones', version: 4 },
+        { slug: 'tratamiento-de-datos', title: 'Política de tratamiento de datos personales', version: 3 },
+      ]),
+    ).toBe('3');
+    expect(elegirVersionPolitica([{ slug: 'terminos', title: 'Términos', version: 1 }])).toBeNull();
+    expect(elegirVersionPolitica([])).toBeNull();
+  });
+
+  it('versionPoliticaDatos consulta solo páginas publicadas del país, ordenadas por título', async () => {
+    const q = consultaFalsa({ data: [{ slug: 'privacidad', title: 'Privacidad', version: 2 }], error: null });
+    fijarClienteDbParaPruebas(q.cliente as never);
+    expect(await fuenteSupabase.versionPoliticaDatos('EC')).toBe('2');
+    expect(q.tablas).toEqual(['pages']);
+    expect(q.filtros).toContainEqual(['eq', 'country_code', 'EC']);
+    expect(q.filtros).toContainEqual(['eq', 'status', 'published']);
+    expect(q.filtros).toContainEqual(['order', 'title']);
+  });
+
+  it('solicitud persistida del pedido: líneas, método, código copiado y dirección', () => {
+    expect(
+      solicitudDePedido({
+        country_code: 'CO',
+        payment_method: 'wompi',
+        discount_code_text: 'DESC10',
+        shipping_region_id: 'AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA',
+        shipping_city_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        shipping_district: null,
+        shipping_address1: 'Calle 10 # 20-30',
+        shipping_address2: 'Apto 301',
+        shipping_notes: null,
+        order_items: [{ variant_id: V, quantity: 2 }],
+      }),
+    ).toEqual({
+      country_code: 'CO',
+      payment_method: 'wompi',
+      discount_code: 'DESC10',
+      items: [{ variant_id: V, quantity: 2 }],
+      shipping: {
+        region_id: 'AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA',
+        city_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        district: null,
+        address1: 'Calle 10 # 20-30',
+        address2: 'Apto 301',
+        notes: null,
+      },
+    });
   });
 });

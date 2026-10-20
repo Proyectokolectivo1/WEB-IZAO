@@ -12,6 +12,7 @@ import { amountSchema, checkoutPaymentMethodSchema, countryCodeSchema, currencyC
 import { ErrorDb, clienteDb, llamarRpc } from '@/lib/db/cliente';
 import { crearPedidoCheckoutDb, type EntradaCrearPedido } from '@/lib/db/checkout';
 import type { ConfigPais, FuenteCheckout, PedidoCreado, VarianteCheckout } from './fuente';
+import type { DatosSolicitud } from './huella';
 
 const uuid = z.guid();
 const entero = z.number().int();
@@ -163,6 +164,51 @@ export function mapearPedido(f: z.infer<typeof filaPedido>): Omit<PedidoCreado, 
   };
 }
 
+export const filaSolicitud = z.object({
+  country_code: countryCodeSchema,
+  payment_method: checkoutPaymentMethodSchema,
+  discount_code_text: z.string().nullable(),
+  shipping_region_id: z.string().nullable(),
+  shipping_city_id: z.string().nullable(),
+  shipping_district: z.string().nullable(),
+  shipping_address1: z.string().nullable(),
+  shipping_address2: z.string().nullable(),
+  shipping_notes: z.string().nullable(),
+  order_items: z.array(z.object({ variant_id: uuid.nullable(), quantity: entero })),
+});
+
+/** Lo que el pedido guardado pidió, en la forma de `huella.ts` (el código es la copia `discount_code_text`). */
+export function solicitudDePedido(f: z.infer<typeof filaSolicitud>): DatosSolicitud {
+  return {
+    country_code: f.country_code,
+    payment_method: f.payment_method,
+    discount_code: f.discount_code_text,
+    items: f.order_items.map((i) => ({ variant_id: i.variant_id, quantity: i.quantity })),
+    shipping: {
+      region_id: f.shipping_region_id ?? '',
+      city_id: f.shipping_city_id ?? '',
+      district: f.shipping_district,
+      address1: f.shipping_address1 ?? '',
+      address2: f.shipping_address2,
+      notes: f.shipping_notes,
+    },
+  };
+}
+
+/**
+ * Mismo criterio que la tienda (`lib/store/checkout-datos.ts`, `enlacesLegales`) para saber cuál página es la
+ * de tratamiento de datos: la primera, por título, cuyo slug o título coincida. Pendiente izao-db: marcarla
+ * explícitamente (p. ej. `pages.kind`) para no depender del nombre.
+ */
+const REGEX_DATOS = /datos|privacidad|tratamiento/i;
+export function elegirVersionPolitica(paginas: readonly { slug: string; title: string; version: number }[]): string | null {
+  const p = paginas.find((x) => REGEX_DATOS.test(x.slug) || REGEX_DATOS.test(x.title));
+  return p ? String(p.version) : null;
+}
+
+/** Mismo patrón de `discountCodeInputSchema` y del CHECK de `discount_codes.code`. */
+const PATRON_CODIGO = /^[A-Z0-9_-]{1,40}$/;
+
 // ── Acceso ───────────────────────────────────────────────────────────────────────────────────────
 
 function validar<S extends z.ZodType>(funcion: string, esquema: S, data: unknown): z.infer<S> {
@@ -224,13 +270,17 @@ export const fuenteSupabase: FuenteCheckout = {
   },
 
   async codigo(texto) {
+    // `discount_codes.code` siempre está en mayúsculas (CHECK code = upper(code)); se normaliza aquí también por
+    // defensa. El índice único hoy es sobre `upper(code)`: pedido a izao-db el índice sobre `code` (bitácora).
+    const normal = texto.replace(/\s+/g, '').toUpperCase();
+    if (!PATRON_CODIGO.test(normal)) return null;
     const { data, error } = await clienteDb()
       .from('discount_codes')
       .select(
         'id, code, country_code, type, value, max_discount_amount, min_subtotal, starts_at, ends_at, is_active, ' +
           'applies_to, target_ids, exclude_ids, applies_to_sale_items, usage_limit_total, usage_count, usage_limit_per_customer',
       )
-      .eq('code', texto)
+      .eq('code', normal)
       .maybeSingle();
     revisar('discount_codes', error);
     return data ? mapearCodigo(validar('discount_codes', filaCodigo, data)) : null;
@@ -279,7 +329,11 @@ export const fuenteSupabase: FuenteCheckout = {
   async pedidoPorIdempotencia(clave) {
     const { data, error } = await clienteDb()
       .from('orders')
-      .select(`${COLUMNAS_PEDIDO}, order_items(variant_id, name_snapshot, variant_label, quantity, unit_price, line_discount), order_events(type)`)
+      .select(
+        `${COLUMNAS_PEDIDO}, discount_code_text, shipping_region_id, shipping_city_id, shipping_district, ` +
+          'shipping_address1, shipping_address2, shipping_notes, ' +
+          'order_items(variant_id, name_snapshot, variant_label, quantity, unit_price, line_discount), order_events(type)',
+      )
       .eq('checkout_idempotency_key', clave)
       .eq('order_events.type', 'created')
       .maybeSingle();
@@ -287,11 +341,15 @@ export const fuenteSupabase: FuenteCheckout = {
     if (!data) return null;
     const f = validar(
       'orders',
-      filaPedido.extend({ order_items: z.array(filaItemResumen), order_events: z.array(z.object({ type: z.string() })) }),
+      filaPedido.merge(filaSolicitud.omit({ order_items: true })).extend({
+        order_items: z.array(filaItemResumen),
+        order_events: z.array(z.object({ type: z.string() })),
+      }),
       data,
     );
     return {
       ...mapearPedido(f),
+      solicitud: solicitudDePedido(f),
       lines: f.order_items.map((i) => ({
         variant_id: i.variant_id,
         name: i.name_snapshot,
@@ -302,6 +360,23 @@ export const fuenteSupabase: FuenteCheckout = {
       })),
       completo: f.order_events.some((e) => e.type === 'created'),
     };
+  },
+
+  async versionPoliticaDatos(pais) {
+    // Sin caché: el consentimiento se valida contra lo vigente en el momento del pedido.
+    const { data, error } = await clienteDb()
+      .from('pages')
+      .select('slug, title, version')
+      .eq('country_code', pais)
+      .eq('status', 'published')
+      .order('title');
+    revisar('pages', error);
+    const paginas = validar(
+      'pages',
+      z.array(z.object({ slug: z.string(), title: z.string(), version: entero.positive() })),
+      data ?? [],
+    );
+    return elegirVersionPolitica(paginas);
   },
 
   async crearPedido(fila, items) {

@@ -11,6 +11,7 @@ import type {
   PricingPaymentMethodSetting,
 } from '@izao/core/pricing';
 import type { OrderStatus } from '@izao/core/order-state';
+import type { DatosSolicitud } from './huella';
 
 /** Variante leída para un país, con lo necesario para precio, stock y la línea del pedido. */
 export interface VarianteCheckout {
@@ -105,8 +106,14 @@ export interface FuenteCheckout {
   /**
    * Pedido con esa clave de idempotencia. `completo` = ya tiene el evento `created` (stock y canje
    * reservados); si no, otra petición lo está creando o quedó a medias y lo vencerá `pedidos_por_vencer`.
+   * `solicitud` = lo que el pedido guardado pidió (para comparar la huella con la de un reintento).
    */
-  pedidoPorIdempotencia(clave: string): Promise<(PedidoCreado & { completo: boolean }) | null>;
+  pedidoPorIdempotencia(clave: string): Promise<(PedidoCreado & { completo: boolean; solicitud: DatosSolicitud }) | null>;
+  /**
+   * Versión vigente de la política de tratamiento de datos del país (página publicada; mismo criterio que la
+   * tienda usa para mostrarla). `null` si el país no tiene una publicada.
+   */
+  versionPoliticaDatos(pais: CountryCode): Promise<string | null>;
   /** `crear_pedido_checkout` (izao-db): atómico e idempotente por `checkout_idempotency_key`. */
   crearPedido(fila: FilaPedido, items: readonly FilaItem[]): Promise<ResultadoCrearPedido>;
 }

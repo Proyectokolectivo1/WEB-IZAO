@@ -3,7 +3,8 @@
  * existencias, código y totales se recalculan aquí con `@izao/core/pricing`; el navegador solo envía
  * variantes, cantidades, datos del cliente, método y el texto del código.
  *
- * Orden (§10.2): validar con `checkoutInputSchemaFor(métodos activos)` → idempotencia → leer y recalcular →
+ * Orden (§10.2): validar con `checkoutInputSchemaFor(métodos activos)` → idempotencia por clave y huella
+ * (`huella.ts`) → versión vigente de la política de datos → leer y recalcular →
  * `crear_pedido_checkout` (izao-db): pedido, líneas, `reservar_stock`, `reservar_canje` y evento `created` en
  * una sola transacción; un rechazo no deja nada escrito.
  *
@@ -23,6 +24,7 @@ import type { OrderStatus } from '@izao/core/order-state';
 import { checkoutInputSchemaFor, countryCodeSchema, orderSummarySchema, type CheckoutInput } from '@izao/core/schemas';
 import { cruzarCarrito } from './carrito';
 import type { FilaItem, FilaPedido, FuenteCheckout, PedidoCreado } from './fuente';
+import { huellaSolicitud, solicitudDeEntrada } from './huella';
 import { motivoPublico, resolverCodigo, type MotivoCodigoPublico } from './vista-previa';
 
 export type CodigoErrorCheckout =
@@ -33,6 +35,7 @@ export type CodigoErrorCheckout =
   | 'METHOD_UNAVAILABLE'
   | 'IDEMPOTENCY_CONFLICT'
   | 'CHECKOUT_IN_PROGRESS'
+  | 'DATA_POLICY_OUTDATED'
   | 'UNAVAILABLE';
 
 export interface ErrorCheckout {
@@ -44,6 +47,8 @@ export interface ErrorCheckout {
   /** `CODE_REJECTED`: `MotivoCodigoPublico`. `METHOD_UNAVAILABLE`: `MethodUnavailableCode`. */
   reason?: string;
   missing_amount?: string | null;
+  /** `DATA_POLICY_OUTDATED`: versión vigente; la tienda muestra la política y pide aceptar de nuevo. */
+  current_version?: string;
 }
 
 export type SiguientePaso = 'pay_wompi' | 'pay_addi' | 'pay_sistecredito' | 'pay_cod_deposit' | 'manual_whatsapp';
@@ -170,14 +175,20 @@ function respuesta(p: PedidoCreado, repetido: boolean, warnings: string[]): Extr
   };
 }
 
+/**
+ * Pedido ya creado con la clave: mismo país y misma huella (líneas, método, código efectivo y dirección) →
+ * reintento (200 `repeated`); otro contenido → `IDEMPOTENCY_CONFLICT`. Sin pedido → `null`.
+ */
 async function porIdempotencia(
   fuente: FuenteCheckout,
   entrada: CheckoutInput,
+  huella: string,
 ): Promise<ResultadoCheckout | null> {
   const previo = await fuente.pedidoPorIdempotencia(entrada.idempotency_key);
   if (!previo) return null;
   if (previo.country_code !== entrada.country_code) return falla(409, { error: 'IDEMPOTENCY_CONFLICT' });
   if (!previo.completo) return falla(409, { error: 'CHECKOUT_IN_PROGRESS' });
+  if (huellaSolicitud(previo.solicitud) !== huella) return falla(409, { error: 'IDEMPOTENCY_CONFLICT' });
   return respuesta(previo, true, []);
 }
 
@@ -188,6 +199,8 @@ function filaPedido(
   codigoId: string | null,
   costoTotal: bigint,
   ahora: Date,
+  politicaVigente: string,
+  huella: string,
 ): FilaPedido {
   const metodo = entrada.payment_method;
   return {
@@ -219,8 +232,10 @@ function filaPedido(
     cod_collect_amount: r.cod_collect.toString(),
     product_cost_total: costoTotal.toString(),
     checkout_idempotency_key: entrada.idempotency_key,
+    // Aún sin columna: `crearPedidoCheckoutDb` la descarta hasta que izao-db la agregue (ver bitácora).
+    checkout_request_hash: huella,
     terms_accepted_at: ahora.toISOString(),
-    data_policy_version: entrada.data_policy_version,
+    data_policy_version: politicaVigente,
     whatsapp_opt_in: entrada.consents.whatsapp,
   };
 }
@@ -243,9 +258,20 @@ export async function crearPedidoCheckout(
     if (!parsed.success) return invalido(parsed.error);
     const entrada = parsed.data;
 
-    // 2. Idempotencia (doble clic, reintento del navegador)
-    const repetido = await porIdempotencia(fuente, entrada);
+    // 2. Idempotencia (doble clic, reintento del navegador): misma clave y mismo contenido
+    const huella = huellaSolicitud(solicitudDeEntrada(entrada));
+    const repetido = await porIdempotencia(fuente, entrada, huella);
     if (repetido) return repetido;
+
+    // 2b. Consentimiento: solo la versión vigente de la política de datos del país (no la que diga el navegador)
+    const politica = await fuente.versionPoliticaDatos(pais);
+    if (politica === null) {
+      console.error(`[checkout] ${pais} sin política de tratamiento de datos publicada`);
+      return NO_DISPONIBLE();
+    }
+    if (entrada.data_policy_version.trim() !== politica) {
+      return falla(409, { error: 'DATA_POLICY_OUTDATED', current_version: politica });
+    }
 
     // 3. Leer y recalcular
     const [variantes, ubic] = await Promise.all([
@@ -332,8 +358,15 @@ export async function crearPedidoCheckout(
     const codigoId = dc?.status === 'applied' ? dc.id : null;
 
     // 4. Guardar antes de cualquier pasarela (§10.2), en una sola transacción de la base
-    const c = await fuente.crearPedido(filaPedido(entrada, r, ubic, codigoId, costoTotal, ahora), items);
-    if (c.ok) return respuesta(c.pedido, c.repetido, c.repetido ? [] : warnings);
+    const fila = filaPedido(entrada, r, ubic, codigoId, costoTotal, ahora, politica, huella);
+    const c = await fuente.crearPedido(fila, items);
+    if (c.ok && !c.repetido) return respuesta(c.pedido, false, warnings);
+    if (c.ok) {
+      // La base encontró el pedido de la clave (carrera tras la lectura): se compara su contenido antes de
+      // confirmarlo. Si no se puede releer, no se confirma a ciegas.
+      const previo = await porIdempotencia(fuente, entrada, huella);
+      return previo ?? falla(409, { error: 'CHECKOUT_IN_PROGRESS' });
+    }
     switch (c.motivo) {
       case 'idempotencia_conflicto':
         return falla(409, { error: 'IDEMPOTENCY_CONFLICT' });

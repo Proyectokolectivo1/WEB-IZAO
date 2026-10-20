@@ -2,27 +2,26 @@
 
 ## Hecho
 - 3a7e66b `POST /api/checkout/preview` y `POST /api/checkout` (§7.7, §10, §11, §17.1) en `apps/web/lib/checkout/`.
-- (este commit) Wompi pago completo (§12.2, D-024): `@izao/wompi` (credenciales, firmas, Web Checkout, eventos, cliente, mock), `@izao/core/credentials` (AES-256-GCM), `comisionPasarela` en pricing, `lib/checkout/pago-wompi.ts` + `fuente-pagos-supabase.ts`, `POST /api/checkout/pago`, `payment` aditivo en `POST /api/checkout`, webhook `app/api/webhooks/wompi/` (firma, `webhook_events`, BullMQ), job `apps/worker/src/jobs/payments/`. `crear_pedido_checkout` integrado (sin deshacer ni borrado). Tope de `max_quantity` en vista previa.
+- 65c9228 Wompi pago completo (§12.2, D-024): `@izao/wompi`, `@izao/core/credentials`, `POST /api/checkout/pago`, webhook, job `payments`.
+- (este commit) Correcciones de revisión del checkout: idempotencia por huella (`huella.ts`, SHA-256 de país, líneas, método, código efectivo y dirección; misma clave con otro contenido → 409 `IDEMPOTENCY_CONFLICT`, también en la carrera), `data_policy_version` validada contra la vigente (409 `DATA_POLICY_OUTDATED {current_version}`; sin política publicada → 503), limitador sin `clear()` (purga vencidas y expulsa las más antiguas), IP solo por `X-Real-IP` en producción, código normalizado a mayúsculas.
 
 ## Contrato
-- Checkout: igual que antes + `payment: {checkout_url, expires_at} | null` solo si `next_step = pay_wompi`.
-- `POST /api/checkout/pago` `{country, token}` → 200 `{checkout_url, expires_at, reused}`; 404 NOT_FOUND; 409/410/503 `{error:'PAYMENT_NOT_AVAILABLE', reason: metodo|estado|pagado|vencido|conflicto|sin_credenciales}`; 400; 429.
-- La tienda ya lee `payments` (created/pending, https, sin vencer) en `/pedido/[token]`: no hay que cambiarla.
-- Cola `pagos`, job `wompi.transaccion` `{event_id, transaction_id}`, id `wompi.{event_id}` (constantes en `@izao/wompi`).
-- Variables nuevas: `CHECKOUT_PREVIEW_MAX_QUANTITY` (10), `CHECKOUT_PAY_RATE_LIMIT_PER_MIN` (20), `SITE_URL`, `REDIS_URL` en web; worker necesita `APP_ENCRYPTION_KEY`.
+- Checkout: igual + `payment: {checkout_url, expires_at} | null` con `next_step = pay_wompi`; nuevo error 409 `{error:'DATA_POLICY_OUTDATED', current_version}`.
+- `POST /api/checkout/pago` `{country, token}` → 200 `{checkout_url, expires_at, reused}`; 404; 409/410/503 `PAYMENT_NOT_AVAILABLE`; 400; 429.
+- Cola `pagos`, job `wompi.transaccion` `{event_id, transaction_id}`, id `wompi.{event_id}`.
+
+## Pedidos a otros agentes
+- izao-db (1): `orders.checkout_request_hash text check (char_length = 64)`, insertarlo en `crear_pedido_checkout` desde `p.order.checkout_request_hash` (ya viaja en la fila; agregarlo a `pedidoCheckoutSchema` de `lib/db/checkout.ts`) y en `pedido_checkout_existente(p_clave, p_pais, p_hash)` devolver `idempotencia_conflicto` si ambos hashes existen y difieren. Hoy la comparación se hace en el servidor con lo persistido (líneas, método, `discount_code_text`, `shipping_*`).
+- izao-db (2): `.eq('code', X)` no usa `discount_codes_upper_code_idx` (expresión). Crear `unique index discount_codes_code_key on discount_codes (code)` (equivalente por el CHECK `code = upper(code)`) o una RPC `buscar_codigo_descuento(p_code)` con `where upper(code) = upper(p_code)`. Verificado en la base: no hay índice sobre `code`.
+- izao-db (3): marcar la página de tratamiento de datos (`pages.kind` o similar); hoy servidor y tienda la eligen por regex de slug/título.
+- izao-db (4): índice único parcial `payments (provider, provider_reference)` y `aplicar_transicion_pedido` atómica.
+- izao-tienda: manejar 409 `DATA_POLICY_OUTDATED` (mostrar la política vigente y pedir aceptar de nuevo); la versión de la tienda se cachea 300 s (`conCache 'legal'`): revalidar la etiqueta al publicar la página o habrá rechazos en esa ventana.
+- izao-infra: Nginx del repo fija `X-Real-IP $remote_addr` (`infra/nginx/izao-proxy.conf`) y `web` escucha en 127.0.0.1: correcto. Registrar la cola `pagos` en el worker y pasar su build a bundler. Limitador en Redis (con 2 réplicas el de memoria se duplica).
+- izao-logistica: `encolarTransportadora(orderId)`. izao-admin: cifrar con `cifrarCredenciales`.
+- izao-admin: lint de `apps/web` falla en `lib/admin/catalogo/csv.ts:19` y `xlsx.ts:28` (no es de esta zona).
 
 ## Pendiente
-- izao-infra: registrar la cola en `apps/worker/src/{queues,index}.ts`: `createWorker(COLA_PAGOS, crearProcesadorPagos(dependenciasPagosDesdeEnv(encolarTransportadora)), conexión)` de `jobs/payments/index.ts`; el build del worker (`tsc` con `rootDir src`) no compila paquetes del workspace: pasar a bundler (tsup/esbuild) o `tsx`.
-- izao-logistica: función `encolarTransportadora(orderId)` (job `carrier.create`, id fijo por pedido).
-- izao-db: índice único parcial `payments (provider, provider_reference) where provider_reference is not null` (hoy la carrera de dos intentos iguales se resuelve en código) y función atómica `aplicar_transicion_pedido` (hoy update condicional + insert del evento, en dos sentencias).
-- izao-admin: módulo de integraciones debe cifrar con `cifrarCredenciales` de `@izao/core/credentials` (formato en D-024) y permitir una sola credencial activa por proveedor/país.
-- Probar contra sandbox real (sin llaves en `.env.local`): un evento real para confirmar el checksum (el ejemplo de la documentación es ilustrativo) y `bytea` vía PostgREST.
-- Abono de contra entrega (`payment_links`), Addi, Sistecrédito; el job deja `cod_deposit`/`financing` sin procesar (`proposito_no_soportado`).
-- Rate limit en memoria (pasar a Redis); UTM, `customer_id`, `gateway_fee_estimated`.
+- Sandbox real de Wompi (sin llaves en `.env.local`). Abono de contra entrega, Addi, Sistecrédito. UTM, `customer_id`, `gateway_fee_estimated`.
 
 ## Siguiente paso exacto
-Link de abono de contra entrega por `POST /v1/payment_links` + `pay_links` y su rama en el job (skill izao-contraentrega-whatsapp).
-
-## Decisiones que necesitan al líder
-- Lint de `apps/web` falla por las carpetas sin seguimiento `.next-tienda/` y `.next-tienda-dev/` (salida de compilación de izao-tienda): agregarlas al ignore de ESLint/git.
-- Se agregaron dependencias: `@izao/wompi`, `bullmq`, `ioredis` en `apps/web`; `@izao/core`, `@izao/wompi` en `apps/worker`; `@izao/wompi` en `transpilePackages` de `next.config.ts` (cambia `pnpm-lock.yaml`).
+En espera del líder (no seguir con abono de contra entrega hasta nueva orden).

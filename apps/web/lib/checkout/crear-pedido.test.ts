@@ -307,14 +307,115 @@ describe('POST /api/checkout: crear pedido', () => {
     expect(r).toMatchObject({ ok: false, status: 409, cuerpo: { error: 'CHECKOUT_IN_PROGRESS' } });
   });
 
-  it('la base detecta la repetición (carrera tras la lectura de idempotencia) → 200 repeated con el mismo pedido', async () => {
+  it('la base detecta la repetición pero no se puede releer el pedido → 409 CHECKOUT_IN_PROGRESS (no se confirma a ciegas)', async () => {
     const f = fuenteDePrueba();
     await crearPedidoCheckout(f, cuerpo(), AHORA);
-    f.pedidoPorIdempotencia = async () => null; // la lectura previa no lo vio
+    f.pedidoPorIdempotencia = async () => null; // ninguna lectura lo ve
     const r = await crearPedidoCheckout(f, cuerpo(), AHORA);
-    expect(r.status).toBe(200);
-    expect(exito(r)).toMatchObject({ repeated: true, public_token: 'tok1' });
+    expect(r).toMatchObject({ ok: false, status: 409, cuerpo: { error: 'CHECKOUT_IN_PROGRESS' } });
     expect(f.pedidos.size).toBe(1);
+  });
+
+  describe('idempotencia con contenido distinto', () => {
+    it.each<[string, Record<string, unknown>]>([
+      ['otra cantidad', { items: [{ variant_id: V1, quantity: 2 }] }],
+      ['otra línea', { items: [{ variant_id: V1, quantity: 1 }, { variant_id: V2, quantity: 1 }] }],
+      ['otro método', { payment_method: 'sistecredito' }],
+      ['un código', { discount_code: 'DESC10' }],
+      [
+        'otra dirección',
+        { shipping: { region_id: REGION, city_id: CIUDAD, district: 'Laureles', address1: 'Carrera 70 # 1-2', address2: null, notes: null } },
+      ],
+    ])('misma clave con %s → 409 IDEMPOTENCY_CONFLICT sin crear otro pedido', async (_n, cambio) => {
+      const f = fuenteDePrueba();
+      exito(await crearPedidoCheckout(f, cuerpo(), AHORA));
+      const r = await crearPedidoCheckout(f, cuerpo(cambio), AHORA);
+      expect(r).toEqual({ ok: false, status: 409, cuerpo: { error: 'IDEMPOTENCY_CONFLICT' } });
+      expect(f.pedidos.size).toBe(1);
+      expect(f.llamadas.filter((x) => x === 'crearPedido')).toHaveLength(1);
+    });
+
+    it('mismo contenido con otro orden de líneas, mayúsculas en el código o espacios → 200 repeated', async () => {
+      const f = fuenteDePrueba();
+      const items = [{ variant_id: V1, quantity: 1 }, { variant_id: V2, quantity: 1 }];
+      exito(await crearPedidoCheckout(f, cuerpo({ items, discount_code: 'DESC10' }), AHORA));
+      const r = await crearPedidoCheckout(f, cuerpo({ items: [...items].reverse(), discount_code: ' desc10 ' }), AHORA);
+      expect(r.status).toBe(200);
+      expect(exito(r).repeated).toBe(true);
+    });
+
+    it('Addi retira el código: el reintento con el mismo código es el mismo pedido', async () => {
+      const f = fuenteDePrueba();
+      exito(await crearPedidoCheckout(f, cuerpo({ payment_method: 'addi', discount_code: 'DESC10' }), AHORA));
+      const r = await crearPedidoCheckout(f, cuerpo({ payment_method: 'addi', discount_code: 'DESC10' }), AHORA);
+      expect(r.status).toBe(200);
+      const r2 = await crearPedidoCheckout(f, cuerpo({ payment_method: 'addi', discount_code: null }), AHORA);
+      expect(r2.status).toBe(200);
+    });
+
+    it('carrera: la base devuelve el pedido existente y su contenido difiere → 409 IDEMPOTENCY_CONFLICT', async () => {
+      const f = fuenteDePrueba();
+      exito(await crearPedidoCheckout(f, cuerpo(), AHORA));
+      const original = f.pedidoPorIdempotencia.bind(f);
+      let primera = true;
+      f.pedidoPorIdempotencia = async (k: string) => {
+        if (primera) {
+          primera = false;
+          return null;
+        }
+        return original(k);
+      };
+      const r = await crearPedidoCheckout(f, cuerpo({ items: [{ variant_id: V1, quantity: 3 }] }), AHORA);
+      expect(r).toEqual({ ok: false, status: 409, cuerpo: { error: 'IDEMPOTENCY_CONFLICT' } });
+      expect(f.pedidos.size).toBe(1);
+      expect(f.vars.get(V1)!.disponible).toBe(4);
+    });
+
+    it('la fila del pedido lleva la huella (checkout_request_hash) para cuando la base la guarde', async () => {
+      const f = fuenteDePrueba();
+      exito(await crearPedidoCheckout(f, cuerpo(), AHORA));
+      expect(soloPedido(f).fila.checkout_request_hash).toMatch(/^[0-9a-f]{64}$/);
+    });
+  });
+
+  describe('versión de la política de datos', () => {
+    it('versión distinta de la vigente → 409 DATA_POLICY_OUTDATED con la vigente, sin pedido', async () => {
+      const f = fuenteDePrueba();
+      const r = await crearPedidoCheckout(f, cuerpo({ data_policy_version: '1999-01' }), AHORA);
+      expect(r).toEqual({ ok: false, status: 409, cuerpo: { error: 'DATA_POLICY_OUTDATED', current_version: '2026-10' } });
+      expect(f.pedidos.size).toBe(0);
+      expect(f.llamadas).not.toContain('crearPedido');
+    });
+
+    it('se guarda la versión vigente leída de la base (espacios del navegador no cuentan)', async () => {
+      const f = fuenteDePrueba();
+      exito(await crearPedidoCheckout(f, cuerpo({ data_policy_version: ' 2026-10 ' }), AHORA));
+      expect(soloPedido(f).fila.data_policy_version).toBe('2026-10');
+    });
+
+    it('la vigente es por país', async () => {
+      const f = fuenteDePrueba();
+      f.politicas.set('CO', '7');
+      const r = await crearPedidoCheckout(f, cuerpo({ data_policy_version: '2026-10' }), AHORA);
+      expect(r).toMatchObject({ status: 409, cuerpo: { error: 'DATA_POLICY_OUTDATED', current_version: '7' } });
+      exito(await crearPedidoCheckout(f, cuerpo({ data_policy_version: '7' }), AHORA));
+    });
+
+    it('sin política de datos publicada en el país → 503 sin pedido (no hay consentimiento válido)', async () => {
+      const f = fuenteDePrueba();
+      f.politicas.delete('CO');
+      const r = await crearPedidoCheckout(f, cuerpo(), AHORA);
+      expect(r).toEqual({ ok: false, status: 503, cuerpo: { error: 'UNAVAILABLE' } });
+      expect(f.pedidos.size).toBe(0);
+    });
+
+    it('un reintento de un pedido ya creado responde el pedido aunque la política haya cambiado después', async () => {
+      const f = fuenteDePrueba();
+      exito(await crearPedidoCheckout(f, cuerpo(), AHORA));
+      f.politicas.set('CO', '2026-11');
+      const r = await crearPedidoCheckout(f, cuerpo(), AHORA);
+      expect(r.status).toBe(200);
+    });
   });
 
   it('totales rechazados por la base (totales_inconsistentes/datos_invalidos) → 503 sin detalles', async () => {
