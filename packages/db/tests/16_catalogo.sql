@@ -1,7 +1,7 @@
 -- Pruebas pgtap · T2.7: RPC del catálogo (catalog_page, catalog_search_page, catalog_suggest, catalog_product, catalog_related).
 begin;
 set local search_path = public, extensions;
-select plan(21);
+select plan(23);
 
 insert into public.currencies (code, exponent, symbol, format_pattern) values ('COP', 0, '$', '$ #.##0'), ('USD', 2, '$', '$ #.##0,00') on conflict do nothing;
 insert into public.countries (code, name, currency_code, locale, timezone, phone_prefix) values
