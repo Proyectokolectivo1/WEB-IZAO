@@ -55,7 +55,32 @@ export interface InjectedResponse {
   headers?: Record<string, string>;
 }
 
-type Route = 'create' | 'get' | 'list' | 'update' | 'products';
+type Route = 'create' | 'get' | 'list' | 'update' | 'products' | 'wallet';
+
+/** Movimiento de billetera simulado (forma de la colección). */
+export interface MockMovement {
+  idBalanceMovement: number;
+  idOrder: number | null;
+  movementType: string;
+  movementStatus: string;
+  /** Tal como lo devolvería la API (puede traer decimales). */
+  movementValue: number;
+  newBalance: number;
+  balanceMovementDate: Date;
+  currency: string;
+  carrierTrackingCode: string | null;
+}
+
+const WALLET_FILTER_KEYS = new Set([
+  'balanceMovementType',
+  'carrierTrackingCode',
+  'finalDate',
+  'idOrder',
+  'movementStatus',
+  'startDate',
+  'type',
+]);
+const WALLET_STATUSES = new Set(['AVAILABLE', 'ERROR', 'PAID', 'PENDING', 'SUCCESS']);
 
 export interface MasterShopMockOptions {
   apiKey: string;
@@ -209,6 +234,24 @@ export class MasterShopMock {
     return order;
   }
 
+  readonly movements = new Map<number, MockMovement>();
+  private nextMovementId = 90001;
+
+  /** Agrega un movimiento de billetera (p. ej. "Cobro por Envío" de un pedido). */
+  seedMovement(partial: Partial<MockMovement> & { movementType: string; movementValue: number; balanceMovementDate: Date }): MockMovement {
+    const m: MockMovement = {
+      idBalanceMovement: this.nextMovementId++,
+      idOrder: null,
+      movementStatus: 'SUCCESS',
+      newBalance: 0,
+      currency: 'COP',
+      carrierTrackingCode: null,
+      ...partial,
+    };
+    this.movements.set(m.idBalanceMovement, m);
+    return m;
+  }
+
   findByExternalId(externalOrderId: string): MockOrder | undefined {
     for (const o of this.orders.values()) if (o.externalOrderId === externalOrderId) return o;
     return undefined;
@@ -273,6 +316,7 @@ export class MasterShopMock {
     else if (path === '/api/orders/list' && request.method === 'POST') route = 'list';
     else if (/^\/api\/orders\/[^/]+$/.test(path) && request.method === 'PUT') route = 'update';
     else if (path === '/api/products' && request.method === 'GET') route = 'products';
+    else if (path === '/api/wallets/movements/list' && request.method === 'POST') route = 'wallet';
     if (route === null) return this.json(404, { error: 'Ruta no encontrada' }, rl.headers);
 
     const forced = this.injected.get(route)?.shift();
@@ -309,6 +353,9 @@ export class MasterShopMock {
         break;
       case 'products':
         response = this.json(200, { results: [], resultsCount: 0 }, rl.headers);
+        break;
+      case 'wallet':
+        response = this.wallet(url.searchParams, parsed, now, rl.headers);
         break;
     }
     // PUT 502 que sí se aplicó: el cambio ocurrió pero la respuesta no lo confirma.
@@ -611,6 +658,75 @@ export class MasterShopMock {
     return this.json(
       200,
       slice.map((o) => this.listItem(o)),
+      headers,
+    );
+  }
+
+  /** Billetera: mismas trampas que el listado (7 días sin filtros, `limit` recortado a 50), orden descendente. */
+  private wallet(
+    params: URLSearchParams,
+    parsed: unknown,
+    now: number,
+    headers: Record<string, string>,
+  ): Response {
+    const page = Number(params.get('page') ?? '1');
+    const requestedLimit = Number(params.get('limit') ?? '20');
+    if (!Number.isInteger(page) || page < 1 || !Number.isInteger(requestedLimit) || requestedLimit < 1) {
+      return this.badRequest(MS_ERRORS.invalidParams, [{ path: 'page', message: 'Inválido' }], headers);
+    }
+    const limit = Math.min(requestedLimit, 50);
+    const filters = isObject(parsed) ? parsed : {};
+    const unknown = Object.keys(filters).filter((k) => !WALLET_FILTER_KEYS.has(k));
+    if (unknown.length > 0) {
+      return this.badRequest(
+        MS_ERRORS.invalidBody,
+        unknown.map((k) => ({ path: k, message: 'Campo no permitido' })),
+        headers,
+      );
+    }
+    if (filters.movementStatus !== undefined && !WALLET_STATUSES.has(String(filters.movementStatus))) {
+      return this.badRequest(MS_ERRORS.invalidBody, [{ path: 'movementStatus', message: 'Invalid enum value' }], headers);
+    }
+    const hasFilters = Object.values(filters).some((v) => v !== undefined && v !== null && v !== '');
+    const start = typeof filters.startDate === 'string' ? Date.parse(filters.startDate) : null;
+    const end = typeof filters.finalDate === 'string' ? Date.parse(filters.finalDate) : null;
+    const rows = [...this.movements.values()]
+      .filter((m) => {
+        const t = m.balanceMovementDate.getTime();
+        if (!hasFilters && t < now - SEVEN_DAYS_MS) return false;
+        if (start !== null && t < start) return false;
+        if (end !== null && t > end) return false;
+        if (filters.idOrder !== undefined && m.idOrder !== Number(filters.idOrder)) return false;
+        if (filters.balanceMovementType !== undefined && m.movementType !== filters.balanceMovementType) return false;
+        if (filters.movementStatus !== undefined && m.movementStatus !== filters.movementStatus) return false;
+        return true;
+      })
+      .sort(
+        (a, b) =>
+          b.balanceMovementDate.getTime() - a.balanceMovementDate.getTime() || b.idBalanceMovement - a.idBalanceMovement,
+      );
+    const slice = rows.slice((page - 1) * limit, page * limit);
+    return this.json(
+      200,
+      slice.map((m) => ({
+        availableDate: m.balanceMovementDate.toISOString(),
+        balanceMovementDate: m.balanceMovementDate.toISOString(),
+        carrierTrackingCode: m.carrierTrackingCode,
+        createdAt: m.balanceMovementDate.toISOString(),
+        currency: m.currency,
+        idBalanceMovement: m.idBalanceMovement,
+        idBalanceMovementType: 2,
+        idOrder: m.idOrder,
+        idTransaction: null,
+        movementStatus: m.movementStatus,
+        movementType: m.movementType,
+        movementValue: m.movementValue,
+        newBalance: m.newBalance,
+        transactionDate: m.balanceMovementDate.toISOString(),
+        transactionStatus: 'SUCCESS',
+        updatedAt: m.balanceMovementDate.toISOString(),
+        withdrawnBalance: 0,
+      })),
       headers,
     );
   }

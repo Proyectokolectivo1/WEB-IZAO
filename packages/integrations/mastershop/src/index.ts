@@ -11,3 +11,4 @@ export * from './credentials';
 export * from './adapter';
 export * from './jobs';
 export * from './webhook';
+export * from './wallet';

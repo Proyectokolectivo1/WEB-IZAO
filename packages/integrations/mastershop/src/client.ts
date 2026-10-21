@@ -30,6 +30,8 @@ import type { MasterShopOrderBody } from './order';
 import { parseRateLimit, RateLimitGate, resetDelayMs } from './rate-limit';
 import { noveltyBadge, resolveMasterShopStatus } from './status';
 import type { MasterShopAlert } from './status';
+import { montoBilletera } from './wallet';
+import type { MovimientoBilletera } from './wallet';
 
 export const MASTERSHOP_BASE_URL = 'https://prod.api.mastershop.com';
 /** Máximo real de `limit` en el listado: más se recorta en silencio. */
@@ -103,6 +105,32 @@ const ListItemSchema = z.looseObject({
   createdAt: optText,
   lastCarrierStatusUpdate: optText,
 });
+
+const WalletMovementSchema = z.looseObject({
+  idBalanceMovement: idSchema,
+  idOrder: idSchema.nullish().transform((v) => v ?? null),
+  movementType: z.string(),
+  movementStatus: optText,
+  currency: optText,
+  movementValue: z.unknown(),
+  newBalance: z.unknown().optional(),
+  balanceMovementDate: z.string(),
+  carrierTrackingCode: z.union([z.string(), z.number()]).nullish(),
+});
+
+export interface WalletMovementsFilter {
+  /** Obligatorio: sin filtros MasterShop devuelve solo los últimos 7 días. */
+  startDate: Date;
+  finalDate?: Date;
+  idOrder?: number;
+  balanceMovementType?: string;
+}
+
+/** Fila de la billetera que no se pudo leer (monto raro o moneda distinta de COP): se omite con aviso. */
+export interface WalletMovementWarning {
+  idBalanceMovement: number;
+  motivo: 'monto_invalido' | 'moneda_no_soportada';
+}
 
 export interface CreateOrderResult {
   idOrder: number;
@@ -650,6 +678,85 @@ export class MasterShopClient {
       }
       throw error;
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Billetera
+  // -------------------------------------------------------------------------
+
+  /** Una página de `POST /api/wallets/movements/list`. Siempre con `startDate`; `limit` ≤ 50. */
+  async listWalletMovements(
+    filter: WalletMovementsFilter & { page: number; limit?: number },
+  ): Promise<{ movimientos: MovimientoBilletera[]; avisos: WalletMovementWarning[]; filas: number }> {
+    if (!(filter.startDate instanceof Date) || Number.isNaN(filter.startDate.getTime())) {
+      throw new MasterShopError({
+        kind: 'validacion',
+        message: 'startDate es obligatorio: sin filtros MasterShop solo devuelve 7 días.',
+      });
+    }
+    if (!Number.isInteger(filter.page) || filter.page < 1) {
+      throw new MasterShopError({ kind: 'validacion', message: 'page debe ser un entero ≥ 1.' });
+    }
+    const limit = Math.min(filter.limit ?? MASTERSHOP_MAX_PAGE_SIZE, MASTERSHOP_MAX_PAGE_SIZE);
+    const body: Record<string, unknown> = { startDate: filter.startDate.toISOString() };
+    if (filter.finalDate) body.finalDate = filter.finalDate.toISOString();
+    if (filter.idOrder !== undefined) body.idOrder = filter.idOrder;
+    if (filter.balanceMovementType !== undefined) body.balanceMovementType = filter.balanceMovementType;
+    const res = await this.send('POST', '/api/wallets/movements/list', {
+      query: { page: String(filter.page), limit: String(limit) },
+      body: JSON.stringify(body),
+    });
+    if (res.status !== 200) throw this.fail(res, 'POST');
+    const rows = this.parse(z.array(WalletMovementSchema), res.data, 'movimientos de billetera');
+    const movimientos: MovimientoBilletera[] = [];
+    const avisos: WalletMovementWarning[] = [];
+    for (const r of rows) {
+      const moneda = r.currency ?? 'COP';
+      if (moneda !== 'COP') {
+        avisos.push({ idBalanceMovement: r.idBalanceMovement, motivo: 'moneda_no_soportada' });
+        continue;
+      }
+      const valor = montoBilletera(r.movementValue, 'COP');
+      if (valor === null) {
+        avisos.push({ idBalanceMovement: r.idBalanceMovement, motivo: 'monto_invalido' });
+        continue;
+      }
+      movimientos.push({
+        id: r.idBalanceMovement,
+        idOrder: r.idOrder,
+        concepto: r.movementType,
+        estado: r.movementStatus,
+        moneda: 'COP',
+        valor,
+        saldoNuevo: r.newBalance === undefined || r.newBalance === null ? null : montoBilletera(r.newBalance, 'COP'),
+        fecha: r.balanceMovementDate,
+        guia: text(r.carrierTrackingCode),
+      });
+    }
+    return { movimientos, avisos, filas: rows.length };
+  }
+
+  /** Todas las páginas hasta una vacía (el recorte silencioso de `limit` impide parar en una página corta). */
+  async listAllWalletMovements(
+    filter: WalletMovementsFilter,
+  ): Promise<{ movimientos: MovimientoBilletera[]; avisos: WalletMovementWarning[] }> {
+    const movimientos: MovimientoBilletera[] = [];
+    const avisos: WalletMovementWarning[] = [];
+    const vistos = new Set<number>();
+    for (let page = 1; page <= this.maxPages; page++) {
+      const r = await this.listWalletMovements({ ...filter, page });
+      if (r.filas === 0) return { movimientos, avisos };
+      avisos.push(...r.avisos);
+      for (const m of r.movimientos) {
+        if (vistos.has(m.id)) continue;
+        vistos.add(m.id);
+        movimientos.push(m);
+      }
+    }
+    throw new MasterShopError({
+      kind: 'respuesta_invalida',
+      message: `La billetera de MasterShop superó ${this.maxPages} páginas.`,
+    });
   }
 
   /** Prueba la llave con una lectura inocua (`GET /api/products`). */
