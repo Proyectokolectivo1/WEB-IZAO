@@ -16,6 +16,7 @@ import {
   type ContextoCredencial,
 } from '@izao/core/credentials';
 import { auditarCambio } from '@/lib/admin/auditoria';
+import { activarCredencialIntegracionDb, type ResultadoActivarCredencial } from '@/lib/db/credenciales-integracion';
 import type { Cliente } from '../catalogo/taxonomias-servidor';
 import type { ErroresCampo, ResultadoAccion } from '../crud/comun';
 import { traducirErrorBd } from '../crud/servidor';
@@ -214,31 +215,46 @@ async function leerPublica(cliente: Cliente, id: string): Promise<FilaCredencial
 }
 
 /**
- * Deja esta credencial como la única activa de su proveedor y país. Primero activa la nueva y luego apaga las
- * demás; si apagar falla, revierte la nueva para no dejar dos activas.
+ * Deja esta credencial como la única activa de su proveedor y país con la función `activar_credencial_integracion`
+ * (una transacción: apaga la activa anterior y enciende la pedida; el índice único parcial impide dos activas).
  */
-export async function activarCredencialBd(args: Ctx & { id: string }): Promise<ResultadoIntegracion> {
+export async function activarCredencialBd(
+  args: Ctx & { id: string; activar?: (id: string) => Promise<ResultadoActivarCredencial> },
+): Promise<ResultadoIntegracion> {
   const { cliente, actor, ip, id } = args;
+  const activar = args.activar ?? activarCredencialIntegracionDb;
   const fila = await leerPublica(cliente, id);
   if (!fila) return { ok: false, mensaje: 'Esa credencial ya no existe.' };
   if (fila.is_active) return { ok: true, id, mensaje: 'Esa credencial ya estaba activa.' };
 
-  const { error: e1 } = await cliente.from('integration_credentials').update({ is_active: true }).eq('id', id);
-  if (e1) return { ok: false, mensaje: traducirErrorBd(e1).mensaje };
-  let apagar = cliente.from('integration_credentials').update({ is_active: false }).eq('provider', fila.provider);
-  apagar = fila.country_code === null ? apagar.is('country_code', null) : apagar.eq('country_code', fila.country_code);
-  const { error: e2 } = await apagar.neq('id', id);
-  if (e2) {
-    await cliente.from('integration_credentials').update({ is_active: false }).eq('id', id);
+  let r: ResultadoActivarCredencial;
+  try {
+    r = await activar(id);
+  } catch (e) {
+    console.error('[integraciones] no se pudo activar la credencial:', e instanceof Error ? e.name : 'error');
     return { ok: false, mensaje: 'No se pudo cambiar la credencial activa. No se hizo ningún cambio.' };
   }
+  if (!r.ok) {
+    return {
+      ok: false,
+      mensaje: r.motivo === 'no_existe' ? 'Esa credencial ya no existe.' : 'Identificador de credencial no válido.',
+    };
+  }
+  if (r.estado === 'ya_activa') return { ok: true, id, mensaje: 'Esa credencial ya estaba activa.' };
+
   await auditarCambio({
     actor,
     accion: 'integracion.credencial_activada',
     entidad: 'integration_credentials',
     entidadId: id,
     ip,
-    diff: { proveedor: fila.provider, pais: fila.country_code, ambiente: fila.environment },
+    diff: {
+      proveedor: fila.provider,
+      pais: fila.country_code,
+      ambiente: fila.environment,
+      desactivada_id: r.anterior_id,
+      desactivada_ambiente: r.anterior_environment,
+    },
   });
   return { ok: true, id, mensaje: 'Credencial activada. Las demás de este proveedor y país quedaron inactivas.' };
 }

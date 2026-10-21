@@ -198,27 +198,55 @@ describe('activar y desactivar', () => {
     is_active: false,
   };
 
-  it('activa la elegida y apaga las demás del mismo proveedor y país', async () => {
-    const { cliente, llamadas } = clienteFalso({
-      'integration_credentials.select': { data: publica },
-      'integration_credentials.update': { data: null },
-    });
-    const r = await activarCredencialBd({ cliente, ...comun, id: ID });
+  const ANTERIOR = '22222222-2222-4222-8222-222222222222';
+
+  it('activa con la función atómica (sin escribir is_active desde aquí) y audita la desactivada', async () => {
+    const { cliente, llamadas } = clienteFalso({ 'integration_credentials.select': { data: publica } });
+    const activar = vi.fn(async () => ({
+      ok: true as const,
+      estado: 'activada' as const,
+      id: ID,
+      provider: 'wompi',
+      country_code: 'CO',
+      environment: 'sandbox' as const,
+      anterior_id: ANTERIOR,
+      anterior_environment: 'production' as const,
+    }));
+    const r = await activarCredencialBd({ cliente, ...comun, id: ID, activar });
     expect(r.ok).toBe(true);
-    const updates = llamadas.filter((l) => l.clave === 'integration_credentials.update').map((l) => l.args[0]);
-    expect(updates).toEqual([{ is_active: true }, { is_active: false }]);
-    expect(auditar.mock.calls[0]![0]).toMatchObject({ accion: 'integracion.credencial_activada' });
+    expect(activar).toHaveBeenCalledExactlyOnceWith(ID);
+    expect(llamadas.some((l) => l.clave === 'integration_credentials.update')).toBe(false);
+    expect(auditar.mock.calls[0]![0]).toMatchObject({
+      accion: 'integracion.credencial_activada',
+      diff: { desactivada_id: ANTERIOR, desactivada_ambiente: 'production' },
+    });
   });
 
-  it('si apagar las demás falla, revierte la activación', async () => {
-    const { cliente, llamadas } = clienteFalso({
-      'integration_credentials.select': { data: publica },
-      'integration_credentials.update': [{ error: null }, { error: { message: 'x' } }, { error: null }],
+  it('si la función falla o la credencial ya no existe, no audita', async () => {
+    const { cliente } = clienteFalso({ 'integration_credentials.select': { data: publica } });
+    const falla = vi.fn(async () => {
+      throw new Error('red');
     });
-    const r = await activarCredencialBd({ cliente, ...comun, id: ID });
-    expect(r.ok).toBe(false);
-    const updates = llamadas.filter((l) => l.clave === 'integration_credentials.update').map((l) => l.args[0]);
-    expect(updates).toEqual([{ is_active: true }, { is_active: false }, { is_active: false }]);
+    const r1 = await activarCredencialBd({ cliente, ...comun, id: ID, activar: falla });
+    expect(r1.ok).toBe(false);
+    const noExiste = vi.fn(async () => ({ ok: false as const, motivo: 'no_existe' as const }));
+    const r2 = await activarCredencialBd({ cliente, ...comun, id: ID, activar: noExiste });
+    expect(r2).toMatchObject({ ok: false, mensaje: 'Esa credencial ya no existe.' });
+    expect(auditar).not.toHaveBeenCalled();
+  });
+
+  it('si la función responde ya_activa (otra pestaña la activó), no audita', async () => {
+    const { cliente } = clienteFalso({ 'integration_credentials.select': { data: publica } });
+    const activar = vi.fn(async () => ({
+      ok: true as const,
+      estado: 'ya_activa' as const,
+      id: ID,
+      provider: 'wompi',
+      country_code: 'CO',
+      environment: 'sandbox' as const,
+    }));
+    const r = await activarCredencialBd({ cliente, ...comun, id: ID, activar });
+    expect(r.ok).toBe(true);
     expect(auditar).not.toHaveBeenCalled();
   });
 
