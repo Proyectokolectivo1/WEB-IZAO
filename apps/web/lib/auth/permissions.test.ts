@@ -43,6 +43,9 @@ describe('permisos por acción (§24.3)', () => {
     'catalogo.importar',
     'contenido.gestionar',
     'whatsapp.plantillas',
+    'integraciones.gestionar',
+    'pagos.gestionar',
+    'agente.gestionar',
   ];
 
   it('cancelar y marcar pagado son exclusivos del administrador', () => {
@@ -99,7 +102,7 @@ describe('navegación filtrada por rol', () => {
 
   it('el administrador ve los módulos que ya existen, no los futuros', () => {
     const ids = modulosVisibles('admin').map((m) => m.id);
-    expect(ids).toEqual(['inicio', 'pedidos', 'garantias', 'agente', 'productos', 'categorias', 'catalogo_auxiliar', 'colecciones', 'contenido', 'whatsapp']);
+    expect(ids).toEqual(['inicio', 'pedidos', 'garantias', 'agente', 'productos', 'categorias', 'catalogo_auxiliar', 'colecciones', 'contenido', 'whatsapp', 'integraciones']);
     expect(ids).not.toContain('usuarios');
   });
 

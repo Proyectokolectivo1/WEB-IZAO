@@ -1,0 +1,103 @@
+import { describe, expect, it } from 'vitest';
+import {
+  mezclarConGuardados,
+  proveedorPorId,
+  redactarSecretos,
+  validarCredencial,
+  vistaPrevia,
+} from './catalogo';
+
+const wompi = proveedorPorId('wompi')!;
+const mastershop = proveedorPorId('mastershop')!;
+const whatsapp = proveedorPorId('whatsapp')!;
+
+const WOMPI_SANDBOX = {
+  public_key: 'pub_test_abc123',
+  private_key: 'prv_test_privada_0001',
+  events_secret: 'test_events_secreto_0002',
+  integrity_secret: 'test_integrity_secreto_0003',
+};
+const WA = {
+  phone_number_id: '1234567890',
+  waba_id: '9876543210',
+  access_token: 'EAAG_token_largo_de_prueba_0001',
+  app_secret: 'app_secret_de_prueba_0002',
+  verify_token: 'verify_token_prueba_0003',
+};
+
+describe('catálogo de proveedores', () => {
+  it('expone Wompi, MasterShop y WhatsApp con su esquema', () => {
+    expect(proveedorPorId('wompi')?.esquema.provider).toBe('wompi');
+    expect(proveedorPorId('mastershop')?.esquema.fields.map((f) => f.key)).toEqual(['api_key']);
+    expect(proveedorPorId('inexistente')).toBeNull();
+  });
+});
+
+describe('validarCredencial', () => {
+  it('acepta credenciales correctas', () => {
+    expect(validarCredencial(wompi, 'CO', 'sandbox', WOMPI_SANDBOX)).toEqual({});
+    expect(validarCredencial(mastershop, 'CO', 'production', { api_key: 'llave-ms-larga-12345' })).toEqual({});
+    expect(validarCredencial(whatsapp, 'EC', 'production', WA)).toEqual({});
+  });
+
+  it('rechaza país o ambiente que el proveedor no admite', () => {
+    expect(validarCredencial(wompi, 'EC', 'sandbox', WOMPI_SANDBOX).pais).toBeTruthy();
+    expect(validarCredencial(mastershop, 'CO', 'sandbox', { api_key: 'x'.repeat(20) }).ambiente).toBeTruthy();
+    expect(validarCredencial(wompi, 'XX', 'sandbox', WOMPI_SANDBOX).pais).toBeTruthy();
+  });
+
+  it('marca los campos obligatorios vacíos sin repetir valores', () => {
+    const e = validarCredencial(wompi, 'CO', 'sandbox', { ...WOMPI_SANDBOX, private_key: '' });
+    expect(e.private_key).toMatch(/obligatorio/);
+    expect(JSON.stringify(e)).not.toContain('prv_test');
+  });
+
+  it('Wompi: las llaves de producción no valen en sandbox', () => {
+    const e = validarCredencial(wompi, 'CO', 'sandbox', { ...WOMPI_SANDBOX, public_key: 'pub_prod_abc123' });
+    expect(e.public_key).toMatch(/ambiente/);
+  });
+
+  it('WhatsApp: identificadores no numéricos', () => {
+    expect(validarCredencial(whatsapp, 'CO', 'production', { ...WA, phone_number_id: 'abc' })).not.toEqual({});
+  });
+
+  it('rechaza campos desconocidos', () => {
+    expect(validarCredencial(mastershop, 'CO', 'production', { api_key: 'x'.repeat(20), otro: '1' }).otro).toBeTruthy();
+  });
+});
+
+describe('mezclarConGuardados', () => {
+  it('un secreto en blanco conserva el guardado y un campo público en blanco se vacía', () => {
+    const r = mezclarConGuardados(
+      whatsapp,
+      { ...WA, access_token: '', graph_version: '' },
+      { ...WA, graph_version: 'v25.0' },
+    );
+    expect(r.access_token).toBe(WA.access_token);
+    expect(r.graph_version).toBeUndefined();
+  });
+
+  it('un valor nuevo reemplaza al guardado y las claves ajenas se descartan', () => {
+    const r = mezclarConGuardados(mastershop, { api_key: ' nueva-llave-123456 ', basura: 'x' }, { api_key: 'vieja' });
+    expect(r).toEqual({ api_key: 'nueva-llave-123456' });
+  });
+
+  it('sin guardado, el secreto en blanco queda ausente', () => {
+    expect(mezclarConGuardados(mastershop, { api_key: '' }, null)).toEqual({});
+  });
+});
+
+describe('vistaPrevia y redacción', () => {
+  it('enmascara los secretos y deja ver los campos públicos', () => {
+    const v = vistaPrevia(wompi, WOMPI_SANDBOX);
+    expect(v.public_key).toBe(WOMPI_SANDBOX.public_key);
+    expect(v.private_key).toBe('prv_test_****0001');
+    expect(Object.values(v).join(' ')).not.toContain('privada');
+  });
+
+  it('redactarSecretos limpia cualquier secreto dentro de un texto', () => {
+    const t = redactarSecretos(`Error con ${WA.access_token} y ${WA.phone_number_id}`, whatsapp, WA);
+    expect(t).not.toContain(WA.access_token);
+    expect(t).toContain(WA.phone_number_id);
+  });
+});

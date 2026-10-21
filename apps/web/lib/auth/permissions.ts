@@ -123,7 +123,7 @@ export const MODULOS = {
     etiqueta: 'Integraciones',
     ruta: '/admin/integraciones',
     roles: SOLO_ADMIN,
-    disponible: false,
+    disponible: true,
   },
   apariencia: {
     etiqueta: 'Apariencia',
@@ -171,6 +171,12 @@ export const ACCIONES = {
   'contenido.gestionar': SOLO_ADMIN,
   /** Editar, versionar y enviar a aprobación las plantillas de WhatsApp (§13.2). */
   'whatsapp.plantillas': SOLO_ADMIN,
+  /** Guardar, activar y probar credenciales cifradas; registrar webhooks de MasterShop (§24.1, §26.3). */
+  'integraciones.gestionar': SOLO_ADMIN,
+  /** Métodos de pago por país, recargo, abono, tiempos y horario silencioso (§24.1). */
+  'pagos.gestionar': SOLO_ADMIN,
+  /** Alta de agentes de impresión (token), activarlos/desactivarlos y editar su configuración remota (§24.1). */
+  'agente.gestionar': SOLO_ADMIN,
 } as const satisfies Record<string, readonly Rol[]>;
 
 export type AccionId = keyof typeof ACCIONES;
