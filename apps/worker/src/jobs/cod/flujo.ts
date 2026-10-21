@@ -91,8 +91,9 @@ function valores(p: PedidoCod, vence: Date, zona: string): ValoresCobro {
   };
 }
 
+/** Token de `/pagar/{token}`: 128 bits (22 caracteres base64url). */
 function tokenNuevo(deps: DepsCod): string {
-  return deps.generarToken ? deps.generarToken() : randomBytes(12).toString('base64url');
+  return deps.generarToken ? deps.generarToken() : randomBytes(16).toString('base64url');
 }
 
 async function asegurarLink(deps: DepsCod, p: PedidoCod, vence: Date): Promise<AbonoFila | 'pagado' | 'fallido'> {
