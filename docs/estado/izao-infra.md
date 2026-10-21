@@ -33,3 +33,8 @@ test-backup-restore, test-restore-guard, test-deploy-rollback, test-nginx (1.27/
 - `queues.ts`: `crearProcesadorSistema(extra)` (procesarSistema sigue exportado); `pedidos.barrido` se inyecta desde index con `barrerPedidos(dependenciasBarridoDesdeEnv(colaCod, cancelarJobsCod))`.
 - `cron.ts`: scheduler `pedidos.barrido` `*/5 * * * *` America/Bogota (upsert idempotente). Test añadido.
 - Verificado: typecheck, build y 117 tests del worker verdes.
+
+## Cola carrier
+- `queues.ts`: `QUEUE_NAMES.carrier = COLA_CARRIER`. `index.ts`: cola + worker `crearProcesadorCarrier(dependenciasCarrierDesdeEnv(programadorCarrier(colaCarrier)))`; el stub de pagos se reemplazó por `encolarTransportadora(colaCarrier)`; cierre de la cola.
+- `.env.example`: `MASTERSHOP_MODO` (solo dev/QA; bloqueado con NODE_ENV=production). `MASTERSHOP_WEBHOOK_PATH_SECRET` ya existía.
+- Pendiente: polling de respaldo cada 10 min en `cron.ts` (anotado) cuando izao-logistica entregue `jobs/sync`.

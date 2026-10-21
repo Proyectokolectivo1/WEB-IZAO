@@ -1,6 +1,7 @@
 import { Queue, Worker, type Processor } from 'bullmq';
 import { Redis } from 'ioredis';
 import { COLA_COD, COLA_WHATSAPP } from '@izao/whatsapp';
+import { COLA_CARRIER } from '@izao/mastershop';
 import { COLA_PAGOS } from '@izao/wompi';
 import { JOB_PURGAR_AUDIT_LOG, purgarAuditLog } from './jobs/purgar-audit-log.js';
 
@@ -16,6 +17,7 @@ export const QUEUE_NAMES = {
   pagos: COLA_PAGOS,
   contraentrega: COLA_COD,
   whatsapp: COLA_WHATSAPP,
+  carrier: COLA_CARRIER,
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

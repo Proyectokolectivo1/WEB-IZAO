@@ -24,4 +24,5 @@ export async function registrarCron(colaSistema: Queue): Promise<void> {
     { pattern: CRON_BARRIDO_PEDIDOS, tz: 'America/Bogota' },
     { name: JOB_BARRIDO_PEDIDOS, data: {} },
   );
+  // PENDIENTE(izao-logistica): polling de respaldo de MasterShop cada 10 min (*/10 * * * *) cuando exista jobs/sync.
 }

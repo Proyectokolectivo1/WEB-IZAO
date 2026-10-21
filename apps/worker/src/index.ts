@@ -4,6 +4,12 @@ import { cancelarJobsCod, crearProcesadorCod, dependenciasCodDesdeEnv, programad
 import { barrerPedidos, dependenciasBarridoDesdeEnv, JOB_BARRIDO_PEDIDOS } from './jobs/cod/barrido.js';
 import { crearProcesadorWhatsApp, dependenciasWhatsAppDesdeEnv } from './jobs/whatsapp/evento.js';
 import { crearProcesadorPagos, dependenciasPagosDesdeEnv } from './jobs/payments/index.js';
+import {
+  crearProcesadorCarrier,
+  dependenciasCarrierDesdeEnv,
+  encolarTransportadora,
+  programadorCarrier,
+} from './jobs/carrier/index.js';
 import { registrarCron } from './cron.js';
 import { createConnection, createQueue, createWorker, crearProcesadorSistema, QUEUE_NAMES } from './queues.js';
 
@@ -11,6 +17,7 @@ async function main(): Promise<void> {
   const connection = createConnection();
   const cola = createQueue(QUEUE_NAMES.sistema, connection);
   const colaCod = createQueue(QUEUE_NAMES.contraentrega, connection);
+  const colaCarrier = createQueue(QUEUE_NAMES.carrier, connection);
   const worker = createWorker(
     QUEUE_NAMES.sistema,
     crearProcesadorSistema({
@@ -23,10 +30,7 @@ async function main(): Promise<void> {
     QUEUE_NAMES.pagos,
     crearProcesadorPagos(
       dependenciasPagosDesdeEnv(
-        // TODO(izao-logistica): reemplazar por la cola de la transportadora cuando exista su contrato.
-        async (orderId) => {
-          console.warn(`[worker] encolarTransportadora pendiente de izao-logistica (pedido ${orderId})`);
-        },
+        encolarTransportadora(colaCarrier),
         (orderId) => cancelarJobsCod(colaCod, orderId),
       ),
     ),
@@ -36,6 +40,13 @@ async function main(): Promise<void> {
   const trabajadores: Worker[] = [worker, workerPagos];
   trabajadores.push(
     createWorker(QUEUE_NAMES.contraentrega, crearProcesadorCod(dependenciasCodDesdeEnv(programadorCod(colaCod))), connection),
+  );
+  trabajadores.push(
+    createWorker(
+      QUEUE_NAMES.carrier,
+      crearProcesadorCarrier(dependenciasCarrierDesdeEnv(programadorCarrier(colaCarrier))),
+      connection,
+    ),
   );
   const colaWhatsapp = createQueue(QUEUE_NAMES.whatsapp, connection);
   trabajadores.push(
@@ -72,6 +83,7 @@ async function main(): Promise<void> {
     try {
       await Promise.all(trabajadores.map((w) => w.close()));
       await colaCod.close();
+      await colaCarrier.close();
       await colaWhatsapp.close();
       await cola.close();
       await connection.quit();
