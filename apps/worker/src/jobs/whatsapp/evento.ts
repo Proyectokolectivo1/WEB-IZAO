@@ -143,8 +143,8 @@ async function estadoPlantilla(e: Extract<EventoWhatsApp, { tipo: 'estado_planti
         await fuente.actualizarPlantilla(t.id, { meta_status: 'approved', meta_rejection_reason: null, ...id });
         return { accion: 'aprobada' };
       }
-      await fuente.activarPlantilla(t, e.meta_template_id);
-      return { accion: 'activada' };
+      const r = await fuente.activarPlantilla(t, e.meta_template_id);
+      return { accion: r === 'ya_activa' ? 'aprobada' : r };
     }
     case 'REJECTED':
       await fuente.actualizarPlantilla(t.id, { meta_status: 'rejected', meta_rejection_reason: e.reason, ...id });

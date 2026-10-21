@@ -47,13 +47,17 @@ describe('fuente PostgREST de eventos de WhatsApp', () => {
     expect(await fuente.plantillaPorMeta('555', 'cobro_abono_v2', 'es')).toBeNull();
   });
 
-  it('activarPlantilla: primero desactiva la anterior y luego activa la nueva con su id de Meta', async () => {
-    const { fuente, llamadas } = fuenteCon(() => ({ status: 204 }));
-    await fuente.activarPlantilla({ ...T, country_code: 'CO', meta_status: 'pending' }, '555');
-    expect(llamadas[0]!.url).toContain('whatsapp_templates?key=eq.cobro_abono&country_code=eq.CO&is_active=is.true&id=neq.t2');
-    expect(llamadas[0]!.cuerpo).toEqual({ is_active: false });
-    expect(llamadas[1]!.url).toContain('whatsapp_templates?id=eq.t2');
-    expect(llamadas[1]!.cuerpo).toEqual({ is_active: true, meta_status: 'approved', meta_rejection_reason: null, meta_template_id: '555' });
+  it('activarPlantilla: una sola RPC atómica activar_plantilla_whatsapp; devuelve el estado; rechazo lanza', async () => {
+    let cuerpo: unknown = { ok: true, estado: 'activada', id: 't2', version: 2 };
+    const { fuente, llamadas } = fuenteCon(() => ({ status: 200, cuerpo }));
+    const t = { ...T, country_code: 'CO' as const, meta_status: 'pending' as const };
+    expect(await fuente.activarPlantilla(t, '555')).toBe('activada');
+    expect(llamadas).toHaveLength(1);
+    expect(llamadas[0]).toMatchObject({ metodo: 'POST', url: 'https://x.supabase.co/rest/v1/rpc/activar_plantilla_whatsapp', cuerpo: { p_id: 't2', p_meta_template_id: '555' } });
+    cuerpo = { ok: true, estado: 'aprobada_sin_activar', id: 't2', version: 2 };
+    expect(await fuente.activarPlantilla(t, '555')).toBe('aprobada_sin_activar');
+    cuerpo = { ok: false, motivo: 'no_existe' };
+    await expect(fuente.activarPlantilla(t, '555')).rejects.toThrow(/no_existe/);
   });
 
   it('actualizarPlantilla guarda el motivo de rechazo (recortado)', async () => {

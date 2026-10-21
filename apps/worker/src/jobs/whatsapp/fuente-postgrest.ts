@@ -3,9 +3,8 @@
  * contra entrega. Los cambios de estado de `whatsapp_messages` son condicionales (`status=in.(…)`): un estado
  * repetido o fuera de orden no retrocede.
  *
- * `activarPlantilla` hace dos updates (desactivar la anterior, activar la nueva) por el índice único parcial
- * `whatsapp_templates_one_active_idx`; entre ambos no hay versión activa unos milisegundos (un envío en esa ventana
- * registra `plantilla_no_activa`). Pedido a izao-db: RPC atómica `activar_plantilla_whatsapp`.
+ * `activarPlantilla` llama `activar_plantilla_whatsapp` (izao-db, b3f163d): desactiva la anterior y activa la pedida
+ * en una transacción; si la vigente es más nueva solo la marca aprobada.
  */
 import type { CountryCode } from '@izao/core/money';
 import { crearFuenteCodPostgrest } from '../cod/fuente-postgrest.js';
@@ -97,16 +96,13 @@ export function crearFuenteWaPostgrest(o: OpcionesPostgrest): FuenteEventosWa {
       });
     },
     async activarPlantilla(t, metaId) {
-      await pedir('whatsapp_templates', `whatsapp_templates?key=${eq(t.key)}&country_code=${eq(t.country_code)}&is_active=is.true&id=neq.${encodeURIComponent(t.id)}`, {
-        method: 'PATCH',
-        headers: minimo,
-        body: JSON.stringify({ is_active: false }),
-      });
-      await pedir('whatsapp_templates', `whatsapp_templates?id=${eq(t.id)}`, {
-        method: 'PATCH',
-        headers: minimo,
-        body: JSON.stringify({ is_active: true, meta_status: 'approved', meta_rejection_reason: null, meta_template_id: metaId }),
-      });
+      const r = (await pedir('activar_plantilla_whatsapp', 'rpc/activar_plantilla_whatsapp', {
+        method: 'POST',
+        body: JSON.stringify({ p_id: t.id, p_meta_template_id: metaId }),
+      })) as { ok?: unknown; estado?: unknown; motivo?: unknown } | null;
+      if (r?.ok === true && (r.estado === 'activada' || r.estado === 'ya_activa' || r.estado === 'aprobada_sin_activar')) return r.estado;
+      const motivo = r?.ok === false && typeof r.motivo === 'string' ? r.motivo.slice(0, 40) : 'forma';
+      throw new Error(`activar_plantilla_whatsapp rechazó: ${motivo}`);
     },
   };
 }

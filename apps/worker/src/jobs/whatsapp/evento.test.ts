@@ -82,6 +82,7 @@ function escenario(o: { mensaje?: Partial<MensajeWa> | null; pedido?: Partial<Pe
       const p = plantillas.find((x) => x.id === t.id)!;
       Object.assign(p, { is_active: true, meta_status: 'approved', meta_template_id: metaId });
       razones.set(t.id, null);
+      return 'activada';
     },
     async pedido(id) {
       return id === ORDER ? pedido : null;

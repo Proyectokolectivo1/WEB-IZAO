@@ -13,7 +13,7 @@
 - Variables: SUPABASE_URL, SUPABASE_SECRET_KEY, APP_ENCRYPTION_KEY, SITE_URL.
 
 ## Pedidos a otros agentes
-- izao-db: (1) RPC atómica `activar_plantilla_whatsapp(p_id)` (hoy dos PATCH con ventana de ms sin activa). (2) `pedidos_por_vencer` no incluye `pago_rechazado` con reserva (core permite `pago_rechazado → expirado`); confirmar si debe. (3) `seed.sql` de plantillas (D-025).
+- izao-db: (1) hecho: `activar_plantilla_whatsapp` (b3f163d) ya usada por el worker. (2) `pedidos_por_vencer` no incluye `pago_rechazado` con reserva (core permite `pago_rechazado → expirado`); confirmar si debe. (3) `seed.sql` de plantillas (D-025).
 - izao-infra: registrar lo de "Contrato".
 - izao-tienda: `/pagar/{token}` y "Pagar abono ahora" (pendiente anterior).
 - izao-admin: panel de plantillas, "Copiar link de cobro"/"Reenviar cobro", cifrar credenciales `whatsapp`.

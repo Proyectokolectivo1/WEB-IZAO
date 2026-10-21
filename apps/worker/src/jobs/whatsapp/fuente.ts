@@ -45,6 +45,6 @@ export interface FuenteEventosWa extends Pick<FuenteCod, 'pedido' | 'payLink' | 
     id: string,
     c: { meta_status: EstadoMetaPlantilla; meta_rejection_reason: string | null; meta_template_id?: string },
   ): Promise<void>;
-  /** Desactiva la versión activa de (key, país) y activa esta como `approved`. */
-  activarPlantilla(p: PlantillaFila, metaId: string): Promise<void>;
+  /** Atómico: desactiva la versión activa de (key, país) y activa esta (`approved`), salvo que la vigente sea más nueva. */
+  activarPlantilla(p: PlantillaFila, metaId: string): Promise<'activada' | 'ya_activa' | 'aprobada_sin_activar'>;
 }
