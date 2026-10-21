@@ -1009,6 +1009,7 @@ export type Database = {
           cod_quiet_hours_end: string
           cod_quiet_hours_start: string
           cod_reminder_offsets_minutes: number[]
+          cod_resend_max: number
           country_code: string
           created_at: string
           financing_surcharge_pct: Json
@@ -1033,6 +1034,7 @@ export type Database = {
           cod_quiet_hours_end?: string
           cod_quiet_hours_start?: string
           cod_reminder_offsets_minutes?: number[]
+          cod_resend_max?: number
           country_code: string
           created_at?: string
           financing_surcharge_pct?: Json
@@ -1057,6 +1059,7 @@ export type Database = {
           cod_quiet_hours_end?: string
           cod_quiet_hours_start?: string
           cod_reminder_offsets_minutes?: number[]
+          cod_resend_max?: number
           country_code?: string
           created_at?: string
           financing_surcharge_pct?: Json
@@ -3757,7 +3760,7 @@ export type Database = {
         Args: { p_id: string; p_meta_template_id?: string }
         Returns: Json
       }
-      admin_entero:{ Args: { campo: string; v: Json }; Returns: number }
+      admin_entero: { Args: { campo: string; v: Json }; Returns: number }
       admin_guardar_producto: { Args: { p: Json }; Returns: Json }
       admin_importar_catalogo: { Args: { p: Json }; Returns: Json }
       admin_producto_estado: { Args: { p_product_id: string }; Returns: Json }
