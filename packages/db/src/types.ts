@@ -3753,7 +3753,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      admin_entero: { Args: { campo: string; v: Json }; Returns: number }
+      activar_plantilla_whatsapp: {
+        Args: { p_id: string; p_meta_template_id?: string }
+        Returns: Json
+      }
+      admin_entero:{ Args: { campo: string; v: Json }; Returns: number }
       admin_guardar_producto: { Args: { p: Json }; Returns: Json }
       admin_importar_catalogo: { Args: { p: Json }; Returns: Json }
       admin_producto_estado: { Args: { p_product_id: string }; Returns: Json }

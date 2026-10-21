@@ -6,6 +6,8 @@
 - `crear_pedido_checkout`: 34cfe1f. Pedidos (1-3): 20261020213954, pgTAP 20/19: 0d237eb. Pedido (4): 20261020214637, pgTAP 21: cd24577.
 - Espacios de la tienda: 20261020220958 (solo datos) + seed.sql Parte 3, pgTAP 22 (12/12 remoto). Commit «feat(db): espacios de contenido…».
 - Abono COD (pedidos 2 y 3 de izao-pagos): 20261020221412, pgTAP 23 (16/16 remoto), `lib/db/pay-links.ts` («feat(db): clic de pay_link…»). Pedido 1 (seed de plantillas): espera al dueño.
+- `activar_plantilla_whatsapp`: 20261021011746, pgTAP 24 (14/14 remoto), `lib/db/plantillas-whatsapp.ts` («feat(db): activar_plantilla_whatsapp…»).
+  `pedidos_por_vencer` ya incluye `pago_rechazado → expirado` desde 20261019234041 (A2, §16 tabla de estados; pgTAP 14); sin cambio.
 
 ## Contratos vigentes (detalle en el commit de cada migración)
 - `crear_pedido_checkout(p jsonb)` → `{ok, estado:'creado'|'existente'|'rechazado', order|motivo}`; motivos: `idempotencia_conflicto`,
@@ -23,6 +25,8 @@
 - `pay_link_click(p_token)` (service_role) → `{ok, estado:'vigente'|'pagado'|'vencido', order_id, order_number, clicks, expires_at,
   target_url solo si vigente}` | `{ok:false, motivo:'no_existe'|'datos_invalidos'}`. Envoltorio `registrarClicPayLinkDb`.
 - `whatsapp_messages_envio_unico_key` unique (order_id, template_id, scheduled_for); NULL no choca; duplicado → 23505.
+- `activar_plantilla_whatsapp(p_id, p_meta_template_id?)` (service_role) → `{ok, estado:'activada'(+anterior_id/version|null)|
+  'ya_activa'|'aprobada_sin_activar'(+activa_id/version), id, version}` | `{ok:false, motivo:'no_existe'|'datos_invalidos'}`.
 
 ## Pendiente
 1. Rendimiento T2.7: explain (analyze, buffers) y p95 de 50 corridas por RPC.
