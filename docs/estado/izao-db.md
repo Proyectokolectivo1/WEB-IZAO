@@ -1,13 +1,10 @@
 # Bitácora izao-db
 
 ## Hecho
-- Oleadas 0 y 1 (última f63d558). T2.7 RPC catálogo: 8da6bc2, 343bfbe. T2.8 `lib/db/`: 8f33a8c. Colección y stock_bajo: 08d0a46.
-- `admin_guardar_producto` / `admin_importar_catalogo` + `lib/db/admin-catalogo`: 373d18d. T2.9 fixture de imágenes: 490cf03.
-- `crear_pedido_checkout`: 34cfe1f. Pedidos (1-3): 20261020213954, pgTAP 20/19: 0d237eb. Pedido (4): 20261020214637, pgTAP 21: cd24577.
-- Espacios de la tienda: 20261020220958 (solo datos) + seed.sql Parte 3, pgTAP 22 (12/12 remoto). Commit «feat(db): espacios de contenido…».
-- Abono COD (pedidos 2 y 3 de izao-pagos): 20261020221412, pgTAP 23 (16/16 remoto), `lib/db/pay-links.ts` («feat(db): clic de pay_link…»). Pedido 1 (seed de plantillas): espera al dueño.
-- `activar_plantilla_whatsapp`: 20261021011746, pgTAP 24 (14/14 remoto), `lib/db/plantillas-whatsapp.ts` («feat(db): activar_plantilla_whatsapp…»).
-  `pedidos_por_vencer` ya incluye `pago_rechazado → expirado` desde 20261019234041 (A2, §16 tabla de estados; pgTAP 14); sin cambio.
+- Oleadas 0-1 (f63d558). T2.7 8da6bc2, 343bfbe. T2.8 8f33a8c. Colección 08d0a46. Admin catálogo 373d18d. T2.9 490cf03.
+- `crear_pedido_checkout` 34cfe1f; 20261020213954 (0d237eb); 20261020214637 (cd24577). Espacios 20261020220958 + seed Parte 3.
+- Abono COD 20261020221412 (pgTAP 23). Seed de plantillas: espera al dueño. `activar_plantilla_whatsapp` 20261021011746 (b3f163d,
+  pgTAP 24 14/14). `pedidos_por_vencer` ya incluye `pago_rechazado → expirado` (20261019234041, A2, §16; pgTAP 14): sin cambio.
 
 ## Contratos vigentes (detalle en el commit de cada migración)
 - `crear_pedido_checkout(p jsonb)` → `{ok, estado:'creado'|'existente'|'rechazado', order|motivo}`; motivos: `idempotencia_conflicto`,
@@ -31,8 +28,7 @@
 ## Pendiente
 1. Rendimiento T2.7: explain (analyze, buffers) y p95 de 50 corridas por RPC.
 2. Cierre: pgTAP 01–22 remoto, advisors (solo INFO hoy), lint/typecheck/test.
-3. Prueba de concurrencia de `crear_pedido_checkout` con dos sesiones (tests/concurrencia/run.sh, local).
-4. store_*: no se crean salvo pedido de izao-tienda.
+3. Concurrencia de `crear_pedido_checkout` con dos sesiones (tests/concurrencia/run.sh). store_*: solo si izao-tienda lo pide.
 
 ## Siguiente paso exacto
 - Pendiente 1 (explain de las RPC del catálogo) salvo nueva tarea del líder.
