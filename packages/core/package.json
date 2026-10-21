@@ -10,7 +10,8 @@
     "./order-state": "./src/order-state/index.ts",
     "./schemas": "./src/schemas/index.ts",
     "./contracts": "./src/contracts/index.ts",
-    "./credentials": "./src/credentials/index.ts"
+    "./credentials": "./src/credentials/index.ts",
+    "./metrics": "./src/metrics/index.ts"
   },
   "scripts": {
     "lint": "eslint .",
