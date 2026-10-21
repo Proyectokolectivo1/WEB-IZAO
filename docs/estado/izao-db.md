@@ -6,6 +6,7 @@
 - Abono COD 20261020221412 (pgTAP 23). `activar_plantilla_whatsapp` 20261021011746 (b3f163d, pgTAP 24). Seed plantillas: dueño.
 - `cod_resend_max` 20261021013019 (1b216c3, pgTAP 25). Etiqueta auto única 20261021013134 (pgTAP 26). D-027: 20261021015339
   (pgTAP 27 28/28): `carrier_wallet_*` en country_settings (seed CO umbral 100000), `print_agents.remote_config`, `integration_webhooks`.
+  Credencial activa única 20261021062843 (pgTAP 28 15/15, envoltorio `activarCredencialIntegracionDb`).
 
 ## Contratos vigentes (detalle en el commit de cada migración)
 - `crear_pedido_checkout(p jsonb)` → `{ok, estado:'creado'|'existente'|'rechazado', order|motivo}`; motivos: `idempotencia_conflicto`,
@@ -28,13 +29,12 @@
 - `carrier_wallet_low_balance` bigint null ≥ 0, `_balance` bigint null, `_balance_at`/`_low_alert_at` timestamptz null.
   `print_agents.remote_config` jsonb objeto default {}. `integration_webhooks` (provider, country_code, environment, event_id=idWebhook,
   event_name, external_id=idProductWebhook bigint, is_enabled, registered_at); únicos (prov,país,entorno,evento) y (prov,entorno,external_id).
-
+- `integration_credentials_one_active_key` único parcial (provider, country_code) nulls not distinct where is_active (sin environment:
+  la activa decide el entorno) → 23505. `activar_credencial_integracion(p_id uuid)` (service_role) → `{ok, estado:'activada'(+anterior_id/anterior_environment|null)|'ya_activa', id, provider, country_code, environment}`|`{ok:false, motivo:'no_existe'|'datos_invalidos'}`.
 ## Pendiente
 1. Rendimiento T2.7: explain (analyze, buffers) y p95 de 50 corridas por RPC. 2. Cierre: pgTAP 01–22 remoto, advisors (INFO).
 3. Concurrencia de `crear_pedido_checkout` con dos sesiones (tests/concurrencia/run.sh). store_*: solo si izao-tienda lo pide.
-
-## Siguiente paso exacto
-Pendiente 1 (explain de las RPC del catálogo) salvo nueva tarea del líder.
+## Siguiente paso exacto: Pendiente 1 (explain de las RPC del catálogo) salvo nueva tarea del líder.
 ## Notas
 - pgTAP por el MCP: `insert into tap(l) select ...` (temp), sin begin/rollback, cierre `raise exception 'RESUMEN %'` (deshace todo).
 - Versión: la de `list_migrations`. Tipos: JSON de `generate_typescript_types` (tool-results) → `types` a `src/types.ts` con python.

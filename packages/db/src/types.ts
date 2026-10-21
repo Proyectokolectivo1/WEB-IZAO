@@ -3821,6 +3821,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activar_credencial_integracion: { Args: { p_id: string }; Returns: Json }
       activar_plantilla_whatsapp: {
         Args: { p_id: string; p_meta_template_id?: string }
         Returns: Json
