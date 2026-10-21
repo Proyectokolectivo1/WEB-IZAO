@@ -7,7 +7,7 @@ import type { Order, OrderItem } from '@izao/core/contracts';
 import { fromDbAmount, type CountryCode, type CurrencyCode } from '@izao/core/money';
 import type { OrderStatus } from '@izao/core/order-state';
 import { parseMasterShopCredentials, type CarrierDiscountMode } from '@izao/mastershop';
-import { aplicarTransicionRpc, crearClientePostgrest, eq, type Fila, type OpcionesPostgrest } from '../postgrest.js';
+import { aplicarTransicionRpc, crearClientePostgrest, eq, ErrorPostgrest, type Fila, type OpcionesPostgrest } from '../postgrest.js';
 import type { CambiosEnvio, EnvioFila, FuenteCarrier } from './fuente.js';
 
 const json = (v: unknown): string => JSON.stringify(v, (_k, x) => (typeof x === 'bigint' ? x.toString() : x));
@@ -186,14 +186,20 @@ export function crearFuenteCarrierPostgrest(o: OpcionesPostgrest): FuenteCarrier
     async crearImpresionEtiqueta(id, shipmentId) {
       const ya = await filas(
         'print_jobs',
-        `print_jobs?shipment_id=${eq(shipmentId)}&type=eq.label&status=neq.cancelled&select=id&limit=1`,
+        `print_jobs?shipment_id=${eq(shipmentId)}&type=eq.label&requested_by=eq.auto&status=neq.cancelled&select=id&limit=1`,
       );
       if (ya.length > 0) return false;
-      await pedir('print_jobs', 'print_jobs', {
-        method: 'POST',
-        headers: { prefer: 'return=minimal' },
-        body: json({ order_id: id, shipment_id: shipmentId, type: 'label', requested_by: 'auto' }),
-      });
+      try {
+        await pedir('print_jobs', 'print_jobs', {
+          method: 'POST',
+          headers: { prefer: 'return=minimal' },
+          body: json({ order_id: id, shipment_id: shipmentId, type: 'label', requested_by: 'auto' }),
+        });
+      } catch (e) {
+        // `print_jobs_etiqueta_auto_unica_key`: otro proceso (poll_label / sync) la creó entre la lectura y el insert.
+        if (e instanceof ErrorPostgrest && e.codigo === '23505') return false;
+        throw e;
+      }
       return true;
     },
     async marcarWebhook(eventId, r) {
