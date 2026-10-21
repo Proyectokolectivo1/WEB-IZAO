@@ -42,3 +42,6 @@ test-backup-restore, test-restore-guard, test-deploy-rollback, test-nginx (1.27/
 
 ## CI agente de impresión
 - Job `agente-impresion` (windows-2022, py3.12, caché pip) en ci.yml + sección en RUNBOOK. Sin ejecutar en Actions aún.
+
+## Ajustes menores
+- .env.example: INTEGRACIONES_MODO (mock, ignorado en producción). CI: comentario de agente-impresion corregido (sin filtro por rutas). pnpm lint verde (8/8).

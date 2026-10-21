@@ -56,7 +56,7 @@ jobs:
           retention-days: 14
 
   # Agente de impresión (Python): fuera de pnpm/turbo. Servidor falso y SumatraPDF falso:
-  # no imprime nada ni usa el token real. Solo corre si cambia el agente o el workflow.
+  # no imprime nada ni usa el token real. Corre en cada push a main y en cada PR (sin filtro por rutas).
   agente-impresion:
     runs-on: windows-2022
     timeout-minutes: 15
