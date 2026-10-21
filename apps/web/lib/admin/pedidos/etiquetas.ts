@@ -39,4 +39,20 @@ export const ETIQUETA_MENSAJE: Record<string, string> = {
 export const ETIQUETA_EVENTO: Record<string, string> = {
   status_changed: 'Cambio de estado',
   cobro_reenvio_solicitado: 'Reenvío de cobro solicitado',
+  reintento_envio_solicitado: 'Reintento de envío a MasterShop',
+  nota_interna: 'Nota interna',
+};
+
+export const ETIQUETA_IMPRESION: Record<string, string> = {
+  queued: 'En cola',
+  claimed: 'Imprimiendo',
+  printed: 'Impresa',
+  failed: 'Falló',
+  cancelled: 'Cancelada',
+};
+
+export const ETIQUETA_TIPO_IMPRESION: Record<string, string> = {
+  label: 'Etiqueta',
+  packing_list: 'Lista de empaque',
+  test_page: 'Página de prueba',
 };

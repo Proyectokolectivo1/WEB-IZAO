@@ -78,12 +78,50 @@ export type DetallePedido = {
     created_at: string;
     whatsapp_templates: { key: string; version: number } | null;
   }[];
-  eventos: { id: string; type: string; from_status: string | null; to_status: string | null; actor: string; created_at: string }[];
+  eventos: {
+    id: string;
+    type: string;
+    from_status: string | null;
+    to_status: string | null;
+    actor: string;
+    created_at: string;
+    /** Solo trae el texto en las notas internas; en los demás eventos siempre es `null`. */
+    nota: string | null;
+  }[];
+  envio: {
+    id: string;
+    carrier_name: string | null;
+    tracking_code: string | null;
+    tracking_url: string | null;
+    provider_status_name: string | null;
+    has_novelty: boolean;
+    etiqueta_lista: boolean;
+  } | null;
+  impresiones: { id: string; type: string; status: string; requested_by: string; attempts: number; error: string | null; created_at: string; printed_at: string | null }[];
 };
 
 function ok<T>(r: { data: unknown; error: { message: string } | null }, que: string): T {
   if (r.error) throw new Error(`No se pudo leer ${que}.`);
   return (r.data ?? []) as T;
+}
+
+function textoDeNota(payload: unknown): string | null {
+  const t = (payload as { texto?: unknown } | null)?.texto;
+  return typeof t === 'string' ? t : null;
+}
+
+function envioPublico(f: Record<string, unknown> | undefined): DetallePedido['envio'] {
+  if (!f) return null;
+  const texto = (v: unknown) => (typeof v === 'string' ? v : null);
+  return {
+    id: String(f.id),
+    carrier_name: texto(f.carrier_name),
+    tracking_code: texto(f.tracking_code),
+    tracking_url: texto(f.tracking_url),
+    provider_status_name: texto(f.provider_status_name),
+    has_novelty: f.has_novelty === true,
+    etiqueta_lista: typeof f.label_local_path === 'string' && f.label_local_path !== '',
+  };
 }
 
 /** Detalle completo. El token del link NO se lee aquí: solo sale por `linkCobroBd`. */
@@ -98,7 +136,7 @@ export async function obtenerDetallePedido(cliente: Cliente, id: string): Promis
   if (error) throw new Error('No se pudo leer el pedido.');
   if (!pedido) return null;
 
-  const [pagos, links, mensajes, eventos] = await Promise.all([
+  const [pagos, links, mensajes, eventos, envios, impresiones] = await Promise.all([
     cliente
       .from('payments')
       .select('id, provider, purpose, amount, status, provider_reference, created_at')
@@ -112,9 +150,20 @@ export async function obtenerDetallePedido(cliente: Cliente, id: string): Promis
       .order('created_at', { ascending: true }),
     cliente
       .from('order_events')
-      .select('id, type, from_status, to_status, actor, created_at')
+      .select('id, type, from_status, to_status, actor, created_at, payload')
       .eq('order_id', id)
       .order('created_at', { ascending: true }),
+    cliente
+      .from('shipments')
+      .select('id, carrier_name, tracking_code, tracking_url, provider_status_name, has_novelty, label_local_path')
+      .eq('order_id', id)
+      .limit(1),
+    cliente
+      .from('print_jobs')
+      .select('id, type, status, requested_by, attempts, error, created_at, printed_at')
+      .eq('order_id', id)
+      .order('created_at', { ascending: false })
+      .limit(10),
   ]);
   const links1 = ok<DetallePedido['link'][]>(links, 'el link de cobro');
   return {
@@ -122,7 +171,12 @@ export async function obtenerDetallePedido(cliente: Cliente, id: string): Promis
     pagos: ok(pagos, 'los pagos'),
     link: links1[0] ?? null,
     mensajes: ok(mensajes, 'los mensajes'),
-    eventos: ok(eventos, 'la línea de tiempo'),
+    eventos: ok<(DetallePedido['eventos'][number] & { payload?: unknown })[]>(eventos, 'la línea de tiempo').map(({ payload, ...e }) => ({
+      ...e,
+      nota: e.type === 'nota_interna' ? textoDeNota(payload) : null,
+    })),
+    envio: envioPublico(ok<Record<string, unknown>[]>(envios, 'el envío')[0]),
+    impresiones: ok(impresiones, 'las impresiones'),
   };
 }
 

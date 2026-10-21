@@ -1,0 +1,299 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { auditar } = vi.hoisted(() => ({ auditar: vi.fn(async (_e: unknown) => true) }));
+vi.mock('@/lib/admin/auditoria', () => ({ auditarCambio: auditar }));
+
+import type { OrderStatusEvent } from '@izao/core/order-state';
+import { clienteFalso } from '../crud/cliente-falso';
+import {
+  agregarNotaBd,
+  cancelarPedidoBd,
+  marcarPagadoBd,
+  reimprimirEtiquetaBd,
+  reintentarEnvioBd,
+} from './acciones-servidor';
+
+const ID = '11111111-1111-4111-8111-111111111111';
+const AHORA = new Date('2026-10-21T15:00:00Z');
+const comun = { actor: 'u1', ip: null, ahora: () => AHORA };
+
+const pedido = (status: string, extra: Record<string, unknown> = {}) => ({ number: 'IZ-CO-000123', status, payment_method: 'cod', ...extra });
+const envio = (extra: Record<string, unknown> = {}) => ({ id: 's1', provider_order_id: 777, provider_status_id: 1, label_local_path: null, ...extra });
+
+const okTransicion = () =>
+  vi.fn(async (orderId: string, e: OrderStatusEvent) => ({
+    ok: true as const,
+    order_id: orderId,
+    from_status: e.from_status,
+    to_status: e.to_status,
+    event_id: '22222222-2222-4222-8222-222222222222',
+  }));
+
+beforeEach(() => auditar.mockClear());
+
+describe('cancelarPedidoBd', () => {
+  it('cancela un pedido pendiente manual con transicionar, libera stock y audita', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('pendiente_manual') }, 'shipments.select': { data: null } });
+    const aplicar = okTransicion();
+    const liberarStock = vi.fn(async () => undefined);
+    const cancelarEnMasterShop = vi.fn(async () => undefined);
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'El cliente ya no lo quiere', aplicar, liberarStock, cancelarEnMasterShop });
+    expect(r.ok).toBe(true);
+    expect(cancelarEnMasterShop).not.toHaveBeenCalled();
+    expect(aplicar).toHaveBeenCalledWith(
+      ID,
+      expect.objectContaining({ from_status: 'pendiente_manual', to_status: 'cancelado', actor: 'admin:u1', payload: { motivo: 'El cliente ya no lo quiere' } }),
+      { cancelled_at: AHORA.toISOString() },
+    );
+    expect(liberarStock).toHaveBeenCalledWith(ID);
+    expect(auditar.mock.calls[0]![0]).toMatchObject({ accion: 'pedido.cancelado', entidadId: ID, actor: 'u1' });
+  });
+
+  it('con envío en MasterShop 1–2 lo cancela allá primero y luego en la base', async () => {
+    for (const estadoRemoto of [1, 2]) {
+      const { cliente } = clienteFalso({
+        'orders.select': { data: pedido('enviado_transportadora') },
+        'shipments.select': { data: envio({ provider_status_id: estadoRemoto }) },
+      });
+      const orden: string[] = [];
+      const cancelarEnMasterShop = vi.fn(async () => void orden.push('mastershop'));
+      const aplicar = vi.fn(async (...a: Parameters<ReturnType<typeof okTransicion>>) => {
+        orden.push('base');
+        return okTransicion()(...a);
+      });
+      const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Dirección imposible', aplicar, liberarStock: async () => undefined, cancelarEnMasterShop });
+      expect(r.ok).toBe(true);
+      expect(cancelarEnMasterShop).toHaveBeenCalledWith(777);
+      expect(orden).toEqual(['mastershop', 'base']);
+    }
+  });
+
+  it('si MasterShop rechaza la cancelación no toca la base', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('enviado_transportadora') }, 'shipments.select': { data: envio() } });
+    const aplicar = okTransicion();
+    const r = await cancelarPedidoBd({
+      cliente,
+      ...comun,
+      orderId: ID,
+      motivo: 'Error de digitación',
+      aplicar,
+      liberarStock: async () => undefined,
+      cancelarEnMasterShop: async () => {
+        throw new Error('502');
+      },
+    });
+    expect(r.ok).toBe(false);
+    expect(aplicar).not.toHaveBeenCalled();
+    expect(auditar).not.toHaveBeenCalled();
+  });
+
+  it('un envío que ya avanzó en MasterShop (3 o más) se cancela allá, no desde el panel', async () => {
+    const { cliente } = clienteFalso({
+      'orders.select': { data: pedido('en_preparacion') },
+      'shipments.select': { data: envio({ provider_status_id: 3 }) },
+    });
+    const aplicar = okTransicion();
+    const cancelarEnMasterShop = vi.fn(async () => undefined);
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Cambio de opinión', aplicar, liberarStock: async () => undefined, cancelarEnMasterShop });
+    expect(r.ok).toBe(false);
+    expect(r.mensaje).toMatch(/MasterShop/);
+    expect(cancelarEnMasterShop).not.toHaveBeenCalled();
+    expect(aplicar).not.toHaveBeenCalled();
+  });
+
+  it('rechaza estados que la máquina de estados no permite y motivos vacíos', async () => {
+    for (const estado of ['pagado', 'entregado', 'cancelado', 'en_transito', 'pendiente_pago']) {
+      const { cliente } = clienteFalso({ 'orders.select': { data: pedido(estado) }, 'shipments.select': { data: null } });
+      const aplicar = okTransicion();
+      const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'motivo válido', aplicar, liberarStock: async () => undefined, cancelarEnMasterShop: async () => undefined });
+      expect(r.ok, estado).toBe(false);
+      expect(aplicar).not.toHaveBeenCalled();
+    }
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('pendiente_manual') } });
+    const aplicar = okTransicion();
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: '  ', aplicar, liberarStock: async () => undefined, cancelarEnMasterShop: async () => undefined });
+    expect(r.ok).toBe(false);
+    expect(aplicar).not.toHaveBeenCalled();
+  });
+
+  it('si otro proceso movió el pedido, lo dice y no libera stock', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('pendiente_manual') }, 'shipments.select': { data: null } });
+    const liberarStock = vi.fn(async () => undefined);
+    const r = await cancelarPedidoBd({
+      cliente,
+      ...comun,
+      orderId: ID,
+      motivo: 'Cancelación solicitada',
+      aplicar: async () => ({ ok: false, motivo: 'estado_cambiado', status_actual: 'pagado' }),
+      liberarStock,
+      cancelarEnMasterShop: async () => undefined,
+    });
+    expect(r.ok).toBe(false);
+    expect(liberarStock).not.toHaveBeenCalled();
+    expect(auditar).not.toHaveBeenCalled();
+  });
+
+  it('pedido inexistente', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: null } });
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'motivo válido', aplicar: okTransicion(), liberarStock: async () => undefined, cancelarEnMasterShop: async () => undefined });
+    expect(r.ok).toBe(false);
+  });
+});
+
+describe('marcarPagadoBd', () => {
+  const deps = () => ({
+    confirmarStock: vi.fn(async () => true),
+    encolarEnvio: vi.fn(async () => 'encolado' as const),
+    aplicar: okTransicion(),
+  });
+
+  it('solo marca pagado un pedido en pendiente_manual: confirma stock, transiciona, encola el envío y audita', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('pendiente_manual', { payment_method: 'manual' }) } });
+    const d = deps();
+    const r = await marcarPagadoBd({ cliente, ...comun, orderId: ID, referencia: 'Transferencia Bancolombia 8841', ...d });
+    expect(r.ok).toBe(true);
+    expect(d.confirmarStock).toHaveBeenCalledWith(ID);
+    expect(d.aplicar).toHaveBeenCalledWith(
+      ID,
+      expect.objectContaining({ from_status: 'pendiente_manual', to_status: 'pagado', actor: 'admin:u1', payload: { motivo: 'pago_manual', referencia: 'Transferencia Bancolombia 8841' } }),
+      { paid_at: AHORA.toISOString() },
+    );
+    expect(d.encolarEnvio).toHaveBeenCalledWith(ID, 'pagado');
+    expect(auditar.mock.calls[0]![0]).toMatchObject({ accion: 'pedido.marcado_pagado', entidadId: ID });
+  });
+
+  it('rechaza cualquier otro estado', async () => {
+    for (const estado of ['pendiente_pago', 'esperando_abono', 'pagado', 'cancelado', 'expirado']) {
+      const { cliente } = clienteFalso({ 'orders.select': { data: pedido(estado) } });
+      const d = deps();
+      const r = await marcarPagadoBd({ cliente, ...comun, orderId: ID, referencia: 'Recibo 55', ...d });
+      expect(r.ok, estado).toBe(false);
+      expect(d.aplicar).not.toHaveBeenCalled();
+      expect(d.confirmarStock).not.toHaveBeenCalled();
+    }
+  });
+
+  it('exige una referencia del pago', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('pendiente_manual') } });
+    const d = deps();
+    expect((await marcarPagadoBd({ cliente, ...comun, orderId: ID, referencia: ' ', ...d })).ok).toBe(false);
+    expect(d.aplicar).not.toHaveBeenCalled();
+  });
+
+  it('sin stock no marca pagado', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('pendiente_manual') } });
+    const d = { ...deps(), confirmarStock: vi.fn(async () => false) };
+    const r = await marcarPagadoBd({ cliente, ...comun, orderId: ID, referencia: 'Recibo 55', ...d });
+    expect(r.ok).toBe(false);
+    expect(d.aplicar).not.toHaveBeenCalled();
+  });
+
+  it('si no se pudo encolar el envío queda pagado y avisa que use Reintentar', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('pendiente_manual') } });
+    const d = { ...deps(), encolarEnvio: vi.fn(async (): Promise<'encolado'> => {
+      throw new Error('redis');
+    }) };
+    const r = await marcarPagadoBd({ cliente, ...comun, orderId: ID, referencia: 'Recibo 55', ...d });
+    expect(r.ok).toBe(true);
+    expect(r.mensaje).toMatch(/Reintentar/);
+    expect(d.aplicar).toHaveBeenCalled();
+  });
+});
+
+describe('agregarNotaBd', () => {
+  it('guarda la nota como evento del pedido con actor admin y audita', async () => {
+    const { cliente, llamadas } = clienteFalso({ 'orders.select': { data: { number: 'IZ-CO-000123' } }, 'order_events.insert': { data: null } });
+    const r = await agregarNotaBd({ cliente, ...comun, orderId: ID, texto: '  Cliente pidió llamar antes de entregar  ' });
+    expect(r.ok).toBe(true);
+    expect(llamadas.find((l) => l.clave === 'order_events.insert')!.args[0]).toEqual({
+      order_id: ID,
+      type: 'nota_interna',
+      payload: { texto: 'Cliente pidió llamar antes de entregar' },
+      actor: 'admin:u1',
+    });
+    expect(auditar.mock.calls[0]![0]).toMatchObject({ accion: 'pedido.nota_agregada' });
+  });
+
+  it('rechaza notas vacías o demasiado largas', async () => {
+    const { cliente, llamadas } = clienteFalso({ 'orders.select': { data: { number: 'IZ-CO-000123' } } });
+    expect((await agregarNotaBd({ cliente, ...comun, orderId: ID, texto: '   ' })).ok).toBe(false);
+    expect((await agregarNotaBd({ cliente, ...comun, orderId: ID, texto: 'x'.repeat(1001) })).ok).toBe(false);
+    expect(llamadas.some((l) => l.clave === 'order_events.insert')).toBe(false);
+  });
+});
+
+describe('reintentarEnvioBd', () => {
+  it('traduce cada resultado de la cola y registra el evento solo si se encoló', async () => {
+    const casos = [
+      ['encolado', true, true],
+      ['ya_pendiente', true, false],
+      ['estado_invalido', false, false],
+    ] as const;
+    for (const [resultado, ok, registra] of casos) {
+      const { cliente, llamadas } = clienteFalso({
+        'orders.select': { data: pedido('error_transportadora') },
+        'order_events.insert': { data: null },
+      });
+      const reintentar = vi.fn(async () => resultado);
+      const r = await reintentarEnvioBd({ cliente, ...comun, orderId: ID, reintentar });
+      expect(reintentar).toHaveBeenCalledWith(ID, 'error_transportadora');
+      expect(r.ok, resultado).toBe(ok);
+      expect(llamadas.some((l) => l.clave === 'order_events.insert'), resultado).toBe(registra);
+      expect(r.mensaje.length).toBeGreaterThan(10);
+    }
+  });
+
+  it('si Redis falla da un mensaje genérico', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('pagado') } });
+    const r = await reintentarEnvioBd({
+      cliente,
+      ...comun,
+      orderId: ID,
+      reintentar: async () => {
+        throw new Error('ECONNREFUSED 10.0.0.1:6379');
+      },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.mensaje).not.toContain('ECONNREFUSED');
+  });
+});
+
+describe('reimprimirEtiquetaBd', () => {
+  it('crea el trabajo con requested_by del administrador (nunca auto)', async () => {
+    const { cliente, llamadas } = clienteFalso({
+      'orders.select': { data: pedido('en_preparacion') },
+      'shipments.select': { data: envio({ label_local_path: 'labels/IZ-CO-000123.pdf' }) },
+      'print_jobs.select': { data: [] },
+      'print_jobs.insert': { data: null },
+    });
+    const r = await reimprimirEtiquetaBd({ cliente, ...comun, orderId: ID });
+    expect(r.ok).toBe(true);
+    const fila = llamadas.find((l) => l.clave === 'print_jobs.insert')!.args[0] as Record<string, unknown>;
+    expect(fila).toMatchObject({ order_id: ID, shipment_id: 's1', type: 'label', status: 'queued', requested_by: 'admin:u1' });
+    expect(fila.requested_by).not.toBe('auto');
+    expect(auditar.mock.calls[0]![0]).toMatchObject({ accion: 'pedido.etiqueta_reimpresa' });
+  });
+
+  it('sin etiqueta descargada o con otra impresión en cola no crea nada', async () => {
+    const sinEtiqueta = clienteFalso({
+      'orders.select': { data: pedido('en_preparacion') },
+      'shipments.select': { data: envio({ label_local_path: null }) },
+    });
+    expect((await reimprimirEtiquetaBd({ cliente: sinEtiqueta.cliente, ...comun, orderId: ID })).ok).toBe(false);
+    expect(sinEtiqueta.llamadas.some((l) => l.clave === 'print_jobs.insert')).toBe(false);
+
+    const enCola = clienteFalso({
+      'orders.select': { data: pedido('en_preparacion') },
+      'shipments.select': { data: envio({ label_local_path: 'labels/x.pdf' }) },
+      'print_jobs.select': { data: [{ id: 'j1' }] },
+    });
+    const r = await reimprimirEtiquetaBd({ cliente: enCola.cliente, ...comun, orderId: ID });
+    expect(r.ok).toBe(false);
+    expect(enCola.llamadas.some((l) => l.clave === 'print_jobs.insert')).toBe(false);
+  });
+
+  it('un pedido sin envío no se reimprime', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('pagado') }, 'shipments.select': { data: null } });
+    expect((await reimprimirEtiquetaBd({ cliente, ...comun, orderId: ID })).ok).toBe(false);
+  });
+});

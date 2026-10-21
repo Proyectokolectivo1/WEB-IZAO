@@ -1,15 +1,25 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ESTADOS_REINTENTO_ENVIO } from '@izao/mastershop';
+import { isOrderStatus, puedeTransicionar } from '@izao/core/order-state';
+import { AccionConTexto, AccionSimple, FormularioNota } from '@/components/admin/AccionesPedido';
 import { BotonesCobro } from '@/components/admin/BotonesCobro';
 import { evaluarCobro } from '@/lib/admin/pedidos/cobro';
 import { dinero, obtenerDetallePedido } from '@/lib/admin/pedidos/detalle-servidor';
-import { ETIQUETA_ESTADO_PEDIDO, ETIQUETA_EVENTO, ETIQUETA_MENSAJE, ETIQUETA_METODO_PAGO } from '@/lib/admin/pedidos/etiquetas';
+import {
+  ETIQUETA_ESTADO_PEDIDO,
+  ETIQUETA_EVENTO,
+  ETIQUETA_IMPRESION,
+  ETIQUETA_MENSAJE,
+  ETIQUETA_METODO_PAGO,
+  ETIQUETA_TIPO_IMPRESION,
+} from '@/lib/admin/pedidos/etiquetas';
 import { ETIQUETA_CLAVE, type ClavePlantilla } from '@/lib/admin/whatsapp/etiquetas';
 import { requerirAdmin } from '@/lib/auth/guard';
 import { puede } from '@/lib/auth/permissions';
 import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
-import { copiarLinkCobro, reenviarCobro } from '../acciones';
+import { agregarNota, cancelarPedido, copiarLinkCobro, marcarPagado, reenviarCobro, reimprimirEtiqueta, reintentarEnvio } from '../acciones';
 
 export const metadata: Metadata = { title: 'Detalle del pedido' };
 
@@ -40,6 +50,16 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
   );
   const veCobro = p.payment_method === 'cod' && (puede(admin.rol, 'pedidos.copiar_link_cobro') || puede(admin.rol, 'pedidos.reenviar_cobro'));
 
+  // Qué acciones aplican según el estado (la regla real la vuelve a comprobar el servidor) y el permiso del rol.
+  const puedeCancelar = puede(admin.rol, 'pedidos.cancelar') && isOrderStatus(p.status) && puedeTransicionar(p.status, 'cancelado');
+  const puedeMarcarPagado = puede(admin.rol, 'pedidos.marcar_pagado') && p.status === 'pendiente_manual';
+  const puedeReintentar = puede(admin.rol, 'pedidos.reintentar_envio');
+  const reintentoValido = ESTADOS_REINTENTO_ENVIO.has(p.status);
+  const puedeReimprimir = puede(admin.rol, 'pedidos.reimprimir');
+  const hayEtiqueta = d.envio?.etiqueta_lista === true;
+  const whatsappFallo = d.mensajes.some((m) => m.status === 'failed');
+  const notas = d.eventos.filter((e) => e.type === 'nota_interna' && e.nota);
+
   return (
     <>
       <p className="adm-migas">
@@ -48,10 +68,82 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
       <div className="adm-cabecera">
         <h1>Pedido {p.number}</h1>
         <span className="adm-insignia">{ETIQUETA_ESTADO_PEDIDO[p.status] ?? p.status}</span>
+        {d.envio?.has_novelty ? <span className="adm-insignia adm-insignia-aviso">Novedad</span> : null}
+        {p.status === 'error_transportadora' ? <span className="adm-insignia adm-insignia-aviso">Error transportadora</span> : null}
+        {whatsappFallo ? <span className="adm-insignia adm-insignia-aviso">WhatsApp falló</span> : null}
       </div>
       <p className="adm-suave">
         {p.country_code} · {ETIQUETA_METODO_PAGO[p.payment_method] ?? p.payment_method} · creado {fecha.format(new Date(p.created_at))}
       </p>
+
+      <section className="adm-form-ancho" aria-labelledby="h-acciones">
+        <h2 id="h-acciones">Acciones</h2>
+        <div className="adm-acciones">
+          {puedeReintentar ? (
+            <AccionSimple
+              etiqueta="Reintentar envío a MasterShop"
+              accion={reintentarEnvio.bind(null, p.id)}
+              deshabilitada={!reintentoValido}
+              motivo="Solo disponible con el pedido pagado, con abono pagado o con error de transportadora."
+            />
+          ) : null}
+          {puedeReimprimir ? (
+            <AccionSimple
+              etiqueta="Reimprimir etiqueta"
+              accion={reimprimirEtiqueta.bind(null, p.id)}
+              deshabilitada={!hayEtiqueta}
+              motivo="La etiqueta todavía no está disponible."
+            />
+          ) : null}
+        </div>
+        {puedeMarcarPagado ? (
+          <AccionConTexto
+            etiqueta="Marcar como pagado"
+            advertencia="Confirma que recibiste el dinero de este pedido. Se descuenta el stock y el pedido pasa a envío. No se puede deshacer."
+            etiquetaCampo="Referencia del pago (transferencia, recibo)"
+            etiquetaConfirmar="Sí, marcar como pagado"
+            maximo={200}
+            accion={marcarPagado.bind(null, p.id)}
+          />
+        ) : null}
+        {puedeCancelar ? (
+          <AccionConTexto
+            etiqueta="Cancelar pedido"
+            advertencia="El pedido pasa a Cancelado y se libera el stock reservado. Si el envío está creado en MasterShop, también se cancela allá. No se puede deshacer."
+            etiquetaCampo="Motivo de la cancelación"
+            etiquetaConfirmar="Sí, cancelar el pedido"
+            peligro
+            accion={cancelarPedido.bind(null, p.id)}
+          />
+        ) : null}
+        {!puede(admin.rol, 'pedidos.cancelar') ? (
+          <p className="adm-suave adm-chico">Cancelar y marcar como pagado los hace un administrador.</p>
+        ) : null}
+      </section>
+
+      {d.envio ? (
+        <section className="adm-form-ancho" aria-labelledby="h-envio">
+          <h2 id="h-envio">Envío</h2>
+          <p>
+            {d.envio.carrier_name ?? 'Transportadora por asignar'}
+            {d.envio.provider_status_name ? ` · ${d.envio.provider_status_name}` : ''}
+            {d.envio.tracking_code ? ` · guía ${d.envio.tracking_code}` : ''}
+          </p>
+          <p className="adm-suave adm-chico">Etiqueta {hayEtiqueta ? 'descargada' : 'aún no disponible'}.</p>
+          {d.impresiones.length > 0 ? (
+            <ul>
+              {d.impresiones.map((i) => (
+                <li key={i.id}>
+                  {ETIQUETA_TIPO_IMPRESION[i.type] ?? i.type} · {ETIQUETA_IMPRESION[i.status] ?? i.status} ·{' '}
+                  {i.requested_by === 'auto' ? 'automática' : 'reimpresión del panel'}
+                  <span className="adm-suave adm-chico"> {fecha.format(new Date(i.created_at))}</span>
+                  {i.status === 'failed' && i.error ? <span className="adm-suave adm-chico"> · {i.error}</span> : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      ) : null}
 
       {veCobro ? (
         <section className="adm-form-ancho" aria-labelledby="h-cobro">
@@ -170,6 +262,24 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           </div>
         )}
       </section>
+
+      {puede(admin.rol, 'pedidos.nota') ? (
+        <section aria-labelledby="h-notas">
+          <h2 id="h-notas">Notas internas</h2>
+          {notas.length === 0 ? <p className="adm-vacio">Aún no hay notas. Escribe la primera.</p> : null}
+          <ul>
+            {notas.map((n) => (
+              <li key={n.id}>
+                {n.nota}{' '}
+                <span className="adm-suave adm-chico">
+                  {fecha.format(new Date(n.created_at))} · {n.actor.startsWith('admin:') ? 'panel' : n.actor}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <FormularioNota accion={agregarNota.bind(null, p.id)} />
+        </section>
+      ) : null}
 
       <section aria-labelledby="h-linea">
         <h2 id="h-linea">Línea de tiempo</h2>
