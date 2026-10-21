@@ -42,6 +42,7 @@ describe('permisos por acción (§24.3)', () => {
     'catalogo.gestionar',
     'catalogo.importar',
     'contenido.gestionar',
+    'whatsapp.plantillas',
   ];
 
   it('cancelar y marcar pagado son exclusivos del administrador', () => {
@@ -55,6 +56,7 @@ describe('permisos por acción (§24.3)', () => {
     for (const a of [
       'pedidos.ver',
       'pedidos.reenviar_cobro',
+      'pedidos.copiar_link_cobro',
       'pedidos.reintentar_envio',
       'pedidos.reimprimir',
       'pedidos.nota',
@@ -97,7 +99,7 @@ describe('navegación filtrada por rol', () => {
 
   it('el administrador ve los módulos que ya existen, no los futuros', () => {
     const ids = modulosVisibles('admin').map((m) => m.id);
-    expect(ids).toEqual(['inicio', 'pedidos', 'garantias', 'agente', 'productos', 'categorias', 'catalogo_auxiliar', 'colecciones', 'contenido']);
+    expect(ids).toEqual(['inicio', 'pedidos', 'garantias', 'agente', 'productos', 'categorias', 'catalogo_auxiliar', 'colecciones', 'contenido', 'whatsapp']);
     expect(ids).not.toContain('usuarios');
   });
 

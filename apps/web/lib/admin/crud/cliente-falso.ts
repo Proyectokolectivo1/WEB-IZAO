@@ -41,7 +41,7 @@ export function clienteFalso(respuestas: Record<string, RespuestaOLista>) {
           return b;
         };
       }
-      for (const m of ['eq', 'neq', 'in', 'order', 'range', 'ilike', 'limit', 'is', 'not']) b[m] = () => b;
+      for (const m of ['eq', 'neq', 'in', 'order', 'range', 'ilike', 'limit', 'is', 'not', 'gte']) b[m] = () => b;
       b.maybeSingle = async () => resolver();
       b.single = async () => resolver();
       b.then = (ok: (v: unknown) => unknown, ko?: (e: unknown) => unknown) =>

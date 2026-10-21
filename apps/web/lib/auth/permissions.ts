@@ -111,7 +111,7 @@ export const MODULOS = {
     etiqueta: 'WhatsApp',
     ruta: '/admin/whatsapp',
     roles: SOLO_ADMIN,
-    disponible: false,
+    disponible: true,
   },
   pagos: {
     etiqueta: 'Pagos y países',
@@ -149,6 +149,8 @@ export type ModuloId = keyof typeof MODULOS;
 export const ACCIONES = {
   'pedidos.ver': TODOS,
   'pedidos.reenviar_cobro': TODOS,
+  /** Copiar el link de cobro del abono (`/pagar/{token}`) desde el detalle del pedido (§13.3, §24.1). */
+  'pedidos.copiar_link_cobro': TODOS,
   'pedidos.reintentar_envio': TODOS,
   'pedidos.reimprimir': TODOS,
   'pedidos.nota': TODOS,
@@ -167,6 +169,8 @@ export const ACCIONES = {
   'catalogo.importar': SOLO_ADMIN,
   /** Crear, editar, publicar y eliminar páginas y políticas del sitio (§9.5). */
   'contenido.gestionar': SOLO_ADMIN,
+  /** Editar, versionar y enviar a aprobación las plantillas de WhatsApp (§13.2). */
+  'whatsapp.plantillas': SOLO_ADMIN,
 } as const satisfies Record<string, readonly Rol[]>;
 
 export type AccionId = keyof typeof ACCIONES;
