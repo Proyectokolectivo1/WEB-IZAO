@@ -35,6 +35,9 @@ importers:
       '@izao/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@izao/mastershop':
+        specifier: workspace:*
+        version: link:../../packages/integrations/mastershop
       '@izao/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -114,6 +117,9 @@ importers:
       '@izao/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@izao/mastershop':
+        specifier: workspace:*
+        version: link:../../packages/integrations/mastershop
       '@izao/whatsapp':
         specifier: workspace:*
         version: link:../../packages/integrations/whatsapp

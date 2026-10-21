@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@izao/core": "workspace:*",
+    "@izao/mastershop": "workspace:*",
     "@izao/whatsapp": "workspace:*",
     "@izao/wompi": "workspace:*",
     "bullmq": "^5.58.0",
