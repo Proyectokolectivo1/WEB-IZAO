@@ -288,7 +288,8 @@ export class MasterShopMock {
       const guide = decodeURIComponent(url.pathname.replace(/^\/|\.pdf$/g, ''));
       const known = [...this.orders.values()].some((o) => o.guide === guide);
       if (!known) return new Response('No encontrado', { status: 404 });
-      return new Response(mockLabelPdf(guide), { status: 200, headers: { 'content-type': 'application/pdf' } });
+      const pdf = mockLabelPdf(guide);
+      return new Response(pdf.buffer.slice(pdf.byteOffset, pdf.byteOffset + pdf.byteLength) as ArrayBuffer, { status: 200, headers: { 'content-type': 'application/pdf' } });
     }
     const body = request.method === 'GET' ? null : await request.text();
     const headers: Record<string, string> = {};

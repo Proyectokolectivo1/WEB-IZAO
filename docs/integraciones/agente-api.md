@@ -97,6 +97,6 @@ Respuesta `200`: `{ "ok": true, "duplicado": false }`.
 
 ## Pendientes conocidos
 
-- `print_agents.remote_config jsonb` (izao-db) para `print`/`panel`/intervalos editables desde el panel; mientras no exista se devuelven los valores por defecto.
+- `print_agents.remote_config` (jsonb, objeto) ya existe: el panel debe permitir editar `print`, `panel` e `intervals`; con `{}` se devuelven los valores por defecto.
 - Lista de empaque (`packing_list`) generada por el servidor.
 - Alerta de agente sin heartbeat > 5 min (job del worker + aviso rojo en el panel).

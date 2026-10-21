@@ -40,11 +40,16 @@ const disponibles = (vencidoAntes: Date) => `status.eq.queued,and(status.eq.clai
 
 export function fuenteAgenteSupabase(): FuenteAgente {
   const db = () => clienteDb();
-  // Columnas que aún no están en los tipos generados (`remote_config`) se leen con `*`.
+  // Embebidos (`orders(number)`) y actualizaciones parciales se tipan a mano con `Fila`.
   const tabla = (t: string) => db().from(t as never) as unknown as ReturnType<ReturnType<typeof clienteDb>['from']>;
   return {
     async agentePorHash(hash) {
-      const { data, error } = await tabla('print_agents').select('*').eq('token_hash', hash).eq('is_active', true).maybeSingle();
+      const { data, error } = await db()
+        .from('print_agents')
+        .select('id,name,mode,remote_config')
+        .eq('token_hash', hash)
+        .eq('is_active', true)
+        .maybeSingle();
       if (error) fallo('print_agents', error);
       if (!data) return null;
       const r = data as Fila;

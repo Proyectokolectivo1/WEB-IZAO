@@ -27,7 +27,7 @@ export interface AgenteFila {
   id: string;
   name: string;
   mode: 'api' | 'panel';
-  /** `print_agents.remote_config` cuando exista (pendiente de izao-db); `{}` mientras tanto. */
+  /** `print_agents.remote_config` (objeto jsonb; `{}` = valores por defecto). */
   remote_config: Record<string, unknown>;
 }
 
