@@ -1,0 +1,49 @@
+# Configuración del Agente de Impresión de Izao
+# Guarde este archivo como "config.yaml" (el instalador lo hace por usted).
+# Regla de oro: respete los espacios del inicio de cada línea y no borre los dos puntos.
+# Todo lo que empieza con # es un comentario y se ignora.
+
+# Dirección de la tienda. Debe empezar por https://
+server_url: https://izaoperfumeria.com
+
+# Nombre EXACTO de la impresora de etiquetas, tal como aparece en
+# Windows > Configuración > Impresoras y escáneres. Se escribe entre comillas.
+printer: "Zebra ZD220"
+
+# Cuántas copias de cada guía. Casi siempre 1.
+copies: 1
+
+# Ajustes de SumatraPDF para -print-settings (separados por comas):
+#   noscale  = tamaño real, sin ajustar          fit = ajustar al papel
+#   shrink   = solo reducir si no cabe           paper=A6 = tamaño de papel
+#   landscape / portrait = girar el contenido    monochrome / color
+# Si el panel de la tienda define ajustes de impresión, esos mandan sobre estos.
+print_settings: "noscale"
+
+# Ruta de SumatraPDF.exe. Vacío = el que está junto a izao-agent.exe (lo normal).
+sumatra_path: ""
+
+# Segundos máximos que se espera a SumatraPDF por cada intento.
+print_timeout_seconds: 60
+
+# Intentos de impresión por guía antes de marcarla como fallida.
+max_print_attempts: 3
+
+# Minutos que se espera a que la impresora vuelva antes de dar la guía por fallida.
+printer_wait_minutes: 30
+
+# Días que se conservan los PDF de las guías en este PC.
+keep_labels_days: 30
+
+# Navegador del modo panel (respaldo). Casi siempre "chrome".
+chrome_channel: chrome
+
+# Cuánto detalle guardar en el archivo de registro: INFO (normal) o DEBUG (para soporte).
+log_level: INFO
+
+# Los tiempos de revisión salen del panel de la tienda. Estos valores solo se usan
+# si el servidor no responde (en segundos).
+intervals:
+  heartbeat_seconds: 30
+  claim_seconds: 10
+  panel_retry_seconds: 300

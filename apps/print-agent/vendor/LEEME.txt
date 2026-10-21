@@ -1,0 +1,2 @@
+Coloque aqui SumatraPDF.exe (version portable de 64 bits, del sitio oficial https://www.sumatrapdfreader.org/download-free-pdf-viewer).
+Verifique la huella publicada antes de usarlo. scriptsuild.ps1 lo incluye en el paquete. No se sube a git.
