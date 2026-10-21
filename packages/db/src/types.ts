@@ -1002,6 +1002,10 @@ export type Database = {
           carrier_auto_confirm: boolean
           carrier_discount_mode: string
           carrier_provider: string | null
+          carrier_wallet_balance: number | null
+          carrier_wallet_balance_at: string | null
+          carrier_wallet_low_alert_at: string | null
+          carrier_wallet_low_balance: number | null
           cod_deposit_amount: number
           cod_enabled: boolean
           cod_link_ttl_hours: number
@@ -1027,6 +1031,10 @@ export type Database = {
           carrier_auto_confirm?: boolean
           carrier_discount_mode?: string
           carrier_provider?: string | null
+          carrier_wallet_balance?: number | null
+          carrier_wallet_balance_at?: string | null
+          carrier_wallet_low_alert_at?: string | null
+          carrier_wallet_low_balance?: number | null
           cod_deposit_amount?: number
           cod_enabled?: boolean
           cod_link_ttl_hours?: number
@@ -1052,6 +1060,10 @@ export type Database = {
           carrier_auto_confirm?: boolean
           carrier_discount_mode?: string
           carrier_provider?: string | null
+          carrier_wallet_balance?: number | null
+          carrier_wallet_balance_at?: string | null
+          carrier_wallet_low_alert_at?: string | null
+          carrier_wallet_low_balance?: number | null
           cod_deposit_amount?: number
           cod_enabled?: boolean
           cod_link_ttl_hours?: number
@@ -1729,6 +1741,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "integration_credentials_country_code_fkey"
+            columns: ["country_code"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      integration_webhooks: {
+        Row: {
+          country_code: string | null
+          created_at: string
+          environment: string
+          event_id: number
+          event_name: string
+          external_id: number
+          id: string
+          is_enabled: boolean
+          provider: string
+          registered_at: string
+          updated_at: string
+        }
+        Insert: {
+          country_code?: string | null
+          created_at?: string
+          environment: string
+          event_id: number
+          event_name: string
+          external_id: number
+          id?: string
+          is_enabled?: boolean
+          provider: string
+          registered_at?: string
+          updated_at?: string
+        }
+        Update: {
+          country_code?: string | null
+          created_at?: string
+          environment?: string
+          event_id?: number
+          event_name?: string
+          external_id?: number
+          id?: string
+          is_enabled?: boolean
+          provider?: string
+          registered_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_webhooks_country_code_fkey"
             columns: ["country_code"]
             isOneToOne: false
             referencedRelation: "countries"
@@ -2619,6 +2681,7 @@ export type Database = {
           mode: string
           name: string
           printer_name: string | null
+          remote_config: Json
           status_payload: Json
           token_hash: string
           updated_at: string
@@ -2632,6 +2695,7 @@ export type Database = {
           mode?: string
           name: string
           printer_name?: string | null
+          remote_config?: Json
           status_payload?: Json
           token_hash: string
           updated_at?: string
@@ -2645,6 +2709,7 @@ export type Database = {
           mode?: string
           name?: string
           printer_name?: string | null
+          remote_config?: Json
           status_payload?: Json
           token_hash?: string
           updated_at?: string

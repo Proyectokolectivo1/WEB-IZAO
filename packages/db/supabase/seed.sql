@@ -27,12 +27,12 @@ insert into public.country_settings (
   cod_reminder_offsets_minutes, cod_quiet_hours_start, cod_quiet_hours_end, financing_surcharge_pct,
   pending_payment_ttl_minutes, manual_order_ttl_hours, advisor_whatsapp, support_email,
   announcement_rotation_seconds, fx_rate_to_cop, carrier_provider, carrier_auto_confirm,
-  carrier_discount_mode, shipping_cost_estimate, hide_out_of_stock, cod_resend_max)
+  carrier_discount_mode, shipping_cost_estimate, hide_out_of_stock, cod_resend_max, carrier_wallet_low_balance)
 values
   ('CO', true, 10000, 20000, 24, '{180,720,1260}', '21:00', '07:00', '{"addi":10,"sistecredito":10}',
-   60, 24, null, null, 4, 1, 'mastershop', true, 'prorate', 0, false, 2),
+   60, 24, null, null, 4, 1, 'mastershop', true, 'prorate', 0, false, 2, 100000),
   ('EC', false, 0, 0, 24, '{180,720,1260}', '21:00', '07:00', '{}',
-   60, 24, null, null, 4, null, null, true, 'prorate', 0, false, 2)
+   60, 24, null, null, 4, null, null, true, 'prorate', 0, false, 2, null)
 on conflict (country_code) do nothing;
 
 -- Métodos de pago: desactivados hasta cargar credenciales. Comisión Wompi = referencia §12.2 (a confirmar con el contrato).

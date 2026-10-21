@@ -3,9 +3,9 @@
 ## Hecho
 - Oleadas 0-1 (f63d558). T2.7 8da6bc2, 343bfbe. T2.8 8f33a8c. Colección 08d0a46. Admin catálogo 373d18d. T2.9 490cf03.
 - `crear_pedido_checkout` 34cfe1f; 20261020213954 (0d237eb); 20261020214637 (cd24577). Espacios 20261020220958 + seed Parte 3.
-- Abono COD 20261020221412 (pgTAP 23). Seed de plantillas: espera al dueño. `activar_plantilla_whatsapp` 20261021011746 (b3f163d,
-  pgTAP 24 14/14). `pedidos_por_vencer` ya incluye `pago_rechazado → expirado` (20261019234041, A2, §16; pgTAP 14): sin cambio.
-- `country_settings.cod_resend_max` 20261021013019 (1b216c3, pgTAP 25 9/9). Índice etiqueta auto única 20261021013134 (pgTAP 26 8/8).
+- Abono COD 20261020221412 (pgTAP 23). `activar_plantilla_whatsapp` 20261021011746 (b3f163d, pgTAP 24). Seed plantillas: dueño.
+- `cod_resend_max` 20261021013019 (1b216c3, pgTAP 25). Etiqueta auto única 20261021013134 (pgTAP 26). D-027: 20261021015339
+  (pgTAP 27 28/28): `carrier_wallet_*` en country_settings (seed CO umbral 100000), `print_agents.remote_config`, `integration_webhooks`.
 
 ## Contratos vigentes (detalle en el commit de cada migración)
 - `crear_pedido_checkout(p jsonb)` → `{ok, estado:'creado'|'existente'|'rechazado', order|motivo}`; motivos: `idempotencia_conflicto`,
@@ -25,16 +25,16 @@
 - `activar_plantilla_whatsapp(p_id, p_meta_template_id?)` (service_role) → `{ok, estado:'activada'(+anterior_id/version|null)|
   'ya_activa'|'aprobada_sin_activar'(+activa_id/version), id, version}` | `{ok:false, motivo:'no_existe'|'datos_invalidos'}`.
 - `cod_resend_max` int ≥ 0 default 2. `print_jobs_etiqueta_auto_unica_key` (shipment_id) where label/auto/no cancelled → 23505.
+- `carrier_wallet_low_balance` bigint null ≥ 0, `_balance` bigint null, `_balance_at`/`_low_alert_at` timestamptz null.
+  `print_agents.remote_config` jsonb objeto default {}. `integration_webhooks` (provider, country_code, environment, event_id=idWebhook,
+  event_name, external_id=idProductWebhook bigint, is_enabled, registered_at); únicos (prov,país,entorno,evento) y (prov,entorno,external_id).
 
 ## Pendiente
-1. Rendimiento T2.7: explain (analyze, buffers) y p95 de 50 corridas por RPC.
-2. Cierre: pgTAP 01–22 remoto, advisors (solo INFO hoy), lint/typecheck/test.
+1. Rendimiento T2.7: explain (analyze, buffers) y p95 de 50 corridas por RPC. 2. Cierre: pgTAP 01–22 remoto, advisors (INFO).
 3. Concurrencia de `crear_pedido_checkout` con dos sesiones (tests/concurrencia/run.sh). store_*: solo si izao-tienda lo pide.
 
 ## Siguiente paso exacto
 Pendiente 1 (explain de las RPC del catálogo) salvo nueva tarea del líder.
 ## Notas
-- pgTAP por el MCP: aserciones → `insert into tap(l) select ...` (tabla temporal), sin begin/rollback, y terminar con
-  `do $$ begin raise exception 'RESUMEN %' ... $$` (el error deshace todo). Como anon: `set local role` en un `do`.
-- El MCP fija la versión al aplicar: nombrar el archivo con la de `list_migrations`. Tipos: `generate_typescript_types` guarda
-  el JSON en tool-results; escribir `types` a `packages/db/src/types.ts` con python.
+- pgTAP por el MCP: `insert into tap(l) select ...` (temp), sin begin/rollback, cierre `raise exception 'RESUMEN %'` (deshace todo).
+- Versión: la de `list_migrations`. Tipos: JSON de `generate_typescript_types` (tool-results) → `types` a `src/types.ts` con python.
