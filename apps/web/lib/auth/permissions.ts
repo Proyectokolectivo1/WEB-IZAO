@@ -117,7 +117,7 @@ export const MODULOS = {
     etiqueta: 'Pagos y países',
     ruta: '/admin/pagos',
     roles: SOLO_ADMIN,
-    disponible: false,
+    disponible: true,
   },
   integraciones: {
     etiqueta: 'Integraciones',

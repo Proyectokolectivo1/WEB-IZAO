@@ -27,6 +27,15 @@ export function invalidarContenido(paises: readonly Pais[] = PAISES): void {
   for (const p of paises) revalidateTag(`content:${p}`);
 }
 
+/**
+ * Invalida la configuración de pagos y países que lee la tienda (métodos de pago, abono, recargo: etiqueta
+ * `checkout-config`; anuncio y asesor: `content:{país}`).
+ */
+export function invalidarConfigPais(paises: readonly Pais[] = PAISES): void {
+  revalidateTag('checkout-config');
+  invalidarContenido(paises);
+}
+
 export type ErrorBd = { code?: string | undefined; message: string; details?: string | undefined };
 
 /**
