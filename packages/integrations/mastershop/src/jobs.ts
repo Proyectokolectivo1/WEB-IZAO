@@ -92,6 +92,33 @@ export async function encolarJobCarrier(
   return 'encolado';
 }
 
+/** Estados desde los que `carrier.create` actúa (igual que el worker): el botón "Reintentar" solo en estos. */
+export const ESTADOS_REINTENTO_ENVIO: ReadonlySet<string> = new Set(['pagado', 'abono_pagado', 'error_transportadora']);
+
+export type ResultadoReintentoEnvio = 'encolado' | 'ya_pendiente' | 'estado_invalido';
+
+/**
+ * Acción "Reintentar" del panel (§14.5 paso 1). Reinicia la serie de reintentos: `carrier.create` con
+ * `intento: 0` e id `carrier.create.{orderId}`. Los ids `.r{n}` (n = 1…5) son de la serie automática; si alguno
+ * de la serie sigue pendiente o activo no se encola otro (doble clic, o reintento ya programado). Un job anterior
+ * ya terminado se reemplaza (`encolarJobCarrier`). El worker vuelve a comprobar el estado y que no exista ya el
+ * pedido en MasterShop (`500` "La orden ya existe" → se consulta), así que repetirlo nunca duplica el envío.
+ */
+export async function reintentarCrearEnvio(
+  cola: ColaMinima,
+  orderId: string,
+  estadoActual: string,
+): Promise<ResultadoReintentoEnvio> {
+  if (!ESTADOS_REINTENTO_ENVIO.has(estadoActual)) return 'estado_invalido';
+  for (let n = 0; n <= CARRIER_CREATE_RETRY_DELAYS_MS.length; n++) {
+    const previo = await cola.getJob(jobIdCrear(orderId, n));
+    if (!previo) continue;
+    const estado = await previo.getState();
+    if (estado !== 'completed' && estado !== 'failed' && estado !== 'unknown') return 'ya_pendiente';
+  }
+  return encolarJobCarrier(cola, JOB_CARRIER_CREATE, { order_id: orderId, intento: 0 }, jobIdCrear(orderId));
+}
+
 function entero(v: unknown, min: number): v is number {
   return typeof v === 'number' && Number.isSafeInteger(v) && v >= min;
 }
