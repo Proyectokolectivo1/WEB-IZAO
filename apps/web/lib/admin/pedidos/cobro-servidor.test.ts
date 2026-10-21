@@ -109,16 +109,4 @@ describe('reenviarCobroBd', () => {
     expect(llamadas.some((l) => l.clave === 'order_events.insert')).toBe(false);
     expect(auditar).not.toHaveBeenCalled();
   });
-
-  it('devuelve el mensaje que explica un envío ya procesado', async () => {
-    const { cliente } = clienteFalso({
-      'orders.select': { data: pedido() },
-      'pay_links.select': { data: [link()] },
-      'order_events.select': { data: [] },
-      'order_events.insert': { data: null },
-    });
-    const r = await reenviarCobroBd({ cliente, orderId: ID, encolar: async () => 'ya_procesado', ...comun });
-    expect(r).toMatchObject({ ok: true, resultado: 'ya_procesado' });
-    expect(r.mensaje).toContain('ya se procesó');
-  });
 });

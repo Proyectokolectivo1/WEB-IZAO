@@ -1,22 +1,14 @@
 import 'server-only';
 /**
- * Productor de la cola `contraentrega` para el reenvío del cobro desde el panel (D-025). Usa el mismo nombre de
- * job y la misma clave de idempotencia que el checkout (`cod.iniciar.{pedido}`): el worker ya sabe procesarlo y
- * no duplica el link ni el mensaje de un mismo envío.
+ * Productor de la cola `contraentrega` para el reenvío del cobro desde el panel (D-025): job `cod.reenviar`.
  */
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
-import { COLA_COD, JOB_COD_INICIAR, jobIdCodIniciar, type DatosJobCodIniciar } from '@izao/whatsapp';
+import { COLA_COD, JOB_COD_REENVIAR, jobIdCodReenviar, type DatosJobCodReenviar } from '@izao/whatsapp';
 import type { ResultadoEncolado } from './cobro';
 
-export interface JobCobro {
-  isFailed(): Promise<boolean>;
-  isCompleted(): Promise<boolean>;
-  retry(): Promise<unknown>;
-}
 export interface ColaCobro {
-  getJob(id: string): Promise<JobCobro | undefined | null>;
-  add(nombre: string, datos: DatosJobCodIniciar, opciones: Record<string, unknown>): Promise<unknown>;
+  add(nombre: string, datos: DatosJobCodReenviar, opciones: Record<string, unknown>): Promise<unknown>;
 }
 
 let cola: Queue | null = null;
@@ -29,21 +21,22 @@ function colaDesdeEnv(): ColaCobro {
   return cola as unknown as ColaCobro;
 }
 
-export async function encolarCobro(orderId: string, q: ColaCobro = colaDesdeEnv()): Promise<ResultadoEncolado> {
-  const jobId = jobIdCodIniciar(orderId);
-  const previo = await q.getJob(jobId);
-  if (previo) {
-    if (await previo.isFailed()) {
-      await previo.retry();
-      return 'reintentado';
-    }
-    return (await previo.isCompleted()) ? 'ya_procesado' : 'en_curso';
-  }
+/**
+ * Encola un reenvío. Cada solicitud tiene su propio jobId (pedido + instante), así que un segundo reenvío es un
+ * job nuevo; repetir el mismo job (reintento de BullMQ) no duplica el mensaje porque el instante es su `scheduled_for`.
+ * El tope de reenvíos por pedido (`cod_resend_max`) lo aplica el worker.
+ */
+export async function encolarCobro(
+  orderId: string,
+  q: ColaCobro = colaDesdeEnv(),
+  ahora: () => Date = () => new Date(),
+): Promise<ResultadoEncolado> {
+  const solicitado = ahora();
   await q.add(
-    JOB_COD_INICIAR,
-    { order_id: orderId },
+    JOB_COD_REENVIAR,
+    { order_id: orderId, solicitado_en: solicitado.toISOString() },
     {
-      jobId,
+      jobId: jobIdCodReenviar(orderId, solicitado),
       attempts: 8,
       backoff: { type: 'exponential', delay: 15_000 },
       removeOnComplete: { age: 7 * 24 * 3600 },

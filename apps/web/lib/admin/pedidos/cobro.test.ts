@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { evaluarCobro, urlCobro } from './cobro';
-import { encolarCobro, type ColaCobro, type JobCobro } from './cola-cobro';
+import { encolarCobro, type ColaCobro } from './cola-cobro';
 
 const AHORA = new Date('2026-10-20T15:00:00Z');
 const futuro = new Date('2026-10-21T15:00:00Z');
@@ -43,42 +43,28 @@ describe('urlCobro', () => {
 
 describe('encolarCobro', () => {
   const ID = '11111111-1111-4111-8111-111111111111';
-  const cola = (job: Partial<Record<keyof JobCobro, boolean>> | null) => {
-    const retry = vi.fn(async () => undefined);
+  const T1 = new Date('2026-10-20T15:00:00.000Z');
+
+  it('agrega cod.reenviar con el instante de la solicitud y un jobId propio', async () => {
     const add = vi.fn(async () => undefined);
-    const q: ColaCobro = {
-      getJob: async () =>
-        job
-          ? { isFailed: async () => job.isFailed ?? false, isCompleted: async () => job.isCompleted ?? false, retry }
-          : undefined,
-      add,
-    };
-    return { q, retry, add };
-  };
-
-  it('sin job previo agrega cod.iniciar con la misma clave de idempotencia del checkout', async () => {
-    const { q, add } = cola(null);
-    expect(await encolarCobro(ID, q)).toBe('encolado');
-    expect(add).toHaveBeenCalledWith('cod.iniciar', { order_id: ID }, expect.objectContaining({ jobId: `cod.iniciar.${ID}`, attempts: 8 }));
+    const q: ColaCobro = { add };
+    expect(await encolarCobro(ID, q, () => T1)).toBe('encolado');
+    expect(add).toHaveBeenCalledWith(
+      'cod.reenviar',
+      { order_id: ID, solicitado_en: '2026-10-20T15:00:00.000Z' },
+      expect.objectContaining({ jobId: `cod.reenviar.${ID}.${T1.getTime()}`, attempts: 8 }),
+    );
   });
 
-  it('si el job falló lo reintenta; no agrega otro', async () => {
-    const { q, retry, add } = cola({ isFailed: true });
-    expect(await encolarCobro(ID, q)).toBe('reintentado');
-    expect(retry).toHaveBeenCalledTimes(1);
-    expect(add).not.toHaveBeenCalled();
-  });
-
-  it('si está en curso o ya terminó no duplica', async () => {
-    const a = cola({});
-    expect(await encolarCobro(ID, a.q)).toBe('en_curso');
-    const b = cola({ isCompleted: true });
-    expect(await encolarCobro(ID, b.q)).toBe('ya_procesado');
-    expect(a.add).not.toHaveBeenCalled();
-    expect(b.add).not.toHaveBeenCalled();
+  it('dos solicitudes en instantes distintos son jobs distintos', async () => {
+    const ids: string[] = [];
+    const q: ColaCobro = { add: async (_n, _d, o) => void ids.push(String(o.jobId)) };
+    await encolarCobro(ID, q, () => T1);
+    await encolarCobro(ID, q, () => new Date(T1.getTime() + 61_000));
+    expect(new Set(ids).size).toBe(2);
   });
 
   it('rechaza ids que no son UUID', async () => {
-    await expect(encolarCobro('no-uuid', cola(null).q)).rejects.toThrow(RangeError);
+    await expect(encolarCobro('no-uuid', { add: vi.fn() }, () => T1)).rejects.toThrow(RangeError);
   });
 });

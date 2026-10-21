@@ -10,7 +10,7 @@ const config: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, '../../'),
   poweredByHeader: false,
   // Paquetes del workspace que se publican como TypeScript.
-  transpilePackages: ['@izao/ui', '@izao/core', '@izao/wompi'],
+  transpilePackages: ['@izao/ui', '@izao/core', '@izao/wompi', '@izao/whatsapp'],
   // El lint corre aparte con `pnpm lint`.
   eslint: { ignoreDuringBuilds: true },
 };

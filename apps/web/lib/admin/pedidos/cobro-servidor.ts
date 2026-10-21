@@ -84,8 +84,8 @@ export async function linkCobroBd(args: Ctx & { orderId: string; origen: string 
 }
 
 /**
- * Pide al worker que reenvíe el cobro. Usa el mismo job y la misma clave de idempotencia que el inicio del
- * cobro, así que no crea otro link ni repite un mensaje ya enviado. Un segundo clic dentro del minuto se rechaza.
+ * Pide al worker que reenvíe el cobro (job `cod.reenviar`, mismo link si sigue vigente). Un segundo clic dentro
+ * del minuto se rechaza; el tope total de reenvíos por pedido lo aplica el worker.
  */
 export async function reenviarCobroBd(
   args: Ctx & { orderId: string; encolar: (orderId: string) => Promise<ResultadoEncolado> },

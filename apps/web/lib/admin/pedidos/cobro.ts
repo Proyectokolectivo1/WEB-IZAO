@@ -50,12 +50,8 @@ export function urlCobro(origen: string, token: string): string {
   return `${origen.replace(/\/+$/, '')}/pagar/${token}`;
 }
 
-export type ResultadoEncolado = 'encolado' | 'reintentado' | 'en_curso' | 'ya_procesado';
+export type ResultadoEncolado = 'encolado';
 
 export const MENSAJE_ENCOLADO: Record<ResultadoEncolado, string> = {
   encolado: 'Listo: el cobro quedó en cola y se enviará en unos segundos.',
-  reintentado: 'Listo: se reintenta el envío del cobro que había fallado.',
-  en_curso: 'El cobro ya está en proceso; se enviará en unos segundos.',
-  ya_procesado:
-    'El cobro de este pedido ya se procesó y el sistema no repite un mensaje ya enviado. Si el cliente no lo recibió, copia el link y envíaselo por otro medio.',
 };
