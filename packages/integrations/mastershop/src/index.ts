@@ -9,3 +9,5 @@ export * from './clock';
 export * from './client';
 export * from './credentials';
 export * from './adapter';
+export * from './jobs';
+export * from './webhook';

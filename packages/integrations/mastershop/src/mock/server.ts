@@ -65,6 +65,17 @@ export interface MasterShopMockOptions {
   /** `[VERIFICAR]`: si MasterShop acepta `additional_charge` negativo (modo A). */
   acceptNegativeCharges?: boolean;
   firstOrderId?: number;
+  /** Modo simulado del worker: al confirmar (1→2) adjunta guía y etiqueta al instante. */
+  autoLabelOnConfirm?: boolean;
+}
+
+/** Host de las etiquetas simuladas; `mock.fetch` sirve ahí un PDF mínimo sin pedir la llave. */
+export const MOCK_LABEL_HOST = 'labels.example.com';
+
+/** PDF mínimo válido (cabecera `%PDF-`) para las etiquetas simuladas. */
+export function mockLabelPdf(guide: string): Uint8Array {
+  const text = `%PDF-1.4\n% Etiqueta simulada ${guide}\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n`;
+  return new TextEncoder().encode(text);
 }
 
 const ADDRESS_KEYS = [
@@ -218,7 +229,7 @@ export class MasterShopMock {
     o.carrierTrackingCode = guide;
     o.carrierName = 'Transportadora';
     o.orderTracking = `https://rastreo.example.com/${guide}`;
-    o.shippingLabel = `https://labels.example.com/${guide}.pdf`;
+    o.shippingLabel = `https://${MOCK_LABEL_HOST}/${guide}.pdf`;
   }
 
   countRequests(method: string, pathPrefix: string): number {
@@ -230,6 +241,12 @@ export class MasterShopMock {
   private async handle(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const now = this.options.clock.now();
+    if (url.hostname === MOCK_LABEL_HOST && request.method === 'GET') {
+      const guide = decodeURIComponent(url.pathname.replace(/^\/|\.pdf$/g, ''));
+      const known = [...this.orders.values()].some((o) => o.guide === guide);
+      if (!known) return new Response('No encontrado', { status: 404 });
+      return new Response(mockLabelPdf(guide), { status: 200, headers: { 'content-type': 'application/pdf' } });
+    }
     const body = request.method === 'GET' ? null : await request.text();
     const headers: Record<string, string> = {};
     request.headers.forEach((v, k) => (headers[k] = v));
@@ -672,6 +689,9 @@ export class MasterShopMock {
         (order.statusId === 1 && (to === 2 || to === 9)) || (order.statusId === 2 && to === 9);
       if (!allowed) return this.json(409, MS_ERRORS.notEditable, headers);
       order.statusId = to;
+      if (to === 2 && this.options.autoLabelOnConfirm && order.shippingLabel === null) {
+        this.attachLabel(order.idOrder, `MOCK${order.idOrder}`);
+      }
     }
     return this.json(
       200,
