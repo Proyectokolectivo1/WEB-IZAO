@@ -1,16 +1,24 @@
 import { writeFileSync } from 'node:fs';
 import type { Worker } from 'bullmq';
-import { cancelarJobsCod, crearProcesadorCod, programadorCod } from './jobs/cod/index.js';
+import { cancelarJobsCod, crearProcesadorCod, dependenciasCodDesdeEnv, programadorCod } from './jobs/cod/index.js';
+import { barrerPedidos, dependenciasBarridoDesdeEnv, JOB_BARRIDO_PEDIDOS } from './jobs/cod/barrido.js';
+import { crearProcesadorWhatsApp, dependenciasWhatsAppDesdeEnv } from './jobs/whatsapp/evento.js';
 import { crearProcesadorPagos, dependenciasPagosDesdeEnv } from './jobs/payments/index.js';
 import { registrarCron } from './cron.js';
-import { createConnection, createQueue, createWorker, procesarSistema, QUEUE_NAMES } from './queues.js';
+import { createConnection, createQueue, createWorker, crearProcesadorSistema, QUEUE_NAMES } from './queues.js';
 
 async function main(): Promise<void> {
   const connection = createConnection();
   const cola = createQueue(QUEUE_NAMES.sistema, connection);
-  const worker = createWorker(QUEUE_NAMES.sistema, procesarSistema, connection);
-
   const colaCod = createQueue(QUEUE_NAMES.contraentrega, connection);
+  const worker = createWorker(
+    QUEUE_NAMES.sistema,
+    crearProcesadorSistema({
+      [JOB_BARRIDO_PEDIDOS]: async () =>
+        barrerPedidos(dependenciasBarridoDesdeEnv(colaCod, (id) => cancelarJobsCod(colaCod, id))),
+    }),
+    connection,
+  );
   const workerPagos = createWorker(
     QUEUE_NAMES.pagos,
     crearProcesadorPagos(
@@ -25,21 +33,14 @@ async function main(): Promise<void> {
     connection,
   );
 
-  // Registro condicionado: las dependencias de COD y el job `whatsapp.evento` los termina izao-pagos.
-  // Hasta que existan sus exportaciones, la cola se crea (los productores ya encolan) pero sin consumidor.
   const trabajadores: Worker[] = [worker, workerPagos];
-  const modCod = (await import('./jobs/cod/index.js')) as Record<string, unknown>;
-  if (typeof modCod.dependenciasCodDesdeEnv === 'function') {
-    const deps = (modCod.dependenciasCodDesdeEnv as (programar: ReturnType<typeof programadorCod>) => Parameters<typeof crearProcesadorCod>[0])(
-      programadorCod(colaCod),
-    );
-    trabajadores.push(createWorker(QUEUE_NAMES.contraentrega, crearProcesadorCod(deps), connection));
-  } else {
-    console.warn('[worker] contraentrega sin consumidor: falta dependenciasCodDesdeEnv (izao-pagos)');
-  }
+  trabajadores.push(
+    createWorker(QUEUE_NAMES.contraentrega, crearProcesadorCod(dependenciasCodDesdeEnv(programadorCod(colaCod))), connection),
+  );
   const colaWhatsapp = createQueue(QUEUE_NAMES.whatsapp, connection);
-  // TODO(izao-pagos): al existir jobs/whatsapp/evento.ts, crear aquí createWorker(QUEUE_NAMES.whatsapp, …).
-  console.warn('[worker] whatsapp sin consumidor: falta jobs/whatsapp (izao-pagos)');
+  trabajadores.push(
+    createWorker(QUEUE_NAMES.whatsapp, crearProcesadorWhatsApp(dependenciasWhatsAppDesdeEnv()), connection),
+  );
 
   for (const w of trabajadores) {
     w.on('failed', (job, err) => {

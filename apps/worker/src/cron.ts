@@ -1,4 +1,5 @@
 import type { Queue } from 'bullmq';
+import { CRON_BARRIDO_PEDIDOS, JOB_BARRIDO_PEDIDOS } from './jobs/cod/barrido.js';
 import { JOB_PURGAR_AUDIT_LOG } from './jobs/purgar-audit-log.js';
 
 /**
@@ -16,5 +17,11 @@ export async function registrarCron(colaSistema: Queue): Promise<void> {
     JOB_PURGAR_AUDIT_LOG,
     { pattern: '30 3 * * *', tz: 'America/Bogota' },
     { name: JOB_PURGAR_AUDIT_LOG, data: {} },
+  );
+  // Barrido de pedidos vencidos, reservas huérfanas y contra entrega sin link (idempotente).
+  await colaSistema.upsertJobScheduler(
+    JOB_BARRIDO_PEDIDOS,
+    { pattern: CRON_BARRIDO_PEDIDOS, tz: 'America/Bogota' },
+    { name: JOB_BARRIDO_PEDIDOS, data: {} },
   );
 }

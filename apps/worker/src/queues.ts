@@ -31,18 +31,28 @@ export function createQueue(name: QueueName, connection: Redis): Queue {
   return new Queue(name, { connection, defaultJobOptions });
 }
 
+/** Manejadores adicionales de la cola de sistema, por nombre de job. */
+export type ManejadoresSistema = Record<string, Processor>;
+
 /** Procesador de la cola de sistema: cada job es idempotente. */
-export const procesarSistema: Processor = async (job) => {
-  switch (job.name) {
-    case JOB_PURGAR_AUDIT_LOG: {
-      const borrados = await purgarAuditLog();
-      console.log(`[worker] purgar_audit_log: ${borrados} eventos borrados`);
-      return { ok: true, job: job.name, borrados };
+export function crearProcesadorSistema(extra: ManejadoresSistema = {}): Processor {
+  return async (job, token) => {
+    switch (job.name) {
+      case JOB_PURGAR_AUDIT_LOG: {
+        const borrados = await purgarAuditLog();
+        console.log(`[worker] purgar_audit_log: ${borrados} eventos borrados`);
+        return { ok: true, job: job.name, borrados };
+      }
+      default: {
+        const manejador = extra[job.name];
+        if (manejador) return manejador(job, token);
+        return { ok: true, job: job.name };
+      }
     }
-    default:
-      return { ok: true, job: job.name };
-  }
-};
+  };
+}
+
+export const procesarSistema: Processor = crearProcesadorSistema();
 
 export function createWorker(name: QueueName, processor: Processor, connection: Redis): Worker {
   return new Worker(name, processor, { connection, concurrency: 5 });

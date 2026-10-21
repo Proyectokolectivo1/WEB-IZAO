@@ -13,3 +13,14 @@ describe('registrarCron', () => {
     expect(purga?.[2].name).toBe('purgar-audit-log');
   });
 });
+
+describe('registrarCron barrido', () => {
+  it('programa pedidos.barrido cada 5 minutos', async () => {
+    const upsertJobScheduler = vi.fn().mockResolvedValue(undefined);
+    await registrarCron({ upsertJobScheduler } as unknown as Queue);
+    const llamadas = upsertJobScheduler.mock.calls as [string, { pattern: string; tz: string }, { name: string }][];
+    const b = llamadas.find(([id]) => id === 'pedidos.barrido');
+    expect(b?.[1]).toEqual({ pattern: '*/5 * * * *', tz: 'America/Bogota' });
+    expect(b?.[2].name).toBe('pedidos.barrido');
+  });
+});
