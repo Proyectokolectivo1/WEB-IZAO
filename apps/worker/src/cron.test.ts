@@ -24,3 +24,17 @@ describe('registrarCron barrido', () => {
     expect(b?.[2].name).toBe('pedidos.barrido');
   });
 });
+
+describe('registrarCron MasterShop', () => {
+  it('programa polling cada 10 min y billetera al minuto 7 de cada hora, en Bogotá', async () => {
+    const upsertJobScheduler = vi.fn().mockResolvedValue(undefined);
+    await registrarCron({ upsertJobScheduler } as unknown as Queue);
+    const llamadas = upsertJobScheduler.mock.calls as [string, { pattern: string; tz: string }, { name: string }][];
+    const p = llamadas.find(([id]) => id === 'mastershop.polling');
+    const b = llamadas.find(([id]) => id === 'mastershop.billetera');
+    expect(p?.[1]).toEqual({ pattern: '*/10 * * * *', tz: 'America/Bogota' });
+    expect(b?.[1]).toEqual({ pattern: '7 * * * *', tz: 'America/Bogota' });
+    expect(p?.[2].name).toBe('mastershop.polling');
+    expect(b?.[2].name).toBe('mastershop.billetera');
+  });
+});

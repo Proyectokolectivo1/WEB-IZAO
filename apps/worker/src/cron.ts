@@ -1,5 +1,6 @@
 import type { Queue } from 'bullmq';
 import { CRON_BARRIDO_PEDIDOS, JOB_BARRIDO_PEDIDOS } from './jobs/cod/barrido.js';
+import { CRON_BILLETERA_MASTERSHOP, CRON_POLLING_MASTERSHOP, JOB_BILLETERA_MASTERSHOP, JOB_POLLING_MASTERSHOP } from './jobs/sync/index.js';
 import { JOB_PURGAR_AUDIT_LOG } from './jobs/purgar-audit-log.js';
 
 /**
@@ -24,5 +25,15 @@ export async function registrarCron(colaSistema: Queue): Promise<void> {
     { pattern: CRON_BARRIDO_PEDIDOS, tz: 'America/Bogota' },
     { name: JOB_BARRIDO_PEDIDOS, data: {} },
   );
-  // PENDIENTE(izao-logistica): polling de respaldo de MasterShop cada 10 min (*/10 * * * *) cuando exista jobs/sync.
+  // Respaldo de webhooks de MasterShop: polling cada 10 min y conciliación de billetera cada hora (minuto 7).
+  await colaSistema.upsertJobScheduler(
+    JOB_POLLING_MASTERSHOP,
+    { pattern: CRON_POLLING_MASTERSHOP, tz: 'America/Bogota' },
+    { name: JOB_POLLING_MASTERSHOP, data: {} },
+  );
+  await colaSistema.upsertJobScheduler(
+    JOB_BILLETERA_MASTERSHOP,
+    { pattern: CRON_BILLETERA_MASTERSHOP, tz: 'America/Bogota' },
+    { name: JOB_BILLETERA_MASTERSHOP, data: {} },
+  );
 }

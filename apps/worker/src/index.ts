@@ -10,6 +10,14 @@ import {
   encolarTransportadora,
   programadorCarrier,
 } from './jobs/carrier/index.js';
+import {
+  billeteraMasterShop,
+  dependenciasBilleteraDesdeEnv,
+  dependenciasPollingDesdeEnv,
+  JOB_BILLETERA_MASTERSHOP,
+  JOB_POLLING_MASTERSHOP,
+  pollingMasterShop,
+} from './jobs/sync/index.js';
 import { registrarCron } from './cron.js';
 import { createConnection, createQueue, createWorker, crearProcesadorSistema, QUEUE_NAMES } from './queues.js';
 
@@ -21,6 +29,8 @@ async function main(): Promise<void> {
   const worker = createWorker(
     QUEUE_NAMES.sistema,
     crearProcesadorSistema({
+      [JOB_POLLING_MASTERSHOP]: async () => pollingMasterShop(dependenciasPollingDesdeEnv(colaCarrier)),
+      [JOB_BILLETERA_MASTERSHOP]: async () => billeteraMasterShop(dependenciasBilleteraDesdeEnv()),
       [JOB_BARRIDO_PEDIDOS]: async () =>
         barrerPedidos(dependenciasBarridoDesdeEnv(colaCod, (id) => cancelarJobsCod(colaCod, id))),
     }),
