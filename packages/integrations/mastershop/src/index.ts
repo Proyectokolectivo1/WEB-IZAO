@@ -12,3 +12,4 @@ export * from './adapter';
 export * from './jobs';
 export * from './webhook';
 export * from './wallet';
+export * from './webhook-registro';

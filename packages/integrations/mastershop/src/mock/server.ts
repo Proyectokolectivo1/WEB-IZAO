@@ -55,7 +55,7 @@ export interface InjectedResponse {
   headers?: Record<string, string>;
 }
 
-type Route = 'create' | 'get' | 'list' | 'update' | 'products' | 'wallet';
+type Route = 'create' | 'get' | 'list' | 'update' | 'products' | 'wallet' | 'webhook_create' | 'webhook_update';
 
 /** Movimiento de billetera simulado (forma de la colección). */
 export interface MockMovement {
@@ -317,6 +317,8 @@ export class MasterShopMock {
     else if (/^\/api\/orders\/[^/]+$/.test(path) && request.method === 'PUT') route = 'update';
     else if (path === '/api/products' && request.method === 'GET') route = 'products';
     else if (path === '/api/wallets/movements/list' && request.method === 'POST') route = 'wallet';
+    else if (path === '/api/webhooks' && request.method === 'POST') route = 'webhook_create';
+    else if (path === '/api/webhooks' && request.method === 'PUT') route = 'webhook_update';
     if (route === null) return this.json(404, { error: 'Ruta no encontrada' }, rl.headers);
 
     const forced = this.injected.get(route)?.shift();
@@ -356,6 +358,12 @@ export class MasterShopMock {
         break;
       case 'wallet':
         response = this.wallet(url.searchParams, parsed, now, rl.headers);
+        break;
+      case 'webhook_create':
+        response = this.webhookCreate(parsed, rl.headers);
+        break;
+      case 'webhook_update':
+        response = this.webhookUpdate(parsed, rl.headers);
         break;
     }
     // PUT 502 que sí se aplicó: el cambio ocurrió pero la respuesta no lo confirma.
@@ -727,6 +735,53 @@ export class MasterShopMock {
         updatedAt: m.balanceMovementDate.toISOString(),
         withdrawnBalance: 0,
       })),
+      headers,
+    );
+  }
+
+  readonly webhooks = new Map<number, { idWebhook: number; url: string; isEnable: boolean }>();
+  private nextWebhookId = 6001;
+
+  /** `POST /api/webhooks`. Trampa: la respuesta repite la `ms-api-key` en `configWebhook.apiKey`. */
+  private webhookCreate(parsed: unknown, headers: Record<string, string>): Response {
+    const b = isObject(parsed) ? parsed : {};
+    const issues: { path: string; message: string }[] = [];
+    for (const k of ['name', 'url', 'webhookName', 'idWebhook', 'idProduct']) {
+      if (!(k in b)) issues.push({ path: k, message: 'Required' });
+    }
+    const letras = /^[\p{L} ]+$/u;
+    if (typeof b.name === 'string' && !letras.test(b.name)) issues.push({ path: 'name', message: 'Solo letras y espacios' });
+    if (typeof b.webhookName === 'string' && !letras.test(b.webhookName)) {
+      issues.push({ path: 'webhookName', message: 'Solo letras y espacios' });
+    }
+    const permitidos = [15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37];
+    if ('idWebhook' in b && !permitidos.includes(Number(b.idWebhook))) {
+      issues.push({ path: 'idWebhook', message: 'Invalid enum value' });
+    }
+    if (issues.length > 0) return this.badRequest(MS_ERRORS.invalidBody, issues, headers);
+    const id = this.nextWebhookId++;
+    this.webhooks.set(id, { idWebhook: Number(b.idWebhook), url: String(b.url), isEnable: true });
+    return this.json(
+      200,
+      {
+        configWebhook: { apiKey: this.options.apiKey, apiUrl: b.url, idConfigWebhook: 5000 + id, name: b.name },
+        productWebhook: { idBussiness: 3001, idProduct: null, idProductWebhook: id, idWebhook: Number(b.idWebhook), isEnable: 1 },
+      },
+      headers,
+    );
+  }
+
+  private webhookUpdate(parsed: unknown, headers: Record<string, string>): Response {
+    const b = isObject(parsed) ? parsed : {};
+    if (![0, 1, true, false].includes(b.isEnable as number | boolean)) {
+      return this.badRequest(MS_ERRORS.invalidBody, [{ path: 'isEnable', message: 'isEnable debe ser 0, 1, true o false' }], headers);
+    }
+    const w = this.webhooks.get(Number(b.idProductWebhook));
+    if (!w) return this.json(404, { data: null, error: 'Webhook no encontrado', success: false }, headers);
+    w.isEnable = b.isEnable === 1 || b.isEnable === true;
+    return this.json(
+      200,
+      [{ idBussiness: 3001, idProduct: null, idProductWebhook: Number(b.idProductWebhook), idWebhook: w.idWebhook, isEnable: w.isEnable }],
       headers,
     );
   }

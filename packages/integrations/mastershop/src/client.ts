@@ -132,6 +132,54 @@ export interface WalletMovementWarning {
   motivo: 'monto_invalido' | 'moneda_no_soportada';
 }
 
+const WebhookCreateSchema = z.looseObject({
+  productWebhook: z.looseObject({
+    idProductWebhook: idSchema,
+    idWebhook: idSchema,
+    isEnable: z.union([z.boolean(), z.number()]).nullish(),
+  }),
+});
+
+/** Eventos aceptados por `POST /api/webhooks` (colección, 2026-10-02). */
+export const MASTERSHOP_WEBHOOK_IDS: ReadonlySet<number> = new Set([
+  15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37,
+]);
+
+/**
+ * Suscripciones de Izao: "Cambio de estado del pedido" (16) y "Cambio de estado de la transportadora" (17).
+ * Los generales notifican desde el estado 2; la confirmación 1→2 la hace el propio servidor y el polling cubre
+ * el resto.
+ */
+export const IZAO_WEBHOOKS: readonly { idWebhook: number; webhookName: string }[] = Object.freeze([
+  { idWebhook: 16, webhookName: 'Cambio de estado del pedido' },
+  { idWebhook: 17, webhookName: 'Cambio de estado de la transportadora' },
+]);
+
+export interface WebhookRegistrado {
+  idProductWebhook: number;
+  idWebhook: number;
+  enabled: boolean;
+}
+
+const SOLO_LETRAS = /^[\p{L} ]{1,100}$/u;
+
+function validarWebhook(i: { name: string; webhookName: string; url: string; idWebhook: number }): void {
+  const problemas: string[] = [];
+  if (!SOLO_LETRAS.test(i.name)) problemas.push('name solo admite letras y espacios');
+  if (!SOLO_LETRAS.test(i.webhookName)) problemas.push('webhookName solo admite letras y espacios');
+  if (!MASTERSHOP_WEBHOOK_IDS.has(i.idWebhook)) problemas.push('idWebhook no es un evento de MasterShop');
+  let url: URL | null = null;
+  try {
+    url = new URL(i.url);
+  } catch {
+    url = null;
+  }
+  if (!url || url.protocol !== 'https:') problemas.push('url debe ser https');
+  if (problemas.length > 0) {
+    throw new MasterShopError({ kind: 'validacion', message: `Webhook inválido: ${problemas.join('; ')}.` });
+  }
+}
+
 export interface CreateOrderResult {
   idOrder: number;
   externalOrderId: string;
@@ -757,6 +805,45 @@ export class MasterShopClient {
       kind: 'respuesta_invalida',
       message: `La billetera de MasterShop superó ${this.maxPages} páginas.`,
     });
+  }
+
+  // -------------------------------------------------------------------------
+  // Webhooks
+  // -------------------------------------------------------------------------
+
+  /**
+   * `POST /api/webhooks` con `idProduct: null` (todos los productos). La respuesta de MasterShop incluye
+   * `configWebhook.apiKey` (la llave con la que se llamó): solo se extrae `productWebhook`, nunca se devuelve ni
+   * se registra el cuerpo. Guardar `idProductWebhook`: no hay forma de listarlo después.
+   */
+  async registerWebhook(input: {
+    name: string;
+    webhookName: string;
+    url: string;
+    idWebhook: number;
+  }): Promise<WebhookRegistrado> {
+    validarWebhook(input);
+    const res = await this.send('POST', '/api/webhooks', {
+      body: JSON.stringify({ ...input, idProduct: null }),
+    });
+    if (res.status !== 200 && res.status !== 201) throw this.fail(res, 'POST');
+    const r = this.parse(WebhookCreateSchema, res.data, 'registrar webhook');
+    return {
+      idProductWebhook: r.productWebhook.idProductWebhook,
+      idWebhook: r.productWebhook.idWebhook,
+      enabled: r.productWebhook.isEnable === true || r.productWebhook.isEnable === 1,
+    };
+  }
+
+  /** `PUT /api/webhooks`: habilita o deshabilita una suscripción ya creada. */
+  async setWebhookEnabled(idProductWebhook: number, enabled: boolean): Promise<void> {
+    if (!Number.isSafeInteger(idProductWebhook) || idProductWebhook <= 0) {
+      throw new MasterShopError({ kind: 'validacion', message: 'idProductWebhook debe ser un entero positivo.' });
+    }
+    const res = await this.send('PUT', '/api/webhooks', {
+      body: JSON.stringify({ idProductWebhook, idProduct: null, isEnable: enabled ? 1 : 0 }),
+    });
+    if (res.status !== 200) throw this.fail(res, 'PUT');
   }
 
   /** Prueba la llave con una lectura inocua (`GET /api/products`). */
