@@ -1,27 +1,34 @@
 # Bitácora de izao-logistica
 
 ## Hecho
-- Paquete `@izao/mastershop` sin red (antes de esta tarea): líneas, pedido, estados, cliente, adaptador, mock con trampas.
-- `1dc959b` contrato de la cola `carrier` (`src/jobs.ts`: `COLA_CARRIER='carrier'`, nombres, ids, `encolarJobCarrier`), lectura del webhook (`src/webhook.ts`), mock con etiqueta automática y PDF servido. Export `./test-utils`.
-- `20acdf2` worker `apps/worker/src/jobs/carrier/`: `carrier.create` (crear, guardar `shipments`, `enviado_transportadora`, confirmar, reintentos 30 s/2 min/10 min/30 min/2 h propios, `error_transportadora` + alerta), `carrier.poll_label` (cada 2 min, PDF a `MEDIA_ROOT/labels/`, `print_job`), `carrier.sync` (reconsulta y `planInternalTransition`), fuente PostgREST, modo `MASTERSHOP_MODO=simulado`. 27 pruebas contra el mock.
-- `607beec` web `POST /api/webhooks/mastershop/[secreto]` (secreto en tiempo constante, `webhook_events` idempotente sin datos del cliente, encola `carrier.sync`). 5 pruebas.
-- D-026 en `docs/DECISIONES.md`.
+- Antes: `@izao/mastershop` (líneas, pedido, estados, cliente, adaptador, mock), `1dc959b` contrato cola `carrier`, `20acdf2` jobs carrier, `607beec` webhook, D-026.
+- `c611a9f` 23505 de `print_jobs_etiqueta_auto_unica_key` = ya existe (prueba en `carrier/fuente-postgrest.test.ts`); pre-chequeo solo `requested_by=auto`.
+- `97c4dd5` billetera en el paquete (`wallet.ts`: decimales sin float, costos por pedido idempotentes, gastos, saldo, alerta) + mock con trampas (7 días, limit 50).
+- `76aa22d` worker `jobs/sync/`: `mastershop.polling` (45 días, paginado hasta vacío) y `mastershop.billetera` (3 días). 24 pruebas contra el mock.
+- `e29de8c` `reintentarCrearEnvio` (paquete) + `reintentarEnvioMasterShop(orderId, estado)` en `apps/web/app/api/webhooks/mastershop/cola.ts`.
+- `942d1ad` contrato `docs/integraciones/agente-api.md` v1; `242e6f1` API `/api/agent/*` (heartbeat, jobs/claim, jobs/{id}/label, jobs/{id}/result, config). 19 pruebas.
+- `9643c4d` `registerWebhook`/`setWebhookEnabled`/`registrarWebhooksIzao` (16 y 17; la respuesta repite la llave: se descarta).
+- `0b8b261` D-027. lint/typecheck/test verdes.
 
-## Para izao-infra (registro de la cola; no edito index.ts/queues.ts)
-- `queues.ts`: `QUEUE_NAMES.carrier = COLA_CARRIER` (import de `@izao/mastershop`).
-- `index.ts`: `const colaCarrier = createQueue(QUEUE_NAMES.carrier, connection)`; reemplazar el stub por `encolarTransportadora(colaCarrier)` (de `./jobs/carrier/index.js`); `createWorker(QUEUE_NAMES.carrier, crearProcesadorCarrier(dependenciasCarrierDesdeEnv(programadorCarrier(colaCarrier))), connection)`; cerrar `colaCarrier`.
-- Variables: `MEDIA_ROOT` (ya en compose), `MASTERSHOP_WEBHOOK_PATH_SECRET` en la web (≥ 32 caracteres; agregar a `.env.example`), `MASTERSHOP_MODO=simulado` opcional solo fuera de producción. El worker necesita escribir en `/srv/izao/media/labels`.
+## Para izao-infra (no edito cron.ts/index.ts)
+- `cron.ts`: `upsertJobScheduler(JOB_POLLING_MASTERSHOP, { pattern: CRON_POLLING_MASTERSHOP, tz: 'America/Bogota' }, { name: JOB_POLLING_MASTERSHOP, data: {} })` y lo mismo con `JOB_BILLETERA_MASTERSHOP`/`CRON_BILLETERA_MASTERSHOP` (`7 * * * *`). Import de `./jobs/sync/index.js`. Quitar el PENDIENTE.
+- `index.ts`, en `crearProcesadorSistema({...})`: `[JOB_POLLING_MASTERSHOP]: async () => pollingMasterShop(dependenciasPollingDesdeEnv(colaCarrier))`, `[JOB_BILLETERA_MASTERSHOP]: async () => billeteraMasterShop(dependenciasBilleteraDesdeEnv())`.
+- La web escribe en `MEDIA_ROOT/agent-screenshots/` (volumen media de la web, lectura/escritura) y lee `MEDIA_ROOT/labels/`.
+
+## Para izao-db
+- `country_settings`: `carrier_wallet_low_balance bigint null` (umbral; seed CO sugerido 100000 o null), `carrier_wallet_balance bigint null`, `carrier_wallet_balance_at timestamptz null`, `carrier_wallet_low_alert_at timestamptz null`.
+- `print_agents.remote_config jsonb not null default '{}'` (print/panel/intervals).
+- Dónde guardar los `idProductWebhook` (p. ej. `integration_settings` o columna en `integration_credentials`).
+
+## Para izao-admin
+- Botón "Reintentar": `reintentarEnvioMasterShop(orderId, order.status)` → `encolado | ya_pendiente | estado_invalido`; auditar.
+- Módulo Agente: token aleatorio ≥ 32 `[A-Za-z0-9_-]`, guardar `hashTokenAgente(token)` (`app/api/agent/_lib/contrato.ts`); reimpresión = nuevo `print_job` con `requested_by: 'admin:<id>'`; "página de prueba" = `type: 'test_page'`.
+- Registro de webhooks: `registrarWebhooksIzao(client, urlWebhookIzao(origen, secreto))`; nunca mostrar la URL (lleva el secreto).
 
 ## Pendiente
-- Polling de respaldo cada 10 min (`jobs/sync/`, `POST /api/orders/list` 45 días) → encolar `carrier.sync` con `origen: 'polling'`; necesita cron de izao-infra.
-- Job horario de billetera (costos reales, `expenses`).
-- Registro de webhooks desde el panel (`POST /api/webhooks`, `idWebhook` 16 y 17, guardar `idProductWebhook`) y botón "Reintentar" (usar `encolarJobCarrier` + `jobIdCrear` en la web) — con izao-admin.
-- API del agente `/api/agent/*` y `docs/integraciones/agente-api.md` (avisar a izao-agente-windows).
+- Canal de alertas al admin (saldo bajo, impresión fallida, agente sin heartbeat > 5 min). Lista de empaque (`packing_list`).
+- Avisar a izao-agente-windows del contrato v1 (no estaba disponible por mensaje).
 - Pedido real de prueba en producción: solo con aprobación explícita del dueño.
 
 ## Siguiente paso exacto
-Polling `jobs/sync/` con su prueba contra la ventana de 7 días y el límite 50 del mock.
-
-## Decisiones que necesitan al líder
-- izao-db: índice único parcial en `print_jobs (shipment_id) where type='label' and status<>'cancelled'` para cerrar la carrera entre `poll_label` y `sync` (hoy se comprueba antes de insertar).
-- Credenciales de MasterShop (`integration_credentials` mastershop/CO) y `MASTERSHOP_WEBHOOK_PATH_SECRET`: las carga el dueño.
+Tras las columnas de izao-db: prueba de `estadoSaldo`/`guardarSaldo` reales y job "agente sin heartbeat".
