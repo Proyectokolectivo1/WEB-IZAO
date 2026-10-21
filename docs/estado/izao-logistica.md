@@ -15,15 +15,12 @@
 - `index.ts`, en `crearProcesadorSistema({...})`: `[JOB_POLLING_MASTERSHOP]: async () => pollingMasterShop(dependenciasPollingDesdeEnv(colaCarrier))`, `[JOB_BILLETERA_MASTERSHOP]: async () => billeteraMasterShop(dependenciasBilleteraDesdeEnv())`.
 - La web escribe en `MEDIA_ROOT/agent-screenshots/` (volumen media de la web, lectura/escritura) y lee `MEDIA_ROOT/labels/`.
 
-## Para izao-db
-- `country_settings`: `carrier_wallet_low_balance bigint null` (umbral; seed CO sugerido 100000 o null), `carrier_wallet_balance bigint null`, `carrier_wallet_balance_at timestamptz null`, `carrier_wallet_low_alert_at timestamptz null`.
-- `print_agents.remote_config jsonb not null default '{}'` (print/panel/intervals).
-- Dónde guardar los `idProductWebhook` (p. ej. `integration_settings` o columna en `integration_credentials`).
+- `6513e22` webhooks guardados en `integration_webhooks` (izao-db `6b71294`); `remote_config` leído con columnas explícitas.
 
 ## Para izao-admin
 - Botón "Reintentar": `reintentarEnvioMasterShop(orderId, order.status)` → `encolado | ya_pendiente | estado_invalido`; auditar.
 - Módulo Agente: token aleatorio ≥ 32 `[A-Za-z0-9_-]`, guardar `hashTokenAgente(token)` (`app/api/agent/_lib/contrato.ts`); reimpresión = nuevo `print_job` con `requested_by: 'admin:<id>'`; "página de prueba" = `type: 'test_page'`.
-- Registro de webhooks: `registrarWebhooksIzao(client, urlWebhookIzao(origen, secreto))`; nunca mostrar la URL (lleva el secreto).
+- Registro de webhooks: `registrarWebhooksMasterShop(apiKey, ambiente)` de `app/api/webhooks/mastershop/registro.ts` (usa `SITE_URL` y el secreto; guarda en `integration_webhooks`; no repite los ya guardados).
 
 ## Pendiente
 - Canal de alertas al admin (saldo bajo, impresión fallida, agente sin heartbeat > 5 min). Lista de empaque (`packing_list`).
