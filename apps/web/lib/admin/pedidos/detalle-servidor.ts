@@ -6,6 +6,7 @@ import 'server-only';
 import { formatMoney, money, type CurrencyCode } from '@izao/core/money';
 import type { Cliente } from '../catalogo/taxonomias-servidor';
 import { escaparBusqueda, rangoPagina } from '../crud/comun';
+import { interpretarBusqueda, rangoFechasUtc, type FiltrosPedido } from './filtros';
 
 export type FilaPedidoLista = {
   id: string;
@@ -23,11 +24,17 @@ const COLUMNAS_LISTA = 'id, number, country_code, currency_code, status, payment
 
 export async function listarPedidos(
   cliente: Cliente,
-  f: { q: string; pagina: number; estado?: string | undefined },
+  f: Pick<FiltrosPedido, 'q' | 'pagina' | 'estado' | 'pais' | 'metodo' | 'desde' | 'hasta'>,
 ): Promise<{ filas: FilaPedidoLista[]; total: number }> {
   let consulta = cliente.from('orders').select(COLUMNAS_LISTA, { count: 'exact' });
-  if (f.q) consulta = consulta.ilike('number', `%${escaparBusqueda(f.q)}%`);
+  const busqueda = interpretarBusqueda(f.q);
+  if (busqueda) consulta = consulta.ilike(busqueda.campo, `%${escaparBusqueda(busqueda.patron)}%`);
   if (f.estado) consulta = consulta.eq('status', f.estado);
+  if (f.pais) consulta = consulta.eq('country_code', f.pais);
+  if (f.metodo) consulta = consulta.eq('payment_method', f.metodo);
+  const rango = rangoFechasUtc(f);
+  if (rango.desde) consulta = consulta.gte('created_at', rango.desde);
+  if (rango.hasta) consulta = consulta.lt('created_at', rango.hasta);
   const [desde, hasta] = rangoPagina(f.pagina);
   const { data, error, count } = await consulta.order('created_at', { ascending: false }).range(desde, hasta);
   if (error) throw new Error(`No se pudieron listar los pedidos: ${error.message}`);

@@ -17,6 +17,8 @@ export type RespuestaOLista = Respuesta | Respuesta[];
 export function clienteFalso(respuestas: Record<string, RespuestaOLista>) {
   const turnos = new Map<string, number>();
   const llamadas: { clave: string; args: unknown[] }[] = [];
+  /** Filtros encadenados (`eq`, `gte`…) en orden, para comprobar qué se consultó. */
+  const filtros: { tabla: string; metodo: string; args: unknown[] }[] = [];
   const cliente = {
     from(tabla: string) {
       let op = 'select';
@@ -41,7 +43,12 @@ export function clienteFalso(respuestas: Record<string, RespuestaOLista>) {
           return b;
         };
       }
-      for (const m of ['eq', 'neq', 'in', 'order', 'range', 'ilike', 'limit', 'is', 'not', 'gte']) b[m] = () => b;
+      for (const m of ['eq', 'neq', 'in', 'order', 'range', 'ilike', 'limit', 'is', 'not', 'gte', 'gt', 'lt', 'lte']) {
+        b[m] = (...args: unknown[]) => {
+          filtros.push({ tabla, metodo: m, args });
+          return b;
+        };
+      }
       b.maybeSingle = async () => resolver();
       b.single = async () => resolver();
       b.then = (ok: (v: unknown) => unknown, ko?: (e: unknown) => unknown) =>
@@ -49,5 +56,5 @@ export function clienteFalso(respuestas: Record<string, RespuestaOLista>) {
       return b;
     },
   };
-  return { cliente: cliente as unknown as Cliente, llamadas };
+  return { cliente: cliente as unknown as Cliente, llamadas, filtros };
 }

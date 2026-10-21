@@ -230,3 +230,16 @@
   border: 1px solid var(--adm-borde, #d6d3d1);
   padding: 0.375rem 0.5rem;
 }
+
+/* Pedidos: filtros y atajos de teclado */
+.adm-filtros .adm-campo {
+  flex: 1 1 11rem;
+}
+.adm-tabla a[data-fila-pedido]:focus-visible {
+  outline: 3px solid var(--adm-primario);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+.adm-tabla tr:has(a[data-fila-pedido]:focus) {
+  background: var(--adm-superficie-suave, rgba(0, 0, 0, 0.04));
+}
