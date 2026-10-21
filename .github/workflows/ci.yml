@@ -54,3 +54,25 @@ jobs:
           path: apps/web/tests/.resultados/
           if-no-files-found: ignore
           retention-days: 14
+
+  # Agente de impresión (Python): fuera de pnpm/turbo. Servidor falso y SumatraPDF falso:
+  # no imprime nada ni usa el token real. Solo corre si cambia el agente o el workflow.
+  agente-impresion:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/print-agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            apps/print-agent/requirements.txt
+            apps/print-agent/requirements-dev.txt
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pytest -q
+        env:
+          IZAO_AGENT_TOKEN: token-de-prueba-ci

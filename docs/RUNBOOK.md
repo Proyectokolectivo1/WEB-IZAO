@@ -109,6 +109,10 @@ Ejemplo de comparación local: `ls packages/db/supabase/migrations | sed 's/\.sq
 - **Límite de canjes por cliente (`claves_cliente`).** Identifica al cliente por documento, celular y correo normalizados con **SHA-256 sin sal** (`doc:`, `tel:`, `mail:` + valor). Sin sal, quien obtenga la tabla `discount_redemptions` podría confirmar por fuerza bruta si un documento, celular o correo concreto canjeó un código; la tabla solo la lee `service_role`, por eso hoy se acepta. Más adelante se evaluará reemplazarlo por **HMAC con una clave del servidor** (en `.env`, nunca en la base); cambiar el algoritmo invalida las claves ya guardadas y exigirá recalcular `customer_keys`. No se cambia ahora.
 - **Pago tardío con descuento.** `confirmar_canje` se llama cuando el cliente ya pagó: confirma sin revalidar vigencia ni cupo. Si con eso se supera `usage_limit_total` o el límite por cliente devuelve `{ok:true, advertencia:'limite_superado'}` y el worker debe alertar al administrador. La vigencia de un código termina cuando `now() >= ends_at`.
 
+## CI del agente de impresión
+
+Job `agente-impresion` en `.github/workflows/ci.yml` (runner `windows-2022`, Python 3.12, caché de pip). Corre `python -m pytest -q` en `apps/print-agent` con servidor y SumatraPDF falsos: no imprime y no usa el token real. En local: `cd apps\print-agent && .venv\Scripts\python -m pytest -q`.
+
 ## Tareas futuras
 
 - **B-n1 (antes de F1):** medir cuántos 429 produce la zona `izao_next_action` (60 por minuto por IP; todo POST con `Next-Action`). En Colombia muchos usuarios móviles comparten IP (CGNAT) y podrían saturarla durante el checkout. Revisar el log de Nginx (`limit_req`) con tráfico real y subir `rate`/`burst` si hace falta.

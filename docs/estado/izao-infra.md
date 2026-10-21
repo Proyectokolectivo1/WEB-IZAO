@@ -39,3 +39,6 @@ test-backup-restore, test-restore-guard, test-deploy-rollback, test-nginx (1.27/
 - `.env.example`: `MASTERSHOP_MODO` (solo dev/QA; bloqueado con NODE_ENV=production). `MASTERSHOP_WEBHOOK_PATH_SECRET` ya existía.
 - Pendiente: polling de respaldo cada 10 min en `cron.ts` (anotado) cuando izao-logistica entregue `jobs/sync`.
 - Worker: cableados mastershop.polling (*/10) y mastershop.billetera (7 * * * *) en cron.ts/index.ts (cola sistema), con prueba.
+
+## CI agente de impresión
+- Job `agente-impresion` (windows-2022, py3.12, caché pip) en ci.yml + sección en RUNBOOK. Sin ejecutar en Actions aún.
