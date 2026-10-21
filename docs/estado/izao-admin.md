@@ -2,23 +2,26 @@
 
 ## Hecho (hashes: `git log --grep "<tema>"`)
 - Oleada 0: login /admin con MFA, roles, bloqueo, cookie propia (D-018, D-020, D-021). T2.5 imágenes (`lib/admin/media/`).
-- T2.6 atributos, categorías, colecciones, productos (editor con variantes/imágenes), T2.7 importación CSV/Excel/ZIP, contenido/páginas, plantillas de WhatsApp (`/admin/whatsapp/plantillas`), pedidos lista/detalle con "Copiar link de cobro" y "Reenviar cobro" (`lib/admin/pedidos/*`).
-- Integraciones (commit "módulo Integraciones"): `/admin/integraciones[/proveedor?pais&ambiente]`; `lib/admin/integraciones/{catalogo,sondas,credenciales-servidor}.ts`. Wompi, MasterShop y WhatsApp (esquema de cada paquete). Cifra con `cifrarCredenciales`; solo `masked_preview` sale al navegador; secreto en blanco = conservar; una sola activa por proveedor+país (activar = activa nueva y apaga otras, revierte si falla); probar conexión real o mock (`INTEGRACIONES_MODO=mock`, ignorado en producción); "Registrar webhooks" con `registrarWebhooksMasterShop`. Acción `integraciones.gestionar` (admin).
-- Pagos y países (commit "módulo Pagos y países"): `/admin/pagos?pais=`; `lib/admin/pagos/{ajustes,ajustes-servidor}.ts`. country_settings (cod_enabled, abono, recaudo mín., vigencia link, recordatorios en horas, horario silencioso, `cod_resend_max` ≥ 0, recargo addi/sistecredito, TTLs, TRM solo EC, `carrier_wallet_low_balance`) y payment_method_settings; `cod` no se activa con `cod_enabled` falso y el país no se deshabilita con `cod` activo. Acción `pagos.gestionar` (admin). Invalida `checkout-config` + `content:{país}` (`invalidarConfigPais`).
-- Permisos nuevos en `lib/auth/permissions.ts`: `integraciones.gestionar`, `pagos.gestionar`, `agente.gestionar` (solo admin; probados).
-- Piezas reutilizables nuevas: `components/admin/{BotonAccion,FormularioCredencial,FormularioAjustesPais,FormularioMetodoPago}.tsx`.
+- T2.6 atributos, categorías, colecciones, productos (editor con variantes/imágenes), T2.7 importación CSV/Excel/ZIP, contenido/páginas, plantillas de WhatsApp.
+- Integraciones (`/admin/integraciones`): credenciales cifradas, probar conexión, webhooks MasterShop. Activar usa `activarCredencialIntegracionDb` (RPC atómica, fa0f98b). Acción `integraciones.gestionar`.
+- Pagos y países (`/admin/pagos`): country_settings y payment_method_settings. Acción `pagos.gestionar`.
+- Pedidos (5b0dfc8 filtros, 2afe2ab acciones): filtros en URL (estado, país, método, fechas en UTC-5, número o celular ≥ 7 dígitos), atajos `/` `j` `k` Enter. Detalle con acciones (`lib/admin/pedidos/acciones-servidor.ts`, `app/admin/(panel)/pedidos/acciones.ts`):
+  cancelar y marcar pagado (solo admin; `transicionar` + `aplicarEventoPedidoDb`; marcar pagado solo desde `pendiente_manual`, exige referencia, confirma stock y encola el envío; cancelar libera stock y, con envío en MasterShop 1–2, cancela allá primero; si el envío está en 3+ se rechaza), nota interna (evento `nota_interna`), Reintentar (`reintentarEnvioMasterShop`: encolado/ya_pendiente/estado_invalido), reimprimir con `requested_by=admin:<id>`. Insignias Novedad / Error transportadora / WhatsApp falló.
+- Agente de impresión (36470e5): `/admin/agente-impresion` (estado por heartbeat, cola, página de prueba, reimprimir) y `/[id]` (admin: activar/desactivar, rotar token, `remote_config` print/panel/intervals + modo). Token solo en la respuesta de alta/rotación, en base solo `hashTokenAgente`. `lib/admin/agentes/{esquemas,estado,servidor}.ts`.
+- Permisos probados en `acciones.test.ts` de pedidos y de agente (rol real vía `puede`).
 
 ## Pendiente
-- (3) Pedidos: filtros, cancelar, marcar pagado, notas, "Reintentar" (`reintentarEnvioMasterShop(orderId, estado)`: encolado/ya_pendiente/estado_invalido), reimprimir con `requested_by=admin:<id>`, atajos `/` `j/k`. Permisos ya existen en `permissions.ts`.
-- (4) Agentes de impresión: alta con token (`hashTokenAgente` de `app/api/agent/_lib/contrato.ts`, token visible una sola vez), activar/desactivar, editar `remote_config` (`print{copies,print_settings}`, `panel{...}` según `apps/print-agent/README.md`). Acción `agente.gestionar` ya definida; `/admin/agente-impresion` es la página actual (solo estado).
-- Integraciones: faltan esquemas de Addi, Sistecrédito, OpenRouter, Meta Ads y píxeles (se agregan a `PROVEEDORES`). Falta que `.env.example` documente `INTEGRACIONES_MODO`, `SITE_URL` y `MASTERSHOP_WEBHOOK_PATH_SECRET` (infra).
-- Para izao-db (opcional): índice único parcial `(provider, country_code) where is_active` en `integration_credentials` y RPC de activar atómica (hoy son 2 escrituras con reversión); RPC `admin_publicar_pagina`.
-- Sin buscador MasterShop en productos; importación síncrona por lotes; falta prueba de humo en navegador (no hay Supabase/MFA local).
+- Pedidos: filtros por ciudad, código, influencer, novedad, guía/documento (§24.1); acciones masivas; "devolver stock" tras entregado/devuelto no existe.
+- Agente: capturas de error del agente (§24.1) no se muestran; editor visual de pasos del modo panel (hoy JSON validado).
+- Integraciones: esquemas de Addi, Sistecrédito, OpenRouter, Meta Ads y píxeles. `.env.example` debe documentar `INTEGRACIONES_MODO`, `SITE_URL`, `MASTERSHOP_WEBHOOK_PATH_SECRET` (infra).
+- Para izao-db (opcional): RPC `admin_publicar_pagina`; RPC que cancele+libere stock en una transacción.
+- Falta prueba de humo en navegador (no hay Supabase/MFA local); importación síncrona por lotes.
 
 ## Decisiones / avisos
-- Sin `react-hook-form`: formularios con `useActionState` + zod del servidor. `cliente-falso` acepta lista de respuestas por operación.
-- Al habilitar un módulo: `disponible: true` en `permissions.ts` y actualizar la lista en `permissions.test.ts`.
-- Las heredocs de bash pierden barras invertidas y se cortan con `''`: escribir archivos con la herramienta Write.
+- Sin `react-hook-form`: formularios con `useActionState` + zod del servidor. `cliente-falso` ahora también devuelve `filtros` (eq/gte/lt…).
+- Al habilitar un módulo: `disponible: true` en `permissions.ts` y actualizar `permissions.test.ts`.
+- Heredocs de bash pierden barras invertidas; escribir archivos con Write.
+- Cancelar con envío en MasterShop 3+ se rechaza a propósito: se cancela allá y el webhook sincroniza.
 
 ## Punto de retoma
-Integraciones y Pagos cerrados y verdes (tsc, eslint de mis rutas, vitest). Siguiente: (3) pedidos, luego (4) agentes de impresión.
+Pedidos y Agente cerrados (tsc, eslint, 807 pruebas verdes). Siguiente: módulos restantes de §24.1 (Dashboard, Descuentos, Garantías, Usuarios, Apariencia…).
