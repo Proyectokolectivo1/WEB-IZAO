@@ -238,6 +238,17 @@ export function crearFuenteCodPostgrest(o: OpcionesPostgrest): FuenteCod & Fuent
         body: JSON.stringify({ order_id: orderId, type: 'alerta', actor: 'system', payload: { motivo, ...payload } }),
       });
     },
+    async topeReenvios(pais) {
+      try {
+        const [f] = await filas('country_settings', `country_settings?country_code=${eq(pais)}&select=cod_resend_max`);
+        const n = f?.cod_resend_max;
+        return typeof n === 'number' && Number.isInteger(n) && n >= 0 ? n : null;
+      } catch (e) {
+        // 42703: la columna aún no existe (migración pendiente de izao-db) → sin tope configurado.
+        if (e instanceof ErrorPostgrest && e.codigo === '42703') return null;
+        throw e;
+      }
+    },
 
     async pedidosPorVencer(ahora, limite) {
       const r = (await pedir('pedidos_por_vencer', 'rpc/pedidos_por_vencer', {

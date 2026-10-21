@@ -6,6 +6,8 @@ export const COLA_COD = 'contraentrega';
 export const JOB_COD_INICIAR = 'cod.iniciar';
 export const JOB_COD_RECORDATORIO = 'cod.recordatorio';
 export const JOB_COD_ABANDONO = 'cod.abandono';
+/** "Reenviar cobro" del panel (admin y operador). */
+export const JOB_COD_REENVIAR = 'cod.reenviar';
 
 export const COLA_WHATSAPP = 'whatsapp';
 export const JOB_WA_EVENTO = 'whatsapp.evento';
@@ -20,6 +22,11 @@ export interface DatosJobCodRecordatorio {
 }
 export interface DatosJobCodAbandono {
   order_id: string;
+}
+export interface DatosJobCodReenviar {
+  order_id: string;
+  /** ISO 8601 UTC de la solicitud: es el `scheduled_for` del reenvío (repetir el job no duplica el mensaje). */
+  solicitado_en: string;
 }
 export interface DatosJobWaEvento {
   /** `webhook_events.event_id` (provider `whatsapp`). */
@@ -36,4 +43,5 @@ function idPedido(orderId: string): string {
 export const jobIdCodIniciar = (orderId: string): string => `cod.iniciar.${idPedido(orderId)}`;
 export const jobIdCodRecordatorio = (orderId: string, n: number): string => `cod.recordatorio.${idPedido(orderId)}.${n}`;
 export const jobIdCodAbandono = (orderId: string): string => `cod.abandono.${idPedido(orderId)}`;
+export const jobIdCodReenviar = (orderId: string, solicitadoEn: Date): string => `cod.reenviar.${idPedido(orderId)}.${solicitadoEn.getTime()}`;
 export const jobIdWaEvento = (eventId: string): string => `wa.${eventId.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 200)}`;

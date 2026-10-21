@@ -195,6 +195,19 @@ describe('fuente PostgREST de contra entrega', () => {
     expect(llamadas[0]!.cuerpo).toEqual({ order_id: ORDER, type: 'alerta', actor: 'system', payload: { motivo: 'whatsapp_fallido', plantilla: 'cobro_abono' } });
   });
 
+  it('topeReenvios: cod_resend_max del país; columna inexistente (42703) o nula → null; otro error lanza', async () => {
+    let r: { status: number; cuerpo?: unknown } = { status: 200, cuerpo: [{ cod_resend_max: 2 }] };
+    const { fuente, llamadas } = fuenteCon(() => r);
+    expect(await fuente.topeReenvios('CO')).toBe(2);
+    expect(llamadas[0]!.url).toContain('country_settings?country_code=eq.CO&select=cod_resend_max');
+    r = { status: 200, cuerpo: [{ cod_resend_max: null }] };
+    expect(await fuente.topeReenvios('CO')).toBeNull();
+    r = { status: 400, cuerpo: { code: '42703' } };
+    expect(await fuente.topeReenvios('CO')).toBeNull();
+    r = { status: 500, cuerpo: { code: 'XX000' } };
+    await expect(fuente.topeReenvios('CO')).rejects.toThrow(/HTTP 500/);
+  });
+
   describe('lecturas del barrido', () => {
     it('pedidosPorVencer: RPC pedidos_por_vencer con la hora y el límite', async () => {
       const { fuente, llamadas } = fuenteCon(() => ({

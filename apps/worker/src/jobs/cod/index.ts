@@ -12,11 +12,12 @@ import {
   JOB_COD_ABANDONO,
   JOB_COD_INICIAR,
   JOB_COD_RECORDATORIO,
+  JOB_COD_REENVIAR,
   jobIdCodAbandono,
   jobIdCodRecordatorio,
 } from '@izao/whatsapp';
 import { crearLinkPago } from '@izao/wompi';
-import { abandonarCod, iniciarCod, recordatorioCod, type DepsCod, type JobProgramado } from './flujo.js';
+import { abandonarCod, iniciarCod, recordatorioCod, reenviarCod, type DepsCod, type JobProgramado } from './flujo.js';
 import { crearFuenteCodPostgrest } from './fuente-postgrest.js';
 
 export { COLA_COD };
@@ -42,7 +43,7 @@ export function dependenciasCodDesdeEnv(programar: DepsCod['programar'], correoR
     urlSitio,
   };
 }
-export { ErrorReintentableCod, abandonarCod, iniciarCod, recordatorioCod } from './flujo.js';
+export { ErrorReintentableCod, abandonarCod, iniciarCod, recordatorioCod, reenviarCod } from './flujo.js';
 
 /** Tope de recordatorios que se intentan cancelar por pedido (más que cualquier configuración razonable). */
 const MAX_RECORDATORIOS = 24;
@@ -102,6 +103,17 @@ export function crearProcesadorCod(deps: DepsCod): Processor {
         r = await abandonarCod(orderId, { ...deps, programar: async (j) => void (en = j.en) });
         if (r.accion === 'reprogramado' && en && token) {
           await job.moveToDelayed((en as Date).getTime(), token);
+          throw new DelayedError();
+        }
+        break;
+      }
+      case JOB_COD_REENVIAR: {
+        const iso = (job.data as { solicitado_en?: unknown }).solicitado_en;
+        const solicitado = typeof iso === 'string' && /^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(iso) ? new Date(iso) : null;
+        if (!solicitado || Number.isNaN(solicitado.getTime())) return { ok: false, motivo: 'datos_invalidos' };
+        r = await reenviarCod(orderId, solicitado, deps);
+        if (r.accion === 'reprogramado' && r.en && token) {
+          await job.moveToDelayed(r.en.getTime(), token);
           throw new DelayedError();
         }
         break;

@@ -90,6 +90,8 @@ export interface FuenteCod {
   liberarStock(orderId: string): Promise<StockFunctionResult>;
   liberarCanje(orderId: string): Promise<{ ok: boolean }>;
   registrarAlerta(orderId: string, motivo: string, payload: Record<string, string | null>): Promise<void>;
+  /** `country_settings.cod_resend_max` (reenvíos manuales del cobro); `null` si no está configurado. */
+  topeReenvios(pais: CountryCode): Promise<number | null>;
 }
 
 /** Fila de `pedidos_por_vencer` (izao-db): reserva vencida y el estado al que debe pasar. */

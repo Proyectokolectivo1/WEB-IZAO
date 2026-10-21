@@ -58,7 +58,7 @@ export function enSilencio(d: Date, s: HorarioSilencio, zona: string): boolean {
 }
 
 /** Siguiente fin del silencio a partir de `d` (CO y EC no tienen horario de verano). */
-function finDelSilencio(d: Date, s: HorarioSilencio, zona: string): Date {
+export function finDelSilencio(d: Date, s: HorarioSilencio, zona: string): Date {
   const { minutos, segundos } = relojLocal(d, zona);
   const delta = (minutosDe(s.fin) - minutos + 1440) % 1440;
   return new Date(d.getTime() + delta * 60_000 - segundos * 1000 - d.getMilliseconds());

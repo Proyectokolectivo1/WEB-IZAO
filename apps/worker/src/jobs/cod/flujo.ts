@@ -20,7 +20,7 @@ import {
 } from '@izao/whatsapp';
 import { ErrorWompi, type EntradaLinkAbono, type LinkPagoCreado, type WompiCredentials } from '@izao/wompi';
 import type { AbonoFila, FuenteCod, PayLinkFila, PedidoCod } from './fuente.js';
-import { planRecordatorios, plantillaRecordatorio } from './plan.js';
+import { enSilencio, finDelSilencio, planRecordatorios, plantillaRecordatorio } from './plan.js';
 
 export class ErrorReintentableCod extends Error {
   constructor(motivo: string) {
@@ -56,11 +56,18 @@ export type AccionCod =
   | 'ya_enviado'
   | 'no_enviado'
   | 'abandonado'
-  | 'reprogramado';
+  | 'reprogramado'
+  | 'tope_alcanzado'
+  | 'link_vencido';
 
 export interface ResultadoCod {
   accion: AccionCod;
+  /** Con `reprogramado` de `cod.reenviar`: cuándo debe correr (fin del horario silencioso). */
+  en?: Date;
 }
+
+/** Vigencia mínima del link que debe quedar al enviar fuera del silencio (misma regla que los recordatorios). */
+const MIN_VIGENCIA_MS = 3_600_000;
 
 const ACTOR = 'system';
 const COBRABLE = new Set(['created', 'pending']);
@@ -267,4 +274,48 @@ export async function abandonarCod(orderId: string, deps: DepsCod): Promise<Resu
   if (!stock.ok) throw new ErrorReintentableCod('liberar_stock');
   await fuente.liberarCanje(p.id);
   return { accion: 'abandonado' };
+}
+
+/**
+ * `cod.reenviar` ("Reenviar cobro" del panel): vuelve a enviar `cobro_abono` con `scheduled_for = solicitadoEn`, una
+ * fila nueva bajo `whatsapp_messages_envio_unico_key`; el reintento del mismo job encuentra esa fila y no duplica.
+ * Solo con el pedido en `esperando_abono` y el link vigente; tope `country_settings.cod_resend_max`; en horario
+ * silencioso se reprograma al fin si al link le queda al menos 1 h.
+ */
+export async function reenviarCod(orderId: string, solicitadoEn: Date, deps: DepsCod): Promise<ResultadoCod> {
+  const { fuente } = deps;
+  const ahora = (deps.ahora ?? (() => new Date()))();
+  const p = await fuente.pedido(orderId);
+  if (!p) return { accion: 'pedido_no_encontrado' };
+  if (p.payment_method !== 'cod' || p.status !== 'esperando_abono') return { accion: 'omitido' };
+  const pay = await fuente.payLink(p.id);
+  if (!pay || pay.expires_at.getTime() <= ahora.getTime()) return { accion: 'link_vencido' };
+  const cfg = await fuente.config(p.country_code);
+  if (!cfg) throw new ErrorReintentableCod('sin_config');
+
+  const tope = await fuente.topeReenvios(p.country_code);
+  if (tope === null) {
+    await fuente.registrarAlerta(p.id, 'reenvio_sin_tope', { pais: p.country_code });
+    return { accion: 'no_enviado' };
+  }
+  const previos = await fuente.mensajes(p.id);
+  const reenvios = previos.filter((m) => {
+    const t = m.scheduled_for?.getTime();
+    return m.template_key === 'cobro_abono' && t !== undefined && t !== p.created_at.getTime() && t !== solicitadoEn.getTime();
+  }).length;
+  if (reenvios >= tope) {
+    await fuente.registrarAlerta(p.id, 'reenvio_tope_alcanzado', { tope: String(tope) });
+    return { accion: 'tope_alcanzado' };
+  }
+  if (enSilencio(ahora, cfg.silencio, cfg.zona)) {
+    const en = finDelSilencio(ahora, cfg.silencio, cfg.zona);
+    if (pay.expires_at.getTime() - en.getTime() < MIN_VIGENCIA_MS) return { accion: 'link_vencido' };
+    return { accion: 'reprogramado', en };
+  }
+
+  const r = await enviar(deps, p, 'cobro_abono', solicitadoEn, pay, cfg.zona);
+  if (r === 'no_enviado' && p.contact_email && deps.correoRespaldo) {
+    await deps.correoRespaldo({ order_id: p.id, email: p.contact_email, url: `${origen(deps)}/pagar/${pay.token}` });
+  }
+  return { accion: r };
 }

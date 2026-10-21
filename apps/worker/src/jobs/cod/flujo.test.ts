@@ -4,7 +4,7 @@ import { ErrorWhatsApp, PLANTILLAS_SEMILLA, type CredencialesWhatsApp } from '@i
 import { crearWhatsAppMock } from '@izao/whatsapp/mock';
 import { ErrorWompi, type EntradaLinkAbono, type WompiCredentials } from '@izao/wompi';
 import type { AbonoFila, FuenteCod, MensajeFila, PayLinkFila, PedidoCod } from './fuente.js';
-import { ErrorReintentableCod, abandonarCod, iniciarCod, recordatorioCod, type JobProgramado } from './flujo.js';
+import { ErrorReintentableCod, abandonarCod, iniciarCod, recordatorioCod, reenviarCod, type JobProgramado } from './flujo.js';
 
 const ORDER = '00000000-0000-4000-8000-0000000000aa';
 const CREADO = new Date('2026-10-20T15:00:00.000Z'); // 10:00 en Bogotá
@@ -25,7 +25,7 @@ const WA: CredencialesWhatsApp = {
   versionGraph: 'v26.0',
 };
 
-function escenario(o: { pedido?: Partial<PedidoCod>; sinPlantillas?: boolean; sinWa?: boolean; ahora?: Date } = {}) {
+function escenario(o: { pedido?: Partial<PedidoCod>; sinPlantillas?: boolean; sinWa?: boolean; ahora?: Date; tope?: number | null } = {}) {
   const pedido: PedidoCod = {
     id: ORDER,
     number: 'IZ-CO-000123',
@@ -116,6 +116,7 @@ function escenario(o: { pedido?: Partial<PedidoCod>; sinPlantillas?: boolean; si
     registrarAlerta: async (_id, motivo) => {
       r.alertas.push(motivo);
     },
+    topeReenvios: async () => (o.tope === undefined ? 2 : o.tope),
   };
   let ahora = o.ahora ?? new Date(CREADO.getTime() + 5_000);
   const deps = {
@@ -305,5 +306,78 @@ describe('cod.recordatorio y cod.abandono (reloj inyectado)', () => {
     expect((await abandonarCod(ORDER, t.deps)).accion).toBe('abandonado');
     expect(t.r.eventos).toEqual([]);
     expect(t.r.liberados).toEqual({ stock: 1, canje: 1 });
+  });
+});
+
+describe('cod.reenviar: "Reenviar cobro" del panel (§13.4)', () => {
+  const SOLICITUD = new Date('2026-10-20T18:00:00.000Z'); // 13:00 en Bogotá
+  async function iniciado(o: Parameters<typeof escenario>[0] = {}) {
+    const s = escenario(o);
+    await iniciarCod(ORDER, s.deps);
+    s.avanzar(SOLICITUD);
+    return s;
+  }
+
+  it('reenvía cobro_abono con scheduled_for = hora de la solicitud (fila nueva, no choca con la restricción única)', async () => {
+    const s = await iniciado();
+    expect(await reenviarCod(ORDER, SOLICITUD, s.deps)).toEqual({ accion: 'enviado' });
+    expect(s.wa.enviados).toHaveLength(2);
+    expect(s.wa.enviados[1]!.template.name).toBe('cobro_abono_v1');
+    const cobros = s.mensajes.filter((m) => m.template_key === 'cobro_abono');
+    expect(cobros.map((m) => m.scheduled_for!.toISOString())).toEqual([CREADO.toISOString(), SOLICITUD.toISOString()]);
+  });
+
+  it('repetir el mismo job (reintento) no reenvía dos veces', async () => {
+    const s = await iniciado();
+    await reenviarCod(ORDER, SOLICITUD, s.deps);
+    expect(await reenviarCod(ORDER, SOLICITUD, s.deps)).toEqual({ accion: 'ya_enviado' });
+    expect(s.wa.enviados).toHaveLength(2);
+  });
+
+  it('respeta el tope de country_settings; sin tope configurado no envía y alerta', async () => {
+    const s = await iniciado({ tope: 1 });
+    expect(await reenviarCod(ORDER, SOLICITUD, s.deps)).toEqual({ accion: 'enviado' });
+    const otra = new Date(SOLICITUD.getTime() + 60_000);
+    expect(await reenviarCod(ORDER, otra, s.deps)).toEqual({ accion: 'tope_alcanzado' });
+    expect(s.r.alertas).toContain('reenvio_tope_alcanzado');
+    const t = await iniciado({ tope: null });
+    expect(await reenviarCod(ORDER, SOLICITUD, t.deps)).toEqual({ accion: 'no_enviado' });
+    expect(t.r.alertas).toContain('reenvio_sin_tope');
+    expect(t.wa.enviados).toHaveLength(1);
+  });
+
+  it('horario silencioso: se reprograma al fin del silencio (07:00 local)', async () => {
+    const s = await iniciado();
+    const noche = new Date('2026-10-21T03:00:00.000Z'); // 22:00 en Bogotá
+    s.avanzar(noche);
+    expect(await reenviarCod(ORDER, noche, s.deps)).toEqual({ accion: 'reprogramado', en: new Date('2026-10-21T12:00:00.000Z') });
+    expect(s.wa.enviados).toHaveLength(1);
+  });
+
+  it('silencio que termina con menos de 1 h de vigencia del link: no se envía', async () => {
+    const s = await iniciado({ pedido: { stock_reserved_until: new Date('2026-10-21T12:30:00.000Z') } });
+    const noche = new Date('2026-10-21T03:00:00.000Z');
+    s.avanzar(noche);
+    expect(await reenviarCod(ORDER, noche, s.deps)).toEqual({ accion: 'link_vencido' });
+  });
+
+  it('pedido ya pagado, que no es contra entrega o con el link vencido: no envía', async () => {
+    const s = await iniciado();
+    s.pedido.status = 'abono_pagado';
+    expect(await reenviarCod(ORDER, SOLICITUD, s.deps)).toEqual({ accion: 'omitido' });
+    const v = await iniciado();
+    v.avanzar(new Date(VENCE.getTime() + 1));
+    expect(await reenviarCod(ORDER, new Date(VENCE.getTime() + 1), v.deps)).toEqual({ accion: 'link_vencido' });
+    const sinLink = escenario();
+    expect(await reenviarCod(ORDER, SOLICITUD, sinLink.deps)).toEqual({ accion: 'link_vencido' });
+    expect(v.wa.enviados).toHaveLength(1);
+  });
+
+  it('fallo definitivo de WhatsApp: alerta y correo de respaldo', async () => {
+    const s = await iniciado();
+    s.wa.fallarCon = new ErrorWhatsApp('DESTINO', false, 400, '131026');
+    expect(await reenviarCod(ORDER, SOLICITUD, s.deps)).toEqual({ accion: 'no_enviado' });
+    expect(s.r.alertas).toContain('whatsapp_fallido');
+    expect(s.r.correos.at(-1)).toBe('laura@example.com https://izaoperfumeria.com/pagar/TokCorto123');
   });
 });
