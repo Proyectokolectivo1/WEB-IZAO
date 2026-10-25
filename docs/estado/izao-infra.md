@@ -45,3 +45,6 @@ test-backup-restore, test-restore-guard, test-deploy-rollback, test-nginx (1.27/
 
 ## Ajustes menores
 - .env.example: INTEGRACIONES_MODO (mock, ignorado en producción). CI: comentario de agente-impresion corregido (sin filtro por rutas). pnpm lint verde (8/8).
+
+## Métricas en el worker
+- `index.ts`: manejadores `metrics.recompute_day` (dependenciasMetricasDesdeEnv) y `metrics.recompute_recent` (cola sistema) inyectados en `crearProcesadorSistema`. `cron.ts`: `metrics.recompute_recent` `30 3 * * *` America/Bogota (60 días x CO/EC, lo expande el manejador). Pruebas en cron.test.ts y queues.test.ts. `queues.ts` sin cambios (ya admitía extras).

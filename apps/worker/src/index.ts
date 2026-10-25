@@ -18,6 +18,13 @@ import {
   JOB_POLLING_MASTERSHOP,
   pollingMasterShop,
 } from './jobs/sync/index.js';
+import {
+  crearManejadorRecalculoDia,
+  crearManejadorRecalculoReciente,
+  dependenciasMetricasDesdeEnv,
+  JOB_METRICS_RECOMPUTE_DAY,
+  JOB_METRICS_RECOMPUTE_RECENT,
+} from './jobs/metrics/recalcular-dia.js';
 import { registrarCron } from './cron.js';
 import { createConnection, createQueue, createWorker, crearProcesadorSistema, QUEUE_NAMES } from './queues.js';
 
@@ -31,6 +38,8 @@ async function main(): Promise<void> {
     crearProcesadorSistema({
       [JOB_POLLING_MASTERSHOP]: async () => pollingMasterShop(dependenciasPollingDesdeEnv(colaCarrier)),
       [JOB_BILLETERA_MASTERSHOP]: async () => billeteraMasterShop(dependenciasBilleteraDesdeEnv()),
+      [JOB_METRICS_RECOMPUTE_DAY]: crearManejadorRecalculoDia(dependenciasMetricasDesdeEnv()),
+      [JOB_METRICS_RECOMPUTE_RECENT]: crearManejadorRecalculoReciente(cola),
       [JOB_BARRIDO_PEDIDOS]: async () =>
         barrerPedidos(dependenciasBarridoDesdeEnv(colaCod, (id) => cancelarJobsCod(colaCod, id))),
     }),

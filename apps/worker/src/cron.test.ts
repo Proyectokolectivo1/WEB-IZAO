@@ -38,3 +38,14 @@ describe('registrarCron MasterShop', () => {
     expect(b?.[2].name).toBe('mastershop.billetera');
   });
 });
+
+describe('registrarCron métricas', () => {
+  it('programa metrics.recompute_recent a las 03:30 de Bogotá', async () => {
+    const upsertJobScheduler = vi.fn().mockResolvedValue(undefined);
+    await registrarCron({ upsertJobScheduler } as unknown as Queue);
+    const llamadas = upsertJobScheduler.mock.calls as [string, { pattern: string; tz: string }, { name: string }][];
+    const m = llamadas.find(([id]) => id === 'metrics.recompute_recent');
+    expect(m?.[1]).toEqual({ pattern: '30 3 * * *', tz: 'America/Bogota' });
+    expect(m?.[2].name).toBe('metrics.recompute_recent');
+  });
+});

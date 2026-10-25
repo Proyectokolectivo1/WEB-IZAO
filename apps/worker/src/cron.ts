@@ -1,6 +1,7 @@
 import type { Queue } from 'bullmq';
 import { CRON_BARRIDO_PEDIDOS, JOB_BARRIDO_PEDIDOS } from './jobs/cod/barrido.js';
 import { CRON_BILLETERA_MASTERSHOP, CRON_POLLING_MASTERSHOP, JOB_BILLETERA_MASTERSHOP, JOB_POLLING_MASTERSHOP } from './jobs/sync/index.js';
+import { JOB_METRICS_RECOMPUTE_RECENT } from './jobs/metrics/recalcular-dia.js';
 import { JOB_PURGAR_AUDIT_LOG } from './jobs/purgar-audit-log.js';
 
 /**
@@ -35,5 +36,11 @@ export async function registrarCron(colaSistema: Queue): Promise<void> {
     JOB_BILLETERA_MASTERSHOP,
     { pattern: CRON_BILLETERA_MASTERSHOP, tz: 'America/Bogota' },
     { name: JOB_BILLETERA_MASTERSHOP, data: {} },
+  );
+  // Recalculo nocturno de métricas: 60 días por país (CO y EC), 03:30 Bogotá. El manejador encola cada día con deduplicación.
+  await colaSistema.upsertJobScheduler(
+    JOB_METRICS_RECOMPUTE_RECENT,
+    { pattern: '30 3 * * *', tz: 'America/Bogota' },
+    { name: JOB_METRICS_RECOMPUTE_RECENT, data: {} },
   );
 }
