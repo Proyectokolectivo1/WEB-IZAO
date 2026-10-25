@@ -135,7 +135,7 @@ export const MODULOS = {
     etiqueta: 'Usuarios',
     ruta: '/admin/usuarios',
     roles: SOLO_ADMIN,
-    disponible: false,
+    disponible: true,
   },
   sistema: { etiqueta: 'Sistema', ruta: '/admin/sistema', roles: SOLO_ADMIN, disponible: false },
 } as const satisfies Record<string, ModuloDef>;
@@ -183,6 +183,8 @@ export const ACCIONES = {
   'descuentos.gestionar': SOLO_ADMIN,
   /** Fichas de influencers y su reporte (§17.2, §24.1). */
   'influencers.gestionar': SOLO_ADMIN,
+  /** Crear usuarios del panel, cambiar rol/estado, restablecer contraseña y reiniciar el MFA (§24.1). */
+  'usuarios.gestionar': SOLO_ADMIN,
   /** Registrar, editar y borrar gastos manuales y sus categorías; exportarlos (§22, §24.1). */
   'gastos.gestionar': SOLO_ADMIN,
   /** Exportar el dashboard a Excel; ver las métricas exige el módulo `dashboard` (§21, §24.3). */
