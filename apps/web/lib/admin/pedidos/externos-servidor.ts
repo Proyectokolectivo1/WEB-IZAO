@@ -18,12 +18,6 @@ export async function confirmarStockPedido(orderId: string): Promise<boolean> {
   return r.ok;
 }
 
-/** Libera la reserva de un pedido cancelado (idempotente; si el stock ya se descontó, no hace nada). */
-export async function liberarStockPedido(orderId: string): Promise<void> {
-  const r = await llamarRpc('liberar_stock', { p_order_id: orderId }, respuestaStock);
-  if (!r.ok) throw new Error('liberar_stock respondió ok=false');
-}
-
 /** Llave activa de MasterShop (Colombia) descifrada en memoria; `null` si falta o no se puede leer. */
 export async function llaveMasterShopActiva(
   cliente: Cliente,

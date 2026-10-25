@@ -18,7 +18,6 @@ vi.mock('@/lib/auth/supabase/servicio', () => ({ crearClienteServicio: () => ({}
 vi.mock('@/app/api/webhooks/mastershop/cola', () => ({ reintentarEnvioMasterShop: vi.fn() }));
 vi.mock('@/lib/admin/pedidos/externos-servidor', () => ({
   confirmarStockPedido: vi.fn(),
-  liberarStockPedido: vi.fn(),
   crearCancelarEnMasterShop: () => vi.fn(),
 }));
 vi.mock('@/lib/admin/pedidos/cola-cobro', () => ({ encolarCobro: vi.fn() }));

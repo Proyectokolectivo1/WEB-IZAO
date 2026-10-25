@@ -13,6 +13,7 @@ import type { ResultadoReintentoEnvio } from '@izao/mastershop';
 import { z } from 'zod';
 import { auditarCambio } from '@/lib/admin/auditoria';
 import { aplicarEventoPedidoDb, type ResultadoTransicion } from '@/lib/db/pedidos';
+import { cancelarPedidoDb, type EntradaCancelar, type ResultadoCancelar } from '@/lib/db/panel-atomicas';
 import type { Cliente } from '../catalogo/taxonomias-servidor';
 
 type Ctx = { cliente: Cliente; actor: string; ip: string | null; ahora?: () => Date };
@@ -68,20 +69,26 @@ function mensajeTransicion(r: Exclude<ResultadoTransicion, { ok: true }>): strin
 const ESTADOS_CANCELABLES_REMOTOS: readonly number[] = [1, 2];
 const ESTADO_REMOTO_CANCELADO = 9;
 
+export type CancelarDb = (entrada: EntradaCancelar) => Promise<ResultadoCancelar>;
+
+/**
+ * Cancela un pedido. Si el envío está en MasterShop (estado 1 o 2) se cancela allá primero (es externo y no puede ir en la
+ * transacción); luego `cancelar_pedido` hace en UNA transacción el cambio de estado, el evento y la liberación de la
+ * reserva de stock, solo si el pedido sigue en el estado que se leyó.
+ */
 export async function cancelarPedidoBd(
   args: Ctx & {
     orderId: string;
     motivo: string;
     cancelarEnMasterShop: (providerOrderId: number) => Promise<void>;
-    liberarStock: (orderId: string) => Promise<void>;
-    aplicar?: AplicarEvento;
+    cancelar?: CancelarDb;
   },
 ): Promise<ResultadoPedido> {
   const { cliente, actor, ip, orderId } = args;
   const motivo = motivoSchema.safeParse(args.motivo);
   if (!motivo.success) return { ok: false, mensaje: primerError(motivo) };
   const ahora = (args.ahora ?? (() => new Date()))();
-  const aplicar = args.aplicar ?? aplicarEventoPedidoDb;
+  const cancelar = args.cancelar ?? cancelarPedidoDb;
 
   const pedido = await leerPedido(cliente, orderId);
   if (!pedido) return { ok: false, mensaje: 'Ese pedido ya no existe.' };
@@ -108,33 +115,42 @@ export async function cancelarPedidoBd(
     }
   }
 
-  const r = await aplicar(orderId, t.event, { cancelled_at: ahora.toISOString() });
+  const r = await cancelar({
+    order_id: orderId,
+    from_status: pedido.status as OrderStatus,
+    actor: `admin:${actor}`,
+    motivo: motivo.data,
+    cancelled_at: ahora.toISOString(),
+  });
   if (!r.ok) {
     const extra = canceladoEnMasterShop ? ' La cancelación en MasterShop sí se hizo; el pedido se sincronizará.' : '';
-    return { ok: false, mensaje: mensajeTransicion(r) + extra };
+    return { ok: false, mensaje: mensajeCancelacion(r.motivo) + extra };
   }
 
-  let stockLiberado = true;
-  try {
-    await args.liberarStock(orderId);
-  } catch (e) {
-    stockLiberado = false;
-    console.error('[panel] no se pudo liberar el stock del pedido cancelado:', e instanceof Error ? e.name : 'error');
-  }
   await auditarCambio({
     actor,
     accion: 'pedido.cancelado',
     entidad: 'orders',
     entidadId: orderId,
     ip,
-    diff: { numero: pedido.number, antes: { status: pedido.status }, despues: { status: 'cancelado' }, motivo: motivo.data, cancelado_en_mastershop: canceladoEnMasterShop, stock_liberado: stockLiberado },
+    diff: {
+      numero: pedido.number,
+      antes: { status: pedido.status },
+      despues: { status: 'cancelado' },
+      motivo: motivo.data,
+      cancelado_en_mastershop: canceladoEnMasterShop,
+      stock_estado: r.stock_estado,
+      stock_liberado: r.stock_liberado,
+    },
   });
-  return {
-    ok: true,
-    mensaje: stockLiberado
-      ? 'Pedido cancelado.'
-      : 'Pedido cancelado, pero no se pudo liberar el stock reservado. Avísale al equipo técnico.',
-  };
+  return { ok: true, mensaje: 'Pedido cancelado.' };
+}
+
+function mensajeCancelacion(motivo: 'transicion_invalida' | 'estado_cambiado' | 'pedido_inexistente' | 'datos_invalidos'): string {
+  if (motivo === 'estado_cambiado') return 'El pedido cambió de estado mientras lo gestionabas. Recarga la página para ver el estado actual.';
+  if (motivo === 'pedido_inexistente') return 'Ese pedido ya no existe.';
+  if (motivo === 'transicion_invalida') return 'Este pedido ya no se puede cancelar desde su estado actual.';
+  return 'No se pudo cancelar el pedido. Inténtalo de nuevo.';
 }
 
 // ---------------------------------------------------------------------------

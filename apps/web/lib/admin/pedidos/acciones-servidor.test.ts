@@ -31,22 +31,41 @@ const okTransicion = () =>
 
 beforeEach(() => auditar.mockClear());
 
-describe('cancelarPedidoBd', () => {
-  it('cancela un pedido pendiente manual con transicionar, libera stock y audita', async () => {
+const okCancelar = (extra: Record<string, unknown> = {}) =>
+  vi.fn(async (e: { order_id: string; from_status: string }) => ({
+    ok: true as const,
+    order_id: e.order_id,
+    from_status: e.from_status as never,
+    to_status: 'cancelado' as const,
+    event_id: '22222222-2222-4222-8222-222222222222',
+    stock_estado: 'released',
+    stock_liberado: true,
+    ...extra,
+  }));
+const noCancelar = (motivo: 'transicion_invalida' | 'estado_cambiado' | 'pedido_inexistente' | 'datos_invalidos') =>
+  vi.fn(async () => ({ ok: false as const, motivo }));
+
+describe('cancelarPedidoBd (RPC atómica cancelar_pedido)', () => {
+  it('cancela un pedido pendiente manual en una sola llamada (estado, evento y stock) y audita', async () => {
     const { cliente } = clienteFalso({ 'orders.select': { data: pedido('pendiente_manual') }, 'shipments.select': { data: null } });
-    const aplicar = okTransicion();
-    const liberarStock = vi.fn(async () => undefined);
+    const cancelar = okCancelar();
     const cancelarEnMasterShop = vi.fn(async () => undefined);
-    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'El cliente ya no lo quiere', aplicar, liberarStock, cancelarEnMasterShop });
-    expect(r.ok).toBe(true);
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'El cliente ya no lo quiere', cancelar, cancelarEnMasterShop });
+    expect(r).toEqual({ ok: true, mensaje: 'Pedido cancelado.' });
     expect(cancelarEnMasterShop).not.toHaveBeenCalled();
-    expect(aplicar).toHaveBeenCalledWith(
-      ID,
-      expect.objectContaining({ from_status: 'pendiente_manual', to_status: 'cancelado', actor: 'admin:u1', payload: { motivo: 'El cliente ya no lo quiere' } }),
-      { cancelled_at: AHORA.toISOString() },
-    );
-    expect(liberarStock).toHaveBeenCalledWith(ID);
-    expect(auditar.mock.calls[0]![0]).toMatchObject({ accion: 'pedido.cancelado', entidadId: ID, actor: 'u1' });
+    expect(cancelar).toHaveBeenCalledWith({
+      order_id: ID,
+      from_status: 'pendiente_manual',
+      actor: 'admin:u1',
+      motivo: 'El cliente ya no lo quiere',
+      cancelled_at: AHORA.toISOString(),
+    });
+    expect(auditar.mock.calls[0]![0]).toMatchObject({
+      accion: 'pedido.cancelado',
+      entidadId: ID,
+      actor: 'u1',
+      diff: { stock_estado: 'released', stock_liberado: true, cancelado_en_mastershop: false },
+    });
   });
 
   it('con envío en MasterShop 1–2 lo cancela allá primero y luego en la base', async () => {
@@ -57,11 +76,11 @@ describe('cancelarPedidoBd', () => {
       });
       const orden: string[] = [];
       const cancelarEnMasterShop = vi.fn(async () => void orden.push('mastershop'));
-      const aplicar = vi.fn(async (...a: Parameters<ReturnType<typeof okTransicion>>) => {
+      const cancelar = vi.fn(async (e: { order_id: string; from_status: string }) => {
         orden.push('base');
-        return okTransicion()(...a);
+        return okCancelar()(e);
       });
-      const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Dirección imposible', aplicar, liberarStock: async () => undefined, cancelarEnMasterShop });
+      const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Dirección imposible', cancelar, cancelarEnMasterShop });
       expect(r.ok).toBe(true);
       expect(cancelarEnMasterShop).toHaveBeenCalledWith(777);
       expect(orden).toEqual(['mastershop', 'base']);
@@ -70,72 +89,70 @@ describe('cancelarPedidoBd', () => {
 
   it('si MasterShop rechaza la cancelación no toca la base', async () => {
     const { cliente } = clienteFalso({ 'orders.select': { data: pedido('enviado_transportadora') }, 'shipments.select': { data: envio() } });
-    const aplicar = okTransicion();
+    const cancelar = okCancelar();
     const r = await cancelarPedidoBd({
       cliente,
       ...comun,
       orderId: ID,
       motivo: 'Error de digitación',
-      aplicar,
-      liberarStock: async () => undefined,
+      cancelar,
       cancelarEnMasterShop: async () => {
         throw new Error('502');
       },
     });
     expect(r.ok).toBe(false);
-    expect(aplicar).not.toHaveBeenCalled();
+    expect(cancelar).not.toHaveBeenCalled();
     expect(auditar).not.toHaveBeenCalled();
   });
 
   it('un envío que ya avanzó en MasterShop (3 o más) se cancela allá, no desde el panel', async () => {
-    const { cliente } = clienteFalso({
-      'orders.select': { data: pedido('en_preparacion') },
-      'shipments.select': { data: envio({ provider_status_id: 3 }) },
-    });
-    const aplicar = okTransicion();
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('en_preparacion') }, 'shipments.select': { data: envio({ provider_status_id: 3 }) } });
+    const cancelar = okCancelar();
     const cancelarEnMasterShop = vi.fn(async () => undefined);
-    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Cambio de opinión', aplicar, liberarStock: async () => undefined, cancelarEnMasterShop });
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Cambio de opinión', cancelar, cancelarEnMasterShop });
     expect(r.ok).toBe(false);
     expect(r.mensaje).toMatch(/MasterShop/);
     expect(cancelarEnMasterShop).not.toHaveBeenCalled();
-    expect(aplicar).not.toHaveBeenCalled();
+    expect(cancelar).not.toHaveBeenCalled();
   });
 
-  it('rechaza estados que la máquina de estados no permite y motivos vacíos', async () => {
+  it('rechaza estados que la máquina de estados no permite y motivos vacíos sin llamar a la RPC', async () => {
     for (const estado of ['pagado', 'entregado', 'cancelado', 'en_transito', 'pendiente_pago']) {
       const { cliente } = clienteFalso({ 'orders.select': { data: pedido(estado) }, 'shipments.select': { data: null } });
-      const aplicar = okTransicion();
-      const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'motivo válido', aplicar, liberarStock: async () => undefined, cancelarEnMasterShop: async () => undefined });
+      const cancelar = okCancelar();
+      const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'motivo válido', cancelar, cancelarEnMasterShop: async () => undefined });
       expect(r.ok, estado).toBe(false);
-      expect(aplicar).not.toHaveBeenCalled();
+      expect(cancelar).not.toHaveBeenCalled();
     }
     const { cliente } = clienteFalso({ 'orders.select': { data: pedido('pendiente_manual') } });
-    const aplicar = okTransicion();
-    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: '  ', aplicar, liberarStock: async () => undefined, cancelarEnMasterShop: async () => undefined });
-    expect(r.ok).toBe(false);
-    expect(aplicar).not.toHaveBeenCalled();
+    const cancelar = okCancelar();
+    expect((await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: '  ', cancelar, cancelarEnMasterShop: async () => undefined })).ok).toBe(false);
+    expect(cancelar).not.toHaveBeenCalled();
   });
 
-  it('si otro proceso movió el pedido, lo dice y no libera stock', async () => {
+  it('si otro proceso movió el pedido, la RPC lo rechaza y no se audita', async () => {
     const { cliente } = clienteFalso({ 'orders.select': { data: pedido('pendiente_manual') }, 'shipments.select': { data: null } });
-    const liberarStock = vi.fn(async () => undefined);
-    const r = await cancelarPedidoBd({
-      cliente,
-      ...comun,
-      orderId: ID,
-      motivo: 'Cancelación solicitada',
-      aplicar: async () => ({ ok: false, motivo: 'estado_cambiado', status_actual: 'pagado' }),
-      liberarStock,
-      cancelarEnMasterShop: async () => undefined,
-    });
-    expect(r.ok).toBe(false);
-    expect(liberarStock).not.toHaveBeenCalled();
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Cancelación solicitada', cancelar: noCancelar('estado_cambiado'), cancelarEnMasterShop: async () => undefined });
+    expect(r).toMatchObject({ ok: false, mensaje: expect.stringMatching(/cambió de estado/) });
     expect(auditar).not.toHaveBeenCalled();
+  });
+
+  it('si MasterShop ya canceló y la base rechaza, lo aclara para que se sincronice', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('enviado_transportadora') }, 'shipments.select': { data: envio() } });
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Cancelación solicitada', cancelar: noCancelar('estado_cambiado'), cancelarEnMasterShop: async () => undefined });
+    expect(r).toMatchObject({ ok: false, mensaje: expect.stringMatching(/MasterShop sí se hizo/) });
+  });
+
+  it('si el stock ya estaba descontado, la cancelación lo dice en la auditoría', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('requiere_reembolso') }, 'shipments.select': { data: null } });
+    const cancelar = okCancelar({ stock_estado: 'confirmed', stock_liberado: false });
+    expect((await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Cancelación solicitada', cancelar, cancelarEnMasterShop: async () => undefined })).ok).toBe(true);
+    expect(auditar.mock.calls[0]![0]).toMatchObject({ diff: { stock_estado: 'confirmed', stock_liberado: false } });
   });
 
   it('pedido inexistente', async () => {
     const { cliente } = clienteFalso({ 'orders.select': { data: null } });
-    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'motivo válido', aplicar: okTransicion(), liberarStock: async () => undefined, cancelarEnMasterShop: async () => undefined });
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'motivo válido', cancelar: okCancelar(), cancelarEnMasterShop: async () => undefined });
     expect(r.ok).toBe(false);
   });
 });

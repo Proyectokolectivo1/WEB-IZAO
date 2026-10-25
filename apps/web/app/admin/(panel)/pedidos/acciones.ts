@@ -6,7 +6,7 @@ import { encolarCobro } from '@/lib/admin/pedidos/cola-cobro';
 import { linkCobroBd, reenviarCobroBd } from '@/lib/admin/pedidos/cobro-servidor';
 import { reintentarEnvioMasterShop } from '@/app/api/webhooks/mastershop/cola';
 import { agregarNotaBd, cancelarPedidoBd, marcarPagadoBd, reimprimirEtiquetaBd, reintentarEnvioBd, type ResultadoPedido } from '@/lib/admin/pedidos/acciones-servidor';
-import { confirmarStockPedido, crearCancelarEnMasterShop, liberarStockPedido } from '@/lib/admin/pedidos/externos-servidor';
+import { confirmarStockPedido, crearCancelarEnMasterShop } from '@/lib/admin/pedidos/externos-servidor';
 import { ipDelCliente } from '@/lib/auth/cabeceras';
 import type { AccionId } from '@/lib/auth/permissions';
 import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
@@ -73,7 +73,6 @@ export async function cancelarPedido(orderId: string, motivo: string): Promise<R
       orderId,
       motivo,
       cancelarEnMasterShop: crearCancelarEnMasterShop(e.cliente),
-      liberarStock: liberarStockPedido,
     }),
   );
 }
