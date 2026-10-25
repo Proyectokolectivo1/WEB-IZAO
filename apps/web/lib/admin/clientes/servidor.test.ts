@@ -12,7 +12,6 @@ import { anonimizarClienteBd, listarClientes, obtenerCliente } from './servidor'
 const ID = '11111111-1111-4111-8111-111111111111';
 const AUTH = '33333333-3333-4333-8333-333333333333';
 const comun = { actor: 'admin1', ip: null };
-const AHORA = new Date('2026-10-25T12:00:00.000Z');
 const CORREO = 'ana@correo.co';
 const CELULAR = '+573001234567';
 
@@ -83,83 +82,66 @@ describe('obtenerCliente', () => {
   });
 });
 
-describe('anonimizarClienteBd', () => {
+describe('anonimizarClienteBd (RPC atómica)', () => {
   const datos = { id: ID, motivo: 'Radicado 123 del 20/10' };
+  const { cliente } = clienteFalso({});
+  const exito = {
+    ok: true as const,
+    estado: 'anonimizado' as const,
+    id: ID,
+    pedidos: 2,
+    mensajes_whatsapp: 1,
+    garantias: 1,
+    leads: 3,
+    direcciones: 2,
+    deseos: 4,
+    conversaciones: 5,
+    cuenta_acceso_eliminada: true,
+  };
 
-  it('neutraliza pedidos, garantías, leads, direcciones y cuenta, y marca al final', async () => {
-    const f = conAuth(base());
-    const r = await anonimizarClienteBd({ cliente: f.cliente, datos, ahora: AHORA, ...comun });
-    expect(r).toEqual({ ok: true, id: ID });
-    const orden = f.llamadas.filter((l) => /\.(update|delete)$/.test(l.clave)).map((l) => l.clave);
-    expect(orden).toEqual([
-      'orders.update',
-      'whatsapp_messages.update',
-      'warranty_claims.update',
-      'leads.delete',
-      'warranty_claims.update',
-      'leads.delete',
-      'addresses.delete',
-      'wishlists.delete',
-      'chat_sessions.delete',
-      'customers.update',
-    ]);
-    expect(f.borrar).toHaveBeenCalledWith(AUTH);
-    expect(f.llamadas.find((l) => l.clave === 'orders.update')!.args[0]).toMatchObject({
-      contact_first_name: 'Anonimizado',
-      contact_email: null,
-      document_number: null,
-      shipping_address1: null,
-    });
-    // Los pedidos conservan montos, fecha, estado y ciudad: no se tocan esas columnas.
-    expect(Object.keys(f.llamadas.find((l) => l.clave === 'orders.update')!.args[0] as object)).not.toEqual(
-      expect.arrayContaining(['total_customer', 'status', 'created_at', 'shipping_city_name']),
-    );
-    expect(f.llamadas.filter((l) => l.clave === 'customers.update').at(-1)!.args[0]).toMatchObject({
-      first_name: null,
-      email: null,
-      phone_e164: null,
-      document_number: null,
-      marketing_opt_in: false,
-      anonymized_at: AHORA.toISOString(),
-    });
-    // Garantías y leads se buscan por celular y por correo, cada uno con su filtro.
-    const eqs = f.filtros.filter((x) => (x.tabla === 'warranty_claims' || x.tabla === 'leads') && x.metodo === 'eq').map((x) => x.args);
-    expect(eqs).toEqual(expect.arrayContaining([['phone', CELULAR], ['email', CORREO], ['phone_e164', CELULAR]]));
-  });
-
-  it('la auditoría no lleva ningún dato personal', async () => {
-    const f = conAuth(base());
-    await anonimizarClienteBd({ cliente: f.cliente, datos, ahora: AHORA, ...comun });
+  it('llama a la RPC con el id y audita el resultado sin datos personales', async () => {
+    const rpc = vi.fn(async (_id: string) => exito);
+    expect(await anonimizarClienteBd({ cliente, datos, rpc, ...comun })).toEqual({ ok: true, id: ID });
+    expect(rpc).toHaveBeenCalledWith(ID);
     const texto = JSON.stringify(auditar.mock.calls);
     for (const dato of [CORREO, CELULAR, 'Ana', 'Pérez', '1020304050']) expect(texto).not.toContain(dato);
     expect(auditar).toHaveBeenCalledWith(
-      expect.objectContaining({ accion: 'clientes.anonimizado', entidadId: ID, diff: { motivo: datos.motivo, pedidos: 2, direcciones: 2, cuenta_acceso_eliminada: true } }),
+      expect.objectContaining({
+        accion: 'clientes.anonimizado',
+        entidadId: ID,
+        diff: { motivo: datos.motivo, pedidos: 2, garantias: 1, leads: 3, direcciones: 2, conversaciones: 5, cuenta_acceso_eliminada: true },
+      }),
     );
   });
 
-  it('con pedidos en curso no toca nada', async () => {
-    const f = conAuth(base({ 'orders.select': { data: [pedido('a', 'pagado')] } }));
-    const r = await anonimizarClienteBd({ cliente: f.cliente, datos, ...comun });
-    expect(r).toMatchObject({ ok: false, mensaje: expect.stringMatching(/en curso/) });
-    expect(f.llamadas.some((l) => /\.(update|delete)$/.test(l.clave))).toBe(false);
-    expect(f.borrar).not.toHaveBeenCalled();
+  it('si la RPC se niega por pedidos o garantías en curso, lo explica y no audita', async () => {
+    const rpc = vi.fn(async () => ({ ok: false as const, motivo: 'bloqueado' as const, cuenta_del_panel: false, pedidos_en_curso: 2, garantias_abiertas: 1 }));
+    const r = await anonimizarClienteBd({ cliente, datos, rpc, ...comun });
+    expect(r).toMatchObject({ ok: false, mensaje: expect.stringMatching(/2 pedido.*en curso.*1 garantía/) });
     expect(auditar).not.toHaveBeenCalled();
   });
 
-  it('si un paso falla, el cliente no queda marcado y se puede repetir', async () => {
-    const f = conAuth(base({ 'addresses.delete': { error: { message: 'boom' } } }));
-    const r = await anonimizarClienteBd({ cliente: f.cliente, datos, ...comun });
-    expect(r).toMatchObject({ ok: false, mensaje: expect.stringMatching(/direcciones.*intentarlo de nuevo/) });
-    expect(f.llamadas.some((l) => l.clave === 'customers.update')).toBe(false);
-    expect(f.borrar).not.toHaveBeenCalled();
+  it('explica cuenta del panel, ya anonimizado, inexistente y datos inválidos', async () => {
+    const motivo = (m: 'ya_anonimizado' | 'no_existe' | 'datos_invalidos') => anonimizarClienteBd({ cliente, datos, rpc: async () => ({ ok: false, motivo: m }), ...comun });
+    expect(await motivo('ya_anonimizado')).toMatchObject({ ok: false, mensaje: expect.stringMatching(/ya fue anonimizado/) });
+    expect(await motivo('no_existe')).toMatchObject({ ok: false, mensaje: expect.stringMatching(/ya no existe/) });
+    expect(await motivo('datos_invalidos')).toMatchObject({ ok: false });
+    const panel = await anonimizarClienteBd({
+      cliente,
+      datos,
+      rpc: async () => ({ ok: false, motivo: 'bloqueado', cuenta_del_panel: true, pedidos_en_curso: 0, garantias_abiertas: 0 }),
+      ...comun,
+    });
+    expect(panel).toMatchObject({ ok: false, mensaje: expect.stringMatching(/cuenta del panel/) });
     expect(auditar).not.toHaveBeenCalled();
   });
 
-  it('un cliente sin cuenta de acceso ni celular no busca por esos campos', async () => {
-    const f = conAuth(base({ 'customers.select': { data: cliente({ auth_user_id: null, phone_e164: null }) } }));
-    expect((await anonimizarClienteBd({ cliente: f.cliente, datos, ahora: AHORA, ...comun })).ok).toBe(true);
-    expect(f.borrar).not.toHaveBeenCalled();
-    expect(f.filtros.some((x) => x.args[0] === 'phone_e164')).toBe(false);
+  it('un fallo de la base se propaga: no se audita una anonimización que no ocurrió', async () => {
+    const rpc = vi.fn(async (): Promise<never> => {
+      throw new Error('db caída');
+    });
+    await expect(anonimizarClienteBd({ cliente, datos, rpc, ...comun })).rejects.toThrow('db caída');
+    expect(auditar).not.toHaveBeenCalled();
   });
 });
 

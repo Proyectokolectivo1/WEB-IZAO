@@ -7,11 +7,11 @@ import 'server-only';
  * repetir sin riesgo. Nunca se registra en la auditoría ningún dato personal, ni el anterior ni el nuevo.
  */
 import { auditarCambio } from '@/lib/admin/auditoria';
+import { anonimizarClienteDb, type ResultadoAnonimizar } from '@/lib/db/panel-atomicas';
 import type { Cliente } from '../catalogo/taxonomias-servidor';
 import { escaparBusqueda, rangoPagina, type ResultadoAccion } from '../crud/comun';
 import {
   ESTADOS_GARANTIA_ABIERTOS,
-  MARCA_ANONIMIZADO,
   bloqueosAnonimizacion,
   interpretarBusquedaCliente,
   pedidoEnCurso,
@@ -143,94 +143,49 @@ export async function obtenerCliente(cliente: Cliente, id: string): Promise<Deta
   };
 }
 
-const LOTE = 100;
-const trozos = <T>(xs: readonly T[]): T[][] => Array.from({ length: Math.ceil(xs.length / LOTE) }, (_, i) => xs.slice(i * LOTE, (i + 1) * LOTE));
+type Rpc = (id: string) => Promise<ResultadoAnonimizar>;
 
 /**
- * Anonimiza al cliente y sus rastros: pedidos (contacto, documento y dirección; se conservan montos, fechas, estado y
- * ciudad), garantías, mensajes de WhatsApp, direcciones, lista de deseos, conversaciones con Iza, leads y la cuenta de
- * acceso. Irreversible. Se niega si hay pedidos o garantías en curso.
+ * Anonimiza al cliente y sus rastros con la RPC atómica `anonimizar_cliente` (una sola transacción: o queda todo
+ * anonimizado o no queda nada). Neutraliza pedidos, garantías, WhatsApp, direcciones, lista de deseos, chat con Iza,
+ * leads y la cuenta de acceso, y conserva montos, fechas, estado y ciudad. La RPC se niega con pedidos o garantías en
+ * curso o si es una cuenta del panel. El motivo y la auditoría los pone el panel, sin datos personales.
  */
-export async function anonimizarClienteBd(args: Ctx & { datos: DatosAnonimizar; ahora?: Date }): Promise<ResultadoAccion> {
-  const { cliente, datos, actor, ip } = args;
-  const detalle = await obtenerCliente(cliente, datos.id);
-  if (!detalle) return { ok: false, mensaje: 'Este cliente ya no existe.' };
-  if (detalle.bloqueos.length > 0) return { ok: false, mensaje: detalle.bloqueos.join(' ') };
-  const c = detalle.cliente;
-  const falla = (paso: string): ResultadoAccion => ({
-    ok: false,
-    mensaje: `No se pudo terminar (${paso}). El cliente aún no quedó marcado como anonimizado: es seguro intentarlo de nuevo.`,
-  });
-
-  const idsPedidos = detalle.pedidos.map((p) => p.id);
-  for (const lote of trozos(idsPedidos)) {
-    const { error } = await cliente
-      .from('orders')
-      .update({
-        contact_first_name: MARCA_ANONIMIZADO,
-        contact_last_name: '',
-        contact_phone_e164: MARCA_ANONIMIZADO.toLowerCase(),
-        contact_email: null,
-        document_type: null,
-        document_number: null,
-        shipping_district: null,
-        shipping_address1: null,
-        shipping_address2: null,
-        shipping_zip: null,
-        shipping_notes: null,
-      })
-      .in('id', lote);
-    if (error) return falla('pedidos');
-    const wa = await cliente.from('whatsapp_messages').update({ to_e164: MARCA_ANONIMIZADO.toLowerCase() }).in('order_id', lote);
-    if (wa.error) return falla('mensajes de WhatsApp');
+export async function anonimizarClienteBd(args: Ctx & { datos: DatosAnonimizar; rpc?: Rpc }): Promise<ResultadoAccion> {
+  const { datos, actor, ip } = args;
+  const r = await (args.rpc ?? anonimizarClienteDb)(datos.id);
+  if (!r.ok) {
+    if (r.motivo === 'bloqueado') {
+      return {
+        ok: false,
+        mensaje: bloqueosAnonimizacion({
+          yaAnonimizado: false,
+          pedidosEnCurso: r.pedidos_en_curso,
+          garantiasAbiertas: r.garantias_abiertas,
+          esCuentaDelPanel: r.cuenta_del_panel,
+        }).join(' '),
+      };
+    }
+    return {
+      ok: false,
+      mensaje: r.motivo === 'ya_anonimizado' ? 'Este cliente ya fue anonimizado.' : r.motivo === 'no_existe' ? 'Este cliente ya no existe.' : 'Identificador no válido.',
+    };
   }
-
-  // Garantías y leads que coinciden por celular o correo (consultas separadas, sin filtros armados con texto).
-  const claves: [string, string | null][] = [['phone', c.phone_e164], ['email', c.email]];
-  for (const [campo, valor] of claves) {
-    if (!valor) continue;
-    const g = await cliente
-      .from('warranty_claims')
-      .update({ customer_name: MARCA_ANONIMIZADO, phone: MARCA_ANONIMIZADO.toLowerCase(), email: null, description: null })
-      .eq(campo, valor);
-    if (g.error) return falla('garantías');
-    const l = await cliente.from('leads').delete().eq(campo === 'phone' ? 'phone_e164' : 'email', valor);
-    if (l.error) return falla('leads');
-  }
-
-  for (const [tabla, columna] of [['addresses', 'customer_id'], ['wishlists', 'customer_id'], ['chat_sessions', 'customer_id']] as const) {
-    const { error } = await cliente.from(tabla).delete().eq(columna, c.id);
-    if (error) return falla(tabla === 'addresses' ? 'direcciones' : tabla === 'wishlists' ? 'lista de deseos' : 'conversaciones');
-  }
-
-  if (c.auth_user_id) {
-    const { error } = await cliente.auth.admin.deleteUser(c.auth_user_id);
-    if (error) return falla('cuenta de acceso');
-  }
-
-  const { error } = await cliente
-    .from('customers')
-    .update({
-      first_name: null,
-      last_name: null,
-      email: null,
-      phone_e164: null,
-      document_type: null,
-      document_number: null,
-      marketing_opt_in: false,
-      whatsapp_opt_in: false,
-      anonymized_at: (args.ahora ?? new Date()).toISOString(),
-    })
-    .eq('id', c.id);
-  if (error) return falla('ficha del cliente');
-
   await auditarCambio({
     actor,
     accion: 'clientes.anonimizado',
     entidad: 'customers',
-    entidadId: c.id,
-    diff: { motivo: datos.motivo, pedidos: idsPedidos.length, direcciones: detalle.direcciones, cuenta_acceso_eliminada: Boolean(c.auth_user_id) },
+    entidadId: r.id,
+    diff: {
+      motivo: datos.motivo,
+      pedidos: r.pedidos,
+      garantias: r.garantias,
+      leads: r.leads,
+      direcciones: r.direcciones,
+      conversaciones: r.conversaciones,
+      cuenta_acceso_eliminada: r.cuenta_acceso_eliminada,
+    },
     ip,
   });
-  return { ok: true, id: c.id };
+  return { ok: true, id: r.id };
 }

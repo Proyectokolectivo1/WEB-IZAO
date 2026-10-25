@@ -87,9 +87,6 @@ export const esquemaAnonimizar = z.object({
     .max(300, 'Máximo 300 caracteres.'),
 }).transform(({ id, motivo }): DatosAnonimizar => ({ id, motivo })) as unknown as z.ZodType<DatosAnonimizar, unknown>;
 
-/** Texto que reemplaza los datos personales en los pedidos y garantías conservados. */
-export const MARCA_ANONIMIZADO = 'Anonimizado';
-
 /** Qué impide anonimizar, en palabras para la persona. Vacío = se puede. */
 export function bloqueosAnonimizacion(args: {
   yaAnonimizado: boolean;
