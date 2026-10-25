@@ -1,13 +1,12 @@
 import 'server-only';
 /** Páginas y políticas del sitio (servicio, sin RLS): lectura, guardado con publicación única, eliminación. */
 import { auditarCambio } from '@/lib/admin/auditoria';
+import { publicarPaginaDb, type EntradaPagina, type ResultadoPagina } from '@/lib/db/panel-atomicas';
 import type { Cliente } from '../catalogo/taxonomias-servidor';
 import { diffCampos, type ResultadoAccion } from '../crud/comun';
 import { invalidarContenido, traducirErrorBd, type Pais } from '../crud/servidor';
 import {
-  calcularVersion,
   columnasPagina,
-  esTipoUnico,
   marcadoresPendientes,
   type DatosPagina,
   type EstadoPagina,
@@ -29,7 +28,6 @@ export type FilaPagina = {
   updated_at: string;
 };
 
-type Reemplazada = Pick<FilaPagina, 'id' | 'title' | 'country_code' | 'kind'>;
 type Ctx = { cliente: Cliente; actor: string; ip: string | null };
 
 const COLUMNAS = 'id, country_code, kind, slug, title, content_html, seo_title, seo_description, status, version, updated_by, updated_at';
@@ -67,18 +65,17 @@ export async function publicadasUnicas(cliente: Cliente): Promise<{ id: string; 
   return (data ?? []) as never;
 }
 
+export type PublicarDb = (entrada: EntradaPagina) => Promise<ResultadoPagina>;
+
 /**
- * Guarda la página. Si queda publicada y su tipo es único, despublica (pasa a borrador) la que estaba
- * publicada del mismo país y tipo ANTES de escribir la nueva (el índice único no admite dos), y si la
- * escritura falla vuelve a publicar la anterior. Sube `version` al publicar o al cambiar el texto publicado
- * e invalida `content:{país}` (país actual y, si cambió, el anterior).
- *
- * No es una transacción de base de datos (supabase-js no las expone): ver "Pendiente" de la bitácora.
+ * Guarda la página con la RPC atómica `admin_publicar_pagina`: en UNA transacción escribe la página, sube `version` al
+ * publicar o al cambiar el texto publicado y, si queda publicada y su tipo es único, pasa a borrador la que estaba
+ * publicada del mismo país y tipo (o deshace todo si algo falla). El panel conserva la validación de marcadores, la
+ * auditoría (sin el HTML completo) y la invalidación de `content:{país}` (el actual, el anterior y el de la reemplazada).
  */
-export async function guardarPaginaBd(args: Ctx & { datos: DatosPagina }): Promise<ResultadoAccion & { despublicada?: string }> {
-  const { cliente, datos, actor, ip } = args;
-  const antes = datos.id ? await obtenerPagina(cliente, datos.id) : null;
-  if (datos.id && !antes) return { ok: false, mensaje: 'Esa página ya no existe.' };
+export async function guardarPaginaBd(args: Ctx & { datos: DatosPagina; publicar?: PublicarDb }): Promise<ResultadoAccion & { despublicada?: string }> {
+  const { datos, actor, ip } = args;
+  const publicar = args.publicar ?? publicarPaginaDb;
 
   if (datos.status === 'published') {
     const pendientes = marcadoresPendientes(datos.content_html);
@@ -91,89 +88,65 @@ export async function guardarPaginaBd(args: Ctx & { datos: DatosPagina }): Promi
     }
   }
 
-  const fila = {
-    ...columnasPagina(datos),
-    version: calcularVersion(antes, datos),
-    updated_by: actor,
-    updated_at: new Date().toISOString(),
-  };
-
-  // Publicación única por país y tipo.
-  let reemplazada = null as Reemplazada | null;
-  if (datos.status === 'published' && esTipoUnico(datos.kind)) {
-    let consulta = cliente
-      .from('pages')
-      .select('id, title, country_code, kind')
-      .eq('country_code', datos.country_code)
-      .eq('kind', datos.kind)
-      .eq('status', 'published');
-    if (datos.id) consulta = consulta.neq('id', datos.id);
-    const { data, error } = await consulta.maybeSingle();
-    if (error) return { ok: false, ...traducirErrorBd(error) };
-    reemplazada = (data as Reemplazada | null) ?? null;
-  }
-
-  if (reemplazada) {
-    const { error } = await cliente
-      .from('pages')
-      .update({ status: 'draft', updated_by: actor, updated_at: fila.updated_at })
-      .eq('id', reemplazada.id);
-    if (error) return { ok: false, ...traducirErrorBd(error) };
-  }
-
-  const restaurarAnterior = async () => {
-    if (!reemplazada) return;
-    const { error } = await cliente.from('pages').update({ status: 'published' }).eq('id', reemplazada.id);
-    if (error) console.error('[panel] no se pudo restaurar la página publicada anterior:', reemplazada.id, error.message);
-  };
-
-  let id = datos.id ?? '';
-  if (datos.id) {
-    const { error } = await cliente.from('pages').update(fila).eq('id', datos.id);
-    if (error) {
-      await restaurarAnterior();
-      return { ok: false, ...traducirErrorBd(error, UNICOS) };
+  const r = await publicar({ ...(datos.id ? { id: datos.id } : {}), ...columnasPagina(datos), updated_by: actor });
+  if (!r.ok) {
+    switch (r.motivo) {
+      case 'no_existe':
+        return { ok: false, mensaje: 'Esa página ya no existe.' };
+      case 'marcadores_pendientes':
+        return { ok: false, mensaje: 'Resuelve los textos entre corchetes antes de publicar.', errores: { content_html: 'Quedan marcadores sin resolver.' } };
+      case 'slug_duplicado':
+        return { ok: false, mensaje: UNICOS.slug, errores: { slug: UNICOS.slug } };
+      case 'publicada_duplicada':
+        return { ok: false, mensaje: UNICOS.kind, errores: { kind: UNICOS.kind } };
+      default:
+        return { ok: false, mensaje: 'Revisa los campos marcados.' };
     }
-  } else {
-    const { data, error } = await cliente.from('pages').insert(fila).select('id').single();
-    if (error) {
-      await restaurarAnterior();
-      return { ok: false, ...traducirErrorBd(error, UNICOS) };
-    }
-    id = data.id as string;
   }
 
-  if (reemplazada) {
+  const { id, antes, despublicada } = r;
+  if (despublicada) {
     await auditarCambio({
       actor,
       accion: 'pages.despublicada',
       entidad: 'pages',
-      entidadId: reemplazada.id,
+      entidadId: despublicada.id,
       diff: { antes: { status: 'published' }, despues: { status: 'draft' }, motivo: `reemplazada por ${id}` },
       ip,
     });
   }
+  const despues = { ...columnasPagina(datos), version: r.version, content_html: `${datos.content_html.length} caracteres` };
   await auditarCambio({
     actor,
-    accion: antes ? (antes.status !== 'published' && datos.status === 'published' ? 'pages.publicada' : 'pages.actualizada') : 'pages.creada',
+    accion: r.estado === 'creada' ? 'pages.creada' : antes && antes.status !== 'published' && datos.status === 'published' ? 'pages.publicada' : 'pages.actualizada',
     entidad: 'pages',
     entidadId: id,
     // El HTML completo no va al diff: solo qué campos cambiaron y su versión.
     diff: antes
       ? diffCampos(
-          { ...antes, content_html: `${antes.content_html.length} caracteres` },
-          { ...fila, content_html: `${fila.content_html.length} caracteres` },
+          {
+            country_code: antes.country_code,
+            kind: antes.kind,
+            slug: antes.slug,
+            title: antes.title,
+            status: antes.status,
+            version: antes.version,
+            seo_title: antes.seo_title,
+            seo_description: antes.seo_description,
+            content_html: `${antes.content_length} caracteres`,
+          },
+          despues,
         )
-      : { despues: { ...fila, content_html: `${fila.content_html.length} caracteres` } },
+      : { despues },
     ip,
   });
 
   const paises = new Set<Pais>([datos.country_code as Pais]);
-  if (antes) paises.add(antes.country_code);
-  if (reemplazada) paises.add(reemplazada.country_code);
+  if (antes) paises.add(antes.country_code as Pais);
+  if (despublicada) paises.add(despublicada.country_code as Pais);
   invalidarContenido([...paises]);
 
-  return { ok: true, id, ...(reemplazada ? { despublicada: reemplazada.title } : {}) };
+  return { ok: true, id, ...(despublicada ? { despublicada: despublicada.title } : {}) };
 }
 
 export async function eliminarPaginaBd(args: Ctx & { id: string }): Promise<ResultadoAccion> {

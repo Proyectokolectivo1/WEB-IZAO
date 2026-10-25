@@ -6,7 +6,8 @@ vi.mock('next/cache', () => ({ revalidateTag: revalidar }));
 
 import { clienteFalso } from '../crud/cliente-falso';
 import { esquemaPagina } from './paginas';
-import { eliminarPaginaBd, guardarPaginaBd } from './paginas-servidor';
+import type { EntradaPagina } from '@/lib/db/panel-atomicas';
+import { eliminarPaginaBd, guardarPaginaBd, type PublicarDb } from './paginas-servidor';
 
 const comun = { actor: 'u1', ip: null };
 const datos = (extra: Record<string, unknown> = {}) =>
@@ -27,99 +28,118 @@ beforeEach(() => {
   revalidar.mockClear();
 });
 
-describe('guardarPaginaBd · publicación única por país y tipo', () => {
-  it('al publicar despublica la anterior del mismo país y tipo, antes de escribir la nueva', async () => {
-    const { cliente, llamadas } = clienteFalso({
-      'pages.select': { data: { id: ID_VIEJA, title: 'Vieja', country_code: 'CO', kind: 'tratamiento_datos' } },
-      'pages.insert': { data: { id: ID } },
-    });
-    const r = await guardarPaginaBd({ cliente, datos: datos(), ...comun });
+const exito = (extra: Record<string, unknown> = {}) => ({
+  ok: true as const,
+  estado: 'creada' as 'creada' | 'actualizada',
+  id: ID,
+  version: 1,
+  status: 'published' as 'draft' | 'published',
+  publicada_ahora: true,
+  despublicada: null as { id: string; title: string; country_code: string } | null,
+  antes: null as null | {
+    country_code: string;
+    kind: string;
+    slug: string;
+    title: string;
+    status: string;
+    version: number;
+    seo_title: string | null;
+    seo_description: string | null;
+    content_length: number;
+  },
+  ...extra,
+});
+const publicarCon = (r: Awaited<ReturnType<PublicarDb>>) => vi.fn(async (_e: EntradaPagina) => r);
+const antes = (extra: Record<string, unknown> = {}) => ({
+  country_code: 'CO',
+  kind: 'tratamiento_datos',
+  slug: 'tratamiento-de-datos',
+  title: 'Política de datos',
+  status: 'published',
+  version: 4,
+  seo_title: null,
+  seo_description: null,
+  content_length: 14,
+  ...extra,
+});
+const { cliente: sinCliente } = clienteFalso({});
+
+describe('guardarPaginaBd (RPC atómica admin_publicar_pagina)', () => {
+  it('manda la página completa y el actor, y avisa de la que quedó en borrador', async () => {
+    const publicar = publicarCon(exito({ despublicada: { id: ID_VIEJA, title: 'Vieja', country_code: 'CO' } }));
+    const r = await guardarPaginaBd({ cliente: sinCliente, datos: datos(), publicar, ...comun });
     expect(r).toEqual({ ok: true, id: ID, despublicada: 'Vieja' });
-    const orden = llamadas.map((l) => l.clave).filter((c) => c === 'pages.update' || c === 'pages.insert');
-    expect(orden).toEqual(['pages.update', 'pages.insert']);
-    expect((llamadas.find((l) => l.clave === 'pages.update')?.args[0] as { status: string }).status).toBe('draft');
-    expect(auditar.mock.calls.map((c) => (c[0] as { accion: string }).accion)).toEqual(['pages.despublicada', 'pages.creada']);
-  });
-
-  it('si la escritura de la nueva falla, vuelve a publicar la anterior', async () => {
-    const { cliente, llamadas } = clienteFalso({
-      'pages.select': { data: { id: ID_VIEJA, title: 'Vieja', country_code: 'CO', kind: 'tratamiento_datos' } },
-      'pages.insert': { error: { code: '23505', message: 'duplicate key', details: 'Key (country_code, slug)=(CO, x) already exists.' } },
+    expect(publicar).toHaveBeenCalledWith({
+      country_code: 'CO',
+      kind: 'tratamiento_datos',
+      slug: 'tratamiento-de-datos',
+      title: 'Política de datos',
+      content_html: '<p>Texto</p>',
+      seo_title: null,
+      seo_description: null,
+      status: 'published',
+      updated_by: 'u1',
     });
-    const r = await guardarPaginaBd({ cliente, datos: datos(), ...comun });
-    expect(r.ok).toBe(false);
-    const estados = llamadas.filter((l) => l.clave === 'pages.update').map((l) => (l.args[0] as { status: string }).status);
-    expect(estados).toEqual(['draft', 'published']);
-    expect(revalidar).not.toHaveBeenCalled();
-    expect(auditar).not.toHaveBeenCalled();
+    expect(auditar.mock.calls.map((c) => (c[0] as { accion: string }).accion)).toEqual(['pages.despublicada', 'pages.creada']);
+    expect(auditar.mock.calls[0]![0]).toMatchObject({ entidadId: ID_VIEJA, diff: { motivo: `reemplazada por ${ID}` } });
   });
 
-  it('no despublica nada si el tipo es general', async () => {
-    const { cliente, llamadas } = clienteFalso({ 'pages.insert': { data: { id: ID } } });
-    const r = await guardarPaginaBd({ cliente, datos: datos({ kind: 'general', slug: 'promo' }), ...comun });
-    expect(r).toEqual({ ok: true, id: ID });
-    expect(llamadas.some((l) => l.clave === 'pages.update')).toBe(false);
+  it('al editar manda el id; el resultado de la RPC define la acción auditada', async () => {
+    const borrador = publicarCon(exito({ estado: 'actualizada', antes: antes({ status: 'draft' }) }));
+    await guardarPaginaBd({ cliente: sinCliente, datos: datos({ id: ID }), publicar: borrador, ...comun });
+    expect(borrador.mock.calls[0]![0]).toMatchObject({ id: ID });
+    expect(auditar.mock.calls.at(-1)![0]).toMatchObject({ accion: 'pages.publicada' });
+
+    const editada = publicarCon(exito({ estado: 'actualizada', antes: antes() }));
+    await guardarPaginaBd({ cliente: sinCliente, datos: datos({ id: ID }), publicar: editada, ...comun });
+    expect(auditar.mock.calls.at(-1)![0]).toMatchObject({ accion: 'pages.actualizada' });
   });
 
-  it('un borrador no toca a la publicada', async () => {
-    const { cliente, llamadas } = clienteFalso({ 'pages.insert': { data: { id: ID } } });
-    await guardarPaginaBd({ cliente, datos: datos({ status: 'draft' }), ...comun });
-    expect(llamadas.some((l) => l.clave === 'pages.update')).toBe(false);
-  });
-
-  it('no publica con marcadores sin resolver y no escribe nada', async () => {
-    const { cliente, llamadas } = clienteFalso({});
-    const r = await guardarPaginaBd({ cliente, datos: datos({ content_html: '<p>NIT [NIT]</p>' }), ...comun });
+  it('no publica con marcadores sin resolver y ni siquiera llama a la RPC', async () => {
+    const publicar = publicarCon(exito());
+    const r = await guardarPaginaBd({ cliente: sinCliente, datos: datos({ content_html: '<p>NIT [NIT]</p>' }), publicar, ...comun });
     expect(r.ok).toBe(false);
     expect(!r.ok && r.errores?.content_html).toContain('[NIT]');
-    expect(llamadas).toEqual([]);
+    expect(publicar).not.toHaveBeenCalled();
+  });
+
+  it('traduce cada rechazo de la RPC sin auditar ni invalidar', async () => {
+    const prueba = async (motivo: 'no_existe' | 'marcadores_pendientes' | 'slug_duplicado' | 'publicada_duplicada' | 'datos_invalidos') =>
+      guardarPaginaBd({ cliente: sinCliente, datos: datos(), publicar: publicarCon({ ok: false, motivo }), ...comun });
+    expect(await prueba('no_existe')).toMatchObject({ ok: false, mensaje: expect.stringMatching(/ya no existe/) });
+    expect(await prueba('slug_duplicado')).toMatchObject({ ok: false, errores: { slug: expect.any(String) } });
+    expect(await prueba('publicada_duplicada')).toMatchObject({ ok: false, errores: { kind: expect.any(String) } });
+    expect(await prueba('marcadores_pendientes')).toMatchObject({ ok: false, errores: { content_html: expect.any(String) } });
+    expect(await prueba('datos_invalidos')).toMatchObject({ ok: false });
+    expect(auditar).not.toHaveBeenCalled();
+    expect(revalidar).not.toHaveBeenCalled();
   });
 });
 
-describe('guardarPaginaBd · versión e invalidación', () => {
-  const previa = { id: ID, country_code: 'CO', kind: 'tratamiento_datos', slug: 'tratamiento-de-datos', title: 'Política de datos', content_html: '<p>Viejo</p>', seo_title: null, seo_description: null, status: 'published', version: 4, updated_by: null, updated_at: '2026-01-01T00:00:00Z' };
-
-  it('sube la versión al cambiar el texto de una publicada e invalida content:CO', async () => {
-    const { cliente, llamadas } = clienteFalso({
-      // 1.ª lectura: la página; 2.ª: no hay otra publicada del tipo.
-      'pages.select': [{ data: previa }, { data: null }],
-      'pages.update': { data: null },
-    });
-    const r = await guardarPaginaBd({ cliente, datos: datos({ id: ID }), ...comun });
-    expect(r.ok).toBe(true);
-    const fila = llamadas.find((l) => l.clave === 'pages.update')?.args[0] as { version: number; updated_by: string };
-    expect(fila.version).toBe(5);
-    expect(fila.updated_by).toBe('u1');
+describe('guardarPaginaBd · invalidación y auditoría', () => {
+  it('invalida content:CO al guardar una página de Colombia y no toca Ecuador', async () => {
+    await guardarPaginaBd({ cliente: sinCliente, datos: datos(), publicar: publicarCon(exito()), ...comun });
     expect(revalidar).toHaveBeenCalledWith('content:CO');
     expect(revalidar).not.toHaveBeenCalledWith('content:EC');
   });
 
-  it('conserva la versión si solo cambia el SEO', async () => {
-    const { cliente, llamadas } = clienteFalso({
-      'pages.select': [{ data: { ...previa, content_html: '<p>Texto</p>' } }, { data: null }],
-    });
-    await guardarPaginaBd({ cliente, datos: datos({ id: ID, seo_title: 'Nuevo' }), ...comun });
-    expect((llamadas.find((l) => l.clave === 'pages.update')?.args[0] as { version: number }).version).toBe(4);
-  });
-
-  it('invalida el país anterior y el nuevo si cambia de país', async () => {
-    const { cliente } = clienteFalso({ 'pages.select': [{ data: previa }, { data: null }] });
-    await guardarPaginaBd({ cliente, datos: datos({ id: ID, country_code: 'EC' }), ...comun });
+  it('si cambia de país invalida el anterior y el nuevo; si reemplaza una de otro país, también ese', async () => {
+    await guardarPaginaBd({ cliente: sinCliente, datos: datos({ id: ID, country_code: 'EC' }), publicar: publicarCon(exito({ estado: 'actualizada', antes: antes() })), ...comun });
     expect(revalidar).toHaveBeenCalledWith('content:CO');
     expect(revalidar).toHaveBeenCalledWith('content:EC');
   });
 
-  it('el diff de auditoría no lleva el HTML completo', async () => {
-    const { cliente } = clienteFalso({ 'pages.select': [{ data: previa }, { data: null }] });
-    await guardarPaginaBd({ cliente, datos: datos({ id: ID }), ...comun });
-    const diff = JSON.stringify((auditar.mock.calls.at(-1)?.[0] as { diff: unknown }).diff);
-    expect(diff).not.toContain('<p>');
-  });
-
-  it('una página que ya no existe devuelve error', async () => {
-    const { cliente } = clienteFalso({ 'pages.select': { data: null } });
-    const r = await guardarPaginaBd({ cliente, datos: datos({ id: ID }), ...comun });
-    expect(r.ok).toBe(false);
+  it('el diff de auditoría no lleva el HTML completo y muestra qué cambió', async () => {
+    await guardarPaginaBd({
+      cliente: sinCliente,
+      datos: datos({ id: ID, title: 'Nuevo título' }),
+      publicar: publicarCon(exito({ estado: 'actualizada', version: 5, antes: antes() })),
+      ...comun,
+    });
+    const evento = auditar.mock.calls.at(-1)![0] as { diff: { antes: Record<string, unknown>; despues: Record<string, unknown> } };
+    expect(JSON.stringify(evento.diff)).not.toContain('<p>');
+    expect(evento.diff.antes).toMatchObject({ title: 'Política de datos', version: 4 });
+    expect(evento.diff.despues).toMatchObject({ title: 'Nuevo título', version: 5 });
   });
 });
 
