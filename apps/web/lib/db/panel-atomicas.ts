@@ -28,10 +28,10 @@ const anonimizarSchema = z.union([
     conversaciones: z.number().int(),
     cuenta_acceso_eliminada: z.boolean(),
     /** 20261025191446: pagos con `raw_last_event` vaciado, webhooks recortados, reseñas y fotos de garantía retiradas. */
-    pagos_limpiados: z.number().int().optional(),
-    webhooks_recortados: z.number().int().optional(),
-    resenas: z.number().int().optional(),
-    fotos_garantia: z.number().int().optional(),
+    pagos_limpiados: z.number().int(),
+    webhooks_recortados: z.number().int(),
+    resenas: z.number().int(),
+    fotos_garantia: z.number().int(),
   }),
   z.object({
     ok: z.literal(false),
@@ -67,10 +67,10 @@ const cancelarSchema = z.union([
     stock_estado: z.string(),
     stock_liberado: z.boolean(),
     /** El stock ya descontado por el pago volvió al inventario (D-035). */
-    stock_devuelto: z.boolean().optional(),
-    unidades_devueltas: z.number().int().optional(),
+    stock_devuelto: z.boolean(),
+    unidades_devueltas: z.number().int(),
     /** `envio_recolectado`: no se devolvió porque el paquete ya salió con la transportadora. */
-    stock_retenido: z.literal('envio_recolectado').nullable().optional(),
+    stock_retenido: z.literal('envio_recolectado').nullable(),
   }),
   z.object({
     ok: z.literal(false),

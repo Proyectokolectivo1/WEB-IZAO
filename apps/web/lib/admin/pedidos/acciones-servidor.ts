@@ -159,6 +159,9 @@ export async function cancelarPedidoBd(
       cancelado_en_mastershop: canceladoEnMasterShop,
       stock_estado: r.stock_estado,
       stock_liberado: r.stock_liberado,
+      stock_devuelto: r.stock_devuelto,
+      unidades_devueltas: r.unidades_devueltas,
+      stock_retenido: r.stock_retenido,
     },
   });
   return { ok: true, mensaje: 'Pedido cancelado.' };

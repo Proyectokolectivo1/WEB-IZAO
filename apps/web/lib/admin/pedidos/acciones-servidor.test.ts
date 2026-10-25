@@ -40,6 +40,9 @@ const okCancelar = (extra: Record<string, unknown> = {}) =>
     event_id: '22222222-2222-4222-8222-222222222222',
     stock_estado: 'released',
     stock_liberado: true,
+    stock_devuelto: false,
+    unidades_devueltas: 0,
+    stock_retenido: null,
     ...extra,
   }));
 const noCancelar = (motivo: 'transicion_invalida' | 'estado_cambiado' | 'pedido_inexistente' | 'datos_invalidos') =>
@@ -145,9 +148,16 @@ describe('cancelarPedidoBd (RPC atómica cancelar_pedido)', () => {
 
   it('si el stock ya estaba descontado, la cancelación lo dice en la auditoría', async () => {
     const { cliente } = clienteFalso({ 'orders.select': { data: pedido('requiere_reembolso') }, 'shipments.select': { data: null } });
-    const cancelar = okCancelar({ stock_estado: 'confirmed', stock_liberado: false });
+    const cancelar = okCancelar({ stock_estado: 'confirmed', stock_liberado: false, stock_devuelto: false, stock_retenido: 'envio_recolectado' });
     expect((await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Cancelación solicitada', cancelar, cancelarEnMasterShop: async () => undefined })).ok).toBe(true);
-    expect(auditar.mock.calls[0]![0]).toMatchObject({ diff: { stock_estado: 'confirmed', stock_liberado: false } });
+    expect(auditar.mock.calls[0]![0]).toMatchObject({ diff: { stock_estado: 'confirmed', stock_liberado: false, stock_retenido: 'envio_recolectado' } });
+  });
+
+  it('si la cancelación devolvió el stock pagado, la auditoría guarda las unidades', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('pendiente_manual') }, 'shipments.select': { data: null } });
+    const cancelar = okCancelar({ stock_devuelto: true, unidades_devueltas: 3 });
+    await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Cancelación solicitada', cancelar, cancelarEnMasterShop: async () => undefined });
+    expect(auditar.mock.calls[0]![0]).toMatchObject({ diff: { stock_devuelto: true, unidades_devueltas: 3, stock_retenido: null } });
   });
 
   it('pedido inexistente', async () => {

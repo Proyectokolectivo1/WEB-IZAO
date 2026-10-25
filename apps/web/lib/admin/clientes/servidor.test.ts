@@ -97,6 +97,10 @@ describe('anonimizarClienteBd (RPC atómica)', () => {
     deseos: 4,
     conversaciones: 5,
     cuenta_acceso_eliminada: true,
+    pagos_limpiados: 2,
+    webhooks_recortados: 3,
+    resenas: 1,
+    fotos_garantia: 4,
   };
 
   it('llama a la RPC con el id y audita el resultado sin datos personales', async () => {
@@ -109,7 +113,19 @@ describe('anonimizarClienteBd (RPC atómica)', () => {
       expect.objectContaining({
         accion: 'clientes.anonimizado',
         entidadId: ID,
-        diff: { motivo: datos.motivo, pedidos: 2, garantias: 1, leads: 3, direcciones: 2, conversaciones: 5, cuenta_acceso_eliminada: true },
+        diff: {
+          motivo: datos.motivo,
+          pedidos: 2,
+          garantias: 1,
+          leads: 3,
+          direcciones: 2,
+          conversaciones: 5,
+          pagos_limpiados: 2,
+          webhooks_recortados: 3,
+          resenas: 1,
+          fotos_garantia: 4,
+          cuenta_acceso_eliminada: true,
+        },
       }),
     );
   });

@@ -46,6 +46,15 @@ describe('anonimizarClienteDb', () => {
   });
 });
 
+describe('campos obligatorios de las respuestas (20261025191446)', () => {
+  it('una respuesta de anonimizar sin los conteos nuevos o de cancelar sin los datos del stock es ErrorDb', async () => {
+    clienteFalso({ ok: true, estado: 'anonimizado', id: ID, pedidos: 1, mensajes_whatsapp: 0, garantias: 0, leads: 0, direcciones: 0, deseos: 0, conversaciones: 0, cuenta_acceso_eliminada: false });
+    await expect(anonimizarClienteDb(ID)).rejects.toBeInstanceOf(ErrorDb);
+    clienteFalso({ ok: true, order_id: ID, from_status: 'pendiente_manual', to_status: 'cancelado', event_id: EV, stock_estado: 'released', stock_liberado: true });
+    await expect(cancelarPedidoDb({ order_id: ID, from_status: 'pendiente_manual', actor: 'admin:u1' })).rejects.toBeInstanceOf(ErrorDb);
+  });
+});
+
 describe('cancelarPedidoDb', () => {
   it('los estados cancelables salen de order-state y coinciden con la RPC', () => {
     expect([...ESTADOS_CANCELABLES].sort()).toEqual(['en_preparacion', 'enviado_transportadora', 'pendiente_manual', 'requiere_reembolso']);

@@ -41,6 +41,8 @@ export const ETIQUETA_EVENTO: Record<string, string> = {
   cobro_reenvio_solicitado: 'Reenvío de cobro solicitado',
   reintento_envio_solicitado: 'Reintento de envío a MasterShop',
   nota_interna: 'Nota interna',
+  stock_devuelto: 'Stock devuelto al inventario',
+  stock_retenido: 'Stock retenido: el paquete ya salió con la transportadora',
 };
 
 export const ETIQUETA_IMPRESION: Record<string, string> = {

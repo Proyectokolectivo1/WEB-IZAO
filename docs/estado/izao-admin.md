@@ -26,7 +26,7 @@
 - Gastos: botón "Sincronizar ahora" de Meta Ads (conector: izao-integraciones/worker). Comprobante hecho (`media.kind='expense'`, se sirve por `/media`: ruta con uuid, no listada).
 - Garantías: formulario público y correo de recepción (izao-tienda/izao-pagos). Pedidos: filtros por ciudad/código/influencer/documento (§24.1).
 - Integraciones: esquemas de Addi, Sistecrédito, OpenRouter, Meta Ads y píxeles. `.env.example`: `INTEGRACIONES_MODO`, `SITE_URL`, `MASTERSHOP_WEBHOOK_PATH_SECRET` (infra).
-- Reseñas/Home: el rating del catálogo (`catalog_listing.rating_*`) debe recalcularse al moderar (izao-db). Atómicas ya usadas: anonimizar cliente, cancelar pedido (MasterShop antes, fuera de la transacción) y publicar página (`lib/db/panel-atomicas.ts`).
+- Reseñas/Home: el rating del catálogo (`catalog_listing.rating_*`) debe recalcularse al moderar (izao-db). Atómicas en uso: anonimizar cliente, cancelar pedido (MasterShop antes; devuelve stock y lo registra) y publicar página. Cancelar/marcar pagado encolan `metrics.recompute_day` (best effort).
 ## Decisiones / avisos
 - Sin `react-hook-form`: `useActionState` + zod del servidor. `cliente-falso` devuelve `filtros` y soporta `or`.
 - Al habilitar un módulo: `disponible: true` en `permissions.ts` y actualizar `permissions.test.ts`. Pruebas de vitest solo `*.test.ts` (JSX: `createElement` + `globalThis.React`).
