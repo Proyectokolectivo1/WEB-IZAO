@@ -25,6 +25,8 @@ export interface OpcionesFetchAddi {
   expiraEn?: number;
   /** Responde 401 al primer uso del token (token revocado). */
   tokenRevocadoUnaVez?: boolean;
+  /** `Location` del 301 (por defecto una URL de checkout de staging de Addi). */
+  location?: (orderId: string) => string;
 }
 
 export interface FetchAddiFalso {
@@ -77,7 +79,9 @@ export function fetchAddiFalso(o: OpcionesFetchAddi = {}): FetchAddiFalso {
         case 'redirige':
           return new Response(null, {
             status: 301,
-            headers: { location: `https://checkout.addi-staging.com/aplicacion/${encodeURIComponent(orderId)}` },
+            headers: {
+              location: o.location ? o.location(orderId) : `https://checkout.addi-staging.com/aplicacion/${encodeURIComponent(orderId)}`,
+            },
           });
         case 'sin_location':
           return new Response(null, { status: 301 });

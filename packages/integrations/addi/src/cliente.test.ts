@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ErrorAddi, crearClienteAddi, probarCredencialesAddi } from './cliente';
+import { ErrorAddi, crearClienteAddi, probarCredencialesAddi, urlRedireccionAddiPermitida } from './cliente';
+import { ADDI_ENDPOINTS } from './credentials';
 import { CREDENCIALES_ADDI_PRUEBA, fetchAddiFalso, type OpcionesFetchAddi } from './mock';
 import type { SolicitudAddi } from './solicitud';
 
@@ -95,5 +96,92 @@ describe('cliente de Addi', () => {
     );
     expect(mal.ok).toBe(false);
     expect(mal.message).toBe('Addi rechazó el client ID o el client secret.');
+  });
+});
+
+describe('Location de Addi limitada a sus dominios por ambiente', () => {
+  it('los dominios permitidos vienen de la configuración del ambiente', () => {
+    expect(ADDI_ENDPOINTS.sandbox.dominiosRedireccion.length).toBeGreaterThan(0);
+    expect(ADDI_ENDPOINTS.production.dominiosRedireccion).toEqual(['addi.com']);
+  });
+
+  it.each([
+    ['https://checkout.addi-staging.com/aplicacion/x', true],
+    ['https://addi.com/x', true],
+    ['https://co.addi.com/x?y=1', true],
+    ['https://evil.example.com/x', false],
+    ['https://addi.com.evil.example/x', false],
+    ['https://evilAddi.com/x', false],
+    ['https://user:pw@checkout.addi.com/x', false],
+    ['https://checkout.addi.com:8443/x', false],
+    ['http://checkout.addi.com/x', false],
+    ['javascript:alert(1)', false],
+    ['', false],
+  ])('%s → %s (sandbox)', (url, ok) => {
+    expect(urlRedireccionAddiPermitida(url, ADDI_ENDPOINTS.sandbox.dominiosRedireccion)).toBe(ok);
+  });
+
+  it('producción no acepta el dominio de staging', () => {
+    expect(urlRedireccionAddiPermitida('https://checkout.addi-staging.com/x', ADDI_ENDPOINTS.production.dominiosRedireccion)).toBe(false);
+  });
+
+  it('una Location fuera de los dominios de Addi → RESPUESTA_INVALIDA (no se entrega al navegador)', async () => {
+    const { c } = cliente({ location: () => 'https://phishing.example.com/addi' });
+    const e = await error(c.crearSolicitud(CUERPO));
+    expect(e.codigo).toBe('RESPUESTA_INVALIDA');
+    expect(e.reintentable).toBe(false);
+  });
+
+  it('los dominios se pueden fijar por opción (configuración por ambiente)', async () => {
+    const f = fetchAddiFalso();
+    const c = crearClienteAddi({ credenciales: CREDENCIALES_ADDI_PRUEBA, fetchImpl: f.fetch, dominiosRedireccion: ['addi.com'] });
+    expect((await error(c.crearSolicitud(CUERPO))).codigo).toBe('RESPUESTA_INVALIDA');
+  });
+});
+
+describe('caché del token de Addi entre clientes', () => {
+  it('dos clientes con las mismas credenciales y transporte comparten el token vigente', async () => {
+    const f = fetchAddiFalso();
+    const ahora = () => new Date('2026-10-21T15:00:00Z');
+    await crearClienteAddi({ credenciales: CREDENCIALES_ADDI_PRUEBA, fetchImpl: f.fetch, ahora }).crearSolicitud(CUERPO);
+    await crearClienteAddi({ credenciales: CREDENCIALES_ADDI_PRUEBA, fetchImpl: f.fetch, ahora }).crearSolicitud(CUERPO);
+    expect(f.tokensEmitidos).toBe(1);
+  });
+
+  it('peticiones simultáneas piden un solo token', async () => {
+    const f = fetchAddiFalso();
+    const c = () => crearClienteAddi({ credenciales: CREDENCIALES_ADDI_PRUEBA, fetchImpl: f.fetch });
+    await Promise.all([c().crearSolicitud(CUERPO), c().crearSolicitud(CUERPO), c().crearSolicitud(CUERPO)]);
+    expect(f.tokensEmitidos).toBe(1);
+  });
+
+  it('otro secreto (rotación de credenciales) no reutiliza el token anterior', async () => {
+    const f = fetchAddiFalso();
+    await crearClienteAddi({ credenciales: CREDENCIALES_ADDI_PRUEBA, fetchImpl: f.fetch }).verificarToken();
+    const otras = { ...CREDENCIALES_ADDI_PRUEBA, clientSecret: `${CREDENCIALES_ADDI_PRUEBA.clientSecret}-rotado` };
+    await crearClienteAddi({ credenciales: otras, fetchImpl: f.fetch }).verificarToken().catch(() => undefined);
+    expect(f.llamadas.filter((l) => l.url.endsWith('/oauth/token'))).toHaveLength(2);
+  });
+
+  it('un 401 en un cliente invalida el token compartido', async () => {
+    const f = fetchAddiFalso({ tokenRevocadoUnaVez: true });
+    await crearClienteAddi({ credenciales: CREDENCIALES_ADDI_PRUEBA, fetchImpl: f.fetch }).crearSolicitud(CUERPO);
+    expect(f.tokensEmitidos).toBe(2);
+    const sol = await crearClienteAddi({ credenciales: CREDENCIALES_ADDI_PRUEBA, fetchImpl: f.fetch }).crearSolicitud(CUERPO);
+    expect(sol.url).toMatch(/^https:\/\//);
+    expect(f.tokensEmitidos).toBe(2);
+    expect(f.llamadas.at(-1)?.headers.authorization).toBe('Bearer jwt-ficticio-2');
+  });
+
+  it('un token no se comparte entre ambientes', async () => {
+    const f = fetchAddiFalso();
+    await crearClienteAddi({ credenciales: CREDENCIALES_ADDI_PRUEBA, fetchImpl: f.fetch }).verificarToken();
+    await crearClienteAddi({ credenciales: { ...CREDENCIALES_ADDI_PRUEBA, ambiente: 'production' }, fetchImpl: f.fetch })
+      .verificarToken()
+      .catch(() => undefined);
+    expect(f.llamadas.filter((l) => l.url.endsWith('/oauth/token')).map((l) => l.url)).toEqual([
+      'https://auth.addi-staging.com/oauth/token',
+      'https://auth.addi.com/oauth/token',
+    ]);
   });
 });

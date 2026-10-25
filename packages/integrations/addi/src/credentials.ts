@@ -47,18 +47,31 @@ export interface AddiCredentials {
   allySlug: string | null;
 }
 
-export const ADDI_ENDPOINTS: Record<Environment, { auth: string; audience: string; api: string }> = {
+export interface EndpointsAddi {
+  auth: string;
+  audience: string;
+  api: string;
+  /**
+   * Dominios (y sus subdominios) aceptados en el `Location` del 301 de la solicitud. La documentación solo dice
+   * "URL de redirección al sitio de ADDI" (D-036): fuera de ellos la URL nunca llega al navegador.
+   */
+  dominiosRedireccion: readonly string[];
+}
+
+export const ADDI_ENDPOINTS: Readonly<Record<Environment, EndpointsAddi>> = Object.freeze({
   sandbox: {
     auth: 'https://auth.addi-staging.com/oauth/token',
     audience: 'https://api.staging.addi.com',
     api: 'https://api.addi-staging.com',
+    dominiosRedireccion: ['addi-staging.com', 'addi.com'],
   },
   production: {
     auth: 'https://auth.addi.com/oauth/token',
     audience: 'https://api.addi.com',
     api: 'https://api.addi.com',
+    dominiosRedireccion: ['addi.com'],
   },
-};
+});
 
 export type ResultadoCredencialesAddi =
   | { ok: true; credenciales: AddiCredentials }

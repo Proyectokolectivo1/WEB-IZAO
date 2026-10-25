@@ -1,12 +1,17 @@
 /**
  * Cliente mínimo de la API de e-commerce de Addi (documentación oficial en api-docs-sandbox.addi.com, D-031).
  * - Token: `POST {auth}/oauth/token` `{audience, grant_type: client_credentials, client_id, client_secret}` →
- *   `{access_token, expires_in, token_type}`. Se guarda en memoria hasta 60 s antes de vencer.
+ *   `{access_token, expires_in, token_type}` (`expires_in` de ejemplo 86400 s). Se guarda en memoria del proceso
+ *   hasta 60 s antes de vencer y se comparte entre clientes con el mismo ambiente, client ID, huella SHA-256 del
+ *   secreto (nunca el secreto) y transporte `fetch`; peticiones simultáneas comparten una sola solicitud de token.
  * - Solicitud: `POST {api}/v1/online-applications` con `Authorization: Bearer`. Responde **301** con `Location`
- *   (la URL de Addi para el cliente): no se sigue la redirección, se captura. 409 = el cliente ya tiene crédito.
+ *   (la URL de Addi para el cliente): no se sigue la redirección, se captura y solo se acepta https en los
+ *   dominios de Addi del ambiente (`ADDI_ENDPOINTS[ambiente].dominiosRedireccion`, D-036). 409 = el cliente ya
+ *   tiene crédito.
  * - La API de e-commerce no documenta consulta de estado: el estado llega solo por el callback (Basic auth).
  * Timeouts de 10 s. Los errores nunca incluyen credenciales ni cuerpos de respuesta.
  */
+import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { ADDI_ENDPOINTS, type AddiCredentials } from './credentials';
 import type { SolicitudAddi } from './solicitud';
@@ -37,6 +42,8 @@ export interface OpcionesClienteAddi {
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
   ahora?: () => Date;
+  /** Reemplaza los dominios aceptados en `Location` (por defecto, los del ambiente en `ADDI_ENDPOINTS`). */
+  dominiosRedireccion?: readonly string[];
 }
 
 export interface ClienteAddi {
@@ -48,18 +55,66 @@ export interface ClienteAddi {
 
 const tokenSchema = z.object({
   access_token: z.string().min(1),
-  expires_in: z.number().int().positive(),
+  // La documentación lo declara `number` (double).
+  expires_in: z.number().positive().finite(),
   token_type: z.string().optional(),
 });
 
 const MARGEN_TOKEN_MS = 60_000;
+const MAX_TOKENS_EN_CACHE = 16;
+
+/** `true` si la URL es https, sin usuario ni puerto, en uno de los dominios o en un subdominio suyo. */
+export function urlRedireccionAddiPermitida(url: string, dominios: readonly string[]): boolean {
+  if (!/^https:\/\/[^\s]+$/.test(url)) return false;
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== 'https:' || u.username !== '' || u.password !== '' || u.port !== '') return false;
+  const host = u.hostname.toLowerCase();
+  return dominios.some((d) => {
+    const dom = d.trim().toLowerCase().replace(/^\.+/, '');
+    return dom !== '' && (host === dom || host.endsWith(`.${dom}`));
+  });
+}
+
+interface EntradaToken {
+  token: string;
+  venceMs: number;
+}
+
+interface CacheTokens {
+  vigentes: Map<string, EntradaToken>;
+  enCurso: Map<string, Promise<EntradaToken>>;
+}
+
+/** Caché por transporte: el `fetch` global en producción; cada `fetch` falso de las pruebas tiene la suya. */
+const cachePorTransporte = new WeakMap<typeof fetch, CacheTokens>();
+
+function cacheDe(f: typeof fetch): CacheTokens {
+  let c = cachePorTransporte.get(f);
+  if (!c) {
+    c = { vigentes: new Map(), enCurso: new Map() };
+    cachePorTransporte.set(f, c);
+  }
+  return c;
+}
+
+function llaveToken(c: AddiCredentials): string {
+  const huella = createHash('sha256').update(c.clientSecret).digest('hex');
+  return `${c.ambiente}|${c.clientId}|${huella}`;
+}
 
 export function crearClienteAddi(o: OpcionesClienteAddi): ClienteAddi {
   const ep = ADDI_ENDPOINTS[o.credenciales.ambiente];
   const doFetch = o.fetchImpl ?? fetch;
   const timeoutMs = o.timeoutMs ?? 10_000;
   const ahora = o.ahora ?? (() => new Date());
-  let cache: { token: string; venceMs: number } | null = null;
+  const dominios = o.dominiosRedireccion ?? ep.dominiosRedireccion;
+  const cache = cacheDe(doFetch);
+  const llave = llaveToken(o.credenciales);
 
   async function llamar(url: string, init: RequestInit): Promise<Response> {
     try {
@@ -69,8 +124,7 @@ export function crearClienteAddi(o: OpcionesClienteAddi): ClienteAddi {
     }
   }
 
-  async function token(): Promise<string> {
-    if (cache && cache.venceMs - MARGEN_TOKEN_MS > ahora().getTime()) return cache.token;
+  async function pedirToken(): Promise<EntradaToken> {
     const res = await llamar(ep.auth, {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'application/json' },
@@ -91,17 +145,43 @@ export function crearClienteAddi(o: OpcionesClienteAddi): ClienteAddi {
     }
     const p = tokenSchema.safeParse(cuerpo);
     if (!p.success) throw new ErrorAddi('RESPUESTA_INVALIDA', false, res.status);
-    cache = { token: p.data.access_token, venceMs: ahora().getTime() + p.data.expires_in * 1000 };
-    return cache.token;
+    const entrada: EntradaToken = {
+      token: p.data.access_token,
+      venceMs: ahora().getTime() + Math.floor(p.data.expires_in * 1000),
+    };
+    if (!cache.vigentes.has(llave) && cache.vigentes.size >= MAX_TOKENS_EN_CACHE) {
+      const masAntigua = cache.vigentes.keys().next().value;
+      if (masAntigua !== undefined) cache.vigentes.delete(masAntigua);
+    }
+    cache.vigentes.set(llave, entrada);
+    return entrada;
   }
 
-  async function enviar(cuerpo: SolicitudAddi): Promise<Response> {
-    return llamar(`${ep.api}/v1/online-applications`, {
+  async function token(): Promise<string> {
+    const vigente = cache.vigentes.get(llave);
+    if (vigente && vigente.venceMs - MARGEN_TOKEN_MS > ahora().getTime()) return vigente.token;
+    let pendiente = cache.enCurso.get(llave);
+    if (!pendiente) {
+      pendiente = pedirToken().finally(() => cache.enCurso.delete(llave));
+      cache.enCurso.set(llave, pendiente);
+    }
+    return (await pendiente).token;
+  }
+
+  /** Solo borra el token rechazado: si otro cliente ya lo renovó, se conserva el nuevo. */
+  function invalidar(usado: string): void {
+    if (cache.vigentes.get(llave)?.token === usado) cache.vigentes.delete(llave);
+  }
+
+  async function enviar(cuerpo: SolicitudAddi): Promise<{ res: Response; usado: string }> {
+    const usado = await token();
+    const res = await llamar(`${ep.api}/v1/online-applications`, {
       method: 'POST',
       redirect: 'manual',
-      headers: { 'content-type': 'application/json', accept: 'application/json', authorization: `Bearer ${await token()}` },
+      headers: { 'content-type': 'application/json', accept: 'application/json', authorization: `Bearer ${usado}` },
       body: JSON.stringify(cuerpo),
     });
+    return { res, usado };
   }
 
   return {
@@ -109,15 +189,16 @@ export function crearClienteAddi(o: OpcionesClienteAddi): ClienteAddi {
       await token();
     },
     async crearSolicitud(cuerpo) {
-      let res = await enviar(cuerpo);
+      let { res, usado } = await enviar(cuerpo);
       if (res.status === 401) {
         // Token revocado o vencido antes de lo informado: uno nuevo, una sola vez.
-        cache = null;
-        res = await enviar(cuerpo);
+        invalidar(usado);
+        ({ res, usado } = await enviar(cuerpo));
+        if (res.status === 401) invalidar(usado);
       }
       if (res.status >= 300 && res.status < 400) {
         const location = res.headers.get('location') ?? '';
-        if (!/^https:\/\/[^\s]+$/.test(location)) throw new ErrorAddi('RESPUESTA_INVALIDA', false, res.status);
+        if (!urlRedireccionAddiPermitida(location, dominios)) throw new ErrorAddi('RESPUESTA_INVALIDA', false, res.status);
         return { url: location };
       }
       if (res.status === 409) throw new ErrorAddi('CLIENTE_CON_CREDITO', false, 409);

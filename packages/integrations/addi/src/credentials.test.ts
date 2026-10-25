@@ -64,11 +64,13 @@ describe('credenciales de Addi (§12.3, D-031)', () => {
       auth: 'https://auth.addi-staging.com/oauth/token',
       audience: 'https://api.staging.addi.com',
       api: 'https://api.addi-staging.com',
+      dominiosRedireccion: ['addi-staging.com', 'addi.com'],
     });
     expect(ADDI_ENDPOINTS.production).toEqual({
       auth: 'https://auth.addi.com/oauth/token',
       audience: 'https://api.addi.com',
       api: 'https://api.addi.com',
+      dominiosRedireccion: ['addi.com'],
     });
   });
 });
