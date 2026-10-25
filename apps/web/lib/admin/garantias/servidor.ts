@@ -108,6 +108,26 @@ export async function contarPorEstado(cliente: Cliente, pais: 'CO' | 'EC' | ''):
   return Object.fromEntries(cuentas) as Record<EstadoGarantia, number>;
 }
 
+export type AdjuntoGarantia = {
+  id: string;
+  tipo: 'foto' | 'video';
+  alt: string;
+  /** Variante para la miniatura / vista grande (`video` para el video). */
+  miniatura: string;
+  grande: string;
+};
+
+/** Fila de `media` → adjunto. Un video lleva `variants.video`; una foto, anchos numéricos (400, 800…). */
+export function aAdjunto(m: { id: string; variants: Record<string, string> | null; alt: string | null; original_name: string | null }): AdjuntoGarantia | null {
+  const v = m.variants ?? {};
+  if (typeof v.video === 'string' && v.video !== '') {
+    return { id: m.id, tipo: 'video', alt: m.alt ?? 'Video del caso', miniatura: 'video', grande: 'video' };
+  }
+  const anchos = Object.keys(v).filter((k) => /^\d{2,4}$/.test(k)).sort((a, b) => Number(a) - Number(b));
+  if (anchos.length === 0) return null;
+  return { id: m.id, tipo: 'foto', alt: m.alt ?? m.original_name ?? 'Foto del caso', miniatura: v['400'] ? '400' : anchos[0]!, grande: anchos[anchos.length - 1]! };
+}
+
 export type DetalleGarantia = {
   caso: {
     id: string;
@@ -129,7 +149,8 @@ export type DetalleGarantia = {
   };
   pedido: { id: string; number: string; status: string; delivered_at: string | null } | null;
   historial: EntradaHistorial[];
-  fotos: { id: string; ruta: string; alt: string }[];
+  /** Fotos y video del caso, en orden. Se sirven por una ruta protegida del panel, no por `/media`. */
+  adjuntos: AdjuntoGarantia[];
   /** Fecha límite de respuesta y si ya pasó (solo casos abiertos). */
   limite: { fecha: string; vencida: boolean };
 };
@@ -150,13 +171,11 @@ export async function obtenerGarantia(cliente: Cliente, id: string, ahora: Date 
     ids.length ? cliente.from('media').select('id, variants, alt, original_name').in('id', ids) : Promise.resolve({ data: [] }),
     diasRespuestaPorPais(cliente),
   ]);
-  const fotos = ((media.data ?? []) as { id: string; variants: Record<string, string> | null; alt: string | null; original_name: string | null }[])
-    .map((m) => {
-      const v = m.variants ?? {};
-      const ruta = v['400'] ?? Object.values(v)[0] ?? '';
-      return { id: m.id, ruta, alt: m.alt ?? m.original_name ?? 'Foto del caso' };
-    })
-    .filter((m) => m.ruta !== '');
+  const filasMedia = new Map(
+    ((media.data ?? []) as { id: string; variants: Record<string, string> | null; alt: string | null; original_name: string | null }[]).map((m) => [m.id, m]),
+  );
+  // En el orden en que el cliente los subió; cada archivo se pide por `/api/admin/garantias/archivo/{id}` (solo con sesión).
+  const adjuntos = ids.map((id) => filasMedia.get(id)).filter((m): m is NonNullable<typeof m> => m !== undefined).map(aAdjunto).filter((x): x is AdjuntoGarantia => x !== null);
   const { status_history, media_ids: _media, ...caso } = fila;
   void _media;
   const limite = limiteRespuesta(fila.created_at, dias[fila.country_code] ?? DIAS_RESPUESTA_POR_DEFECTO);
@@ -164,7 +183,7 @@ export async function obtenerGarantia(cliente: Cliente, id: string, ahora: Date 
     caso,
     pedido: (pedido.data as DetalleGarantia['pedido']) ?? null,
     historial: leerHistorial(status_history),
-    fotos,
+    adjuntos,
     limite: { fecha: limite.toISOString(), vencida: estaVencida(fila.status, fila.created_at, dias[fila.country_code] ?? DIAS_RESPUESTA_POR_DEFECTO, ahora) },
   };
 }

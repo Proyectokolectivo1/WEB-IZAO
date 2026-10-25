@@ -28,7 +28,7 @@ export default async function DetalleGarantia({
   const sp = await searchParams;
   const d = await obtenerGarantia(crearClienteServicio(), id);
   if (!d) notFound();
-  const { caso, pedido, historial, fotos, limite } = d;
+  const { caso, pedido, historial, adjuntos, limite } = d;
   const moneda = MONEDA_PAIS[caso.country_code];
 
   return (
@@ -93,18 +93,25 @@ export default async function DetalleGarantia({
           <strong>Motivo:</strong> {caso.reason}
         </p>
         {caso.description ? <p style={{ whiteSpace: 'pre-wrap' }}>{caso.description}</p> : <p className="adm-suave">Sin descripción.</p>}
-        {fotos.length > 0 ? (
-          <ul className="adm-lista-simple" aria-label="Fotos del caso">
-            {fotos.map((f) => (
-              <li key={f.id}>
-                <a href={`/media/${f.ruta}`} target="_blank" rel="noopener noreferrer">
-                  <img className="adm-miniatura" src={`/media/${f.ruta}`} alt={f.alt} loading="lazy" />
-                </a>
-              </li>
-            ))}
+        {adjuntos.length > 0 ? (
+          <ul className="adm-lista-simple" aria-label="Fotos y video del caso">
+            {adjuntos.map((f) => {
+              const url = (v: string) => `/api/admin/garantias/archivo/${f.id}?v=${v}`;
+              return (
+                <li key={f.id}>
+                  {f.tipo === 'video' ? (
+                    <video controls preload="metadata" src={url('video')} style={{ maxWidth: '100%', maxHeight: '24rem' }} aria-label={f.alt} />
+                  ) : (
+                    <a href={url(f.grande)} target="_blank" rel="noopener noreferrer">
+                      <img className="adm-miniatura" src={url(f.miniatura)} alt={f.alt} loading="lazy" />
+                    </a>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         ) : (
-          <p className="adm-suave adm-chico">Sin fotos en el sistema. Si adjuntó un video, está en el disco del servidor.</p>
+          <p className="adm-suave adm-chico">Sin fotos ni video en este caso.</p>
         )}
       </section>
 

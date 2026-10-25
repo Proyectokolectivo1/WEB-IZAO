@@ -148,18 +148,28 @@ describe('obtenerGarantia', () => {
           reason: 'Dañado',
           description: null,
           order_id: 'o1',
-          media_ids: ['m1', 'm2'],
+          media_ids: ['m1', 'm2', 'm3'],
           status_history: [{ at: '2026-10-11T00:00:00Z', actor: 'u1', from: 'recibida', to: 'en_revision', nota: null }],
           created_at: '2026-10-10T12:00:00Z',
         },
       },
       'orders.select': { data: { id: 'o1', number: 'IZ-CO-000001', status: 'entregado', delivered_at: null } },
-      'media.select': { data: [{ id: 'm1', variants: { '400': 'w/a-400.webp' }, alt: null, original_name: 'foto.jpg' }, { id: 'm2', variants: {}, alt: null, original_name: null }] },
+      'media.select': {
+        data: [
+          { id: 'm2', variants: {}, alt: null, original_name: null },
+          { id: 'm1', variants: { '400': 'w/a-400.webp', '800': 'w/a-800.webp' }, alt: null, original_name: 'foto.jpg' },
+          { id: 'm3', variants: { video: 'warranty/2026/10/v.mp4' }, alt: 'Video enviado', original_name: null },
+        ],
+      },
       'warranty_settings.select': { data: [{ country_code: 'CO', response_days: 5 }] },
     });
     const d = await obtenerGarantia(cliente, ID, AHORA);
     expect(d?.pedido?.number).toBe('IZ-CO-000001');
-    expect(d?.fotos).toEqual([{ id: 'm1', ruta: 'w/a-400.webp', alt: 'foto.jpg' }]);
+    // En el orden en que se subieron; una fila sin archivos se omite; el video se pide como `video`.
+    expect(d?.adjuntos).toEqual([
+      { id: 'm1', tipo: 'foto', alt: 'foto.jpg', miniatura: '400', grande: '800' },
+      { id: 'm3', tipo: 'video', alt: 'Video enviado', miniatura: 'video', grande: 'video' },
+    ]);
     expect(d?.historial).toHaveLength(1);
     expect(d?.limite).toEqual({ fecha: '2026-10-15T12:00:00.000Z', vencida: true });
     expect(d?.caso).not.toHaveProperty('status_history');

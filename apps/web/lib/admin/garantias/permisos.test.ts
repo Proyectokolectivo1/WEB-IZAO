@@ -24,6 +24,16 @@ describe('permisos de garantías', () => {
     expect(moduloDeRuta('/admin/garantias/ajustes')).toBe('garantias');
   });
 
+  it('los archivos del cliente solo se sirven con sesión y permiso, y las páginas no usan /media', () => {
+    const leer = (p: string) => readFileSync(path.join(RAIZ, p), 'utf8');
+    const ruta = leer('api/admin/garantias/archivo/[id]/route.ts');
+    expect(ruta).toContain("adminParaApiDe('garantias', 'garantias.gestionar')");
+    expect(moduloDeRuta('/api/admin/garantias/archivo/abc')).toBe('garantias');
+    expect(puedeVerRuta('operator', '/api/admin/garantias/archivo/abc')).toBe(true);
+    expect(puedeVerRuta(null, '/api/admin/garantias/archivo/abc')).toBe(false);
+    expect(leer('admin/(panel)/garantias/[id]/page.tsx')).not.toContain('/media/');
+  });
+
   it('cada Server Action y página exige su acción en el servidor', () => {
     const leer = (p: string) => readFileSync(path.join(RAIZ, p), 'utf8');
     const a = leer('admin/(panel)/garantias/acciones.ts');
