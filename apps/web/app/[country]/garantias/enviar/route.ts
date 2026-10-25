@@ -1,5 +1,5 @@
 import { aCodigoCore, esPais } from '@/lib/store/pais';
-import { enteroEnv } from '@/lib/checkout/limite-tasa';
+import { enteroEnv, ipCliente } from '@/lib/checkout/limite-tasa';
 import { crearLimitadorRedis, redisTasa } from '@/lib/limite-tasa-redis';
 import { detectarTipo } from '@/lib/admin/media/validar';
 import { ajustesGarantia } from '@/lib/store/garantias/datos';
@@ -47,16 +47,15 @@ function responder(cuerpo: RespuestaGarantia, extra?: ResponseInit['headers']): 
   return Response.json(cuerpo, { status, headers: { 'Cache-Control': 'no-store', ...extra } });
 }
 
-const ipDe = (req: Request): string | null =>
-  req.headers.get('x-real-ip')?.trim() || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null;
-
 export async function POST(req: Request, { params }: { params: Promise<{ country: string }> }) {
   const { country } = await params;
   if (!esPais(country)) return Response.json({ error: 'not_found' }, { status: 404 });
   const pais = aCodigoCore(country);
-  const ip = ipDe(req);
+  // Solo vale X-Real-IP (la fija Nginx); X-Forwarded-For lo escribe el navegador y no se usa en producción.
+  const ip = ipCliente(req.headers);
+  const ipReal = /^[0-9a-fA-F:.]+$/.test(ip) ? ip : null;
 
-  const decision = await limitador.consumir(ip ?? 'sin-ip');
+  const decision = await limitador.consumir(ip);
   if (!decision.permitido) return responder({ ok: false, motivo: 'demasiados' }, { 'Retry-After': String(decision.reintentarEnSeg) });
 
   const largo = Number(req.headers.get('content-length') ?? '0');
@@ -71,7 +70,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ country
 
   // Campo trampa: las personas no lo ven ni lo llenan.
   if (String(form.get('sitio_web') ?? '') !== '') return responder({ ok: false, motivo: 'bot' });
-  if (!(await verificarTurnstile(String(form.get('cf-turnstile-response') ?? '') || null, ip))) {
+  if (!(await verificarTurnstile(String(form.get('cf-turnstile-response') ?? '') || null, ipReal))) {
     return responder({ ok: false, motivo: 'bot' });
   }
 
