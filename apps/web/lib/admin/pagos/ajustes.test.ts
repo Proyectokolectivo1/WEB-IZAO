@@ -183,6 +183,11 @@ describe('métodos de pago', () => {
   it('contra entrega no se activa si el país la tiene deshabilitada', () => {
     expect(motivoMetodoNoActivable('cod', true, false)).toMatch(/habilít/);
     expect(motivoMetodoNoActivable('cod', true, true)).toBeNull();
+    // Sistecrédito sigue pendiente de documentación: no se puede activar, pero sí desactivar.
+    expect(motivoMetodoNoActivable('sistecredito', true, true)).toMatch(/integración/);
+    expect(motivoMetodoNoActivable('sistecredito', false, true)).toBeNull();
+    expect(motivoMetodoNoActivable('wompi', true, false)).toBeNull();
+    expect(motivoMetodoNoActivable('addi', true, false)).toBeNull();
     expect(motivoMetodoNoActivable('cod', false, false)).toBeNull();
     expect(motivoMetodoNoActivable('wompi', true, false)).toBeNull();
   });

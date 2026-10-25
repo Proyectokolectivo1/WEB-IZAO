@@ -4,6 +4,7 @@
  * enteros en unidad menor con `fromMajorString` (regla 1: nada de floats). Código puro, sin servidor.
  */
 import { z } from 'zod';
+import { metodoVendible } from '@izao/core/contracts';
 import {
   CURRENCY_EXPONENT,
   MoneyError,
@@ -263,9 +264,14 @@ export function esquemaMetodo(pais: PaisAjustes) {
 
 /**
  * Regla de §13 y del módulo: "Contra entrega" solo puede estar activo si el país tiene la contra entrega
- * habilitada. Devuelve el mensaje de error o `null`.
+ * habilitada, y un método sin integración lista no se activa. Devuelve el mensaje de error o `null`.
  */
 export function motivoMetodoNoActivable(metodo: MetodoPago, quiereActivo: boolean, codHabilitadoEnPais: boolean): string | null {
+  // Un método cuya integración aún no está lista (p. ej. Sistecrédito, pendiente de la documentación oficial) no se activa:
+  // el checkout igual lo filtra, y así el panel no promete algo que la tienda no ofrece.
+  if (quiereActivo && !metodoVendible(metodo)) {
+    return 'Este método aún no tiene su integración lista (falta la documentación oficial del proveedor): no se puede activar todavía.';
+  }
   if (quiereActivo && metodo === 'cod' && !codHabilitadoEnPais) {
     return 'Para activar la contra entrega, primero habilítala en los ajustes del país.';
   }

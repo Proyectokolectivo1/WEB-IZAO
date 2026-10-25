@@ -194,6 +194,21 @@ describe('guardarMetodoBd', () => {
     expect(auditar.mock.calls[0]![0]).toMatchObject({ accion: 'pagos.metodo_actualizado', entidadId: 'CO:cod' });
   });
 
+  it('no deja activar Sistecrédito mientras su integración esté pendiente, pero sí desactivarlo', async () => {
+    const sis = { ...previo, method: 'sistecredito', is_enabled: true, display_name: 'Sistecrédito' };
+    const { cliente, llamadas } = clienteFalso({
+      'country_settings.select': { data: { cod_enabled: true } },
+      'payment_method_settings.select': { data: { ...sis, is_enabled: false } },
+      'payment_method_settings.update': { data: null },
+    });
+    const activar = await guardarMetodoBd({ cliente, ...comun, pais: 'CO', metodo: 'sistecredito', datos: esquemaMetodo('CO').parse({ ...form, display_name: 'Sistecrédito' }) });
+    expect(activar).toMatchObject({ ok: false, errores: { is_enabled: expect.stringMatching(/integración/) } });
+    expect(llamadas.some((l) => l.clave === 'payment_method_settings.update')).toBe(false);
+    const sinActivo = Object.fromEntries(Object.entries(form).filter(([k]) => k !== 'is_enabled'));
+    const apagar = await guardarMetodoBd({ cliente, ...comun, pais: 'CO', metodo: 'sistecredito', datos: esquemaMetodo('CO').parse({ ...sinActivo, display_name: 'Sistecrédito' }) });
+    expect(apagar.ok).toBe(true);
+  });
+
   it('otros métodos sí pueden activarse aunque la contra entrega esté deshabilitada', async () => {
     const wompi = { ...previo, method: 'wompi', display_name: 'Wompi' };
     const { cliente } = clienteFalso({
