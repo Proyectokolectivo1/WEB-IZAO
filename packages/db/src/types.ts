@@ -2168,6 +2168,7 @@ export type Database = {
           payment_method: string
           product_cost_total: number
           public_token: string
+          sale_source: string
           sent_to_carrier_at: string | null
           shipping_address1: string | null
           shipping_address2: string | null
@@ -2225,6 +2226,7 @@ export type Database = {
           payment_method: string
           product_cost_total?: number
           public_token?: string
+          sale_source?: string
           sent_to_carrier_at?: string | null
           shipping_address1?: string | null
           shipping_address2?: string | null
@@ -2282,6 +2284,7 @@ export type Database = {
           payment_method?: string
           product_cost_total?: number
           public_token?: string
+          sale_source?: string
           sent_to_carrier_at?: string | null
           shipping_address1?: string | null
           shipping_address2?: string | null
@@ -3904,11 +3907,100 @@ export type Database = {
       confirmar_stock: { Args: { p_order_id: string }; Returns: Json }
       crear_pedido_checkout: { Args: { p: Json }; Returns: Json }
       f_unaccent: { Args: { p_text: string }; Returns: string }
+      fuente_venta: {
+        Args: { p_click_ids: Json; p_utm: Json }
+        Returns: string
+      }
       liberar_canje: { Args: { p_order_id: string }; Returns: Json }
       liberar_stock: { Args: { p_order_id: string }; Returns: Json }
       media_json: {
         Args: { m: Database["public"]["Tables"]["media"]["Row"] }
         Returns: Json
+      }
+      metricas_estados_pagados: { Args: never; Returns: string[] }
+      metricas_panel_guias: {
+        Args: { p_desde: string; p_hasta: string; p_pais: string }
+        Returns: {
+          cantidad: number
+          dimension: string
+          estado: string
+          grupo: string
+        }[]
+      }
+      metricas_periodo: {
+        Args: {
+          p_desde: string
+          p_hasta: string
+          p_limite?: number
+          p_pais: string
+        }
+        Returns: Record<string, unknown>
+      }
+      metricas_top_agrupado: {
+        Args: {
+          p_desde: string
+          p_dimension: string
+          p_hasta: string
+          p_limite?: number
+          p_pais: string
+        }
+        Returns: {
+          clave: string
+          etiqueta: string
+          ingresos_confirmados: number
+          pagados: number
+          pedidos: number
+          ventas_brutas: number
+        }[]
+      }
+      metricas_top_ciudades: {
+        Args: {
+          p_desde: string
+          p_hasta: string
+          p_limite?: number
+          p_pais: string
+        }
+        Returns: {
+          ciudad: string
+          departamento: string
+          devueltos: number
+          entregados: number
+          pedidos: number
+          ventas_brutas: number
+        }[]
+      }
+      metricas_top_departamentos: {
+        Args: {
+          p_desde: string
+          p_hasta: string
+          p_limite?: number
+          p_pais: string
+        }
+        Returns: {
+          departamento: string
+          devueltos: number
+          entregados: number
+          pedidos: number
+          ventas_brutas: number
+        }[]
+      }
+      metricas_top_productos: {
+        Args: {
+          p_desde: string
+          p_hasta: string
+          p_limite?: number
+          p_pais: string
+        }
+        Returns: {
+          costo: number
+          nombre: string
+          producto_id: string
+          sku: string
+          unidades: number
+          unidades_sin_costo: number
+          utilidad: number
+          ventas: number
+        }[]
       }
       next_document_number: {
         Args: { p_country_code: string; p_kind: string }
