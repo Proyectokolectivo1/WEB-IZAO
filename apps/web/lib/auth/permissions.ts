@@ -98,7 +98,7 @@ export const MODULOS = {
     roles: SOLO_ADMIN,
     disponible: true,
   },
-  leads: { etiqueta: 'Leads', ruta: '/admin/leads', roles: SOLO_ADMIN, disponible: false },
+  leads: { etiqueta: 'Leads', ruta: '/admin/leads', roles: SOLO_ADMIN, disponible: true },
   gastos: { etiqueta: 'Gastos', ruta: '/admin/gastos', roles: SOLO_ADMIN, disponible: true },
   clientes: {
     etiqueta: 'Clientes',
@@ -183,6 +183,8 @@ export const ACCIONES = {
   'descuentos.gestionar': SOLO_ADMIN,
   /** Fichas de influencers y su reporte (§17.2, §24.1). */
   'influencers.gestionar': SOLO_ADMIN,
+  /** Ver y exportar los leads de los pop-ups: son datos personales captados con consentimiento (§9.3, §24.1). */
+  'leads.gestionar': SOLO_ADMIN,
   /** Moderar reseñas, escribir las de Izao, destacar en el home y borrar spam (§9.6, §24.1). */
   'resenas.gestionar': SOLO_ADMIN,
   /** Orden, activación y contenido de las secciones del home por país (§8.5, §24.1). */
