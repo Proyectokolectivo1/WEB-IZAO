@@ -1,5 +1,4 @@
 # Bitácora izao-db
-
 ## Hecho
 - Oleadas 0-1 (f63d558). T2.7 8da6bc2, 343bfbe. T2.8 8f33a8c. Colección 08d0a46. Admin catálogo 373d18d. T2.9 490cf03.
 - `crear_pedido_checkout` 34cfe1f; 20261020213954 (0d237eb); 20261020214637 (cd24577). Espacios 20261020220958 + seed Parte 3.
@@ -7,7 +6,8 @@
 - `cod_resend_max` 20261021013019 (1b216c3, pgTAP 25). Etiqueta auto única 20261021013134 (pgTAP 26). D-027: 20261021015339
   (pgTAP 27 28/28): `carrier_wallet_*` en country_settings (seed CO umbral 100000), `print_agents.remote_config`, `integration_webhooks`.
   Credencial activa única 20261021062843 (pgTAP 28 15/15, envoltorio `activarCredencialIntegracionDb`).
-
+- 20261025033707 `daily_sales_stats` + `orders_abandoned`/`shipping_estimated_count` int, `confirmed_revenue`/`carrier_platform_fees`
+  bigint; not null default 0, check ≥ 0 (pgTAP 29 25/25). Falta dueño del job `metrics.recompute_day` (avisado al líder).
 ## Contratos vigentes (detalle en el commit de cada migración)
 - `crear_pedido_checkout(p jsonb)` → `{ok, estado:'creado'|'existente'|'rechazado', order|motivo}`; motivos: `idempotencia_conflicto`,
   `en_proceso`, `sin_stock`+`faltantes`, `codigo_*`/`limite_*`, `sin_items`, `totales_inconsistentes`, `datos_invalidos`+`detalle`,

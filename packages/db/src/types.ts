@@ -1181,9 +1181,11 @@ export type Database = {
       }
       daily_sales_stats: {
         Row: {
+          carrier_platform_fees: number
           cod_collect_sent: number
           cod_deposits: number
           cod_deposits_returned: number
+          confirmed_revenue: number
           country_code: string
           created_at: string
           currency_code: string
@@ -1193,6 +1195,7 @@ export type Database = {
           discounts: number
           gateway_fees: number
           gross_sales: number
+          orders_abandoned: number
           orders_created: number
           orders_paid: number
           payment_method: string
@@ -1202,14 +1205,17 @@ export type Database = {
           returned_count: number
           returned_value: number
           shipping_cost: number
+          shipping_estimated_count: number
           surcharges: number
           updated_at: string
           warranty_cost: number
         }
         Insert: {
+          carrier_platform_fees?: number
           cod_collect_sent?: number
           cod_deposits?: number
           cod_deposits_returned?: number
+          confirmed_revenue?: number
           country_code: string
           created_at?: string
           currency_code: string
@@ -1219,6 +1225,7 @@ export type Database = {
           discounts?: number
           gateway_fees?: number
           gross_sales?: number
+          orders_abandoned?: number
           orders_created?: number
           orders_paid?: number
           payment_method: string
@@ -1228,14 +1235,17 @@ export type Database = {
           returned_count?: number
           returned_value?: number
           shipping_cost?: number
+          shipping_estimated_count?: number
           surcharges?: number
           updated_at?: string
           warranty_cost?: number
         }
         Update: {
+          carrier_platform_fees?: number
           cod_collect_sent?: number
           cod_deposits?: number
           cod_deposits_returned?: number
+          confirmed_revenue?: number
           country_code?: string
           created_at?: string
           currency_code?: string
@@ -1245,6 +1255,7 @@ export type Database = {
           discounts?: number
           gateway_fees?: number
           gross_sales?: number
+          orders_abandoned?: number
           orders_created?: number
           orders_paid?: number
           payment_method?: string
@@ -1254,6 +1265,7 @@ export type Database = {
           returned_count?: number
           returned_value?: number
           shipping_cost?: number
+          shipping_estimated_count?: number
           surcharges?: number
           updated_at?: string
           warranty_cost?: number
