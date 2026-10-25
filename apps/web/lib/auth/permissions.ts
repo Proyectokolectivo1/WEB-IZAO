@@ -78,7 +78,7 @@ export const MODULOS = {
     roles: SOLO_ADMIN,
     disponible: true,
   },
-  home: { etiqueta: 'Home', ruta: '/admin/home', roles: SOLO_ADMIN, disponible: false },
+  home: { etiqueta: 'Home', ruta: '/admin/home', roles: SOLO_ADMIN, disponible: true },
   contenido: {
     etiqueta: 'Contenido',
     ruta: '/admin/contenido',
@@ -183,6 +183,8 @@ export const ACCIONES = {
   'descuentos.gestionar': SOLO_ADMIN,
   /** Fichas de influencers y su reporte (§17.2, §24.1). */
   'influencers.gestionar': SOLO_ADMIN,
+  /** Orden, activación y contenido de las secciones del home por país (§8.5, §24.1). */
+  'home.gestionar': SOLO_ADMIN,
   /** Reintentar un job fallido de las colas desde Sistema (§24.1). Ver colas, errores y auditoría exige el módulo. */
   'sistema.reintentar_job': SOLO_ADMIN,
   /** Colores, tipografía, logo y favicon, globales o por país (§8, §24.1). */
