@@ -89,6 +89,26 @@ describe('rutas HTTP del checkout', () => {
     expect(((await b.json()) as { repeated: boolean }).repeated).toBe(true);
     expect(d.fuenteMem.pedidos.size).toBe(1);
   });
+
+  it('checkout: encola el recálculo de métricas del pedido nuevo, no del repetido (D-033)', async () => {
+    const ids: string[] = [];
+    const d = { ...deps(), recalcularMetricas: async (id: string) => void ids.push(id) };
+    expect((await manejarCheckout(req(checkout), d)).status).toBe(201);
+    expect((await manejarCheckout(req(checkout), d)).status).toBe(200);
+    expect(ids).toHaveLength(1);
+    expect(ids[0]).toBe([...d.fuenteMem.pedidos.keys()][0]);
+  });
+
+  it('checkout: si el encolado del recálculo falla, el pedido igual responde 201', async () => {
+    const d = {
+      ...deps(),
+      recalcularMetricas: async () => {
+        throw new Error('redis caído');
+      },
+    };
+    expect((await manejarCheckout(req(checkout), d)).status).toBe(201);
+    expect(d.fuenteMem.pedidos.size).toBe(1);
+  });
 });
 
 describe('utilidades del límite', () => {

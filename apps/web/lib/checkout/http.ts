@@ -20,6 +20,8 @@ export interface DepsPagos {
   addi?: () => FuentePagosAddi;
   /** Solo pruebas: cliente de Addi con `fetch` falso. */
   clienteAddi?: (c: AddiCredentials) => ClienteAddi;
+  /** Encola `metrics.recompute_day` tras una transición del pedido al preparar el cobro (best effort, D-033). */
+  recalcularMetricas?: (orderId: string) => Promise<void>;
 }
 
 export interface DepsCheckout {
@@ -35,6 +37,8 @@ export interface DepsCheckout {
    * el token `/pagar/{token}` y envía el cobro por WhatsApp (D-025).
    */
   encolarCod?: (orderId: string) => Promise<void>;
+  /** Encola `metrics.recompute_day` del pedido recién creado (best effort: nunca tumba la respuesta, D-033). */
+  recalcularMetricas?: (orderId: string) => Promise<void>;
 }
 
 export interface DepsPago {
@@ -119,6 +123,13 @@ export async function manejarCheckout(req: Request, deps: DepsCheckout): Promise
   } catch (e) {
     return fallaInterna('checkout', e);
   }
+  if (r.ok && !r.cuerpo.repeated && deps.recalcularMetricas) {
+    try {
+      await deps.recalcularMetricas(r.order_id);
+    } catch (e) {
+      console.error(`[checkout] metrics.recompute_day no encolado: ${e instanceof Error ? e.name : 'error'}`);
+    }
+  }
   if (r.ok && r.cuerpo.next_step === 'pay_cod_deposit') {
     // El pedido ya existe: si Redis falla, el barrido de pedidos `esperando_abono` sin link lo recupera.
     try {
@@ -164,6 +175,7 @@ async function pagoAddi(pagos: DepsPagos, orderId: string, ahora: Date): Promise
     ahora,
     urlSitio: pagos.urlSitio,
     ...(pagos.clienteAddi ? { cliente: pagos.clienteAddi } : {}),
+    ...(pagos.recalcularMetricas ? { recalcularMetricas: pagos.recalcularMetricas } : {}),
   });
 }
 

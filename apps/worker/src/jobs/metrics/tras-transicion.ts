@@ -9,17 +9,13 @@
  *   y el nocturno `metrics.recompute_recent` (60 días) corrige el agregado.
  */
 import type { Queue } from 'bullmq';
-import type { CountryCode } from '@izao/core/money';
+import { fechasPedidoDeFila, type FechasPedido } from '@izao/core/metrics';
 import { crearClientePostgrest, eq, type OpcionesPostgrest } from '../postgrest.js';
-import { PAISES_METRICAS, encolarRecalculoPedido } from './recalcular-dia.js';
+import { encolarRecalculoPedido } from './recalcular-dia.js';
 
 export type RecalcularMetricasPedido = (orderId: string) => Promise<void>;
 
-export interface FechasPedido {
-  country_code: CountryCode;
-  created_at: Date;
-  paid_at: Date | null;
-}
+export type { FechasPedido } from '@izao/core/metrics';
 
 type ConTransicion = { aplicarTransicion(orderId: string, ...resto: never[]): Promise<boolean> };
 
@@ -50,22 +46,11 @@ export function recalculadorMetricas(
   };
 }
 
-function fecha(v: unknown): Date | null {
-  if (typeof v !== 'string') return null;
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
 export function leerFechasPedidoPostgrest(o: OpcionesPostgrest): (orderId: string) => Promise<FechasPedido | null> {
   const c = crearClientePostgrest(o);
   return async (orderId) => {
     const [f] = await c.filas('orders', `orders?id=${eq(orderId)}&select=country_code,created_at,paid_at`);
-    if (!f) return null;
-    const pais = f.country_code as CountryCode;
-    const creado = fecha(f.created_at);
-    const pagado = f.paid_at === null ? null : fecha(f.paid_at);
-    if (!PAISES_METRICAS.includes(pais) || !creado || (f.paid_at !== null && !pagado)) return null;
-    return { country_code: pais, created_at: creado, paid_at: pagado };
+    return f ? fechasPedidoDeFila(f) : null;
   };
 }
 

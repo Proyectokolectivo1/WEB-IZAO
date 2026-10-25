@@ -2,6 +2,7 @@ import { manejarPago } from '@/lib/checkout/http';
 import { fuentePagosSupabase } from '@/lib/checkout/fuente-pagos-supabase';
 import { fuenteAddiSupabase } from '@/lib/checkout/fuente-addi-supabase';
 import { crearLimitadorMemoria, enteroEnv } from '@/lib/checkout/limite-tasa';
+import { encolarRecalculoMetricas } from '../cola-metricas';
 
 /**
  * `POST /api/checkout/pago` `{country, token}`: intento de pago del pedido con Wompi o Addi (crear o
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
       fuente: () => fuentePagosSupabase,
       addi: () => fuenteAddiSupabase,
       urlSitio: process.env.SITE_URL ?? 'https://izaoperfumeria.com',
+      recalcularMetricas: encolarRecalculoMetricas,
     },
     limitador,
   });

@@ -5,3 +5,4 @@
 export * from './fechas';
 export * from './pedido';
 export * from './resumen';
+export * from './cola';

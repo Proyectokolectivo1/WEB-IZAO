@@ -183,6 +183,39 @@ describe('prepararPagoAddi (next_step = pay_addi, §12.3)', () => {
     expect(m.pedido.status).toBe('pago_rechazado');
   });
 
+  describe('recálculo de métricas tras cambiar el pedido (D-033)', () => {
+    it('encola el recálculo tras el reintento (pago_rechazado → pendiente_pago) y tras el rechazo de Addi', async () => {
+      const reintento = memoria({ pedido: { status: 'pago_rechazado' }, intentos: [{ status: 'declined' }] });
+      const ids: string[] = [];
+      await prepararPagoAddi(reintento.fuente, reintento.pedido, { ...reintento.opc, recalcularMetricas: async (id) => void ids.push(id) });
+      expect(ids).toEqual(['o1']);
+
+      const rechazo = memoria({ solicitud: 'conflicto' });
+      const ids2: string[] = [];
+      await prepararPagoAddi(rechazo.fuente, rechazo.pedido, { ...rechazo.opc, recalcularMetricas: async (id) => void ids2.push(id) });
+      expect(ids2).toEqual(['o1']);
+    });
+
+    it('sin cambio de estado (primer intento con URL) no encola', async () => {
+      const m = memoria();
+      const ids: string[] = [];
+      const r = await prepararPagoAddi(m.fuente, m.pedido, { ...m.opc, recalcularMetricas: async (id) => void ids.push(id) });
+      expect(r.ok).toBe(true);
+      expect(ids).toEqual([]);
+    });
+
+    it('si el encolado falla, el cobro sigue (best effort)', async () => {
+      const m = memoria({ pedido: { status: 'pago_rechazado' }, intentos: [{ status: 'declined' }] });
+      const r = await prepararPagoAddi(m.fuente, m.pedido, {
+        ...m.opc,
+        recalcularMetricas: async () => {
+          throw new Error('redis caído');
+        },
+      });
+      expect(r.ok && r.pago.reference).toBe('IZ-CO-000123-A2');
+    });
+  });
+
   it('Addi caído, sin red o Location insegura → intento error, el pedido sigue pendiente y se puede reintentar', async () => {
     for (const solicitud of ['caida', 'red', 'location_http', 'sin_location'] as const) {
       const m = memoria({ solicitud });

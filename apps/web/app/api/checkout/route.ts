@@ -4,6 +4,7 @@ import { fuentePagosSupabase } from '@/lib/checkout/fuente-pagos-supabase';
 import { fuenteAddiSupabase } from '@/lib/checkout/fuente-addi-supabase';
 import { crearLimitadorMemoria, enteroEnv } from '@/lib/checkout/limite-tasa';
 import { encolarInicioCod } from './cola-cod';
+import { encolarRecalculoMetricas } from './cola-metricas';
 
 /**
  * `POST /api/checkout`: crea el pedido recalculando todo en el servidor (§10, §11). Contrato en
@@ -26,7 +27,9 @@ export async function POST(req: Request) {
       fuente: () => fuentePagosSupabase,
       addi: () => fuenteAddiSupabase,
       urlSitio: process.env.SITE_URL ?? 'https://izaoperfumeria.com',
+      recalcularMetricas: encolarRecalculoMetricas,
     },
     encolarCod: encolarInicioCod,
+    recalcularMetricas: encolarRecalculoMetricas,
   });
 }

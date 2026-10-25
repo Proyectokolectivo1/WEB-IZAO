@@ -12,12 +12,17 @@
  *   `UnrecoverableError`, sin reintentos ni escritura.
  * - Nocturno `metrics.recompute_recent`: encola los últimos 60 días por país sin espera.
  */
-import { UnrecoverableError, type Job, type JobsOptions, type Processor, type Queue } from 'bullmq';
+import { UnrecoverableError, type Job, type Processor, type Queue } from 'bullmq';
 import {
+  JOB_METRICS_RECOMPUTE_DAY,
+  encolarRecalculoDia,
   esFechaIso,
+  esPaisMetricas,
   fechaBogota,
   filasVentasDiarias,
   sumarDias,
+  PAISES_METRICAS,
+  type DatosJobRecalculoDia,
   type FechaIso,
   type FilaVentasDiarias,
   type PedidoMetrica,
@@ -25,17 +30,20 @@ import {
 import type { CountryCode } from '@izao/core/money';
 import { crearFuenteMetricasPostgrest } from './fuente-postgrest.js';
 
-export const JOB_METRICS_RECOMPUTE_DAY = 'metrics.recompute_day';
+// El contrato del productor (nombre, deduplicación, opciones, días afectados) vive en `@izao/core/metrics`
+// (`cola.ts`) para que la web encole lo mismo que el worker.
+export {
+  DEBOUNCE_RECALCULO_MS,
+  JOB_METRICS_RECOMPUTE_DAY,
+  PAISES_METRICAS,
+  encolarRecalculoDia,
+  encolarRecalculoPedido,
+  fechasAfectadas,
+  idDeduplicacionRecalculo,
+  type DatosJobRecalculoDia,
+} from '@izao/core/metrics';
 export const JOB_METRICS_RECOMPUTE_RECENT = 'metrics.recompute_recent';
-export const DEBOUNCE_RECALCULO_MS = 60_000;
 export const DIAS_RECALCULO_NOCTURNO = 60;
-export const PAISES_METRICAS: readonly CountryCode[] = Object.freeze(['CO', 'EC'] as const);
-
-export interface DatosJobRecalculoDia {
-  /** Día en Bogotá, `YYYY-MM-DD`. */
-  date: FechaIso;
-  country_code: CountryCode;
-}
 
 export interface FuenteMetricas {
   /** Exactamente los pedidos atribuidos a `fecha` (Bogotá) y `pais`: `paid_at`, o `created_at` sin pago. */
@@ -49,17 +57,11 @@ export interface DepsMetricas {
   ahora?: () => Date;
 }
 
-const esPais = (v: unknown): v is CountryCode => typeof v === 'string' && (PAISES_METRICAS as readonly string[]).includes(v);
-
 export function parseDatosRecalculoDia(d: unknown): DatosJobRecalculoDia | null {
   if (typeof d !== 'object' || d === null) return null;
   const { date, country_code } = d as Record<string, unknown>;
-  if (!esFechaIso(date) || !esPais(country_code)) return null;
+  if (!esFechaIso(date) || !esPaisMetricas(country_code)) return null;
   return { date, country_code };
-}
-
-export function idDeduplicacionRecalculo(fecha: FechaIso, pais: CountryCode): string {
-  return `${JOB_METRICS_RECOMPUTE_DAY}.${fecha}.${pais}`;
 }
 
 export async function recalcularDia(
@@ -87,42 +89,6 @@ export function crearManejadorRecalculoDia(deps: DepsMetricas): Processor {
     console.log(`[metrics] ${r.date} ${r.country_code}: ${r.pedidos} pedidos, ${r.filas} filas`);
     return r;
   };
-}
-
-function opcionesRecalculo(fecha: FechaIso, pais: CountryCode, delay: number): JobsOptions {
-  return {
-    delay,
-    deduplication: { id: idDeduplicacionRecalculo(fecha, pais), keepLastIfActive: true },
-    attempts: 5,
-    backoff: { type: 'exponential', delay: 10_000 },
-    removeOnComplete: { age: 24 * 3600, count: 1000 },
-    removeOnFail: { age: 7 * 24 * 3600 },
-  };
-}
-
-/** Encola el recálculo de un día con debounce (por defecto 1 min). Para quien cambie un pedido. */
-export async function encolarRecalculoDia(cola: Queue, fecha: FechaIso, pais: CountryCode, delay = DEBOUNCE_RECALCULO_MS): Promise<void> {
-  if (!esFechaIso(fecha)) throw new RangeError('Fecha inválida.');
-  if (!esPais(pais)) throw new RangeError('País inválido.');
-  const datos: DatosJobRecalculoDia = { date: fecha, country_code: pais };
-  await cola.add(JOB_METRICS_RECOMPUTE_DAY, datos, opcionesRecalculo(fecha, pais, delay));
-}
-
-/** Días que un cambio del pedido puede mover: el de creación y el de pago (la atribución pasa del uno al otro). */
-export function fechasAfectadas(p: { created_at: Date; paid_at: Date | null }): FechaIso[] {
-  const fechas = [fechaBogota(p.created_at)];
-  if (p.paid_at) {
-    const pago = fechaBogota(p.paid_at);
-    if (pago !== fechas[0]) fechas.push(pago);
-  }
-  return fechas;
-}
-
-export async function encolarRecalculoPedido(
-  cola: Queue,
-  p: { country_code: CountryCode; created_at: Date; paid_at: Date | null },
-): Promise<void> {
-  for (const f of fechasAfectadas(p)) await encolarRecalculoDia(cola, f, p.country_code);
 }
 
 /** Manejador del nocturno: últimos 60 días (hoy en Bogotá incluido) por país, sin espera. */

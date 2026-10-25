@@ -12,6 +12,7 @@
  *   `transicionar` y crea `A{n+1}`.
  * - Rechazo de Addi al crear (409 cliente con crédito, 400 datos) → `pago_rechazado` (la página ofrece otros
  *   métodos). Caída, red o respuesta rara → el pedido sigue pendiente y se puede reintentar.
+ * - Tras cada transición aplicada se encola `metrics.recompute_day` (`recalcularMetricas`, best effort).
  */
 import type { OrderStatus, OrderStatusEvent } from '@izao/core/order-state';
 import { transicionar } from '@izao/core/order-state';
@@ -80,6 +81,20 @@ export interface OpcionesPagoAddi {
   margenMs?: number;
   /** Solo pruebas: cliente con `fetch` falso. */
   cliente?: (c: AddiCredentials) => ClienteAddi;
+  /**
+   * Encola `metrics.recompute_day` del pedido tras cada transición aplicada (D-033). Best effort: si falla se
+   * registra y el nocturno corrige; nunca tumba el cobro.
+   */
+  recalcularMetricas?: (orderId: string) => Promise<void>;
+}
+
+async function recalcular(o: OpcionesPagoAddi, orderId: string): Promise<void> {
+  if (!o.recalcularMetricas) return;
+  try {
+    await o.recalcularMetricas(orderId);
+  } catch (e) {
+    console.error(`[checkout] metrics.recompute_day no encolado: ${e instanceof Error ? e.name : 'error'}`);
+  }
 }
 
 export type MotivoSinPagoAddi = MotivoSinPago | 'datos_cliente' | 'rechazado_entidad' | 'entidad_no_disponible';
@@ -155,13 +170,16 @@ export async function prepararPagoAddi(
 
   const rechazar = async (): Promise<boolean> => {
     const t = transicionar({ from: 'pendiente_pago', to: 'pago_rechazado', actor: 'system', payload: { motivo: 'addi_rechazo_solicitud', reference: referencia } });
-    return t.ok && (await fuente.aplicarTransicion(pedido.id, t.event));
+    const aplicada = t.ok && (await fuente.aplicarTransicion(pedido.id, t.event));
+    if (aplicada) await recalcular(o, pedido.id);
+    return aplicada;
   };
 
   if (pedido.status === 'pago_rechazado') {
     const t = transicionar({ from: 'pago_rechazado', to: 'pendiente_pago', actor: 'system', payload: { motivo: 'reintento_pago' } });
     if (!t.ok) return { ok: false, motivo: 'estado' };
     if (!(await fuente.aplicarTransicion(pedido.id, t.event))) return { ok: false, motivo: 'conflicto' };
+    await recalcular(o, pedido.id);
   }
 
   const ins = await fuente.insertarIntentoAddi({
