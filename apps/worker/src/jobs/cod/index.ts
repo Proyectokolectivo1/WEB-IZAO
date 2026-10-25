@@ -19,6 +19,7 @@ import {
 import { crearLinkPago } from '@izao/wompi';
 import { abandonarCod, iniciarCod, recordatorioCod, reenviarCod, type DepsCod, type JobProgramado } from './flujo.js';
 import { crearFuenteCodPostgrest } from './fuente-postgrest.js';
+import { conRecalculoMetricas, type RecalcularMetricasPedido } from '../metrics/tras-transicion.js';
 
 export { COLA_COD };
 
@@ -26,7 +27,12 @@ export { COLA_COD };
 export type CorreoRespaldo = NonNullable<DepsCod['correoRespaldo']>;
 
 /** Variables: SUPABASE_URL, SUPABASE_SECRET_KEY, APP_ENCRYPTION_KEY, SITE_URL (origen https). */
-export function dependenciasCodDesdeEnv(programar: DepsCod['programar'], correoRespaldo?: CorreoRespaldo): DepsCod {
+export function dependenciasCodDesdeEnv(
+  programar: DepsCod['programar'],
+  correoRespaldo?: CorreoRespaldo,
+  /** Encola `metrics.recompute_day` tras cada transición aplicada (abandono). */
+  recalcularMetricas?: RecalcularMetricasPedido,
+): DepsCod {
   const supabaseUrl = process.env.SUPABASE_URL;
   const secretKey = process.env.SUPABASE_SECRET_KEY;
   const claveCifrado = process.env.APP_ENCRYPTION_KEY;
@@ -35,7 +41,7 @@ export function dependenciasCodDesdeEnv(programar: DepsCod['programar'], correoR
     throw new Error('Faltan SUPABASE_URL, SUPABASE_SECRET_KEY, APP_ENCRYPTION_KEY o SITE_URL para la cola de contra entrega');
   }
   return {
-    fuente: crearFuenteCodPostgrest({ supabaseUrl, secretKey, claveCifrado }),
+    fuente: conRecalculoMetricas(crearFuenteCodPostgrest({ supabaseUrl, secretKey, claveCifrado }), recalcularMetricas),
     wompi: (c) => ({ crearLink: (e) => crearLinkPago({ ambiente: c.ambiente, llavePrivada: c.llavePrivada }, e) }),
     whatsapp: (c) => crearClienteWhatsApp(c),
     programar,

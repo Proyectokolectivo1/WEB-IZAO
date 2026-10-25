@@ -14,6 +14,7 @@ import type { Queue } from 'bullmq';
 import { transicionar, type OrderStatus } from '@izao/core/order-state';
 import { JOB_COD_INICIAR, jobIdCodIniciar, type DatosJobCodIniciar } from '@izao/whatsapp';
 import { crearFuenteCodPostgrest } from './fuente-postgrest.js';
+import { conRecalculoMetricas, type RecalcularMetricasPedido } from '../metrics/tras-transicion.js';
 import type { FuenteBarrido, FuenteCod, PedidoPorVencer } from './fuente.js';
 
 export const JOB_BARRIDO_PEDIDOS = 'pedidos.barrido';
@@ -128,7 +129,12 @@ export function encoladorInicioCod(cola: Pick<Queue, 'getJob' | 'add'>): DepsBar
 }
 
 /** Variables: SUPABASE_URL, SUPABASE_SECRET_KEY, APP_ENCRYPTION_KEY. `colaCod` = cola `contraentrega`. */
-export function dependenciasBarridoDesdeEnv(colaCod: Queue, cancelarJobsCod?: (orderId: string) => Promise<void>): DepsBarrido {
+export function dependenciasBarridoDesdeEnv(
+  colaCod: Queue,
+  cancelarJobsCod?: (orderId: string) => Promise<void>,
+  /** Encola `metrics.recompute_day` tras cada transición aplicada (expirado, abandonado). */
+  recalcularMetricas?: RecalcularMetricasPedido,
+): DepsBarrido {
   const supabaseUrl = process.env.SUPABASE_URL;
   const secretKey = process.env.SUPABASE_SECRET_KEY;
   const claveCifrado = process.env.APP_ENCRYPTION_KEY;
@@ -136,7 +142,7 @@ export function dependenciasBarridoDesdeEnv(colaCod: Queue, cancelarJobsCod?: (o
     throw new Error('Faltan SUPABASE_URL, SUPABASE_SECRET_KEY o APP_ENCRYPTION_KEY para el barrido de pedidos');
   }
   return {
-    fuente: crearFuenteCodPostgrest({ supabaseUrl, secretKey, claveCifrado }),
+    fuente: conRecalculoMetricas(crearFuenteCodPostgrest({ supabaseUrl, secretKey, claveCifrado }), recalcularMetricas),
     encolarInicioCod: encoladorInicioCod(colaCod),
     ...(cancelarJobsCod ? { cancelarJobsCod } : {}),
   };
