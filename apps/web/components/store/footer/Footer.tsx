@@ -45,20 +45,23 @@ export function Footer({ pais, ajustes, paginas, espacios }: Props) {
           </address>
         </div>
 
-        {paginas.length > 0 ? (
-          <nav aria-label={T.footer.politicas} className="md:col-span-4">
-            <p className="etiqueta pb-3 text-bg/80">{T.footer.politicas}</p>
-            <ul>
-              {paginas.map((p) => (
-                <li key={p.slug}>
-                  <Link href={`/${pais}/pagina/${p.slug}`} className={`${enlace} text-[0.9375rem]`}>
-                    {p.title}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        ) : null}
+        <nav aria-label={T.footer.politicas} className="md:col-span-4">
+          <p className="etiqueta pb-3 text-bg/80">{T.footer.politicas}</p>
+          <ul>
+            {paginas.map((p) => (
+              <li key={p.slug}>
+                <Link href={`/${pais}/pagina/${p.slug}`} className={`${enlace} text-[0.9375rem]`}>
+                  {p.title}
+                </Link>
+              </li>
+            ))}
+            <li>
+              <Link href={`/${pais}/garantias`} className={`${enlace} text-[0.9375rem]`}>
+                {T.footer.garantias}
+              </Link>
+            </li>
+          </ul>
+        </nav>
 
         <div className="md:col-span-3">
           <p className="etiqueta pb-3 text-bg/80" id="selector-pais">

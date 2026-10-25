@@ -31,6 +31,7 @@ export const T = {
     cambiarPais: 'Cambiar de país',
     politicas: 'Políticas',
     ayuda: 'Ayuda',
+    garantias: 'Solicitar una garantía',
     escribenos: 'Escríbenos por WhatsApp',
     medios: 'Medios de pago',
     derechos: (anio: number, nombre: string) => `© ${anio} ${nombre}`,
