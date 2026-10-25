@@ -5,6 +5,9 @@
  * `aplicar_transicion_pedido`. Un estado atrasado, sin camino o desconocido no mueve el pedido: alerta.
  * Si la etiqueta ya está disponible y no se guardó, la guarda y crea el `print_job`.
  *
+ * Métricas (§21.4): cada transición aplicada encola `metrics.recompute_day` (fuente envuelta con
+ * `conRecalculoMetricas`); si solo cambió la tarifa del envío, se encola aparte.
+ *
  * Idempotente: repetir la misma notificación deja todo igual (la transición ya aplicada es `sin_cambio`).
  * Un error reintentable se relanza para que BullMQ reintente; el resto se marca en `webhook_events`.
  */
@@ -17,6 +20,7 @@ import {
   guardarEtiqueta,
   guardarRemoto,
   mover,
+  recalcularMetricasSeguro,
   type DepsCarrier,
 } from './comun.js';
 
@@ -78,12 +82,13 @@ export async function procesarSync(datos: DatosJobSync, deps: DepsCarrier): Prom
   }
 
   const actualizado = await guardarRemoto(deps, pedido.id, pedido.number, envio, remoto, datos.origen);
+  const tarifaCambio = (envio?.shipping_rate ?? null) !== remoto.shippingRate;
   const plan = planInternalTransition(pedido.status, remoto.statusId);
   let resultado: ResultadoSync = { accion: 'sin_cambio', order_id: pedido.id };
+  const pasos: string[] = [];
 
   if (plan.kind === 'transicion') {
     let desde = pedido.status;
-    const pasos: string[] = [];
     for (const hacia of plan.path) {
       const m = await mover(deps, pedido.id, desde, hacia, actor, {
         provider_order_id: remoto.providerOrderId,
@@ -101,6 +106,9 @@ export async function procesarSync(datos: DatosJobSync, deps: DepsCarrier): Prom
     await deps.fuente.registrarEvento(pedido.id, 'alerta', actor, { motivo: 'sincronizacion', ...plan.alerta });
     resultado = { accion: 'alerta', order_id: pedido.id };
   }
+  // Cada transición aplicada ya encoló el recálculo (fuente envuelta con `conRecalculoMetricas`); la tarifa
+  // nueva sin transición también mueve `daily_sales_stats` (costo de envío estimado, §21.4).
+  if (tarifaCambio && pasos.length === 0) await recalcularMetricasSeguro(deps, pedido.id);
 
   if (actualizado.label_url && !actualizado.label_local_path && remoto.statusId !== 9) {
     try {

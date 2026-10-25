@@ -9,12 +9,14 @@
  *     { pattern: CRON_BILLETERA_MASTERSHOP, tz: 'America/Bogota' }, { name: JOB_BILLETERA_MASTERSHOP, data: {} });
  *   // index.ts, en crearProcesadorSistema({...})
  *   [JOB_POLLING_MASTERSHOP]: async () => pollingMasterShop(dependenciasPollingDesdeEnv(colaCarrier)),
- *   [JOB_BILLETERA_MASTERSHOP]: async () => billeteraMasterShop(dependenciasBilleteraDesdeEnv()),
+ *   [JOB_BILLETERA_MASTERSHOP]: async () =>
+ *     billeteraMasterShop(dependenciasBilleteraDesdeEnv(process.env, recalcularMetricas)),
  *
  * Variables: SUPABASE_URL, SUPABASE_SECRET_KEY, APP_ENCRYPTION_KEY. Con MASTERSHOP_MODO=simulado no se llama
  * a la API (no hay pedidos simulados compartidos con la cola carrier).
  */
 import { JOB_CARRIER_SYNC, MasterShopClient, encolarJobCarrier, type ColaMinima } from '@izao/mastershop';
+import type { RecalcularMetricasPedido } from '../metrics/tras-transicion.js';
 import type { DepsBilletera } from './billetera.js';
 import { crearFuenteBilleteraPostgrest, crearFuentePollingPostgrest } from './fuente-postgrest.js';
 import type { DepsPolling } from './polling.js';
@@ -44,11 +46,16 @@ export function dependenciasPollingDesdeEnv(colaCarrier: ColaMinima, env: NodeJS
   };
 }
 
-export function dependenciasBilleteraDesdeEnv(env: NodeJS.ProcessEnv = process.env): DepsBilletera {
+/** `recalcularMetricas` (`recalculadorMetricasDesdeEnv(colaSistema)`): recálculo de los días de cada pedido con costos nuevos. */
+export function dependenciasBilleteraDesdeEnv(
+  env: NodeJS.ProcessEnv = process.env,
+  recalcularMetricas?: RecalcularMetricasPedido,
+): DepsBilletera {
   const fuente = crearFuenteBilleteraPostgrest(opcionesDesdeEnv(env));
   const simulado = env.MASTERSHOP_MODO === 'simulado';
   return {
     fuente: simulado ? { ...fuente, credenciales: async () => null } : fuente,
+    ...(recalcularMetricas ? { recalcularMetricas } : {}),
     listar: (creds, desde) => new MasterShopClient({ apiKey: creds.apiKey }).listAllWalletMovements({ startDate: desde }),
     // PENDIENTE: canal de alertas al admin (WhatsApp/correo, §15.5). Hoy queda la bandera en country_settings.
     async avisarSaldoBajo(saldo, umbral) {

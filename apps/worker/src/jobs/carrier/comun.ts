@@ -10,6 +10,7 @@ import {
   type CarrierOrderOptions,
   type MasterShopCredentials,
 } from '@izao/mastershop';
+import type { RecalcularMetricasPedido } from '../metrics/tras-transicion.js';
 import type { AlmacenEtiquetas, EnvioFila, FuenteCarrier, ProgramadorCarrier } from './fuente.js';
 
 export interface DepsCarrier {
@@ -21,7 +22,23 @@ export interface DepsCarrier {
   transportadora(creds: MasterShopCredentials, opciones?: CarrierOrderOptions): CarrierProvider;
   programar: ProgramadorCarrier;
   etiquetas: AlmacenEtiquetas;
+  /**
+   * Encola `metrics.recompute_day` de los días del pedido (§21.4). Las transiciones ya lo disparan porque
+   * `dependenciasCarrierDesdeEnv` envuelve la fuente con `conRecalculoMetricas`; aquí queda para los cambios
+   * que no pasan por una transición (la tarifa del envío que trae la sincronización).
+   */
+  recalcularMetricas?: RecalcularMetricasPedido;
   ahora?: () => Date;
+}
+
+/** Recálculo que nunca tumba el job: si falla, lo corrige el nocturno `metrics.recompute_recent`. */
+export async function recalcularMetricasSeguro(deps: DepsCarrier, orderId: string): Promise<void> {
+  if (!deps.recalcularMetricas) return;
+  try {
+    await deps.recalcularMetricas(orderId);
+  } catch (e) {
+    console.error(`[metricas] metrics.recompute_day no encolado: ${e instanceof Error ? e.name : 'error'}`);
+  }
 }
 
 export const ACTOR_SISTEMA = 'system';

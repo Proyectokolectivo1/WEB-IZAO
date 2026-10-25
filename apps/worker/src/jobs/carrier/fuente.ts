@@ -31,6 +31,8 @@ export interface EnvioFila {
   tracking_code: string | null;
   label_url: string | null;
   label_local_path: string | null;
+  /** Tarifa de envío que reporta MasterShop (entra en las métricas como costo estimado). */
+  shipping_rate?: bigint | null;
 }
 
 export interface CambiosEnvio {

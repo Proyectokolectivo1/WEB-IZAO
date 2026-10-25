@@ -11,6 +11,9 @@
  * 4. Con "Confirmar automáticamente" activo: `PUT {idStatus: 2}` (el `409` concurrente lo reintenta el
  *    cliente a los 5 s; el `502` se consulta, nunca se reintenta a ciegas). Luego programa `carrier.poll_label`.
  *
+ * Métricas (§21.4): `enviado_transportadora` y `error_transportadora` pasan por la fuente envuelta con
+ * `conRecalculoMetricas` (`dependenciasCarrierDesdeEnv`), que encola `metrics.recompute_day` de los días del pedido.
+ *
  * Reintentos propios (no los de BullMQ) con las esperas de §14.5: cada reintento es un job nuevo con id fijo
  * `carrier.create.{id}.r{n}`. Al agotarlos, o ante un error que no se arregla reintentando (validación, llave),
  * el pedido pasa a `error_transportadora` con una alerta que lleva el error completo de MasterShop.

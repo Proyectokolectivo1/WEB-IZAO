@@ -7,6 +7,7 @@
  *   → `orders.shipping_cost_real` (envío + devolución) y `orders.carrier_fees` (desglose + movimientos por id);
  * - registra en `expenses` (categoría "MasterShop", `source = mastershop_wallet`, `external_ref =
  *   idBalanceMovement`) los cobros sin pedido de la tienda;
+ * - encola el recálculo de `daily_sales_stats` de los días de cada pedido cuyos costos cambiaron (§21.4);
  * - guarda el saldo (`newBalance` más reciente) y evalúa la alerta de saldo bajo con el umbral configurable.
  *
  * Idempotente: los movimientos se guardan por id dentro de `carrier_fees` y los totales se recalculan; el gasto
@@ -24,6 +25,7 @@ import {
   type MasterShopCredentials,
   type MovimientoBilletera,
 } from '@izao/mastershop';
+import type { RecalcularMetricasPedido } from '../metrics/tras-transicion.js';
 
 export const JOB_BILLETERA_MASTERSHOP = 'mastershop.billetera';
 /** Cada hora, al minuto 7 (lejos del polling de cada 10 min). */
@@ -66,6 +68,11 @@ export interface DepsBilletera {
   listar(creds: MasterShopCredentials, desde: Date): Promise<{ movimientos: MovimientoBilletera[]; avisos: unknown[] }>;
   /** Aviso de saldo bajo al admin (canal pendiente; hoy registro en log y bandera en `country_settings`). */
   avisarSaldoBajo(saldo: bigint, umbral: bigint): Promise<void>;
+  /**
+   * Encola `metrics.recompute_day` de los días del pedido (creación y pago, §21.4) cuando cambian su costo real
+   * de envío o sus comisiones. Si falla no tumba el job: lo corrige el nocturno `metrics.recompute_recent`.
+   */
+  recalcularMetricas?: RecalcularMetricasPedido;
   ahora?: () => Date;
 }
 
@@ -135,6 +142,13 @@ export async function billeteraMasterShop(deps: DepsBilletera): Promise<Resultad
     if (JSON.stringify(antes.carrier_fees) === JSON.stringify(despues.carrier_fees)) continue;
     await deps.fuente.guardarCostos(pedido.order_id, despues.shipping_cost_real, despues.carrier_fees);
     r.pedidos_actualizados++;
+    if (deps.recalcularMetricas) {
+      try {
+        await deps.recalcularMetricas(pedido.order_id);
+      } catch (e) {
+        console.error(`[metricas] metrics.recompute_day no encolado: ${e instanceof Error ? e.name : 'error'}`);
+      }
+    }
   }
 
   const estado = await deps.fuente.estadoSaldo();

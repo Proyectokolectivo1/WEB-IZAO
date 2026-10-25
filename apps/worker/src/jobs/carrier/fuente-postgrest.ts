@@ -90,7 +90,9 @@ export function filaAPedido(r: Fila): Order {
   };
 }
 
-const COLUMNAS_ENVIO = 'id,order_id,external_order_id,provider_order_id,provider_status_id,tracking_code,label_url,label_local_path';
+const COLUMNAS_ENVIO =
+  'id,order_id,external_order_id,provider_order_id,provider_status_id,tracking_code,label_url,label_local_path,shipping_rate';
+const montoONull = (v: unknown): bigint | null => (typeof v === 'string' || typeof v === 'number' ? monto(v) : null);
 
 function aEnvio(r: Fila): EnvioFila {
   return {
@@ -102,6 +104,7 @@ function aEnvio(r: Fila): EnvioFila {
     tracking_code: txt(r.tracking_code),
     label_url: txt(r.label_url),
     label_local_path: txt(r.label_local_path),
+    shipping_rate: montoONull(r.shipping_rate),
   };
 }
 

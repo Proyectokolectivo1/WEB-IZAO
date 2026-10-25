@@ -15,6 +15,7 @@
 - `index.ts`, en `crearProcesadorSistema({...})`: `[JOB_POLLING_MASTERSHOP]: async () => pollingMasterShop(dependenciasPollingDesdeEnv(colaCarrier))`, `[JOB_BILLETERA_MASTERSHOP]: async () => billeteraMasterShop(dependenciasBilleteraDesdeEnv())`.
 - La web escribe en `MEDIA_ROOT/agent-screenshots/` (volumen media de la web, lectura/escritura) y lee `MEDIA_ROOT/labels/`.
 
+- Recálculo §21.4 (hallazgo del revisor): fuente carrier envuelta con `conRecalculoMetricas`; tarifa nueva sin transición y costos de billetera encolan `metrics.recompute_day`. Cableado mínimo en `apps/worker/src/index.ts` (avisado a izao-infra).
 - `6513e22` webhooks guardados en `integration_webhooks` (izao-db `6b71294`); `remote_config` leído con columnas explícitas.
 
 ## Para izao-admin

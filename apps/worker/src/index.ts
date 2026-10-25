@@ -39,7 +39,8 @@ async function main(): Promise<void> {
     QUEUE_NAMES.sistema,
     crearProcesadorSistema({
       [JOB_POLLING_MASTERSHOP]: async () => pollingMasterShop(dependenciasPollingDesdeEnv(colaCarrier)),
-      [JOB_BILLETERA_MASTERSHOP]: async () => billeteraMasterShop(dependenciasBilleteraDesdeEnv()),
+      [JOB_BILLETERA_MASTERSHOP]: async () =>
+        billeteraMasterShop(dependenciasBilleteraDesdeEnv(process.env, recalcularMetricas)),
       [JOB_METRICS_RECOMPUTE_DAY]: crearManejadorRecalculoDia(dependenciasMetricasDesdeEnv()),
       [JOB_METRICS_RECOMPUTE_RECENT]: crearManejadorRecalculoReciente(cola),
       [JOB_BARRIDO_PEDIDOS]: async () =>
@@ -69,7 +70,7 @@ async function main(): Promise<void> {
   trabajadores.push(
     createWorker(
       QUEUE_NAMES.carrier,
-      crearProcesadorCarrier(dependenciasCarrierDesdeEnv(programadorCarrier(colaCarrier))),
+      crearProcesadorCarrier(dependenciasCarrierDesdeEnv(programadorCarrier(colaCarrier), process.env, recalcularMetricas)),
       connection,
     ),
   );

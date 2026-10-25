@@ -82,6 +82,7 @@ export class FuenteMemoria implements FuenteCarrier {
       tracking_code: e.tracking_code,
       label_url: e.label_url,
       label_local_path: e.label_local_path,
+      shipping_rate: e.extra.shipping_rate ?? null,
     };
   }
   async guardarEnvio(id: string, c: CambiosEnvio) {

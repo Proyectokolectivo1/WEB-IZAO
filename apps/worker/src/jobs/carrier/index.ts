@@ -5,7 +5,8 @@
  *   const colaCarrier = createQueue(QUEUE_NAMES.carrier, connection);
  *   dependenciasPagosDesdeEnv(encolarTransportadora(colaCarrier), …)   // reemplaza el stub
  *   createWorker(QUEUE_NAMES.carrier,
- *     crearProcesadorCarrier(dependenciasCarrierDesdeEnv(programadorCarrier(colaCarrier))), connection)
+ *     crearProcesadorCarrier(dependenciasCarrierDesdeEnv(programadorCarrier(colaCarrier), process.env, recalcularMetricas)),
+ *     connection)
  *   // al cerrar: await colaCarrier.close()
  *
  * Variables: SUPABASE_URL, SUPABASE_SECRET_KEY, APP_ENCRYPTION_KEY, MEDIA_ROOT (defecto /srv/izao/media) y
@@ -30,6 +31,7 @@ import {
   type FetchLike,
 } from '@izao/mastershop';
 import { MasterShopMock } from '@izao/mastershop/mock';
+import { conRecalculoMetricas, type RecalcularMetricasPedido } from '../metrics/tras-transicion.js';
 import { crearAlmacenEtiquetas } from './almacen-etiquetas.js';
 import type { DepsCarrier } from './comun.js';
 import { procesarCrear } from './crear.js';
@@ -80,7 +82,16 @@ export function encolarTransportadora(cola: ColaMinima): (orderId: string) => Pr
 
 const LLAVE_SIMULADA = 'simulado-sin-red';
 
-export function dependenciasCarrierDesdeEnv(programar: ProgramadorCarrier, env: NodeJS.ProcessEnv = process.env): DepsCarrier {
+/**
+ * `recalcularMetricas` (opcional, `recalculadorMetricasDesdeEnv(colaSistema)`): envuelve la fuente con
+ * `conRecalculoMetricas` para que cada transición de `carrier.create`, `carrier.poll_label` y `carrier.sync`
+ * encole `metrics.recompute_day` (§21.4), y lo usa la sincronización cuando solo cambia la tarifa.
+ */
+export function dependenciasCarrierDesdeEnv(
+  programar: ProgramadorCarrier,
+  env: NodeJS.ProcessEnv = process.env,
+  recalcularMetricas?: RecalcularMetricasPedido,
+): DepsCarrier {
   const supabaseUrl = env.SUPABASE_URL;
   const secretKey = env.SUPABASE_SECRET_KEY;
   const claveCifrado = env.APP_ENCRYPTION_KEY;
@@ -88,7 +99,7 @@ export function dependenciasCarrierDesdeEnv(programar: ProgramadorCarrier, env: 
     throw new Error('Faltan SUPABASE_URL, SUPABASE_SECRET_KEY o APP_ENCRYPTION_KEY para la cola carrier');
   }
   const mediaRoot = env.MEDIA_ROOT ?? '/srv/izao/media';
-  const fuente = crearFuenteCarrierPostgrest({ supabaseUrl, secretKey, claveCifrado });
+  const fuente = conRecalculoMetricas(crearFuenteCarrierPostgrest({ supabaseUrl, secretKey, claveCifrado }), recalcularMetricas);
 
   if (env.MASTERSHOP_MODO === 'simulado') {
     if (env.NODE_ENV === 'production') throw new Error('MASTERSHOP_MODO=simulado no se permite en producción');
@@ -98,6 +109,7 @@ export function dependenciasCarrierDesdeEnv(programar: ProgramadorCarrier, env: 
     return {
       fuente: { ...fuente, credenciales: async () => ({ apiKey: LLAVE_SIMULADA }) },
       programar,
+      ...(recalcularMetricas ? { recalcularMetricas } : {}),
       etiquetas: crearAlmacenEtiquetas({ mediaRoot, fetchImpl: fetchSimulado as typeof fetch }),
       transportadora: (_c, opciones) => carrierCon(new MasterShopClient({ apiKey: LLAVE_SIMULADA, fetch: fetchSimulado }), opciones),
     };
@@ -106,6 +118,7 @@ export function dependenciasCarrierDesdeEnv(programar: ProgramadorCarrier, env: 
   return {
     fuente,
     programar,
+    ...(recalcularMetricas ? { recalcularMetricas } : {}),
     etiquetas: crearAlmacenEtiquetas({ mediaRoot }),
     transportadora: (creds, opciones) => carrierCon(new MasterShopClient({ apiKey: creds.apiKey }), opciones),
   };

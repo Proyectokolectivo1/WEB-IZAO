@@ -15,8 +15,21 @@ import { crearAlmacenEtiquetas } from './almacen-etiquetas.js';
 import type { DepsCarrier } from './comun.js';
 import { procesarCrear } from './crear.js';
 import { procesarEtiqueta } from './etiqueta.js';
+import { conRecalculoMetricas } from '../metrics/tras-transicion.js';
+import type { FuenteCarrier } from './fuente.js';
 import { FuenteMemoria, ProgramadorMemoria } from './fuente-memoria.js';
 import { procesarSync } from './sincronizar.js';
+
+/** Vista de objeto plano de la fuente en memoria (como la de PostgREST), para envolverla con `conRecalculoMetricas`. */
+function fuentePlana(f: FuenteMemoria): FuenteCarrier {
+  const proto = FuenteMemoria.prototype as unknown as Record<string, unknown>;
+  const o: Record<string, unknown> = {};
+  for (const k of Object.getOwnPropertyNames(proto)) {
+    const v = proto[k];
+    if (k !== 'constructor' && typeof v === 'function') o[k] = (v as (...a: unknown[]) => unknown).bind(f);
+  }
+  return o as unknown as FuenteCarrier;
+}
 
 const KEY = 'clave-de-prueba';
 const creaciones = (m: MasterShopMock) => m.requests.filter((r) => r.method === 'POST' && r.path === '/api/orders').length;
@@ -304,6 +317,39 @@ describe('carrier.sync (webhook o polling)', () => {
     const r = await procesarSync({ event_id: 'e9', provider_order_id: 999, external_order_id: 'IZ-CO-999999', origen: 'webhook' }, deps);
     expect(r.accion).toBe('pedido_desconocido');
     expect(fuente.webhooks.get('e9')).toEqual({ ok: true });
+  });
+
+  it('métricas (§21.4): cada transición encola el recálculo; una tarifa nueva sin transición también', async () => {
+    const s = setup({ autoLabel: true });
+    const recalculados: string[] = [];
+    const recalcular = async (id: string) => void recalculados.push(id);
+    const deps: DepsCarrier = { ...s.deps, fuente: conRecalculoMetricas(fuentePlana(s.fuente), recalcular), recalcularMetricas: recalcular };
+    s.fuente.agregar(makeOrder());
+    await procesarCrear({ order_id: ID, intento: 0 }, deps);
+    expect(recalculados).toEqual([ID]);
+    s.mock.orders.get(1001)!.shippingRate = 12000;
+    s.mock.setStatus(1001, 6);
+    const datos = { event_id: null, provider_order_id: 1001, external_order_id: null, origen: 'polling' } as const;
+    expect((await procesarSync(datos, deps)).accion).toBe('transicionado');
+    expect(recalculados).toHaveLength(3);
+    await procesarSync(datos, deps);
+    expect(recalculados).toHaveLength(3);
+    s.mock.orders.get(1001)!.shippingRate = 13500;
+    expect((await procesarSync(datos, deps)).accion).toBe('sin_cambio');
+    expect(recalculados).toHaveLength(4);
+  });
+
+  it('si el recálculo falla la sincronización igual termina', async () => {
+    const s = await enviado();
+    const recalcular = async () => {
+      throw new Error('redis caído');
+    };
+    const deps: DepsCarrier = { ...s.deps, fuente: conRecalculoMetricas(fuentePlana(s.fuente), recalcular), recalcularMetricas: recalcular };
+    s.mock.orders.get(1001)!.shippingRate = 9000;
+    s.mock.setStatus(1001, 6);
+    const r = await procesarSync({ event_id: 'e5', provider_order_id: 1001, external_order_id: null, origen: 'webhook' }, deps);
+    expect(r.accion).toBe('transicionado');
+    expect(s.fuente.estado(ID)).toBe('en_transito');
   });
 
   it('un 5xx se relanza para que BullMQ reintente', async () => {

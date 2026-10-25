@@ -71,6 +71,15 @@ describe('dependenciasCarrierDesdeEnv', () => {
     expect(() => dependenciasCarrierDesdeEnv(p, { ...ENV, MASTERSHOP_MODO: 'simulado', NODE_ENV: 'production' })).toThrow(/producción/);
     const d = dependenciasCarrierDesdeEnv(p, { ...ENV, MASTERSHOP_MODO: 'simulado', NODE_ENV: 'development' });
     expect(typeof d.transportadora).toBe('function');
+    expect(d.recalcularMetricas).toBeUndefined();
+  });
+
+  it('con recalcularMetricas lo expone y envuelve la transición de la fuente', () => {
+    const recalcular = async () => {};
+    const d = dependenciasCarrierDesdeEnv(new ProgramadorMemoria(), ENV, recalcular);
+    expect(d.recalcularMetricas).toBe(recalcular);
+    expect(d.fuente.aplicarTransicion.name).toBe('aplicarTransicion');
+    expect(d.fuente.aplicarTransicion).not.toBe(dependenciasCarrierDesdeEnv(new ProgramadorMemoria(), ENV).fuente.aplicarTransicion);
   });
 });
 

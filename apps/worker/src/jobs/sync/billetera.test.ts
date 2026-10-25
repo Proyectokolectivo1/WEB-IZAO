@@ -117,6 +117,32 @@ describe('job de billetera de MasterShop', () => {
     expect(mock.requests).toHaveLength(0);
   });
 
+  it('encola el recálculo de métricas solo de los pedidos cuyos costos cambiaron (§21.4)', async () => {
+    const { clock, mock, deps } = escenario();
+    const recalculados: string[] = [];
+    const conMetricas: DepsBilletera = { ...deps, recalcularMetricas: async (id) => void recalculados.push(id) };
+    mock.seedMovement({ idOrder: 1001, movementType: 'Cobro por Envío', movementValue: -12000, balanceMovementDate: clock.date() });
+    mock.seedMovement({ idOrder: 1002, movementType: 'Comisión de plataforma', movementValue: -800, balanceMovementDate: clock.date() });
+    mock.seedMovement({ idOrder: null, movementType: 'Cobro por envío mensaje de WhatsApp', movementValue: -300, balanceMovementDate: clock.date() });
+    await billeteraMasterShop(conMetricas);
+    expect(recalculados.sort()).toEqual(['ord-1', 'ord-2']);
+    await billeteraMasterShop(conMetricas);
+    expect(recalculados).toHaveLength(2);
+  });
+
+  it('si el recálculo falla los costos quedan guardados y el job termina', async () => {
+    const { clock, mock, deps, pedidos } = escenario();
+    mock.seedMovement({ idOrder: 1001, movementType: 'Cobro por Envío', movementValue: -12000, balanceMovementDate: clock.date() });
+    const r = await billeteraMasterShop({
+      ...deps,
+      recalcularMetricas: async () => {
+        throw new Error('redis caído');
+      },
+    });
+    expect(r).toMatchObject({ accion: 'procesado', pedidos_actualizados: 1 });
+    expect(pedidos.get(1001)).toMatchObject({ shipping_cost_real: 12000n });
+  });
+
   it('la fecha del gasto es la de Bogotá', () => {
     expect(fechaBogota('2026-10-20T03:00:00.000Z')).toBe('2026-10-19');
   });
