@@ -157,6 +157,8 @@ export const ACCIONES = {
   'pedidos.cancelar': SOLO_ADMIN,
   'pedidos.marcar_pagado': SOLO_ADMIN,
   'garantias.gestionar': TODOS,
+  /** Plazo, tiempo de respuesta, motivos y textos de la garantía por país (§19): configuración, solo administrador. */
+  'garantias.ajustes': SOLO_ADMIN,
   'agente.ver_estado': TODOS,
   'agente.reimprimir': TODOS,
   'agente.pagina_prueba': TODOS,

@@ -43,7 +43,7 @@ export function clienteFalso(respuestas: Record<string, RespuestaOLista>) {
           return b;
         };
       }
-      for (const m of ['eq', 'neq', 'in', 'order', 'range', 'ilike', 'limit', 'is', 'not', 'gte', 'gt', 'lt', 'lte']) {
+      for (const m of ['eq', 'neq', 'in', 'order', 'range', 'ilike', 'limit', 'is', 'not', 'gte', 'gt', 'lt', 'lte', 'or']) {
         b[m] = (...args: unknown[]) => {
           filtros.push({ tabla, metodo: m, args });
           return b;
