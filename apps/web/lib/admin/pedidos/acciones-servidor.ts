@@ -11,12 +11,29 @@ import 'server-only';
 import { transicionar, type OrderStatus } from '@izao/core/order-state';
 import type { ResultadoReintentoEnvio } from '@izao/mastershop';
 import { z } from 'zod';
+import { encolarRecalculoMetricas } from '@/app/api/checkout/cola-metricas';
 import { auditarCambio } from '@/lib/admin/auditoria';
 import { aplicarEventoPedidoDb, type ResultadoTransicion } from '@/lib/db/pedidos';
 import { cancelarPedidoDb, type EntradaCancelar, type ResultadoCancelar } from '@/lib/db/panel-atomicas';
 import type { Cliente } from '../catalogo/taxonomias-servidor';
 
-type Ctx = { cliente: Cliente; actor: string; ip: string | null; ahora?: () => Date };
+type Ctx = {
+  cliente: Cliente;
+  actor: string;
+  ip: string | null;
+  ahora?: () => Date;
+  /** Encola `metrics.recompute_day` del pedido (§21.4). Por defecto, el productor de la web. */
+  recalcular?: (orderId: string) => Promise<void>;
+};
+
+/** Best effort: si Redis falla, el cambio del pedido ya está hecho y el nocturno `metrics.recompute_recent` lo corrige. */
+async function recalcularMetricas(args: Pick<Ctx, 'recalcular'>, orderId: string): Promise<void> {
+  try {
+    await (args.recalcular ?? encolarRecalculoMetricas)(orderId);
+  } catch (e) {
+    console.error('[panel] no se pudo encolar el recálculo de métricas:', e instanceof Error ? e.name : 'error');
+  }
+}
 export type ResultadoPedido = { ok: true; mensaje: string } | { ok: false; mensaje: string };
 export type AplicarEvento = (
   orderId: string,
@@ -127,6 +144,7 @@ export async function cancelarPedidoBd(
     return { ok: false, mensaje: mensajeCancelacion(r.motivo) + extra };
   }
 
+  await recalcularMetricas(args, orderId);
   await auditarCambio({
     actor,
     accion: 'pedido.cancelado',
@@ -198,6 +216,7 @@ export async function marcarPagadoBd(
 
   const r = await aplicar(orderId, t.event, { paid_at: ahora.toISOString() });
   if (!r.ok) return { ok: false, mensaje: mensajeTransicion(r) };
+  await recalcularMetricas(args, orderId);
 
   let envio: 'encolado' | 'ya_pendiente' | 'fallo';
   try {

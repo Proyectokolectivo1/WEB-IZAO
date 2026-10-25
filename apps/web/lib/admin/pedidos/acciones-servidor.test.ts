@@ -157,6 +157,49 @@ describe('cancelarPedidoBd (RPC atómica cancelar_pedido)', () => {
   });
 });
 
+describe('recálculo de métricas tras cambiar el pedido', () => {
+  it('cancelar encola metrics.recompute_day del pedido; si Redis falla, el cambio sigue valiendo', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('pendiente_manual') }, 'shipments.select': { data: null } });
+    const recalcular = vi.fn(async () => undefined);
+    expect((await cancelarPedidoBd({ cliente, ...comun, recalcular, orderId: ID, motivo: 'Cancelación solicitada', cancelar: okCancelar(), cancelarEnMasterShop: async () => undefined })).ok).toBe(true);
+    expect(recalcular).toHaveBeenCalledWith(ID);
+
+    const roto = vi.fn(async () => {
+      throw new Error('ECONNREFUSED');
+    });
+    const r = await cancelarPedidoBd({ cliente, ...comun, recalcular: roto, orderId: ID, motivo: 'Cancelación solicitada', cancelar: okCancelar(), cancelarEnMasterShop: async () => undefined });
+    expect(r.ok).toBe(true);
+    expect(auditar).toHaveBeenCalled();
+  });
+
+  it('un rechazo de la RPC no encola nada', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('pendiente_manual') }, 'shipments.select': { data: null } });
+    const recalcular = vi.fn(async () => undefined);
+    await cancelarPedidoBd({ cliente, ...comun, recalcular, orderId: ID, motivo: 'Cancelación solicitada', cancelar: noCancelar('estado_cambiado'), cancelarEnMasterShop: async () => undefined });
+    expect(recalcular).not.toHaveBeenCalled();
+  });
+
+  it('marcar pagado encola el recálculo tras aplicar el pago', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('pendiente_manual') } });
+    const recalcular = vi.fn(async () => undefined);
+    const r = await marcarPagadoBd({
+      cliente,
+      ...comun,
+      recalcular,
+      orderId: ID,
+      referencia: 'Transferencia 123',
+      confirmarStock: async () => true,
+      encolarEnvio: async () => 'encolado',
+      aplicar: okTransicion(),
+    });
+    expect(r.ok).toBe(true);
+    expect(recalcular).toHaveBeenCalledWith(ID);
+    const sinStock = vi.fn(async () => undefined);
+    await marcarPagadoBd({ cliente, ...comun, recalcular: sinStock, orderId: ID, referencia: 'Transferencia 123', confirmarStock: async () => false, encolarEnvio: async () => 'encolado', aplicar: okTransicion() });
+    expect(sinStock).not.toHaveBeenCalled();
+  });
+});
+
 describe('marcarPagadoBd', () => {
   const deps = () => ({
     confirmarStock: vi.fn(async () => true),
