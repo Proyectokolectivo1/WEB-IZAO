@@ -13,6 +13,7 @@ import {
   destacadaTrasModerar,
   destacadaValida,
   esEstadoResena,
+  resenaAfirmaOriginalidad,
   type DatosResenaAdmin,
   type EstadoResena,
   type FiltrosResena,
@@ -38,6 +39,7 @@ export type FilaResena = {
 };
 
 const COLUMNAS = 'id, country_code, product_id, author_name, city, rating, body, source, is_verified_purchase, status, featured_home, created_at, products(name, slug)';
+const MENSAJE_ORIGINALIDAD = 'Esta reseña afirma originalidad o autenticidad: no se puede publicar ni destacar (regla de la tienda). Recházala.';
 const unico = <T>(v: T[] | T | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null));
 const normal = (f: FilaResena & { products: unknown }): FilaResena => ({ ...f, products: unico(f.products as FilaResena['products'] | FilaResena['products'][]) });
 
@@ -84,6 +86,7 @@ export async function moderarResenaBd(args: Ctx & { id: string; estado: EstadoRe
   if (!esEstadoResena(estado)) return { ok: false, mensaje: 'Estado no válido.' };
   const antes = await obtenerResena(cliente, id);
   if (!antes) return { ok: false, mensaje: 'Esa reseña ya no existe.' };
+  if (estado === 'approved' && resenaAfirmaOriginalidad(antes)) return { ok: false, mensaje: MENSAJE_ORIGINALIDAD };
   const fila = { status: estado, featured_home: destacadaTrasModerar(estado, antes.featured_home) };
   const { error } = await cliente.from('reviews').update(fila).eq('id', id);
   if (error) return { ok: false, ...traducirErrorBd(error) };
@@ -97,6 +100,7 @@ export async function destacarResenaBd(args: Ctx & { id: string; destacada: bool
   const { cliente, id, destacada, actor, ip } = args;
   const antes = await obtenerResena(cliente, id);
   if (!antes) return { ok: false, mensaje: 'Esa reseña ya no existe.' };
+  if (destacada && resenaAfirmaOriginalidad(antes)) return { ok: false, mensaje: MENSAJE_ORIGINALIDAD };
   if (!destacadaValida(antes.status, destacada)) return { ok: false, mensaje: 'Solo una reseña aprobada puede destacarse en el home.' };
   const { error } = await cliente.from('reviews').update({ featured_home: destacada }).eq('id', id);
   if (error) return { ok: false, ...traducirErrorBd(error) };

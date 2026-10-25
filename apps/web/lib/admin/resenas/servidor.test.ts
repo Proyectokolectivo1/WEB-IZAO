@@ -80,6 +80,26 @@ describe('moderarResenaBd', () => {
   });
 });
 
+describe('regla 7 en el servidor', () => {
+  it('no aprueba una reseña que afirma originalidad, pero sí la rechaza', async () => {
+    const mala = resena({ body: 'Es 100% original, lo recomiendo' });
+    const a = clienteFalso({ 'reviews.select': { data: mala }, 'reviews.update': {} });
+    expect(await moderarResenaBd({ cliente: a.cliente, id: 'r1', estado: 'approved', ...comun })).toMatchObject({ ok: false, mensaje: expect.stringMatching(/originalidad/) });
+    expect(a.llamadas.some((l) => l.clave === 'reviews.update')).toBe(false);
+    expect(auditar).not.toHaveBeenCalled();
+    const b = clienteFalso({ 'reviews.select': { data: mala }, 'reviews.update': {} });
+    expect((await moderarResenaBd({ cliente: b.cliente, id: 'r1', estado: 'rejected', ...comun })).ok).toBe(true);
+  });
+
+  it('no destaca una reseña aprobada que afirma originalidad, pero sí la puede quitar del home', async () => {
+    const mala = resena({ status: 'approved', featured_home: true, author_name: 'Ana', body: 'Producto auténtico' });
+    const a = clienteFalso({ 'reviews.select': { data: mala }, 'reviews.update': {} });
+    expect(await destacarResenaBd({ cliente: a.cliente, id: 'r1', destacada: true, ...comun })).toMatchObject({ ok: false, mensaje: expect.stringMatching(/originalidad/) });
+    const b = clienteFalso({ 'reviews.select': { data: mala }, 'reviews.update': {} });
+    expect((await destacarResenaBd({ cliente: b.cliente, id: 'r1', destacada: false, ...comun })).ok).toBe(true);
+  });
+});
+
 describe('destacarResenaBd', () => {
   it('destaca una aprobada, rechaza destacar una no aprobada', async () => {
     const ok = clienteFalso({ 'reviews.select': { data: resena({ status: 'approved' }) }, 'reviews.update': {} });

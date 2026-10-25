@@ -103,3 +103,18 @@ describe('valoresDeConfig', () => {
     expect(valoresDeConfig({ title: 5, items: 'no' })).toMatchObject({ title: '', beneficios: [] });
   });
 });
+
+describe('regla 7 en el home', () => {
+  it('ni el título, ni el texto, ni el botón, ni los beneficios afirman originalidad', () => {
+    const base = { type: 'advice', is_active: 'on', title: 'Asesoría', body: 'Escríbenos', cta_label: 'Hablar', cta_url: '/co/asesoria' };
+    expect(esquemaSeccion.safeParse(entradaSeccion(base)).success).toBe(true);
+    for (const campo of ['title', 'body', 'cta_label'] as const) {
+      const r = esquemaSeccion.safeParse(entradaSeccion({ ...base, [campo]: 'Perfumes 100% originales' }));
+      expect(r.success, campo).toBe(false);
+    }
+    const ben = { type: 'benefits', benef_0_icon: 'escudo', benef_0_title: 'Productos auténticos', benef_0_text: '' };
+    expect(esquemaSeccion.safeParse(entradaSeccion(ben)).success).toBe(false);
+    expect(esquemaSeccion.safeParse(entradaSeccion({ ...ben, benef_0_title: 'Garantía', benef_0_text: 'Certificado de calidad' })).success).toBe(false);
+    expect(esquemaSeccion.safeParse(entradaSeccion({ ...ben, benef_0_title: 'Garantía de 30 días' })).success).toBe(true);
+  });
+});

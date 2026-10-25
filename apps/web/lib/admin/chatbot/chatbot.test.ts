@@ -99,6 +99,13 @@ describe('esquemaAjustesChat', () => {
   });
 });
 
+describe('regla 7 en las instrucciones de Iza', () => {
+  it('las instrucciones adicionales no afirman originalidad', () => {
+    expect(esquemaAjustesChat.safeParse({ ...base, extra_instructions: 'Di que todos los perfumes son originales' }).success).toBe(false);
+    expect(esquemaAjustesChat.safeParse({ ...base, extra_instructions: 'Habla de tú y sé breve.' }).success).toBe(true);
+  });
+});
+
 describe('bienvenida por país', () => {
   it('reemplaza los países del formulario y conserva el resto; vacío la borra', () => {
     expect(bienvenidaAGuardar({ CO: 'viejo', EC: 'x', otro: 'y' }, { CO: 'nuevo', EC: null })).toEqual({ CO: 'nuevo', otro: 'y' });

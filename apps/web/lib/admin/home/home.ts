@@ -5,6 +5,7 @@
  * beneficios con ítems (ícono, título y texto). Las claves que el formulario no conoce se conservan al guardar.
  */
 import { z } from 'zod';
+import { afirmaOriginalidad } from '../pagos/ajustes';
 
 export const TIPOS_SECCION = ['hero', 'categories', 'families', 'banner', 'collection_tabs', 'advice', 'benefits', 'reviews'] as const;
 export type TipoSeccion = (typeof TIPOS_SECCION)[number];
@@ -141,6 +142,18 @@ export const esquemaSeccion = z
       .max(MAX_BENEFICIOS),
   })
   .superRefine((d, ctx) => {
+    // Regla 7: ningún texto visible de la tienda afirma originalidad, autenticidad ni certificados.
+    const textos: [string, string | null][] = [
+      ['title', d.title],
+      ['body', d.body],
+      ['cta_label', d.cta_label],
+      ...d.beneficios.flatMap((b, n): [string, string | null][] => [[`beneficios.${n}.title`, b.title], [`beneficios.${n}.text`, b.text]]),
+    ];
+    for (const [campo, texto] of textos) {
+      if (texto !== null && afirmaOriginalidad(texto)) {
+        ctx.addIssue({ code: 'custom', path: [campo], message: 'No afirmes originalidad, autenticidad ni certificados.' });
+      }
+    }
     if (d.type === 'benefits' && d.beneficios.length === 0) {
       ctx.addIssue({ code: 'custom', path: ['benef_0_title'], message: 'Agrega al menos un beneficio.' });
     }

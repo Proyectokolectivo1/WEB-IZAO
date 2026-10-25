@@ -136,6 +136,7 @@ export const esquemaAjustesChat = z
       .trim()
       .max(2000, 'Máximo 2000 caracteres.')
       .default('')
+      .refine((v) => !afirmaOriginalidad(v), 'Escríbelas sin afirmar originalidad ni autenticidad (ni siquiera para negarlas): Iza ya trae esa regla y deriva esas preguntas a un asesor.')
       .transform((v) => (v === '' ? null : v)),
     welcome_CO: bienvenida,
     welcome_EC: bienvenida,
