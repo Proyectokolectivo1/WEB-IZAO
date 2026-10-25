@@ -106,7 +106,7 @@ export const MODULOS = {
     roles: SOLO_ADMIN,
     disponible: true,
   },
-  chatbot: { etiqueta: 'Chatbot', ruta: '/admin/chatbot', roles: SOLO_ADMIN, disponible: false },
+  chatbot: { etiqueta: 'Chatbot', ruta: '/admin/chatbot', roles: SOLO_ADMIN, disponible: true },
   whatsapp: {
     etiqueta: 'WhatsApp',
     ruta: '/admin/whatsapp',
@@ -183,6 +183,8 @@ export const ACCIONES = {
   'descuentos.gestionar': SOLO_ADMIN,
   /** Fichas de influencers y su reporte (§17.2, §24.1). */
   'influencers.gestionar': SOLO_ADMIN,
+  /** Activar a Iza, modelos, presupuesto, instrucciones, bienvenida y límites; leer las conversaciones (§20.6, §24.1). */
+  'chatbot.gestionar': SOLO_ADMIN,
   /** Ver y exportar los leads de los pop-ups: son datos personales captados con consentimiento (§9.3, §24.1). */
   'leads.gestionar': SOLO_ADMIN,
   /** Moderar reseñas, escribir las de Izao, destacar en el home y borrar spam (§9.6, §24.1). */

@@ -6,7 +6,7 @@
 - Integraciones (`/admin/integraciones`): credenciales cifradas, probar conexión, webhooks MasterShop. Activar usa `activarCredencialIntegracionDb` (RPC atómica, fa0f98b). Acción `integraciones.gestionar`.
 - Pagos y países (`/admin/pagos`): country_settings y payment_method_settings. Acción `pagos.gestionar`.
 - Pedidos (5b0dfc8 filtros, 2afe2ab acciones): filtros en URL (estado, país, método, fechas en UTC-5, número o celular ≥ 7 dígitos), atajos `/` `j` `k` Enter. Detalle con acciones (`lib/admin/pedidos/acciones-servidor.ts`, `app/admin/(panel)/pedidos/acciones.ts`):
-  cancelar y marcar pagado (solo admin; `transicionar` + `aplicarEventoPedidoDb`; marcar pagado solo desde `pendiente_manual`, exige referencia, confirma stock y encola el envío; cancelar libera stock y, con envío en MasterShop 1– …
+  cancelar y marcar pagado (solo admin; `transicionar` + `aplicarEventoPedidoDb`; marcar pagado solo desde `pendiente_ma …
 - Agente de impresión (36470e5): `/admin/agente-impresion` (estado por heartbeat, cola, página de prueba, reimprimir) y `/[id]` (admin: activar/desactivar, rotar token, `remote_config` print/panel/int …
 - Descuentos e Influencers (5be63ab): `/admin/descuentos` (lista con filtros en URL país/estado/origen/código, `nuevo`, `[id]` con reporte de uso, `lote`), `/admin/influencers` (fichas, códigos y enlaces `/{pais}?ref=CODIGO`, `reporte` por rango con Excel). Acciones `descuentos.gestionar` e `influencers.gestionar` (solo admin). Lib en `lib/admin/descuentos/`; `lib/admin/excel/libro.ts` (xlsx multihoja, montos numéricos exactos), `lib/admin/metricas/{pedidos,filtros}.ts` (fila de `orders` a `PedidoMetrica`, filtro de fechas por URL) y `components/admin/FiltroFechas.tsx` quedan listos para el Dashboard. `adminParaApiDe(modulo, accion)` en `crud/servidor.ts` para descargas.
 - Métricas (feat dashboard): `/admin/metricas` (país Todos/CO/EC, `FiltroFechas`, comparación con periodo anterior), KPIs de §21.3, gráfica SVG propia, embudo, métodos de pago, panel por estado de guía con enlaces a `/admin/pedidos?estado|guia|grupo|novedad` (filtros nuevos en pedidos), tops (ciudades, departamentos, productos con utilidad, códigos, influencers, fuentes UTM) y Excel de 8 hojas `/api/admin/metricas/exportar`. Calcula desde `orders` (+líneas, envío, pagos embebidos; paginado de a 1 000) con `lib/admin/metricas/{dashboard,servidor,kpis,excel,formato,pais}.ts` y las fórmulas de `@izao/core/metrics`. Acción `metricas.exportar` (solo admin).
@@ -19,21 +19,21 @@
 - Home (feat home): `/admin/home?pais=` orden (subir/bajar = un `upsert` de filas completas), ocultar/mostrar, contenido por tipo (título; asesoría con botón; beneficios con ícono). Conserva claves desconocidas del `config`. `home.gestionar`.
 - Reseñas (feat reseñas): `/admin/resenas` bandeja (pestañas con conteo), aprobar/rechazar/destacar (solo aprobadas; rechazar quita el destacado), reseñas de Izao (`source='admin'`, regla 7) y borrado auditado. `resenas.gestionar`.
 - Leads (feat leads): `/admin/leads` filtros + Excel `/api/admin/leads/exportar` auditado sin el texto buscado. `leads.gestionar`.
+- Chatbot (feat chatbot): `/admin/chatbot` (activar, modelos, presupuesto en micro-USD con umbral de respaldo, instrucciones, bienvenida CO/EC, límites; consumo del mes y estado del presupuesto; conversión por rango), `/conversaciones` (búsqueda en mensajes, filtros) y `[id]` (lectura; de las herramientas solo nombres). Avisa si falta la credencial `openrouter`. `chatbot.gestionar`. `lib/admin/chatbot/`.
 
 ## Pendiente
 - Dashboard: `daily_sales_stats` ya tiene columnas y job, pero los tops/panel/hoja Pedidos necesitan `orders`; para < 1,5 s con 12 meses pedir a izao-db RPC de tops (ciudades, productos, códigos, fuentes, estados de guía) y luego pasar KPIs/serie a la tabla; caché Redis 5 min. Hoy lee `orders` del rango (tope 50 000, avisa si es parcial).
 - Gastos: adjunto opcional (falta `media.kind='expense'`, pedir a izao-db) y botón "Sincronizar ahora" de Meta Ads (conector: izao-integraciones/worker).
-- Garantías: formulario público `/{pais}/garantias` y correo de recepción (izao-tienda/izao-pagos); el video del caso no se lista (solo en disco). Pedidos: filtros por ciudad/código/influencer/documento (§24.1).
+- Garantías: formulario público y correo de recepción (izao-tienda/izao-pagos). Pedidos: filtros por ciudad/código/influencer/documento (§24.1).
 - Integraciones: esquemas de Addi, Sistecrédito, OpenRouter, Meta Ads y píxeles. `.env.example`: `INTEGRACIONES_MODO`, `SITE_URL`, `MASTERSHOP_WEBHOOK_PATH_SECRET` (infra).
-- Reseñas/Home: el rating del catálogo (`catalog_listing.rating_*`) debe recalcularse al moderar (izao-db). Para izao-db: RPC `admin_publicar_pagina`, cancelar+liberar stock atómico, anonimizar cliente atómico. Agente: sin capturas de error ni editor visual del modo panel.
-- Falta prueba de humo en navegador (no hay Supabase/MFA local).
+- Reseñas/Home: el rating del catálogo (`catalog_listing.rating_*`) debe recalcularse al moderar (izao-db). Para izao-db: RPC `admin_publicar_pagina`, cancelar+liberar stock atómico, anonimizar cliente atómico. Agente: sin capturas de error ni editor visual del modo panel. Falta prueba de humo en navegador (no hay Supabase/MFA local).
 ## Decisiones / avisos
 - Sin `react-hook-form`: `useActionState` + zod del servidor. `cliente-falso` devuelve `filtros` y soporta `or`.
 - Al habilitar un módulo: `disponible: true` en `permissions.ts` y actualizar `permissions.test.ts`. Pruebas de vitest solo `*.test.ts` (JSX: `createElement` + `globalThis.React`).
 - Heredocs de bash pierden barras invertidas; escribir archivos con Write. Cancelar con envío MasterShop 3+ se rechaza a propósito.
 
 ## Punto de retoma
-Cerrados además: Home, Reseñas y Leads (web: lint, tsc y 1 119 pruebas verdes). Solo falta Chatbot (§20.6, `chatbot`, `disponible: false`): tablas `chat_settings`, `chat_sessions`, `chat_messages`, `chat_usage_monthly`; activar, modelos, presupuesto, instrucciones, bienvenida por país, consumo del mes, conversaciones (búsqueda y lectura) y conversión; "probar conexión" depende de la credencial OpenRouter (izao-integraciones).
+Todos los módulos de §24.1 en mi zona están construidos (web: lint, tsc y 1 143 pruebas verdes). Pendientes: ver "Pendiente". Mejoras sugeridas: dashboard sobre `daily_sales_stats` con RPC de tops; "Probar conexión" de OpenRouter cuando exista su esquema en Integraciones.
 
 ## Avisos al líder
 - La tienda aún no procesa `?ref=CODIGO` (cookie 30 días, aplicar código, `orders.influencer_id`): izao-tienda/izao-pagos.
