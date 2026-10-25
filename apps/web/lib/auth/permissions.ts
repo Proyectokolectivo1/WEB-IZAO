@@ -129,7 +129,7 @@ export const MODULOS = {
     etiqueta: 'Apariencia',
     ruta: '/admin/apariencia',
     roles: SOLO_ADMIN,
-    disponible: false,
+    disponible: true,
   },
   usuarios: {
     etiqueta: 'Usuarios',
@@ -183,6 +183,8 @@ export const ACCIONES = {
   'descuentos.gestionar': SOLO_ADMIN,
   /** Fichas de influencers y su reporte (§17.2, §24.1). */
   'influencers.gestionar': SOLO_ADMIN,
+  /** Colores, tipografía, logo y favicon, globales o por país (§8, §24.1). */
+  'apariencia.gestionar': SOLO_ADMIN,
   /** Crear usuarios del panel, cambiar rol/estado, restablecer contraseña y reiniciar el MFA (§24.1). */
   'usuarios.gestionar': SOLO_ADMIN,
   /** Registrar, editar y borrar gastos manuales y sus categorías; exportarlos (§22, §24.1). */
