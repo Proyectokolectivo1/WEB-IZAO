@@ -27,6 +27,8 @@ describe('permisos del home', () => {
     const a = leer('admin/(panel)/home/acciones.ts');
     // guardar, mover, alternar y eliminar
     expect((a.match(/adminDeAccion\('home', 'home\.gestionar'\)/g) ?? []).length).toBe(4);
+    // `activa` llega del navegador: la acción lo valida como booleano antes de escribir.
+    expect(a).toContain("typeof activa === 'boolean'");
     for (const p of ['page.tsx', '[id]/page.tsx']) {
       expect(leer(`admin/(panel)/home/${p}`), p).toContain("requerirAdmin({ modulo: 'home', accion: 'home.gestionar' })");
     }

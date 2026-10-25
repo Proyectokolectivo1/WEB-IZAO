@@ -45,7 +45,8 @@ export async function moverSeccion(id: string, sentido: 'arriba' | 'abajo', pais
 export async function alternarSeccion(id: string, activa: boolean, pais: string): Promise<void> {
   const entrada = await adminDeAccion('home', 'home.gestionar');
   if ('error' in entrada) redirect(`/admin/home?pais=${paisSeguro(pais)}&error=1`);
-  const ok = UUID.test(id)
+  // Los argumentos de una Server Action llegan del navegador: `activa` debe ser exactamente un booleano.
+  const ok = UUID.test(id) && typeof activa === 'boolean'
     ? (await alternarSeccionBd({ cliente: crearClienteServicio(), id, activa, actor: entrada.admin.userId, ip: await ipDelCliente() })).ok
     : false;
   redirect(`/admin/home?pais=${paisSeguro(pais)}${ok ? '' : '&error=1'}`);
