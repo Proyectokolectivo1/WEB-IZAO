@@ -49,3 +49,12 @@ describe('registrarCron métricas', () => {
     expect(m?.[2].name).toBe('metrics.recompute_recent');
   });
 });
+
+describe('registrarCron media', () => {
+  it('programa media.borrar_archivos cada 15 min', async () => {
+    const upsertJobScheduler = vi.fn().mockResolvedValue(undefined);
+    await registrarCron({ upsertJobScheduler } as unknown as Queue);
+    const llamadas = upsertJobScheduler.mock.calls as [string, { pattern: string }, { name: string }][];
+    expect(llamadas.find(([id]) => id === 'media.borrar_archivos')?.[1].pattern).toBe('*/15 * * * *');
+  });
+});

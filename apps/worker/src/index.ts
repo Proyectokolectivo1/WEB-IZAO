@@ -26,6 +26,7 @@ import {
   JOB_METRICS_RECOMPUTE_RECENT,
 } from './jobs/metrics/recalcular-dia.js';
 import { recalculadorMetricasDesdeEnv } from './jobs/metrics/tras-transicion.js';
+import { borrarArchivosPendientes, dependenciasBorradosDesdeEnv, JOB_MEDIA_BORRAR_ARCHIVOS } from './jobs/media/borrar-archivos.js';
 import { registrarCron } from './cron.js';
 import { createConnection, createQueue, createWorker, crearProcesadorSistema, QUEUE_NAMES } from './queues.js';
 
@@ -43,6 +44,7 @@ async function main(): Promise<void> {
         billeteraMasterShop(dependenciasBilleteraDesdeEnv(process.env, recalcularMetricas)),
       [JOB_METRICS_RECOMPUTE_DAY]: crearManejadorRecalculoDia(dependenciasMetricasDesdeEnv()),
       [JOB_METRICS_RECOMPUTE_RECENT]: crearManejadorRecalculoReciente(cola),
+      [JOB_MEDIA_BORRAR_ARCHIVOS]: async () => borrarArchivosPendientes(dependenciasBorradosDesdeEnv()),
       [JOB_BARRIDO_PEDIDOS]: async () =>
         barrerPedidos(
           dependenciasBarridoDesdeEnv(colaCod, (id) => cancelarJobsCod(colaCod, id), recalcularMetricas),
