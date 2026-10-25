@@ -63,6 +63,9 @@ probar() { # etiqueta
   done
   csp="$(curl -sk -D - -o /dev/null -H 'Host: izaoperfumeria.com' "https://127.0.0.1/admin/mfa/enroll" | grep -i '^content-security-policy:' || true)"
   if echo "$csp" | grep -q "img-src[^;]* data:"; then echo "OK   [$1] CSP de /admin/mfa permite img-src data:"; else echo "FALLA [$1] CSP de /admin sin data:"; fallos=$((fallos+1)); fi
+  csp="$(curl -sk -D - -o /dev/null -H 'Host: izaoperfumeria.com' "https://127.0.0.1/co" | grep -i '^content-security-policy:' || true)"
+  if echo "$csp" | grep -q "data:"; then echo "FALLA [$1] la CSP de la tienda no debe permitir data:"; fallos=$((fallos+1)); else echo "OK   [$1] CSP de la tienda sin data:"; fi
+  if echo "$csp" | grep -q "challenges.cloudflare.com"; then echo "OK   [$1] CSP de la tienda permite Turnstile"; else echo "FALLA [$1] CSP de la tienda sin challenges.cloudflare.com"; fallos=$((fallos+1)); fi
   # Server Actions de Next: un POST con la cabecera Next-Action se ejecuta en CUALQUIER ruta, así que
   # se limita por cabecera además de por ruta (evita esquivar el límite de /admin/login con POST a /).
   n429=0; n200=0

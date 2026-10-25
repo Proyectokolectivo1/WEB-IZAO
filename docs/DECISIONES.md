@@ -256,3 +256,7 @@ Decisiones de `izao-admin` en T0.13:
 - **Regla (Wompi `full`, abono `cod_deposit` y Addi):** un aprobado sobre `cancelado` nunca llama a `confirmar_stock` (descontaría otra vez el stock devuelto), ni confirma canje, ni encola la transportadora, ni transiciona. Si el pago leído antes del job ya estaba `approved` (reentrega del pago que pagó el pedido) → `sin_cambio`. Si es dinero nuevo → alerta `pago_tras_cancelacion` para que el admin reembolse; el webhook queda procesado.
 - **No se revive** un pedido cancelado aunque haya stock: la cancelación es decisión del admin o de la transportadora. La reactivación con stock o `requiere_reembolso` sin stock aplica a `abandonado` (§12.2) y `expirado → requiere_reembolso`, ya implementados.
 - **Para el líder:** si se quiere `cancelado → requiere_reembolso` como estado visible, es un cambio de §16 y de `aplicar_transicion_pedido` (izao-db).
+
+## D-037 — CSP de la tienda sin `data:` y con Turnstile (2026-10-25, izao-infra)
+
+- La tienda (cualquier ruta distinta de `/admin`) usa `img-src 'self' blob: https:` y `font-src 'self'`: no hay `blurDataURL` ni imágenes o fuentes incrustadas en el código de la tienda. `/admin/**` conserva `data:` (QR del MFA). `challenges.cloudflare.com` (Turnstile) está en `script-src`, `frame-src` y `connect-src` de ambas. Si la tienda agrega placeholders incrustados, reabrir. Probado en `infra/scripts/test-nginx.sh`.
