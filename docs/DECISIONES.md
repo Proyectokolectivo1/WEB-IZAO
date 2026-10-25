@@ -260,3 +260,9 @@ Decisiones de `izao-admin` en T0.13:
 ## D-037 — CSP de la tienda sin `data:` y con Turnstile (2026-10-25, izao-infra)
 
 - La tienda (cualquier ruta distinta de `/admin`) usa `img-src 'self' blob: https:` y `font-src 'self'`: no hay `blurDataURL` ni imágenes o fuentes incrustadas en el código de la tienda. `/admin/**` conserva `data:` (QR del MFA). `challenges.cloudflare.com` (Turnstile) está en `script-src`, `frame-src` y `connect-src` de ambas. Si la tienda agrega placeholders incrustados, reabrir. Probado en `infra/scripts/test-nginx.sh`.
+
+## D-038 — Decisiones del dueño sobre Addi, reembolso y comprobantes (2026-10-25, líder)
+
+- Addi y Sistecrédito: el cliente paga el valor del pedido más el 10 % de recargo, sin abono.
+- La reserva de stock de Addi queda igual que el resto de métodos: 60 minutos (`pending_payment_ttl_minutes`). Una aprobación tardía de Addi pasa el pedido a `requiere_reembolso` (D-034). No se cancela la solicitud en Addi al expirar.
+- Los comprobantes de gastos se siguen sirviendo por `/media` con ruta de uuid, sin sesión.
