@@ -5,11 +5,11 @@
 - Abono COD 20261020221412 (pgTAP 23). `activar_plantilla_whatsapp` 20261021011746 (b3f163d, pgTAP 24). Seed plantillas: dueño.
 - `cod_resend_max` 20261021013019 (pgTAP 25). Etiqueta auto única 20261021013134 (pgTAP 26). D-027 20261021015339 (pgTAP 27).
   Credencial activa única 20261021062843 (pgTAP 28, `activarCredencialIntegracionDb`). daily_sales_stats 20261025033707 (pgTAP 29).
-- 20261025141454 tops del dashboard + `media.kind='expense'` (pgTAP 30 47/47). Rendimiento con 100 000 pedidos CO en 12 meses
-  (en transacción revertida): ciudades 83 ms, deptos 75, productos 105, códigos 36, influencers 34, fuentes 70, guías 171;
-  las 8 llamadas en serie 586 ms; 30 días 12 ms (Index Scan orders_country_atribucion_idx). Advisors: solo INFO.
+- 20261025141454 tops del dashboard + `media.kind='expense'` (pgTAP 30 47/47; 8 tops en serie 586 ms con 100 000 pedidos).
 - 20261025143040 RPC atómicas del panel (pgTAP 31 52/52; envoltorios `lib/db/panel-atomicas.ts`). Rating al moderar: ya lo hace
   el trigger `catalog_listing_refresh` de reviews (sin cambios; probado en 31).
+- 20261025191446 + 20261025191814 (revisión): cancelar devuelve stock pagado (D-035); anonimizar completo; cola
+  `media_file_deletions`. pgTAP 32 34/34 y 31 ajustada. Advisors: solo INFO.
 ## Contratos vigentes (detalle en el commit de cada migración)
 - `crear_pedido_checkout(p jsonb)` → `{ok, estado:'creado'|'existente'|'rechazado', order|motivo}` (motivos en 20261020213954).
 - `pages.kind` (general, quienes_somos, envios, tratamiento_datos, terminos, devoluciones); única publicada por (país, kind) → 23505.
@@ -25,12 +25,15 @@
   codigo|influencer|fuente, …)`, `metricas_panel_guias`. Firmas y columnas en la cabecera de 20261025141454.
 - `orders.sale_source` text not null generada (stored) = `fuente_venta(utm, click_ids)` (igual a `fuenteDeVenta` del panel).
   No se escribe nunca (insert/update con la columna → error). `media.kind` admite `expense`.
-- `anonimizar_cliente(p_id)` (definer) → `anonimizarClienteDb`; `cancelar_pedido(p)` → `cancelarPedidoDb` (cancela + libera la
-  reserva; stock ya confirmado no se devuelve); `admin_publicar_pagina(p)` → `publicarPaginaDb`. Formas en la cabecera de la migración.
+- `anonimizar_cliente(p_id)` (definer) → `anonimizarClienteDb` (+ pagos_limpiados, webhooks_recortados, resenas, fotos_garantia);
+  `cancelar_pedido(p)` → `cancelarPedidoDb` (+ stock_devuelto, unidades_devueltas, stock_retenido; eventos `stock_devuelto` y
+  `stock_retenido`); `admin_publicar_pagina(p)` → `publicarPaginaDb`. Formas en la cabecera de cada migración.
+- `media_file_deletions` (service_role): el worker borra `<raíz media>/base_path` y cada ruta de `variants`, luego la fila;
+  si falla, attempts + 1 y last_error.
 ## Pendiente
 1. Rendimiento T2.7: explain (analyze, buffers) y p95 de 50 corridas por RPC del catálogo. 2. pgTAP 01–22 remoto.
 3. Concurrencia de `crear_pedido_checkout` con dos sesiones (tests/concurrencia/run.sh). store_*: solo si izao-tienda lo pide.
-4. Decisión del líder: ¿cancelar un pedido pagado (stock confirmado) debe devolver las unidades al stock?
+4. Worker (izao-infra/izao-pagos): job que vacíe `media_file_deletions`. Admin: etiquetas de `stock_devuelto`/`stock_retenido`.
 ## Siguiente paso exacto: Pendiente 1 (explain de las RPC del catálogo) salvo nueva tarea del líder.
 ## Notas
 - pgTAP por el MCP: `insert into tap(l) select ...` (temp), sin begin/rollback, cierre `raise exception 'RESUMEN %'` (deshace todo).

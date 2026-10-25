@@ -3,7 +3,7 @@
  *
  * SOLO SERVIDOR (panel /admin). Cada una corre en una sola transacción: si algo falla no queda nada escrito.
  * - `anonimizarClienteDb`: habeas data (§26.2). Mismas reglas que `lib/admin/clientes`.
- * - `cancelarPedidoDb`: `→ cancelado` + liberar la reserva de stock. La cancelación en MasterShop va antes (externa).
+ * - `cancelarPedidoDb`: `→ cancelado` + liberar la reserva y devolver el stock pagado (D-035). MasterShop va antes (externa).
  * - `publicarPaginaDb`: guarda la página y, si queda publicada y es de tipo único, despublica la anterior.
  * Contrato en `docs/estado/izao-db.md`.
  */
@@ -27,6 +27,11 @@ const anonimizarSchema = z.union([
     deseos: z.number().int(),
     conversaciones: z.number().int(),
     cuenta_acceso_eliminada: z.boolean(),
+    /** 20261025191446: pagos con `raw_last_event` vaciado, webhooks recortados, reseñas y fotos de garantía retiradas. */
+    pagos_limpiados: z.number().int().optional(),
+    webhooks_recortados: z.number().int().optional(),
+    resenas: z.number().int().optional(),
+    fotos_garantia: z.number().int().optional(),
   }),
   z.object({
     ok: z.literal(false),
@@ -58,9 +63,14 @@ const cancelarSchema = z.union([
     from_status: estado,
     to_status: z.literal('cancelado'),
     event_id: z.guid(),
-    /** Estado de la reserva tras cancelar: `released`, `confirmed` (pago ya descontado: no se devuelve) o `none`. */
+    /** Estado del stock tras cancelar: `released`, `none` o `confirmed` (solo si la transportadora ya recolectó). */
     stock_estado: z.string(),
     stock_liberado: z.boolean(),
+    /** El stock ya descontado por el pago volvió al inventario (D-035). */
+    stock_devuelto: z.boolean().optional(),
+    unidades_devueltas: z.number().int().optional(),
+    /** `envio_recolectado`: no se devolvió porque el paquete ya salió con la transportadora. */
+    stock_retenido: z.literal('envio_recolectado').nullable().optional(),
   }),
   z.object({
     ok: z.literal(false),

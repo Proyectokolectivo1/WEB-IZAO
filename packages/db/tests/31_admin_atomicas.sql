@@ -90,7 +90,8 @@ select is((select first_name from public.customers where id = 'b3300000-0000-000
 
 select is(public.anonimizar_cliente('b3300000-0000-0000-0000-000000000001') - 'id',
           '{"ok": true, "estado": "anonimizado", "pedidos": 2, "mensajes_whatsapp": 1, "garantias": 1, "leads": 2, "direcciones": 1,
-            "deseos": 1, "conversaciones": 2, "cuenta_acceso_eliminada": true}'::jsonb,
+            "deseos": 1, "conversaciones": 2, "cuenta_acceso_eliminada": true, "pagos_limpiados": 0, "webhooks_recortados": 0,
+            "resenas": 0, "fotos_garantia": 0}'::jsonb,
           'anonimiza pedidos, mensajes, garantías, leads, direcciones, deseos, conversaciones y cuenta');
 select ok((select first_name is null and last_name is null and email is null and phone_e164 is null and document_number is null
                   and not marketing_opt_in and auth_user_id is null and anonymized_at is not null
@@ -147,7 +148,8 @@ select is((select stock_reserved from public.variant_countries where variant_id 
 select is(public.cancelar_pedido('{"order_id":"b3600000-0000-0000-0000-000000000001","from_status":"pendiente_manual","actor":"admin:b3200000","motivo":"Cliente desistió"}')
             - 'event_id',
           '{"ok": true, "order_id": "b3600000-0000-0000-0000-000000000001", "from_status": "pendiente_manual", "to_status": "cancelado",
-            "stock_estado": "released", "stock_liberado": true}'::jsonb,
+            "stock_estado": "released", "stock_liberado": true, "stock_devuelto": false, "unidades_devueltas": 0,
+            "stock_retenido": null}'::jsonb,
           'cancela y libera la reserva');
 select ok((select status = 'cancelado' and cancelled_at is not null and stock_state = 'released' from public.orders where id = 'b3600000-0000-0000-0000-000000000001'),
           'pedido cancelado con fecha y stock liberado');
@@ -156,8 +158,8 @@ select results_eq($$ select stock, stock_reserved from public.variant_countries 
 select is((select payload ->> 'motivo' from public.order_events where order_id = 'b3600000-0000-0000-0000-000000000001' and to_status = 'cancelado'),
           'Cliente desistió', 'evento status_changed con el motivo');
 select is(public.cancelar_pedido('{"order_id":"b3600000-0000-0000-0000-000000000002","from_status":"en_preparacion","actor":"webhook:mastershop"}')
-            ->> 'stock_estado', 'confirmed', 'pagado y confirmado: cancela sin devolver el stock descontado');
-select is((select stock from public.variant_countries where variant_id = 'b3110000-0000-0000-0000-000000000001'), 10, 'stock sin cambios en C2');
+            ->> 'stock_estado', 'released', 'pagado y confirmado sin envío recolectado: devuelve el stock descontado (20261025191446)');
+select is((select stock from public.variant_countries where variant_id = 'b3110000-0000-0000-0000-000000000001'), 11, 'C2: la unidad vuelve al stock');
 
 -- ---------------------------------------------------------------------------------------------------------
 -- 3) admin_publicar_pagina

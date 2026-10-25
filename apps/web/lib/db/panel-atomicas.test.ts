@@ -24,7 +24,7 @@ describe('anonimizarClienteDb', () => {
   it('anonimizado: llama el RPC y devuelve los conteos', async () => {
     const rpc = clienteFalso({
       ok: true, estado: 'anonimizado', id: ID, pedidos: 2, mensajes_whatsapp: 1, garantias: 1, leads: 2, direcciones: 1,
-      deseos: 1, conversaciones: 2, cuenta_acceso_eliminada: true,
+      deseos: 1, conversaciones: 2, cuenta_acceso_eliminada: true, pagos_limpiados: 1, webhooks_recortados: 2, resenas: 1, fotos_garantia: 1,
     });
     expect(await anonimizarClienteDb(ID)).toMatchObject({ ok: true, pedidos: 2, cuenta_acceso_eliminada: true });
     expect(rpc).toHaveBeenCalledWith('anonimizar_cliente', { p_id: ID });
@@ -53,7 +53,7 @@ describe('cancelarPedidoDb', () => {
 
   it('cancela: envía {p} con la fecha en ISO y valida la respuesta', async () => {
     const rpc = clienteFalso({
-      ok: true, order_id: ID, from_status: 'pendiente_manual', to_status: 'cancelado', event_id: EV, stock_estado: 'released', stock_liberado: true,
+      ok: true, order_id: ID, from_status: 'pendiente_manual', to_status: 'cancelado', event_id: EV, stock_estado: 'released', stock_liberado: true, stock_devuelto: false, unidades_devueltas: 0, stock_retenido: null,
     });
     const r = await cancelarPedidoDb({
       order_id: ID, from_status: 'pendiente_manual', actor: 'admin:u1', motivo: 'Desistió', cancelled_at: new Date('2026-10-25T10:00:00Z'),

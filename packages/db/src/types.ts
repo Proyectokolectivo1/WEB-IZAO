@@ -1932,6 +1932,48 @@ export type Database = {
         }
         Relationships: []
       }
+      media_file_deletions: {
+        Row: {
+          attempts: number
+          base_path: string
+          created_at: string
+          id: string
+          kind: string
+          last_error: string | null
+          media_id: string
+          reason: string
+          requested_at: string
+          updated_at: string
+          variants: Json
+        }
+        Insert: {
+          attempts?: number
+          base_path: string
+          created_at?: string
+          id?: string
+          kind: string
+          last_error?: string | null
+          media_id: string
+          reason: string
+          requested_at?: string
+          updated_at?: string
+          variants?: Json
+        }
+        Update: {
+          attempts?: number
+          base_path?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          last_error?: string | null
+          media_id?: string
+          reason?: string
+          requested_at?: string
+          updated_at?: string
+          variants?: Json
+        }
+        Relationships: []
+      }
       number_sequences: {
         Row: {
           country_code: string
