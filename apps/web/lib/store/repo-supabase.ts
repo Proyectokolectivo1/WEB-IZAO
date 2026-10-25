@@ -54,8 +54,9 @@ function conCache<A extends unknown[], R>(nombre: string, segundos: number, etiq
   return (p: CodigoPais, ...a: A): Promise<R> =>
     unstable_cache(() => fn(p, ...a), [nombre, p, ...a.map(String)], { revalidate: segundos, tags: etiquetas(p, ...a) })();
 }
-const contenido = (p: CodigoPais, ..._a: unknown[]) => [`content:${p}`];
-const catalogo = (p: CodigoPais, ..._a: unknown[]) => [`catalog:${p}`];
+// El panel invalida con el código de país en MAYÚSCULAS (`content:CO`): las etiquetas distinguen mayúsculas.
+const contenido = (p: CodigoPais, ..._a: unknown[]) => [`content:${p.toUpperCase()}`];
+const catalogo = (p: CodigoPais, ..._a: unknown[]) => [`catalog:${p.toUpperCase()}`];
 // Páginas: `content:{país}` (lo invalida el panel al guardar) y las finas de `etiquetasPagina` (ver lib/store/etiquetas.ts).
 const paginasTag = (p: CodigoPais, ..._a: unknown[]) => [...contenido(p), ...etiquetasPagina(p)];
 
