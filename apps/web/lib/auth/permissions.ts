@@ -52,7 +52,7 @@ export const MODULOS = {
     etiqueta: 'Métricas',
     ruta: '/admin/metricas',
     roles: SOLO_ADMIN,
-    disponible: false,
+    disponible: true,
   },
   productos: {
     etiqueta: 'Productos',
@@ -181,6 +181,8 @@ export const ACCIONES = {
   'descuentos.gestionar': SOLO_ADMIN,
   /** Fichas de influencers y su reporte (§17.2, §24.1). */
   'influencers.gestionar': SOLO_ADMIN,
+  /** Exportar el dashboard a Excel; ver las métricas exige el módulo `dashboard` (§21, §24.3). */
+  'metricas.exportar': SOLO_ADMIN,
 } as const satisfies Record<string, readonly Rol[]>;
 
 export type AccionId = keyof typeof ACCIONES;

@@ -16,6 +16,12 @@ export type FiltrosPedido = {
   /** `YYYY-MM-DD` (inclusive) o vacío. */
   desde: string;
   hasta: string;
+  /** Estado de la guía en MasterShop (`shipments.provider_status_name`), o vacío. */
+  guia: string;
+  /** Grupo del estado de la guía (`shipments.provider_status_parent`), o vacío. */
+  grupo: string;
+  /** Solo pedidos cuyo envío tiene novedad. */
+  novedad: boolean;
 };
 
 type Buscables = Record<string, string | string[] | undefined>;
@@ -50,6 +56,9 @@ export function leerFiltrosPedido(sp: Buscables): FiltrosPedido {
     metodo: (METODOS_PEDIDO as readonly string[]).includes(metodo) ? metodo : '',
     desde,
     hasta,
+    guia: primero(sp.guia).slice(0, 80),
+    grupo: primero(sp.grupo).slice(0, 80),
+    novedad: primero(sp.novedad) === '1',
   };
 }
 
@@ -59,6 +68,10 @@ export function parametrosDeFiltros(f: FiltrosPedido): Record<string, string> {
   for (const clave of ['q', 'estado', 'pais', 'metodo', 'desde', 'hasta'] as const) {
     if (f[clave]) salida[clave] = f[clave];
   }
+  for (const clave of ['guia', 'grupo'] as const) {
+    if (f[clave]) salida[clave] = f[clave];
+  }
+  if (f.novedad) salida.novedad = '1';
   return salida;
 }
 

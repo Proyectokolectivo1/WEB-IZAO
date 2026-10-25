@@ -18,6 +18,13 @@ describe('leerFiltrosPedido', () => {
     expect(leerFiltrosPedido({ estado: ['cancelado', 'pagado'] }).estado).toBe('cancelado');
   });
 
+  it('lee los filtros de guía y novedad que usa el dashboard y los conserva al paginar', () => {
+    const f = leerFiltrosPedido({ guia: 'En reparto', grupo: 'En tránsito', novedad: '1' });
+    expect(f).toMatchObject({ guia: 'En reparto', grupo: 'En tránsito', novedad: true });
+    expect(parametrosDeFiltros(f)).toEqual({ guia: 'En reparto', grupo: 'En tránsito', novedad: '1' });
+    expect(leerFiltrosPedido({ novedad: 'si' }).novedad).toBe(false);
+  });
+
   it('conserva solo parámetros con valor al paginar', () => {
     const f = leerFiltrosPedido({ estado: 'pagado', q: 'IZ' });
     expect(parametrosDeFiltros(f)).toEqual({ q: 'IZ', estado: 'pagado' });

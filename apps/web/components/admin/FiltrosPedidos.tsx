@@ -9,6 +9,9 @@ export const ID_BUSQUEDA_PEDIDOS = 'filtro-q';
 export function FiltrosPedidos({ filtros }: { filtros: FiltrosPedido }) {
   return (
     <form className="adm-busqueda adm-filtros" role="search" method="get" action="/admin/pedidos">
+      {filtros.guia ? <input type="hidden" name="guia" value={filtros.guia} /> : null}
+      {filtros.grupo ? <input type="hidden" name="grupo" value={filtros.grupo} /> : null}
+      {filtros.novedad ? <input type="hidden" name="novedad" value="1" /> : null}
       <div className="adm-campo">
         <label htmlFor={ID_BUSQUEDA_PEDIDOS} className="adm-etiqueta">
           Número de pedido o celular
@@ -60,6 +63,11 @@ export function FiltrosPedidos({ filtros }: { filtros: FiltrosPedido }) {
         </label>
         <input id="filtro-hasta" name="hasta" type="date" className="adm-input" defaultValue={filtros.hasta} />
       </div>
+      {filtros.guia || filtros.grupo || filtros.novedad ? (
+        <p className="adm-suave adm-chico" role="status">
+          Filtrando por {[filtros.guia && `estado de guía «${filtros.guia}»`, filtros.grupo && `grupo «${filtros.grupo}»`, filtros.novedad && 'con novedad'].filter(Boolean).join(', ')}.
+        </p>
+      ) : null}
       <button type="submit" className="adm-boton">
         Filtrar
       </button>

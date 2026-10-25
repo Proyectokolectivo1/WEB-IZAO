@@ -24,9 +24,16 @@ const COLUMNAS_LISTA = 'id, number, country_code, currency_code, status, payment
 
 export async function listarPedidos(
   cliente: Cliente,
-  f: Pick<FiltrosPedido, 'q' | 'pagina' | 'estado' | 'pais' | 'metodo' | 'desde' | 'hasta'>,
+  f: Pick<FiltrosPedido, 'q' | 'pagina' | 'estado' | 'pais' | 'metodo' | 'desde' | 'hasta'> & Partial<Pick<FiltrosPedido, 'guia' | 'grupo' | 'novedad'>>,
 ): Promise<{ filas: FilaPedidoLista[]; total: number }> {
-  let consulta = cliente.from('orders').select(COLUMNAS_LISTA, { count: 'exact' });
+  // Con filtro de guía o novedad se une `shipments` (join interno): solo quedan pedidos con envío.
+  const conEnvio = Boolean(f.guia || f.grupo || f.novedad);
+  let consulta = cliente
+    .from('orders')
+    .select(conEnvio ? `${COLUMNAS_LISTA}, shipments!inner(provider_status_name)` : COLUMNAS_LISTA, { count: 'exact' });
+  if (f.guia) consulta = consulta.eq('shipments.provider_status_name', f.guia);
+  if (f.grupo) consulta = consulta.eq('shipments.provider_status_parent', f.grupo);
+  if (f.novedad) consulta = consulta.eq('shipments.has_novelty', true);
   const busqueda = interpretarBusqueda(f.q);
   if (busqueda) consulta = consulta.ilike(busqueda.campo, `%${escaparBusqueda(busqueda.patron)}%`);
   if (f.estado) consulta = consulta.eq('status', f.estado);
