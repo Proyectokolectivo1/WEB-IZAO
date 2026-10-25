@@ -25,6 +25,7 @@ import {
   JOB_METRICS_RECOMPUTE_DAY,
   JOB_METRICS_RECOMPUTE_RECENT,
 } from './jobs/metrics/recalcular-dia.js';
+import { recalculadorMetricasDesdeEnv } from './jobs/metrics/tras-transicion.js';
 import { registrarCron } from './cron.js';
 import { createConnection, createQueue, createWorker, crearProcesadorSistema, QUEUE_NAMES } from './queues.js';
 
@@ -33,6 +34,7 @@ async function main(): Promise<void> {
   const cola = createQueue(QUEUE_NAMES.sistema, connection);
   const colaCod = createQueue(QUEUE_NAMES.contraentrega, connection);
   const colaCarrier = createQueue(QUEUE_NAMES.carrier, connection);
+  const recalcularMetricas = recalculadorMetricasDesdeEnv(cola);
   const worker = createWorker(
     QUEUE_NAMES.sistema,
     crearProcesadorSistema({
@@ -41,7 +43,9 @@ async function main(): Promise<void> {
       [JOB_METRICS_RECOMPUTE_DAY]: crearManejadorRecalculoDia(dependenciasMetricasDesdeEnv()),
       [JOB_METRICS_RECOMPUTE_RECENT]: crearManejadorRecalculoReciente(cola),
       [JOB_BARRIDO_PEDIDOS]: async () =>
-        barrerPedidos(dependenciasBarridoDesdeEnv(colaCod, (id) => cancelarJobsCod(colaCod, id))),
+        barrerPedidos(
+          dependenciasBarridoDesdeEnv(colaCod, (id) => cancelarJobsCod(colaCod, id), recalcularMetricas),
+        ),
     }),
     connection,
   );
@@ -51,6 +55,7 @@ async function main(): Promise<void> {
       dependenciasPagosDesdeEnv(
         encolarTransportadora(colaCarrier),
         (orderId) => cancelarJobsCod(colaCod, orderId),
+        recalcularMetricas,
       ),
     ),
     connection,
@@ -58,7 +63,8 @@ async function main(): Promise<void> {
 
   const trabajadores: Worker[] = [worker, workerPagos];
   trabajadores.push(
-    createWorker(QUEUE_NAMES.contraentrega, crearProcesadorCod(dependenciasCodDesdeEnv(programadorCod(colaCod))), connection),
+    createWorker(QUEUE_NAMES.contraentrega, crearProcesadorCod(dependenciasCodDesdeEnv(programadorCod(colaCod), undefined, recalcularMetricas)),
+      connection),
   );
   trabajadores.push(
     createWorker(
