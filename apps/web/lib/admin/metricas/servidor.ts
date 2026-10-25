@@ -27,7 +27,28 @@ import {
   type ModeloPais,
   type PedidoDetalle,
 } from './dashboard';
+import { claveTops, conCache } from './cache';
 import { COLUMNAS_PEDIDO_METRICA, aPedidoMetrica, type FilaPedidoMetrica } from './pedidos';
+import {
+  COLUMNAS_STATS,
+  aAgrupados,
+  aCiudades,
+  aDepartamentos,
+  aFilaVentas,
+  aPanelGuias,
+  aProductos,
+  etiquetasDe,
+  modeloPaisRapido,
+  topsVacios,
+  totalPanel,
+  type FilaStatsBd,
+  type RpcAgrupado,
+  type RpcCiudad,
+  type RpcDepartamento,
+  type RpcGuia,
+  type RpcProducto,
+  type TopsPais,
+} from './rapido';
 
 export const PAISES_DASHBOARD = ['CO', 'EC'] as const;
 export type PaisDashboard = CountryCode | 'TODOS';
@@ -119,34 +140,12 @@ function limitesUtc(r: RangoFechas): { ini: string; fin: string } {
   return { ini: inicioDiaBogotaUtc(r.desde).toISOString(), fin: inicioDiaBogotaUtc(sumarDias(r.hasta, 1)).toISOString() };
 }
 
-export type DatosCargados = {
-  detalles: PedidoDetalle[];
-  trafico: TraficoMetrica[];
-  gastos: GastoMetrica[];
-  garantias: GarantiaMetrica[];
-  descartados: number;
-  truncado: boolean;
-};
+export type Auxiliares = { trafico: TraficoMetrica[]; gastos: GastoMetrica[]; garantias: GarantiaMetrica[]; truncado: boolean };
 
-/** Pedidos, tráfico, gastos y garantías de un país en `rango` (atribución de §21.1). */
-export async function cargarDatosPais(
-  cliente: Cliente,
-  pais: CountryCode,
-  rango: RangoFechas,
-  opciones: { completo: boolean; estimadoPais: Monto },
-): Promise<DatosCargados> {
+/** Tráfico, gastos y garantías de un país en `rango`: pocas filas por día, sin tocar `orders`. */
+export async function cargarAuxiliares(cliente: Cliente, pais: CountryCode, rango: RangoFechas): Promise<Auxiliares> {
   const { ini, fin } = limitesUtc(rango);
-  const columnas = opciones.completo ? COLUMNAS_COMPLETAS : COLUMNAS_LIGERAS;
-  const base = () => cliente.from('orders').select(columnas).eq('country_code', pais);
-  const [pagados, sinPagar, trafico, gastos, garantias] = await Promise.all([
-    leerPaginado<FilaCompleta>(
-      (a, b) => base().gte('paid_at', ini).lt('paid_at', fin).order('id', { ascending: true }).range(a, b),
-      'los pedidos pagados',
-    ),
-    leerPaginado<FilaCompleta>(
-      (a, b) => base().is('paid_at', null).gte('created_at', ini).lt('created_at', fin).order('id', { ascending: true }).range(a, b),
-      'los pedidos sin pagar',
-    ),
+  const [trafico, gastos, garantias] = await Promise.all([
     leerPaginado<{ date: string; sessions: Monto; product_views: Monto; add_to_cart: Monto; checkout_started: Monto }>(
       (a, b) =>
         cliente
@@ -184,21 +183,9 @@ export async function cargarDatosPais(
       'las garantías',
     ),
   ]);
-
-  const detalles: PedidoDetalle[] = [];
-  let descartados = 0;
-  // Un pedido que cambia mientras se pagina podría llegar dos veces: se cuenta una sola.
-  const unicas = new Map<string, FilaCompleta>();
-  for (const fila of [...pagados.filas, ...sinPagar.filas]) unicas.set(fila.id, fila);
-  for (const fila of unicas.values()) {
-    const d = aDetalle(fila, opciones.estimadoPais);
-    if (d) detalles.push(d);
-    else descartados += 1;
-  }
   const moneda = currencyForCountry(pais);
   const estadosGarantia: readonly string[] = ESTADOS_GARANTIA;
   return {
-    detalles,
     trafico: trafico.filas.map((t) => ({
       fecha: t.date,
       pais,
@@ -219,17 +206,68 @@ export async function cargarDatosPais(
     garantias: garantias.filas
       .filter((g) => estadosGarantia.includes(g.status))
       .map((g) => ({ pais, estado: g.status as GarantiaMetrica['estado'], costo: fromDbAmount(g.cost_amount) })),
+    truncado: trafico.truncado || gastos.truncado || garantias.truncado,
+  };
+}
+
+export type DatosCargados = {
+  detalles: PedidoDetalle[];
+  trafico: TraficoMetrica[];
+  gastos: GastoMetrica[];
+  garantias: GarantiaMetrica[];
+  descartados: number;
+  truncado: boolean;
+};
+
+/** Pedidos, tráfico, gastos y garantías de un país en `rango` (atribución de §21.1). */
+export async function cargarDatosPais(
+  cliente: Cliente,
+  pais: CountryCode,
+  rango: RangoFechas,
+  opciones: { completo: boolean; estimadoPais: Monto },
+): Promise<DatosCargados> {
+  const { ini, fin } = limitesUtc(rango);
+  const columnas = opciones.completo ? COLUMNAS_COMPLETAS : COLUMNAS_LIGERAS;
+  const base = () => cliente.from('orders').select(columnas).eq('country_code', pais);
+  const [pagados, sinPagar, auxiliares] = await Promise.all([
+    leerPaginado<FilaCompleta>(
+      (a, b) => base().gte('paid_at', ini).lt('paid_at', fin).order('id', { ascending: true }).range(a, b),
+      'los pedidos pagados',
+    ),
+    leerPaginado<FilaCompleta>(
+      (a, b) => base().is('paid_at', null).gte('created_at', ini).lt('created_at', fin).order('id', { ascending: true }).range(a, b),
+      'los pedidos sin pagar',
+    ),
+    cargarAuxiliares(cliente, pais, rango),
+  ]);
+
+  const detalles: PedidoDetalle[] = [];
+  let descartados = 0;
+  // Un pedido que cambia mientras se pagina podría llegar dos veces: se cuenta una sola.
+  const unicas = new Map<string, FilaCompleta>();
+  for (const fila of [...pagados.filas, ...sinPagar.filas]) unicas.set(fila.id, fila);
+  for (const fila of unicas.values()) {
+    const d = aDetalle(fila, opciones.estimadoPais);
+    if (d) detalles.push(d);
+    else descartados += 1;
+  }
+  return {
+    detalles,
+    trafico: auxiliares.trafico,
+    gastos: auxiliares.gastos,
+    garantias: auxiliares.garantias,
     descartados,
-    truncado: pagados.truncado || sinPagar.truncado || trafico.truncado || gastos.truncado || garantias.truncado,
+    truncado: pagados.truncado || sinPagar.truncado || auxiliares.truncado,
   };
 }
 
 export type PaisVista = {
   actual: ModeloPais;
   anterior: ModeloPais;
-  /** Pedidos del periodo (solo servidor): alimentan la hoja "Pedidos" del Excel. */
-  detalles: readonly PedidoDetalle[];
 };
+
+/** Con el detalle de pedidos del periodo (solo servidor): alimenta la hoja "Pedidos" del Excel. */
+export type PaisVistaDetallada = PaisVista & { detalles: readonly PedidoDetalle[] };
 
 export type VistaDashboard = {
   pais: PaisDashboard;
@@ -241,7 +279,11 @@ export type VistaDashboard = {
   /** Etiquetas de códigos e influencers que aparecen en los tops. */
   nombres: { codigos: Record<string, string>; influencers: Record<string, string> };
   truncado: boolean;
+  /** Pedidos que el panel de guías cuenta frente a los que suman las estadísticas diarias (null en el cálculo desde pedidos). */
+  coherencia: { estadisticas: number; panel: number } | null;
 };
+
+export type VistaDetallada = Omit<VistaDashboard, 'paises'> & { paises: PaisVistaDetallada[] };
 
 type Ajustes = Record<CountryCode, { estimado: Monto; tasa: unknown }>;
 
@@ -267,16 +309,19 @@ async function etiquetas(cliente: Cliente, modelos: readonly ModeloPais[]) {
   };
 }
 
-/** Dashboard completo del periodo y del periodo anterior equivalente (§21.1). */
-export async function cargarDashboard(
+/**
+ * Dashboard con el detalle de cada pedido, calculado desde `orders` (lento: recorre el rango). Solo lo usa el Excel, que
+ * necesita la hoja "Pedidos"; la pantalla usa `cargarDashboard`.
+ */
+export async function cargarDashboardDetallado(
   cliente: Cliente,
   f: { pais: PaisDashboard; rango: RangoFechas; preset: PresetFecha | null },
-): Promise<VistaDashboard> {
+): Promise<VistaDetallada> {
   const anterior = periodoAnterior(f.rango, f.preset ?? undefined);
   const ajustes = await leerAjustes(cliente);
   const paises: readonly CountryCode[] = f.pais === 'TODOS' ? PAISES_DASHBOARD : [f.pais];
   let truncado = false;
-  const vistas: PaisVista[] = await Promise.all(
+  const vistas: PaisVistaDetallada[] = await Promise.all(
     paises.map(async (pais) => {
       const estimadoPais = ajustes[pais].estimado;
       const [a, p] = await Promise.all([
@@ -307,5 +352,112 @@ export async function cargarDashboard(
     consolidado,
     nombres: await etiquetas(cliente, vistas.map((v) => v.actual)),
     truncado,
+    coherencia: null,
   };
+}
+
+// ── Camino rápido (§21.4): estadísticas diarias + RPC de tops + caché de 5 minutos ───────────────
+
+const LIMITE_TOP = 10;
+
+async function leerFilasStats(cliente: Cliente, pais: CountryCode, rango: RangoFechas): Promise<{ filas: ReturnType<typeof aFilaVentas>[]; truncado: boolean }> {
+  const r = await leerPaginado<FilaStatsBd>(
+    (a, b) =>
+      cliente
+        .from('daily_sales_stats')
+        .select(COLUMNAS_STATS)
+        .eq('country_code', pais)
+        .gte('date', rango.desde)
+        .lte('date', rango.hasta)
+        .order('date', { ascending: true })
+        .order('payment_method', { ascending: true })
+        .range(a, b),
+    'las estadísticas de ventas',
+  );
+  return { filas: r.filas.map(aFilaVentas), truncado: r.truncado };
+}
+
+async function rpc<T>(cliente: Cliente, nombre: string, args: Record<string, unknown>): Promise<T[]> {
+  const { data, error } = await cliente.rpc(nombre, args);
+  if (error) throw new Error(`No se pudo calcular ${nombre}: ${error.message}`);
+  return (data ?? []) as T[];
+}
+
+/** Los tops y el panel de guías del periodo: 8 llamadas en paralelo a las RPC `metricas_*`. */
+async function calcularTops(cliente: Cliente, pais: CountryCode, rango: RangoFechas): Promise<TopsPais> {
+  const base = { p_pais: pais, p_desde: rango.desde, p_hasta: rango.hasta };
+  const top = { ...base, p_limite: LIMITE_TOP };
+  const agrupado = (dimension: string) => rpc<RpcAgrupado>(cliente, 'metricas_top_agrupado', { ...top, p_dimension: dimension });
+  const [ciudades, departamentos, productos, codigos, influencers, fuentes, guias] = await Promise.all([
+    rpc<RpcCiudad>(cliente, 'metricas_top_ciudades', top),
+    rpc<RpcDepartamento>(cliente, 'metricas_top_departamentos', top),
+    rpc<RpcProducto>(cliente, 'metricas_top_productos', top),
+    agrupado('codigo'),
+    agrupado('influencer'),
+    agrupado('fuente'),
+    rpc<RpcGuia>(cliente, 'metricas_panel_guias', base),
+  ]);
+  return {
+    ciudades: aCiudades(ciudades),
+    departamentos: aDepartamentos(departamentos),
+    productos: aProductos(productos),
+    codigos: aAgrupados(codigos),
+    influencers: aAgrupados(influencers),
+    fuentes: aAgrupados(fuentes),
+    guias: aPanelGuias(guias),
+    etiquetas: { codigos: etiquetasDe(codigos), influencers: etiquetasDe(influencers) },
+  };
+}
+
+/**
+ * Dashboard de la pantalla. KPIs y serie salen de `daily_sales_stats` (el periodo anterior, solo de ahí); los tops y el
+ * panel de guías, de las RPC con caché de 5 minutos. Ninguna consulta recorre `orders`.
+ */
+export async function cargarDashboard(
+  cliente: Cliente,
+  f: { pais: PaisDashboard; rango: RangoFechas; preset: PresetFecha | null },
+  opciones: { cache?: Parameters<typeof conCache>[2] } = {},
+): Promise<VistaDashboard> {
+  const anterior = periodoAnterior(f.rango, f.preset ?? undefined);
+  const paises: readonly CountryCode[] = f.pais === 'TODOS' ? PAISES_DASHBOARD : [f.pais];
+  const [ajustes, porPais] = await Promise.all([
+    leerAjustes(cliente),
+    Promise.all(
+      paises.map(async (pais) => {
+        const [statsA, statsP, auxA, auxP, tops] = await Promise.all([
+          leerFilasStats(cliente, pais, f.rango),
+          leerFilasStats(cliente, pais, anterior),
+          cargarAuxiliares(cliente, pais, f.rango),
+          cargarAuxiliares(cliente, pais, anterior),
+          conCache(claveTops(pais, f.rango.desde, f.rango.hasta), () => calcularTops(cliente, pais, f.rango), opciones.cache),
+        ]);
+        return { pais, statsA, statsP, auxA, auxP, tops: tops.valor };
+      }),
+    ),
+  ]);
+
+  const nombres: VistaDashboard['nombres'] = { codigos: {}, influencers: {} };
+  let truncado = false;
+  let estadisticas = 0;
+  let panel = 0;
+  const vistas: PaisVista[] = porPais.map((x) => {
+    truncado ||= x.statsA.truncado || x.statsP.truncado || x.auxA.truncado || x.auxP.truncado;
+    Object.assign(nombres.codigos, x.tops.etiquetas.codigos);
+    Object.assign(nombres.influencers, x.tops.etiquetas.influencers);
+    estadisticas += x.statsA.filas.reduce((a, r) => a + r.orders_created, 0);
+    panel += totalPanel(x.tops.guias);
+    return {
+      actual: modeloPaisRapido({ pais: x.pais, filas: x.statsA.filas, trafico: x.auxA.trafico, gastos: x.auxA.gastos, garantias: x.auxA.garantias, tops: x.tops }, f.rango),
+      anterior: modeloPaisRapido({ pais: x.pais, filas: x.statsP.filas, trafico: x.auxP.trafico, gastos: x.auxP.gastos, garantias: x.auxP.garantias, tops: topsVacios() }, anterior),
+    };
+  });
+
+  let consolidado: VistaDashboard['consolidado'] = null;
+  if (f.pais === 'TODOS') {
+    const tasas = { CO: ajustes.CO.tasa, EC: ajustes.EC.tasa };
+    const act = consolidarEnCop(vistas.map((v) => v.actual.resumen), tasas);
+    const ant = consolidarEnCop(vistas.map((v) => v.anterior.resumen), tasas);
+    consolidado = 'error' in act ? act : 'error' in ant ? ant : { actual: act, anterior: ant };
+  }
+  return { pais: f.pais, rango: f.rango, anterior, paises: vistas, consolidado, nombres, truncado, coherencia: { estadisticas, panel } };
 }

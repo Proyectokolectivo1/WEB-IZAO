@@ -56,6 +56,13 @@ export default async function PaginaMetricas({
         </p>
       ) : null}
 
+      {vista.coherencia && vista.coherencia.estadisticas !== vista.coherencia.panel ? (
+        <p className="adm-aviso" role="status">
+          Las cifras de ventas se actualizan cada minuto después de cada pedido y todavía no incluyen los últimos cambios (
+          {vista.coherencia.panel} pedidos en el panel de guías frente a {vista.coherencia.estadisticas} en las estadísticas). Recarga en un momento.
+        </p>
+      ) : null}
+
       {vista.consolidado ? (
         'error' in vista.consolidado ? (
           <p className="adm-alerta" role="alert">

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { clienteFalso } from '../crud/cliente-falso';
-import { cargarDashboard } from './servidor';
+import { cargarDashboardDetallado as cargarDashboard } from './servidor';
 
 const RANGO = { desde: '2026-11-02', hasta: '2026-11-03' };
 

@@ -3,7 +3,7 @@ import { consolidarEnCop, type PedidoMetrica } from '@izao/core/metrics';
 import { crearLibroXlsx } from '../excel/libro';
 import { modeloPais, type PedidoDetalle } from './dashboard';
 import { hojasDelDashboard } from './excel';
-import type { VistaDashboard } from './servidor';
+import type { VistaDetallada } from './servidor';
 
 const RANGO = { desde: '2026-11-02', hasta: '2026-11-03' };
 
@@ -39,7 +39,7 @@ const detalle: PedidoDetalle = {
   guia: { estado: 'Entregado', grupo: 'Finalizadas', novedad: false },
 };
 
-function vista(): VistaDashboard {
+function vista(): VistaDetallada {
   const datos = { pais: 'CO' as const, detalles: [detalle], trafico: [], gastos: [], garantias: [] };
   const actual = modeloPais(datos, RANGO);
   const anterior = modeloPais({ ...datos, detalles: [] }, { desde: '2026-10-31', hasta: '2026-11-01' });
@@ -53,6 +53,7 @@ function vista(): VistaDashboard {
     consolidado: { actual: consolidado, anterior: consolidado },
     nombres: { codigos: { c1: 'IZAO10' }, influencers: { i1: 'Laura' } },
     truncado: false,
+    coherencia: null,
   };
 }
 

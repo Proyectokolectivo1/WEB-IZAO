@@ -22,8 +22,8 @@
 - Chatbot (feat chatbot): `/admin/chatbot` (activar, modelos, presupuesto en micro-USD con umbral de respaldo, instrucciones, bienvenida CO/EC, límites; consumo del mes y estado del presupuesto; conversión por rango), `/conversaciones` (búsqueda en mensajes, filtros) y `[id]` (lectura; de las herramientas solo nombres). Avisa si falta la credencial `openrouter`. `chatbot.gestionar`. `lib/admin/chatbot/`.
 
 ## Pendiente
-- Dashboard: `daily_sales_stats` ya tiene columnas y job, pero los tops/panel/hoja Pedidos necesitan `orders`; para < 1,5 s con 12 meses pedir a izao-db RPC de tops (ciudades, productos, códigos, fuentes, estados de guía) y luego pasar KPIs/serie a la tabla; caché Redis 5 min. Hoy lee `orders` del rango (tope 50 000, avisa si es parcial).
-- Gastos: adjunto opcional (falta `media.kind='expense'`, pedir a izao-db) y botón "Sincronizar ahora" de Meta Ads (conector: izao-integraciones/worker).
+- Dashboard rápido (feat dashboard): `cargarDashboard` lee KPIs/serie de `daily_sales_stats`, tops y panel de las RPC `metricas_*` (caché Redis 5 min, falla abierta; `cache.ts`, `rapido.ts`) y avisa si las estadísticas van atrasadas frente al panel. `cargarDashboardDetallado` (desde `orders`) solo alimenta el Excel. Simulado con 12 meses: 0 consultas a `orders`, cálculo < 50 ms; en la base, 8 RPC en paralelo ≈ 170 ms (izao-db).
+- Gastos: botón "Sincronizar ahora" de Meta Ads (conector: izao-integraciones/worker). Comprobante hecho (`media.kind='expense'`, se sirve por `/media`: ruta con uuid, no listada).
 - Garantías: formulario público y correo de recepción (izao-tienda/izao-pagos). Pedidos: filtros por ciudad/código/influencer/documento (§24.1).
 - Integraciones: esquemas de Addi, Sistecrédito, OpenRouter, Meta Ads y píxeles. `.env.example`: `INTEGRACIONES_MODO`, `SITE_URL`, `MASTERSHOP_WEBHOOK_PATH_SECRET` (infra).
 - Reseñas/Home: el rating del catálogo (`catalog_listing.rating_*`) debe recalcularse al moderar (izao-db). Para izao-db: RPC `admin_publicar_pagina`, cancelar+liberar stock atómico, anonimizar cliente atómico. Agente: sin capturas de error ni editor visual del modo panel. Falta prueba de humo en navegador (no hay Supabase/MFA local).
@@ -33,7 +33,7 @@
 - Heredocs de bash pierden barras invertidas; escribir archivos con Write. Cancelar con envío MasterShop 3+ se rechaza a propósito.
 
 ## Punto de retoma
-Todos los módulos de §24.1 en mi zona están construidos (web: lint, tsc y 1 143 pruebas verdes). Pendientes: ver "Pendiente". Mejoras sugeridas: dashboard sobre `daily_sales_stats` con RPC de tops; "Probar conexión" de OpenRouter cuando exista su esquema en Integraciones.
+Todos los módulos de §24.1 en mi zona están construidos (web: lint, tsc y 1 143 pruebas verdes). Pendientes: ver "Pendiente". Mejora sugerida: "Probar conexión" de OpenRouter cuando exista su esquema en Integraciones.
 
 ## Avisos al líder
 - La tienda aún no procesa `?ref=CODIGO` (cookie 30 días, aplicar código, `orders.influencer_id`): izao-tienda/izao-pagos.

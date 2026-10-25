@@ -17,7 +17,7 @@ import type { Celda, Hoja } from '../excel/libro';
 import { ETIQUETA_ESTADO_PEDIDO, ETIQUETA_METODO_PAGO } from '../pedidos/etiquetas';
 import { topCiudades, topCodigos, topInfluencers, topProductos } from './dashboard';
 import { formatoRoas } from './formato';
-import type { VistaDashboard } from './servidor';
+import type { VistaDetallada } from './servidor';
 
 const NOMBRE_PAIS = { CO: 'Colombia', EC: 'Ecuador' } as const;
 const LIMITE_COMPLETO = 100_000;
@@ -61,7 +61,7 @@ const FILAS_RESUMEN: readonly [string, (r: ResumenPais) => Celda][] = [
   ['ROAS', (r) => (r.roasBp === null ? null : formatoRoas(r.roasBp))],
 ];
 
-function hojaResumen(v: VistaDashboard): Hoja {
+function hojaResumen(v: VistaDetallada): Hoja {
   const bloques: { nombre: string; actual: ResumenPais; anterior: ResumenPais }[] = [];
   if (v.consolidado && !('error' in v.consolidado)) {
     bloques.push({ nombre: 'Consolidado en COP', actual: v.consolidado.actual, anterior: v.consolidado.anterior });
@@ -80,7 +80,7 @@ function hojaResumen(v: VistaDashboard): Hoja {
   };
 }
 
-function hojaPedidos(v: VistaDashboard): Hoja {
+function hojaPedidos(v: VistaDetallada): Hoja {
   const filas: Celda[][] = [];
   for (const p of v.paises) {
     for (const d of p.detalles) {
@@ -144,7 +144,7 @@ function hojaPedidos(v: VistaDashboard): Hoja {
   };
 }
 
-function hojaCiudades(v: VistaDashboard): Hoja {
+function hojaCiudades(v: VistaDetallada): Hoja {
   const filas: Celda[][] = [];
   for (const p of v.paises) {
     for (const c of topCiudades(p.detalles, LIMITE_COMPLETO)) {
@@ -158,7 +158,7 @@ function hojaCiudades(v: VistaDashboard): Hoja {
   };
 }
 
-function hojaProductos(v: VistaDashboard): Hoja {
+function hojaProductos(v: VistaDetallada): Hoja {
   const filas: Celda[][] = [];
   for (const p of v.paises) {
     for (const x of topProductos(p.detalles, LIMITE_COMPLETO)) {
@@ -172,7 +172,7 @@ function hojaProductos(v: VistaDashboard): Hoja {
   };
 }
 
-function hojaMetodos(v: VistaDashboard): Hoja {
+function hojaMetodos(v: VistaDetallada): Hoja {
   const filas: Celda[][] = [];
   for (const p of v.paises) {
     const r = p.actual.resumen;
@@ -189,7 +189,7 @@ function hojaMetodos(v: VistaDashboard): Hoja {
   };
 }
 
-function hojaGastos(v: VistaDashboard): Hoja {
+function hojaGastos(v: VistaDetallada): Hoja {
   const filas: Celda[][] = [];
   for (const p of v.paises) {
     const r = p.actual.resumen;
@@ -200,7 +200,7 @@ function hojaGastos(v: VistaDashboard): Hoja {
   return { nombre: 'Gastos', columnas: [{ titulo: 'País' }, { titulo: 'Categoría', ancho: 28 }, { titulo: 'Total del periodo', ancho: 20 }], filas };
 }
 
-function hojaGarantias(v: VistaDashboard): Hoja {
+function hojaGarantias(v: VistaDetallada): Hoja {
   const filas: Celda[][] = [];
   for (const p of v.paises) {
     const g = p.actual.resumen.garantias;
@@ -210,7 +210,7 @@ function hojaGarantias(v: VistaDashboard): Hoja {
   return { nombre: 'Garantías', columnas: [{ titulo: 'País' }, { titulo: 'Estado', ancho: 36 }, { titulo: 'Casos' }, { titulo: 'Costo asumido', ancho: 18 }], filas };
 }
 
-function hojaInfluencers(v: VistaDashboard): Hoja {
+function hojaInfluencers(v: VistaDetallada): Hoja {
   const filas: Celda[][] = [];
   for (const p of v.paises) {
     for (const x of topInfluencers(p.detalles, LIMITE_COMPLETO)) {
@@ -228,6 +228,6 @@ function hojaInfluencers(v: VistaDashboard): Hoja {
 }
 
 /** Las 8 hojas de §21.3. */
-export function hojasDelDashboard(v: VistaDashboard): Hoja[] {
+export function hojasDelDashboard(v: VistaDetallada): Hoja[] {
   return [hojaResumen(v), hojaPedidos(v), hojaCiudades(v), hojaProductos(v), hojaMetodos(v), hojaGastos(v), hojaGarantias(v), hojaInfluencers(v)];
 }

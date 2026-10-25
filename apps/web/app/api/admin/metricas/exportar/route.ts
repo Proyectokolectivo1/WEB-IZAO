@@ -5,7 +5,7 @@ import { TIPO_XLSX, crearLibroXlsx } from '@/lib/admin/excel/libro';
 import { hojasDelDashboard } from '@/lib/admin/metricas/excel';
 import { leerFiltroFechas } from '@/lib/admin/metricas/filtros';
 import { leerPaisDashboard } from '@/lib/admin/metricas/pais';
-import { cargarDashboard } from '@/lib/admin/metricas/servidor';
+import { cargarDashboardDetallado } from '@/lib/admin/metricas/servidor';
 import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
 
 export const runtime = 'nodejs';
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const pais = leerPaisDashboard(url.searchParams.get('pais') ?? undefined);
   const filtro = leerFiltroFechas(Object.fromEntries(url.searchParams), new Date());
-  const vista = await cargarDashboard(crearClienteServicio(), { pais, rango: filtro.rango, preset: filtro.preset });
+  const vista = await cargarDashboardDetallado(crearClienteServicio(), { pais, rango: filtro.rango, preset: filtro.preset });
   const cuerpo = crearLibroXlsx(hojasDelDashboard(vista));
   return new NextResponse(new Uint8Array(cuerpo), {
     headers: {

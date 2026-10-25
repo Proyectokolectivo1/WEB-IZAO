@@ -48,7 +48,7 @@ function html(detalles: PedidoDetalle[]): string {
   const anterior = modeloPais({ ...datos, detalles: [] }, { desde: '2026-10-30', hasta: '2026-11-01' });
   return renderToStaticMarkup(
     createElement(SeccionPaisMetricas, {
-      vista: { actual, anterior, detalles },
+      vista: { actual, anterior },
       nombres: { codigos: { c1: 'IZAO10' }, influencers: { i1: 'Laura' } },
       rango: RANGO,
     }),
