@@ -104,7 +104,7 @@ export const MODULOS = {
     etiqueta: 'Clientes',
     ruta: '/admin/clientes',
     roles: SOLO_ADMIN,
-    disponible: false,
+    disponible: true,
   },
   chatbot: { etiqueta: 'Chatbot', ruta: '/admin/chatbot', roles: SOLO_ADMIN, disponible: false },
   whatsapp: {
