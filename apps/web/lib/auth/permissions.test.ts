@@ -102,7 +102,7 @@ describe('navegación filtrada por rol', () => {
 
   it('el administrador ve los módulos que ya existen, no los futuros', () => {
     const ids = modulosVisibles('admin').map((m) => m.id);
-    expect(ids).toEqual(['inicio', 'pedidos', 'garantias', 'agente', 'dashboard', 'productos', 'categorias', 'catalogo_auxiliar', 'colecciones', 'contenido', 'descuentos', 'influencers', 'whatsapp', 'pagos', 'integraciones']);
+    expect(ids).toEqual(['inicio', 'pedidos', 'garantias', 'agente', 'dashboard', 'productos', 'categorias', 'catalogo_auxiliar', 'colecciones', 'contenido', 'descuentos', 'influencers', 'gastos', 'whatsapp', 'pagos', 'integraciones']);
     expect(ids).not.toContain('usuarios');
   });
 

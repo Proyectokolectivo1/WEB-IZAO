@@ -99,7 +99,7 @@ export const MODULOS = {
     disponible: true,
   },
   leads: { etiqueta: 'Leads', ruta: '/admin/leads', roles: SOLO_ADMIN, disponible: false },
-  gastos: { etiqueta: 'Gastos', ruta: '/admin/gastos', roles: SOLO_ADMIN, disponible: false },
+  gastos: { etiqueta: 'Gastos', ruta: '/admin/gastos', roles: SOLO_ADMIN, disponible: true },
   clientes: {
     etiqueta: 'Clientes',
     ruta: '/admin/clientes',
@@ -183,6 +183,8 @@ export const ACCIONES = {
   'descuentos.gestionar': SOLO_ADMIN,
   /** Fichas de influencers y su reporte (§17.2, §24.1). */
   'influencers.gestionar': SOLO_ADMIN,
+  /** Registrar, editar y borrar gastos manuales y sus categorías; exportarlos (§22, §24.1). */
+  'gastos.gestionar': SOLO_ADMIN,
   /** Exportar el dashboard a Excel; ver las métricas exige el módulo `dashboard` (§21, §24.3). */
   'metricas.exportar': SOLO_ADMIN,
 } as const satisfies Record<string, readonly Rol[]>;
