@@ -27,7 +27,6 @@
 - Integraciones: esquemas de Addi, Sistecrédito, OpenRouter, Meta Ads y píxeles. `.env.example`: `INTEGRACIONES_MODO`, `SITE_URL`, `MASTERSHOP_WEBHOOK_PATH_SECRET` (infra).
 - Reseñas/Home: el rating del catálogo (`catalog_listing.rating_*`) debe recalcularse al moderar (izao-db). Para izao-db: RPC `admin_publicar_pagina`, cancelar+liberar stock atómico, anonimizar cliente atómico. Agente: sin capturas de error ni editor visual del modo panel.
 - Falta prueba de humo en navegador (no hay Supabase/MFA local).
-
 ## Decisiones / avisos
 - Sin `react-hook-form`: `useActionState` + zod del servidor. `cliente-falso` devuelve `filtros` y soporta `or`.
 - Al habilitar un módulo: `disponible: true` en `permissions.ts` y actualizar `permissions.test.ts`. Pruebas de vitest solo `*.test.ts` (JSX: `createElement` + `globalThis.React`).
