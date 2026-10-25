@@ -29,7 +29,7 @@ export interface OpcionesFetchAddi {
 
 export interface FetchAddiFalso {
   fetch: typeof fetch;
-  llamadas: { url: string; method: string; headers: Record<string, string>; body: unknown; redirect: RequestRedirect | undefined }[];
+  llamadas: { url: string; method: string; headers: Record<string, string>; body: unknown; redirect: RequestInit['redirect'] }[];
   tokensEmitidos: number;
 }
 

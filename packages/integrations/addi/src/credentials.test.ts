@@ -54,7 +54,8 @@ describe('credenciales de Addi (§12.3, D-031)', () => {
 
   it('vista enmascarada sin secretos completos', () => {
     const vista = maskedPreview(ADDI_CREDENTIALS, VALIDAS);
-    expect(vista.client_secret).toBe('****ZWJh');
+    expect(vista.client_secret).toBe(`****${VALIDAS.client_secret.slice(-4)}`);
+    expect(vista.client_secret).not.toContain(VALIDAS.client_secret);
     expect(JSON.stringify(vista)).not.toContain(VALIDAS.callback_password);
   });
 
