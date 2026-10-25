@@ -21,6 +21,7 @@ apk add --no-cache openssl curl >/dev/null
 mkdir -p /srv/izao/media /srv/izao/certbot /etc/letsencrypt/live/izaoperfumeria.com /etc/nginx/sites-enabled
 cp -r /cfg /srv/izao/nginx
 echo imagen > /srv/izao/media/a.webp
+mkdir -p /srv/izao/media/warranty/2026/10 && echo foto > /srv/izao/media/warranty/2026/10/x-640.webp
 openssl req -x509 -nodes -newkey rsa:2048 -days 1 -subj "/CN=izaoperfumeria.com" \
   -keyout /etc/letsencrypt/live/izaoperfumeria.com/privkey.pem \
   -out /etc/letsencrypt/live/izaoperfumeria.com/fullchain.pem 2>/dev/null
@@ -66,6 +67,8 @@ probar() { # etiqueta
   csp="$(curl -sk -D - -o /dev/null -H 'Host: izaoperfumeria.com' "https://127.0.0.1/co" | grep -i '^content-security-policy:' || true)"
   if echo "$csp" | grep -q "data:"; then echo "FALLA [$1] la CSP de la tienda no debe permitir data:"; fallos=$((fallos+1)); else echo "OK   [$1] CSP de la tienda sin data:"; fi
   if echo "$csp" | grep -q "challenges.cloudflare.com"; then echo "OK   [$1] CSP de la tienda permite Turnstile"; else echo "FALLA [$1] CSP de la tienda sin challenges.cloudflare.com"; fallos=$((fallos+1)); fi
+  c="$(curl -sk -o /dev/null -w '%{http_code}' -H 'Host: izaoperfumeria.com' "https://127.0.0.1/media/warranty/2026/10/x-640.webp")"
+  if [ "$c" = 404 ]; then echo "OK   [$1] /media/warranty/ bloqueado (404)"; else echo "FALLA [$1] /media/warranty/ responde $c"; fallos=$((fallos+1)); fi
   # Server Actions de Next: un POST con la cabecera Next-Action se ejecuta en CUALQUIER ruta, así que
   # se limita por cabecera además de por ruta (evita esquivar el límite de /admin/login con POST a /).
   n429=0; n200=0
