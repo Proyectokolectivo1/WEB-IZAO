@@ -10,6 +10,8 @@
 - Agente de impresión (36470e5): `/admin/agente-impresion` (estado por heartbeat, cola, página de prueba, reimprimir) y `/[id]` (admin: activar/desactivar, rotar token, `remote_config` print/panel/intervals + modo). Token solo en la respuesta de alta/rotación, en base solo `hashTokenAgente`. `lib/admin/agentes/{esquemas,estado,servidor}.ts`.
 - Permisos probados en `acciones.test.ts` de pedidos y de agente (rol real vía `puede`).
 
+- Descuentos e Influencers (5be63ab): `/admin/descuentos` (lista con filtros en URL país/estado/origen/código, `nuevo`, `[id]` con reporte de uso, `lote`), `/admin/influencers` (fichas, códigos y enlaces `/{pais}?ref=CODIGO`, `reporte` por rango con Excel). Acciones `descuentos.gestionar` e `influencers.gestionar` (solo admin). Lib en `lib/admin/descuentos/`; `lib/admin/excel/libro.ts` (xlsx multihoja, montos numéricos exactos), `lib/admin/metricas/{pedidos,filtros}.ts` (fila de `orders` a `PedidoMetrica`, filtro de fechas por URL) y `components/admin/FiltroFechas.tsx` quedan listos para el Dashboard. `adminParaApiDe(modulo, accion)` en `crud/servidor.ts` para descargas.
+
 ## Pendiente
 - Pedidos: filtros por ciudad, código, influencer, novedad, guía/documento (§24.1); acciones masivas; "devolver stock" tras entregado/devuelto no existe.
 - Agente: capturas de error del agente (§24.1) no se muestran; editor visual de pasos del modo panel (hoy JSON validado).
@@ -24,4 +26,9 @@
 - Cancelar con envío en MasterShop 3+ se rechaza a propósito: se cancela allá y el webhook sincroniza.
 
 ## Punto de retoma
-Pedidos y Agente cerrados (tsc, eslint, 807 pruebas verdes). Siguiente: módulos restantes de §24.1 (Dashboard, Descuentos, Garantías, Usuarios, Apariencia…).
+Descuentos+Influencers cerrados (web: lint, tsc y 859+ pruebas verdes). Siguiente paso exacto: 2) Dashboard `/admin/metricas` (poner `dashboard.disponible: true`, actualizar `permissions.test.ts`): leer `orders` del rango (patrón de `reporteInfluencers`, 2 consultas paid_at/created_at + `payments` aprobados + `shipments.shipping_rate` + `country_settings`), `aPedidoMetrica` → `filasVentasDiarias` por día/país → `resumenPais`/`consolidarEnCop`/`serieDiaria`; tráfico, gastos y garantías de sus tablas; Excel con `crearLibroXlsx`. Luego 3) Garantías (hoy `EnConstruccion`), 4) Gastos, 5) Usuarios y roles, 6) Apariencia.
+
+## Avisos al líder
+- `FilaVentasDiarias` del núcleo trae columnas que `daily_sales_stats` NO tiene (`orders_abandoned`, `confirmed_revenue`, `carrier_platform_fees`, `shipping_estimated_count`) y no existe el job `metrics.recompute_day`: pedir a izao-db la migración y a izao-pagos/infra el job; mientras tanto el Dashboard calcula desde `orders`.
+- La tienda aún no procesa `?ref=CODIGO` (cookie 30 días, aplicar código y fijar `orders.influencer_id`): pendiente de izao-tienda/izao-pagos.
+- En el árbol hay fallos ajenos: `@izao/addi#typecheck` y `@izao/sistecredito#test`.
