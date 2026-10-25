@@ -16,6 +16,7 @@
     "crear-admin": "tsx --env-file=.env.local scripts/crear-admin.ts"
   },
   "dependencies": {
+    "@izao/addi": "workspace:*",
     "@izao/core": "workspace:*",
     "@izao/mastershop": "workspace:*",
     "@izao/ui": "workspace:*",

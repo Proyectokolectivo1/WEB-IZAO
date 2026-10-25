@@ -52,10 +52,10 @@ export type ResultadoWebhook = { ok: true } | { ok: false; error: string };
 export interface FuentePagosWorker {
   /** Credenciales activas de Wompi para CO, ya descifradas; `null` si no hay o están mal. */
   credencialesWompi(): Promise<WompiCredentials | null>;
-  /** Pagos de Wompi con esa referencia, del más antiguo al más reciente. */
+  /** Pagos del proveedor de la fuente (Wompi o Addi) con esa referencia, del más antiguo al más reciente. */
   pagosPorReferencia(referencia: string): Promise<PagoFila[]>;
   pagosPorLink(linkId: string): Promise<PagoFila[]>;
-  /** Pagos de Wompi del pedido, del más antiguo al más reciente. */
+  /** Pagos del proveedor de la fuente del pedido, del más antiguo al más reciente. */
   pagosDelPedido(orderId: string): Promise<PagoFila[]>;
   pedido(orderId: string): Promise<PedidoFila | null>;
   actualizarPago(id: string, cambios: CambiosPago): Promise<void>;
@@ -72,3 +72,6 @@ export interface FuentePagosWorker {
   registrarAlerta(orderId: string, motivo: string, payload: Record<string, string | null>): Promise<void>;
   marcarWebhook(eventId: string, resultado: ResultadoWebhook): Promise<void>;
 }
+
+/** Lo que usa el job de callbacks de financiación (Addi): sin credenciales de Wompi ni links de pago. */
+export type FuenteFinanciacionWorker = Omit<FuentePagosWorker, 'credencialesWompi' | 'pagosPorLink'>;

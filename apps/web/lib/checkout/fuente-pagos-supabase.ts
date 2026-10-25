@@ -1,5 +1,5 @@
 /**
- * `FuentePagos` y credenciales de Wompi sobre Supabase con el cliente de servicio (SOLO SERVIDOR).
+ * `FuentePagos` y credenciales de Wompi y Addi sobre Supabase con el cliente de servicio (SOLO SERVIDOR).
  * Las credenciales se descifran con `APP_ENCRYPTION_KEY` (`@izao/core/credentials`) y nunca salen de aquí:
  * ni al navegador ni a logs (solo el nombre del error).
  */
@@ -9,6 +9,7 @@ import { byteaDesdePostgrest, descifrarCredenciales } from '@izao/core/credentia
 import { toSafeNumber, type CountryCode } from '@izao/core/money';
 import { ORDER_STATUSES } from '@izao/core/order-state';
 import { amountSchema, countryCodeSchema, currencyCodeSchema } from '@izao/core/schemas';
+import { parseAddiCredentials, type AddiCredentials } from '@izao/addi';
 import { parseWompiCredentials, type WompiCredentials } from '@izao/wompi';
 import { ErrorDb, clienteDb } from '@/lib/db/cliente';
 import { aplicarEventoPedidoDb } from '@/lib/db/pedidos';
@@ -58,19 +59,24 @@ function fallo(tabla: string, error: { code?: string } | null): never {
   throw new ErrorDb(tabla, 'rpc', 'consulta fallida', error?.code ?? null);
 }
 
-/** Credencial activa de Wompi para CO, descifrada y validada contra su ambiente. `null` si no hay o no sirve. */
-export async function credencialesWompiActivas(): Promise<WompiCredentials | null> {
+/**
+ * Valores descifrados de la credencial activa (exactamente una) del proveedor para CO. `null` si no hay, hay
+ * varias o no se puede descifrar. Nunca registra valores: solo el nombre del error.
+ */
+async function credencialActivaCo(
+  provider: 'wompi' | 'addi',
+): Promise<{ valores: unknown; ambiente: 'sandbox' | 'production' } | null> {
   const clave = process.env.APP_ENCRYPTION_KEY;
   if (!clave) return null;
   const { data, error } = await clienteDb()
     .from('integration_credentials')
     .select('environment,data_encrypted,iv,key_version')
-    .eq('provider', 'wompi')
+    .eq('provider', provider)
     .eq('country_code', 'CO')
     .eq('is_active', true);
   if (error) fallo('integration_credentials', error);
   if (!data || data.length !== 1) {
-    if (data && data.length > 1) console.error('[pagos] hay más de una credencial activa de Wompi para CO');
+    if (data && data.length > 1) console.error(`[pagos] hay más de una credencial activa de ${provider} para CO`);
     return null;
   }
   const r = data[0] as Record<string, unknown>;
@@ -78,19 +84,35 @@ export async function credencialesWompiActivas(): Promise<WompiCredentials | nul
   try {
     const valores = await descifrarCredenciales(
       clave,
-      { provider: 'wompi', country_code: 'CO', environment: ambiente },
+      { provider, country_code: 'CO', environment: ambiente },
       {
         data_encrypted: byteaDesdePostgrest(String(r.data_encrypted)),
         iv: byteaDesdePostgrest(String(r.iv)),
         key_version: Number(r.key_version),
       },
     );
-    const p = parseWompiCredentials(valores, ambiente);
-    return p.ok ? p.credenciales : null;
+    return { valores, ambiente };
   } catch (e) {
-    console.error(`[pagos] credenciales de Wompi ilegibles: ${e instanceof Error ? e.name : 'error'}`);
+    console.error(`[pagos] credenciales de ${provider} ilegibles: ${e instanceof Error ? e.name : 'error'}`);
     return null;
   }
+}
+
+/** Credencial activa de Wompi para CO, descifrada y validada contra su ambiente. `null` si no hay o no sirve. */
+export async function credencialesWompiActivas(): Promise<WompiCredentials | null> {
+  const c = await credencialActivaCo('wompi');
+  if (!c) return null;
+  const p = parseWompiCredentials(c.valores, c.ambiente);
+  return p.ok ? p.credenciales : null;
+}
+
+/** Credencial activa de Addi para CO (client credentials y usuario/clave del callback). `null` si no hay o no sirve. */
+export async function credencialesAddiActivas(): Promise<AddiCredentials | null> {
+  const c = await credencialActivaCo('addi');
+  if (!c) return null;
+  const p = parseAddiCredentials(c.valores, c.ambiente);
+  if (!p.ok) console.error(`[pagos] credenciales de Addi incompletas: ${p.problemas.map((x) => x.key).join(',')}`);
+  return p.ok ? p.credenciales : null;
 }
 
 export const fuentePagosSupabase: FuentePagos = {

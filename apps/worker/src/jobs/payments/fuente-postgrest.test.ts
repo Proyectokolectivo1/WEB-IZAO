@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { byteaParaPostgrest, cifrarCredenciales } from '@izao/core/credentials';
 import { transicionar } from '@izao/core/order-state';
-import { crearFuentePostgrest } from './fuente-postgrest.js';
+import { crearFuenteAddiPostgrest, crearFuentePostgrest } from './fuente-postgrest.js';
 
 const CLAVE = 'AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=';
 const LLAVE_SB = 'llave-de-servidor-ficticia';
@@ -123,5 +123,20 @@ describe('fuente PostgREST de pagos', () => {
     )) as Error;
     expect(e.message).toBe('PostgREST orders respondió HTTP 500');
     expect(e.message).not.toContain(LLAVE_SB);
+  });
+
+  it('fuente de Addi: filtra pagos y webhooks por provider addi y alerta con actor webhook:addi', async () => {
+    const { f, llamadas } = fetchFalso(() => ({ status: 200, cuerpo: [] }));
+    const fuente = crearFuenteAddiPostgrest({ supabaseUrl: 'https://x.supabase.co', secretKey: LLAVE_SB, claveCifrado: CLAVE, fetchImpl: f });
+    expect('credencialesWompi' in fuente).toBe(false);
+    await fuente.pagosPorReferencia('IZ-CO-000123-A1');
+    await fuente.pagosDelPedido('o1');
+    await fuente.registrarAlerta('o1', 'monto_no_coincide', { reference: 'IZ-CO-000123-A1' });
+    await fuente.marcarWebhook('app.APPROVED.1', { ok: true });
+    expect(llamadas[0]!.url).toContain('payments?provider=eq.addi&provider_reference=eq.IZ-CO-000123-A1&order=created_at.asc');
+    expect(llamadas[1]!.url).toContain('payments?provider=eq.addi&order_id=eq.o1');
+    expect(llamadas[2]!.cuerpo).toMatchObject({ order_id: 'o1', type: 'alerta', actor: 'webhook:addi', payload: { motivo: 'monto_no_coincide' } });
+    expect(llamadas[3]!.url).toContain('webhook_events?provider=eq.addi&event_id=eq.app.APPROVED.1');
+    expect(llamadas[3]!.metodo).toBe('PATCH');
   });
 });

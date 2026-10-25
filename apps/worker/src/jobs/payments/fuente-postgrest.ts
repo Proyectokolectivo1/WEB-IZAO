@@ -11,8 +11,15 @@ import { fromDbAmount, toSafeNumber, type CountryCode, type CurrencyCode } from 
 import type { OrderStatus } from '@izao/core/order-state';
 import type { StockState } from '@izao/core/contracts';
 import { parseWompiCredentials } from '@izao/wompi';
-import { aplicarTransicionRpc, crearClientePostgrest, eq, type Fila, type OpcionesPostgrest } from '../postgrest.js';
-import type { FuentePagosWorker, PagoFila } from './fuente.js';
+import {
+  aplicarTransicionRpc,
+  crearClientePostgrest,
+  eq,
+  type ClientePostgrest,
+  type Fila,
+  type OpcionesPostgrest,
+} from '../postgrest.js';
+import type { FuenteFinanciacionWorker, FuentePagosWorker, PagoFila } from './fuente.js';
 
 export { ErrorPostgrest, interpretarTransicion, type OpcionesPostgrest } from '../postgrest.js';
 
@@ -37,10 +44,8 @@ function aPago(f: Fila): PagoFila {
 
 export function crearFuentePostgrest(o: OpcionesPostgrest): FuentePagosWorker {
   const c = crearClientePostgrest(o);
-  const { pedir, filas } = c;
-  const rpc = (nombre: string, orderId: string) => c.rpcPedido(nombre, orderId);
-
   return {
+    ...fuenteDeProveedor(c, 'wompi'),
     async credencialesWompi() {
       const cred = await c.credencial('wompi', 'CO', 'pagos');
       if (!cred) return null;
@@ -48,19 +53,33 @@ export function crearFuentePostgrest(o: OpcionesPostgrest): FuentePagosWorker {
       if (!p.ok) console.error(`[pagos] credenciales de Wompi incompletas: ${p.problemas.map((x) => x.key).join(',')}`);
       return p.ok ? p.credenciales : null;
     },
-    async pagosPorReferencia(referencia) {
-      return (
-        await filas('payments', `payments?provider=eq.wompi&provider_reference=${eq(referencia)}&order=created_at.asc&select=${COLUMNAS_PAGO}`)
-      ).map(aPago);
-    },
     async pagosPorLink(linkId) {
       return (
-        await filas('payments', `payments?provider=eq.wompi&payment_link_id=${eq(linkId)}&order=created_at.asc&select=${COLUMNAS_PAGO}`)
+        await c.filas('payments', `payments?provider=eq.wompi&payment_link_id=${eq(linkId)}&order=created_at.asc&select=${COLUMNAS_PAGO}`)
+      ).map(aPago);
+    },
+  };
+}
+
+/** Fuente del job `addi.callback`: mismas operaciones filtradas por `provider = addi` (sin credenciales: no reconsulta). */
+export function crearFuenteAddiPostgrest(o: OpcionesPostgrest): FuenteFinanciacionWorker {
+  return fuenteDeProveedor(crearClientePostgrest(o), 'addi');
+}
+
+function fuenteDeProveedor(c: ClientePostgrest, proveedor: 'wompi' | 'addi'): FuenteFinanciacionWorker {
+  const { pedir, filas } = c;
+  const rpc = (nombre: string, orderId: string) => c.rpcPedido(nombre, orderId);
+  const actor = `webhook:${proveedor}`;
+
+  return {
+    async pagosPorReferencia(referencia) {
+      return (
+        await filas('payments', `payments?provider=eq.${proveedor}&provider_reference=${eq(referencia)}&order=created_at.asc&select=${COLUMNAS_PAGO}`)
       ).map(aPago);
     },
     async pagosDelPedido(orderId) {
       return (
-        await filas('payments', `payments?provider=eq.wompi&order_id=${eq(orderId)}&order=created_at.asc&select=${COLUMNAS_PAGO}`)
+        await filas('payments', `payments?provider=eq.${proveedor}&order_id=${eq(orderId)}&order=created_at.asc&select=${COLUMNAS_PAGO}`)
       ).map(aPago);
     },
     async pedido(orderId) {
@@ -112,12 +131,12 @@ export function crearFuentePostgrest(o: OpcionesPostgrest): FuentePagosWorker {
       await pedir('order_events', 'order_events', {
         method: 'POST',
         headers: { prefer: 'return=minimal' },
-        body: JSON.stringify({ order_id: orderId, type: 'alerta', actor: 'webhook:wompi', payload: { motivo, ...payload } }),
+        body: JSON.stringify({ order_id: orderId, type: 'alerta', actor, payload: { motivo, ...payload } }),
       });
     },
     async marcarWebhook(eventId, r) {
       const cuerpo = r.ok ? { processed_at: new Date().toISOString(), error: null } : { error: r.error.slice(0, 200) };
-      await pedir('webhook_events', `webhook_events?provider=eq.wompi&event_id=${eq(eventId)}`, {
+      await pedir('webhook_events', `webhook_events?provider=eq.${proveedor}&event_id=${eq(eventId)}`, {
         method: 'PATCH',
         headers: { prefer: 'return=minimal' },
         body: JSON.stringify(cuerpo),

@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@izao/addi": "workspace:*",
     "@izao/core": "workspace:*",
     "@izao/mastershop": "workspace:*",
     "@izao/whatsapp": "workspace:*",
