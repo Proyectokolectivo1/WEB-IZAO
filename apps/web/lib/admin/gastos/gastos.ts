@@ -66,6 +66,8 @@ export type DatosGasto = {
   /** Unidad menor de la moneda del país. */
   amount: bigint;
   description: string | null;
+  /** Comprobante (imagen subida con `kind = 'expense'`), opcional. */
+  attachment_media_id: string | null;
 };
 
 /** Esquema del formulario; la moneda sale del país elegido. `hoy` (Bogotá) impide registrar gastos futuros. */
@@ -96,6 +98,12 @@ export function esquemaGasto(pais: PaisAjustes, hoy: string = fechaBogota(new Da
       .trim()
       .max(300, 'Máximo 300 caracteres.')
       .default('')
+      .transform((v) => (v === '' ? null : v)),
+    attachment_media_id: z
+      .string()
+      .trim()
+      .default('')
+      .refine((v) => v === '' || UUID.test(v), 'Comprobante no válido.')
       .transform((v) => (v === '' ? null : v)),
   }) as unknown as z.ZodType<DatosGasto, unknown>;
 }

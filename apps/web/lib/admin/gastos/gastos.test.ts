@@ -40,6 +40,14 @@ describe('esquemaGasto', () => {
   });
 });
 
+describe('comprobante', () => {
+  it('es opcional y debe ser un id válido', () => {
+    expect(esquemaGasto('CO', HOY).parse(entrada()).attachment_media_id).toBeNull();
+    expect(esquemaGasto('CO', HOY).parse(entrada({ attachment_media_id: CAT })).attachment_media_id).toBe(CAT);
+    expect(esquemaGasto('CO', HOY).safeParse(entrada({ attachment_media_id: 'x' })).success).toBe(false);
+  });
+});
+
 describe('categorías', () => {
   it('el slug sale del nombre y la pauta lleva el prefijo que usa el ROAS', () => {
     expect(slugDeCategoria('Empaques y cajas', false)).toBe('empaques_y_cajas');

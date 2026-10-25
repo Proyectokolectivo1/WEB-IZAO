@@ -69,6 +69,26 @@ describe('guardarGastoBd', () => {
   });
 });
 
+describe('comprobante del gasto', () => {
+  it('guarda el comprobante solo si es una imagen subida como «expense»', async () => {
+    const ok = clienteFalso({
+      'expense_categories.select': { data: { id: CAT } },
+      'media.select': { data: { id: CAT } },
+      'expenses.insert': { data: { id: ID } },
+    });
+    expect((await guardarGastoBd({ cliente: ok.cliente, datos: datos({ attachment_media_id: CAT }), ...comun })).ok).toBe(true);
+    expect(ok.llamadas.find((l) => l.clave === 'expenses.insert')!.args[0]).toMatchObject({ attachment_media_id: CAT });
+    expect(ok.filtros.some((f) => f.tabla === 'media' && f.metodo === 'eq' && f.args[0] === 'kind' && f.args[1] === 'expense')).toBe(true);
+
+    const no = clienteFalso({ 'expense_categories.select': { data: { id: CAT } }, 'media.select': { data: null } });
+    expect(await guardarGastoBd({ cliente: no.cliente, datos: datos({ attachment_media_id: CAT }), ...comun })).toMatchObject({
+      ok: false,
+      errores: { attachment_media_id: expect.any(String) },
+    });
+    expect(no.llamadas.some((l) => l.clave === 'expenses.insert')).toBe(false);
+  });
+});
+
 describe('eliminarGastoBd', () => {
   it('borra un manual y guarda el registro completo en la auditoría', async () => {
     const antes = { id: ID, source: 'manual', amount: 5000 };

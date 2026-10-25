@@ -34,12 +34,13 @@ export type FilaGasto = {
   description: string | null;
   source: OrigenGasto;
   external_ref: string | null;
+  attachment_media_id: string | null;
   expense_categories: { name: string; slug: string } | null;
 };
 
 export type FilaCategoriaGasto = { id: string; slug: string; name: string; is_system: boolean };
 
-const COLUMNAS = 'id, country_code, category_id, date, amount, currency_code, description, source, external_ref, expense_categories(name, slug)';
+const COLUMNAS = 'id, country_code, category_id, date, amount, currency_code, description, source, external_ref, attachment_media_id, expense_categories(name, slug)';
 const PAGINA_TOTALES = 1000;
 const MAX_PAGINAS_TOTALES = 30;
 
@@ -159,6 +160,7 @@ function columnas(d: DatosGasto): Record<string, unknown> {
     amount: d.amount.toString(),
     currency_code: MONEDA_PAIS[d.country_code],
     description: d.description,
+    attachment_media_id: d.attachment_media_id,
   };
 }
 
@@ -167,6 +169,11 @@ export async function guardarGastoBd(args: Ctx & { datos: DatosGasto }): Promise
   const fila = columnas(datos);
   const { data: categoria } = await cliente.from('expense_categories').select('id').eq('id', datos.category_id).maybeSingle();
   if (!categoria) return { ok: false, mensaje: 'Esa categoría ya no existe.', errores: { category_id: 'Elige una categoría.' } };
+  if (datos.attachment_media_id) {
+    // Solo imágenes subidas como comprobante de gasto: no se adjunta cualquier archivo del sitio.
+    const { data: media } = await cliente.from('media').select('id').eq('id', datos.attachment_media_id).eq('kind', 'expense').maybeSingle();
+    if (!media) return { ok: false, mensaje: 'Ese comprobante no es válido. Súbelo de nuevo.', errores: { attachment_media_id: 'Sube el comprobante de nuevo.' } };
+  }
 
   if (datos.id) {
     const { data: antes } = await cliente.from('expenses').select('*').eq('id', datos.id).maybeSingle();
@@ -241,4 +248,14 @@ export async function eliminarCategoriaGastoBd(args: Ctx & { id: string }): Prom
   if (error) return { ok: false, ...traducirErrorBd(error) };
   await auditarCambio({ actor, accion: 'gastos.categoria_eliminada', entidad: 'expense_categories', entidadId: id, diff: { antes }, ip });
   return { ok: true };
+}
+
+/** Comprobante de un gasto (miniatura), para mostrarlo en el formulario. */
+export async function comprobanteDeGasto(cliente: Cliente, mediaId: string | null): Promise<{ id: string; ruta: string; alt: string } | null> {
+  if (!mediaId) return null;
+  const { data } = await cliente.from('media').select('id, variants, alt').eq('id', mediaId).maybeSingle();
+  if (!data) return null;
+  const m = data as { id: string; variants: Record<string, string> | null; alt: string | null };
+  const v = m.variants ?? {};
+  return { id: m.id, ruta: v['400'] ?? Object.values(v)[0] ?? '', alt: m.alt ?? '' };
 }

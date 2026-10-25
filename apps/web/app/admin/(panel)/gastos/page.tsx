@@ -143,7 +143,10 @@ export default async function PaginaGastos({
                       {g.source === 'manual' ? <Link href={`/admin/gastos/${g.id}`}>{g.date}</Link> : g.date}
                     </td>
                     <td>{g.expense_categories?.name ?? '—'}</td>
-                    <td className="adm-suave">{g.description ?? '—'}</td>
+                    <td className="adm-suave">
+                      {g.description ?? '—'}
+                      {g.attachment_media_id ? <span className="adm-insignia"> Comprobante</span> : null}
+                    </td>
                     <td>
                       <span className="adm-insignia">{ETIQUETA_ORIGEN_GASTO[g.source] ?? g.source}</span>
                     </td>

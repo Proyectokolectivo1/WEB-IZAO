@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { BotonConfirmar } from '@/components/admin/BotonConfirmar';
 import { FormularioGasto } from '@/components/admin/FormularioGasto';
 import { leerPais } from '@/components/admin/PestanasPais';
-import { listarCategoriasGasto, obtenerGasto } from '@/lib/admin/gastos/servidor';
+import { comprobanteDeGasto, listarCategoriasGasto, obtenerGasto } from '@/lib/admin/gastos/servidor';
 import { hoyBogota } from '@/lib/admin/metricas/filtros';
 import { MONEDA_PAIS, montoATexto } from '@/lib/admin/pagos/ajustes';
 import { requerirAdmin } from '@/lib/auth/guard';
@@ -31,6 +31,7 @@ export default async function EditarGasto({
   const cliente = crearClienteServicio();
   const [gasto, categorias] = await Promise.all([nuevo ? null : obtenerGasto(cliente, id), listarCategoriasGasto(cliente)]);
   if (!nuevo && !gasto) notFound();
+  const comprobante = await comprobanteDeGasto(cliente, gasto?.attachment_media_id ?? null);
   const pais = gasto?.country_code ?? leerPais(sp.pais);
   const hoy = hoyBogota(new Date());
   const volver = `/admin/gastos?pais=${pais}`;
@@ -54,6 +55,7 @@ export default async function EditarGasto({
             volverHref={volver}
             hoy={hoy}
             categorias={categorias}
+            comprobante={comprobante}
             inicial={{
               ...(gasto ? { id: gasto.id } : {}),
               country_code: pais,

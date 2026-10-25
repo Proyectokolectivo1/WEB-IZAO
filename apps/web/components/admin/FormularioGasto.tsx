@@ -7,6 +7,7 @@ import { ESTADO_INICIAL, type ResultadoAccion } from '@/lib/admin/crud/comun';
 import { CampoAreaTexto } from './CampoAreaTexto';
 import { CampoSelect } from './CampoSelect';
 import { CampoTexto } from './CampoTexto';
+import { SelectorImagen, type ImagenInicial } from './SelectorImagen';
 
 export type ValoresGasto = {
   id?: string;
@@ -24,6 +25,7 @@ export function FormularioGasto({
   accion,
   volverHref,
   hoy,
+  comprobante,
 }: {
   inicial: ValoresGasto;
   categorias: readonly { id: string; name: string }[];
@@ -31,6 +33,8 @@ export function FormularioGasto({
   volverHref: string;
   /** Hoy en Bogotá: tope del selector de fecha. */
   hoy: string;
+  /** Comprobante actual, si el gasto ya tiene uno. */
+  comprobante?: ImagenInicial | undefined;
 }) {
   const [estado, enviar, pendiente] = useActionState(accion, ESTADO_INICIAL);
   const errores = estado.ok ? {} : (estado.errores ?? {});
@@ -74,6 +78,14 @@ export function FormularioGasto({
         />
       </div>
       <CampoAreaTexto id="description" name="description" etiqueta="Descripción (opcional)" rows={3} defaultValue={inicial.description} maxLength={300} error={errores.description} />
+      <SelectorImagen
+        nombre="attachment_media_id"
+        etiqueta="Comprobante (opcional)"
+        kind="expense"
+        inicial={comprobante}
+        ayuda="Una foto de la factura o el recibo. Describe qué es en el texto alternativo."
+        error={errores.attachment_media_id}
+      />
       <div className="adm-acciones">
         <button type="submit" className="adm-boton" disabled={pendiente}>
           {pendiente ? 'Guardando…' : 'Guardar gasto'}

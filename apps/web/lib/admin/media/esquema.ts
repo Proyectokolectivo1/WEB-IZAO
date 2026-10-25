@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const TIPOS_MEDIA = ['product', 'banner', 'site', 'category', 'review', 'warranty'] as const;
+export const TIPOS_MEDIA = ['product', 'banner', 'site', 'category', 'review', 'warranty', 'expense'] as const;
 
 /** Campos del formulario de subida. `alt` es obligatorio (accesibilidad y SEO). */
 export const esquemaSubida = z.object({

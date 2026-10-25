@@ -21,7 +21,7 @@ export function SelectorImagen({
 }: {
   nombre: string;
   etiqueta: string;
-  kind: 'product' | 'banner' | 'site' | 'category' | 'review' | 'warranty';
+  kind: 'product' | 'banner' | 'site' | 'category' | 'review' | 'warranty' | 'expense';
   inicial?: ImagenInicial | undefined;
   ayuda?: string | undefined;
   recorte45?: boolean;
