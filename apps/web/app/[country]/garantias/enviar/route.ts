@@ -1,5 +1,6 @@
 import { aCodigoCore, esPais } from '@/lib/store/pais';
-import { crearLimitadorMemoria, enteroEnv } from '@/lib/checkout/limite-tasa';
+import { enteroEnv } from '@/lib/checkout/limite-tasa';
+import { crearLimitadorRedis, redisTasa } from '@/lib/limite-tasa-redis';
 import { detectarTipo } from '@/lib/admin/media/validar';
 import { ajustesGarantia } from '@/lib/store/garantias/datos';
 import { fuenteGarantiasSupabase } from '@/lib/store/garantias/fuente-supabase';
@@ -23,7 +24,10 @@ import { usarSupabase } from '@/lib/store/checkout-datos';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const limitador = crearLimitadorMemoria({
+// Redis compartido entre réplicas (con respaldo en memoria si Redis falla).
+const limitador = crearLimitadorRedis({
+  prefijo: 'rl:garantias',
+  cliente: redisTasa,
   limite: enteroEnv(process.env.WARRANTY_RATE_LIMIT_PER_10MIN, 5),
   ventanaMs: 10 * 60_000,
 });
@@ -52,7 +56,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ country
   const pais = aCodigoCore(country);
   const ip = ipDe(req);
 
-  const decision = limitador.consumir(ip ?? 'sin-ip');
+  const decision = await limitador.consumir(ip ?? 'sin-ip');
   if (!decision.permitido) return responder({ ok: false, motivo: 'demasiados' }, { 'Retry-After': String(decision.reintentarEnSeg) });
 
   const largo = Number(req.headers.get('content-length') ?? '0');
