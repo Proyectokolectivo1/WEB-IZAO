@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { descartarReferido, referidoParaAplicar } from '@/lib/store/atribucion/referido';
 import { SERVIDOR_DISPONIBLE, pedirVistaPrevia } from '@/lib/store/carrito/adaptador';
 import { mensajeCodigo, type RespuestaVistaPrevia } from '@/lib/store/carrito/contrato';
 import { vistaPrevia } from '@/lib/store/carrito/logica';
@@ -50,17 +51,28 @@ export function useVistaPrevia(metodo: string | null = null) {
   const [ajuste, setAjuste] = useState<null | 'ajustado' | 'agotado'>(null);
   const lineasRef = useRef(lineas);
   lineasRef.current = lineas;
+  const codigoRef = useRef<string | null>(null);
 
-  // Código recordado de la sesión (la primera vista previa lo vuelve a validar).
+  // Código del enlace de referido (`?ref=`) que se puso solo: si el servidor lo rechaza, se retira sin avisar.
+  const referidoAuto = useRef<string | null>(null);
+
+  // Código recordado de la sesión, o el del enlace de referido (la primera vista previa lo vuelve a validar).
   useEffect(() => {
     const g = leerCodigo(pais);
     if (g) {
       setCodigo({ texto: g, estado: 'aplicado', mensaje: TC.resumen.codigoAplicado(g) });
+      return;
+    }
+    const ref = referidoParaAplicar(pais);
+    if (ref) {
+      referidoAuto.current = ref;
+      setCodigo({ texto: ref, estado: 'aplicado', mensaje: TC.resumen.codigoAplicado(ref) });
     }
   }, [pais]);
 
   const llaveLineas = lineas.map((l) => `${l.variantId}:${l.cantidad}`).join('|');
   const llaveCodigo = codigo?.estado === 'aplicado' ? codigo.texto : null;
+  codigoRef.current = codigo?.texto ?? null;
 
   useEffect(() => {
     if (!listo || lineasRef.current.length === 0) return;
@@ -99,7 +111,13 @@ export function useVistaPrevia(metodo: string | null = null) {
         }
         if (r.code?.status === 'rejected') {
           guardarCodigo(pais, null);
-          setCodigo({ texto: r.code.code, estado: 'rechazado', mensaje: mensajeCodigo(r.code.reason) });
+          if (referidoAuto.current === r.code.code) {
+            referidoAuto.current = null;
+            setCodigo(null);
+            setDescuentoServidor(null);
+          } else {
+            setCodigo({ texto: r.code.code, estado: 'rechazado', mensaje: mensajeCodigo(r.code.reason) });
+          }
         } else if (r.code?.status === 'applied') {
           setCodigo({ texto: r.code.code, estado: 'aplicado', mensaje: TC.resumen.codigoAplicado(r.code.code) });
         }
@@ -140,6 +158,8 @@ export function useVistaPrevia(metodo: string | null = null) {
   );
 
   const quitarCodigo = useCallback(() => {
+    if (codigoRef.current) descartarReferido(pais, codigoRef.current);
+    referidoAuto.current = null;
     guardarCodigo(pais, null);
     setCodigo(null);
     setDescuentoServidor(null);

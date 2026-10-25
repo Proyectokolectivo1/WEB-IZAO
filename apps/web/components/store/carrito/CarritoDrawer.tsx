@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Icono, IzaoImage, Sheet, clasesBoton } from '@izao/ui';
+import { descartarReferido, referidoParaAplicar } from '@/lib/store/atribucion/referido';
 import { pedirVistaPrevia } from '@/lib/store/carrito/adaptador';
 import { mensajeCodigo } from '@/lib/store/carrito/contrato';
 import { vistaPrevia } from '@/lib/store/carrito/logica';
@@ -33,6 +34,18 @@ export function CarritoDrawer() {
   const local = useMemo(() => vistaPrevia(lineas, pais, new Date()), [lineas, pais]);
   const llaveLineas = lineas.map((l) => `${l.variantId}:${l.cantidad}`).join('|');
   const llaveCodigo = codigo?.estado === 'aplicado' ? codigo.texto : null;
+  // Código del enlace de referido (`?ref=`) puesto solo: si el servidor lo rechaza, se retira sin avisar.
+  const referidoAuto = useRef<string | null>(null);
+  const referidoProbado = useRef(false);
+
+  useEffect(() => {
+    if (!abierto || codigo || referidoProbado.current) return;
+    referidoProbado.current = true;
+    const ref = referidoParaAplicar(pais);
+    if (!ref) return;
+    referidoAuto.current = ref;
+    setCodigo({ texto: ref, estado: 'aplicado', mensaje: T.carrito.codigoAplicado(ref) });
+  }, [abierto, codigo, pais]);
 
   // El servidor recalcula siempre: al abrir y al cambiar el bolso o el código se pide la vista previa.
   useEffect(() => {
@@ -64,7 +77,14 @@ export function CarritoDrawer() {
           reemplazar(actualizadas);
         }
         if (r.code && r.code.status === 'rejected') {
-          setCodigo({ texto: r.code.code, estado: 'rechazado', mensaje: mensajeCodigo(r.code.reason) });
+          if (referidoAuto.current === r.code.code) {
+            // No lo escribió la persona: se retira sin avisar (se vuelve a probar al recargar la página).
+            referidoAuto.current = null;
+            setCodigo(null);
+            setDescuentoServidor(null);
+          } else {
+            setCodigo({ texto: r.code.code, estado: 'rechazado', mensaje: mensajeCodigo(r.code.reason) });
+          }
         }
       } catch {
         /* sin red o cancelado: se queda el subtotal local */
@@ -233,7 +253,11 @@ export function CarritoDrawer() {
               >
                 {codigo?.mensaje}
                 {codigo?.estado === 'aplicado' ? (
-                  <button type="button" onClick={() => setCodigo(null)} className="ml-2 underline underline-offset-4">
+                  <button type="button" onClick={() => {
+                      descartarReferido(pais, codigo.texto);
+                      setCodigo(null);
+                    }}
+                    className="ml-2 underline underline-offset-4">
                     {T.carrito.quitarCodigo}
                   </button>
                 ) : null}

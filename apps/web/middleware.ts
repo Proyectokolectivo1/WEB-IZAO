@@ -17,13 +17,25 @@ import { NOMBRE_COOKIE_MARCA, NOMBRE_COOKIE_MARCA_MFA } from '@/lib/auth/marca-s
 import { auditarMfaNoAprobada } from '@/lib/auth/mfa-no-aprobada';
 import { tieneCookiesDeSesion } from '@/lib/auth/supabase/cookies';
 import { crearClienteMiddleware } from '@/lib/auth/supabase/middleware';
+import { aplicarAtribucion } from '@/lib/store/atribucion/middleware';
 
+// La atribución de la tienda (izao-tienda) solo corre con parámetros de campaña; las rutas internas quedan fuera.
+// Las fuentes van como literales (Next analiza el `matcher` de forma estática).
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*'],
+  matcher: [
+    '/admin/:path*',
+    '/api/admin/:path*',
+    { source: '/((?!admin|api|_next|.*\\..*).*)', has: [{ type: 'query', key: 'ref' }] },
+    { source: '/((?!admin|api|_next|.*\\..*).*)', has: [{ type: 'query', key: 'utm_source' }] },
+    { source: '/((?!admin|api|_next|.*\\..*).*)', has: [{ type: 'query', key: 'fbclid' }] },
+    { source: '/((?!admin|api|_next|.*\\..*).*)', has: [{ type: 'query', key: 'gclid' }] },
+    { source: '/((?!admin|api|_next|.*\\..*).*)', has: [{ type: 'query', key: 'ttclid' }] },
+  ],
 };
 
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  if (!pathname.startsWith('/admin') && !pathname.startsWith('/api/admin')) return aplicarAtribucion(request);
   const esApi = pathname.startsWith('/api/');
   const { supabase, obtenerRespuesta } = crearClienteMiddleware(request);
 
