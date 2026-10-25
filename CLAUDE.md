@@ -50,6 +50,15 @@ El VPS se opera **solo** con el MCP `contabo` (`tools/contabo-mcp/`, ver su READ
 
 El proyecto se construye con un equipo de agentes definido en `.claude/agents/` y coordinado según `docs/EQUIPO.md` (roles, modelos, dueños de archivos, oleadas y ciclo de revisión). Respeta la zona de archivos de tu rol: no edites archivos de otro dueño; pídeselo por mensaje.
 
+## Ahorro de tokens (obligatorio)
+
+- **Un solo agente a la vez.** El líder no lanza ni reanuda agentes en paralelo: espera el reporte del actual antes de despertar al siguiente. Excepción solo con orden explícita del usuario.
+- Antes de despertar a un agente, agrupa en un solo mensaje todo lo que le toca (no mandes tareas sueltas de una línea ni reanudes para preguntas triviales).
+- Pocas revisiones: `izao-revisor` solo al cerrar una oleada o un módulo de dinero/seguridad, no tras cada commit. El líder no relee archivos que el agente ya reportó; confía en el reporte y en `git log`.
+- Prefiere el modelo más barato que sirva para la tarea (Sonnet para CRUD y paneles; Opus solo para base de datos, dinero y seguridad).
+- Si un agente se corta por límite de sesión, no reintentes en bucle: espera al reinicio, reanúdalo una vez con `SendMessage` y que retome desde su bitácora y `git log`.
+- Mensajes entre agentes y reportes cortos (≤12 líneas), sin repetir lo que ya está en `docs/ESTADO.md`.
+
 ## Skills del proyecto
 
 | Skill | Área |
