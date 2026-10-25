@@ -8,9 +8,11 @@
  *   así que ningún pedido puede pasar a `pagado` por esta vía.
  * - Ninguna función sale a la red.
  */
+import { ESTADO_INTEGRACION_METODO } from '@izao/core/contracts';
 import type { SistecreditoCredentials } from './credentials';
 
-export const ESTADO_INTEGRACION_SISTECREDITO = 'pendiente_documentacion' as const;
+/** Fuente única: `ESTADO_INTEGRACION_METODO` de `@izao/core/contracts` (el checkout y el panel lo leen de allí). */
+export const ESTADO_INTEGRACION_SISTECREDITO = ESTADO_INTEGRACION_METODO.sistecredito;
 
 export type CodigoErrorSistecredito = 'NO_VERIFICADO';
 

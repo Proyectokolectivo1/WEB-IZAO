@@ -9,7 +9,8 @@
  * una sola transacción; un rechazo no deja nada escrito.
  *
  * El cobro lo prepara `http.ts`: Wompi con `pago-wompi.ts` y Addi con `pago-addi.ts`; el abono de contra entrega
- * lo encola. Pendiente: Sistecrédito (D-032), UTM y click IDs, `customer_id` y `gateway_fee_estimated`.
+ * lo encola. Sistecrédito no se acepta mientras su integración esté pendiente (`soloMetodosVendibles`, D-032).
+ * Pendiente: UTM y click IDs, `customer_id` y `gateway_fee_estimated`.
  */
 import { z } from 'zod';
 import { problemasClienteAddi } from '@izao/addi';
@@ -20,7 +21,7 @@ import {
   type PricingPaymentMethod,
   type PricingResult,
 } from '@izao/core/pricing';
-import { isFinancingMethod, type RedemptionRejectReason } from '@izao/core/contracts';
+import { isFinancingMethod, soloMetodosVendibles, type RedemptionRejectReason } from '@izao/core/contracts';
 import type { OrderStatus } from '@izao/core/order-state';
 import { checkoutInputSchemaFor, countryCodeSchema, orderSummarySchema, type CheckoutInput } from '@izao/core/schemas';
 import { cruzarCarrito } from './carrito';
@@ -254,8 +255,11 @@ export async function crearPedidoCheckout(
   const pais = pre.data.country_code;
 
   try {
-    const config = await fuente.configPais(pais);
-    if (!config || COUNTRY_CURRENCY[pais] !== config.ajustes.currency_code) return NO_DISPONIBLE();
+    const leida = await fuente.configPais(pais);
+    if (!leida || COUNTRY_CURRENCY[pais] !== leida.ajustes.currency_code) return NO_DISPONIBLE();
+    // Un método cuya integración no puede cobrar (Sistecrédito sin documentación, D-032) cuenta como inactivo
+    // aunque el panel lo tenga encendido: el esquema lo rechaza y `manual` queda permitido si no hay otro.
+    const config = { ...leida, metodos: soloMetodosVendibles(leida.metodos) };
     const activos = config.metodos.filter((m) => m.is_enabled).map((m) => m.method);
     const parsed = checkoutInputSchemaFor(activos).safeParse(cuerpo);
     if (!parsed.success) return invalido(parsed.error);

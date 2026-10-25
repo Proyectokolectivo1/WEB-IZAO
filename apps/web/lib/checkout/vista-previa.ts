@@ -10,6 +10,7 @@
  * - `applied` es provisional: el límite por cliente se verifica al crear el pedido.
  */
 import { z } from 'zod';
+import { soloMetodosVendibles } from '@izao/core/contracts';
 import { COUNTRY_CURRENCY, type CountryCode } from '@izao/core/money';
 import {
   calcularPrecios,
@@ -120,8 +121,10 @@ export async function vistaPrevia(
   opciones: OpcionesVistaPrevia = {},
 ): Promise<RespuestaVistaPreviaServidor | null> {
   const pais: CountryCode = entrada.country;
-  const config = await fuente.configPais(pais);
-  if (!config || COUNTRY_CURRENCY[pais] !== config.ajustes.currency_code) return null;
+  const leida = await fuente.configPais(pais);
+  if (!leida || COUNTRY_CURRENCY[pais] !== leida.ajustes.currency_code) return null;
+  // Métodos sin integración que cobre (Sistecrédito, D-032) se muestran como no disponibles (`METHOD_DISABLED`).
+  const config = { ...leida, metodos: soloMetodosVendibles(leida.metodos) };
 
   const ids = entrada.items.map((i) => i.variant_id);
   const [variantes, resuelto] = await Promise.all([

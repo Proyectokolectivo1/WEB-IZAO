@@ -153,6 +153,27 @@ describe('vista previa del carrito (POST /api/checkout/preview)', () => {
     expect(cod!.totals.available_methods.map((m) => m.method)).toEqual(['wompi', 'addi', 'sistecredito', 'cod']);
   });
 
+  it('Sistecrédito pendiente de documentación nunca figura disponible aunque el panel lo tenga activo (D-032)', async () => {
+    const f = fuenteDePrueba();
+    const r = await vistaPrevia(
+      f,
+      entrada({ country: 'co', items: [{ variant_id: V1, quantity: 1 }], payment_method: 'sistecredito' }),
+      AHORA,
+    );
+    expect(r!.totals.payment_method_available).toBe(false);
+    const st = r!.totals.available_methods.find((m) => m.method === 'sistecredito');
+    expect(st).toMatchObject({ available: false, reason: 'METHOD_DISABLED' });
+    expect(r!.totals.available_methods.filter((m) => m.available).map((m) => m.method)).toEqual(['wompi', 'addi', 'cod']);
+  });
+
+  it('país cuyo único método activo es Sistecrédito (pendiente) ofrece el pedido manual', async () => {
+    const f = fuenteDePrueba();
+    const cfg = f.config.get('CO')!;
+    f.config.set('CO', { ...cfg, metodos: cfg.metodos.map((m) => ({ ...m, is_enabled: m.method === 'sistecredito' })) });
+    const r = await vistaPrevia(f, entrada({ country: 'co', items: [{ variant_id: V1, quantity: 1 }] }), AHORA);
+    expect(r!.totals.manual_allowed).toBe(true);
+  });
+
   it('Ecuador en USD con centavos y sin métodos activos ofrece solo el pedido manual', async () => {
     const f = fuenteDePrueba();
     const r = await vistaPrevia(f, entrada({ country: 'ec', items: [{ variant_id: V4, quantity: 3 }] }), AHORA);

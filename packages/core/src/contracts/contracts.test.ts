@@ -2,8 +2,11 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { Money } from '../money';
 import {
   DOCUMENT_TYPES,
+  ESTADO_INTEGRACION_METODO,
   PAYMENT_METHODS,
   isFinancingMethod,
+  metodoVendible,
+  soloMetodosVendibles,
   maskSecret,
   maskedPreview,
   validateCredentials,
@@ -122,6 +125,29 @@ describe('contracts: dominio', () => {
     expect(isFinancingMethod('sistecredito')).toBe(true);
     expect(isFinancingMethod('wompi')).toBe(false);
     expect(isFinancingMethod('cod')).toBe(false);
+  });
+
+  it('Sistecrédito no se vende mientras su integración esté pendiente de documentación (D-032)', () => {
+    expect(ESTADO_INTEGRACION_METODO.sistecredito).toBe('pendiente_documentacion');
+    expect(metodoVendible('sistecredito')).toBe(false);
+    for (const m of ['wompi', 'addi', 'cod'] as const) expect(metodoVendible(m)).toBe(true);
+    expect(metodoVendible('otro')).toBe(false);
+    expect(Object.keys(ESTADO_INTEGRACION_METODO).sort()).toEqual([...PAYMENT_METHODS].sort());
+  });
+
+  it('soloMetodosVendibles apaga los métodos no vendibles sin perder los demás campos', () => {
+    const filas = [
+      { method: 'wompi' as const, is_enabled: true, sort_order: 1 },
+      { method: 'sistecredito' as const, is_enabled: true, sort_order: 2 },
+      { method: 'cod' as const, is_enabled: false, sort_order: 3 },
+    ];
+    const r = soloMetodosVendibles(filas);
+    expect(r).toEqual([
+      { method: 'wompi', is_enabled: true, sort_order: 1 },
+      { method: 'sistecredito', is_enabled: false, sort_order: 2 },
+      { method: 'cod', is_enabled: false, sort_order: 3 },
+    ]);
+    expect(filas[1]!.is_enabled).toBe(true);
   });
 
   it('tipos de documento por país (§10.1)', () => {

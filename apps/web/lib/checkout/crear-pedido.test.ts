@@ -148,13 +148,28 @@ describe('POST /api/checkout: crear pedido', () => {
     expect(p.canje).toBe('none');
   });
 
-  it('Sistecrédito con porcentaje decimal (12,5 %) redondea medio hacia arriba', async () => {
+  it('financiación con porcentaje decimal (12,5 %) redondea medio hacia arriba', async () => {
     const f = fuenteDePrueba();
+    const cfg = f.config.get('CO')!;
+    f.config.set('CO', {
+      ...cfg,
+      ajustes: { ...cfg.ajustes, financing_surcharge_pct: { ...cfg.ajustes.financing_surcharge_pct, addi: '12.5' } },
+    });
     f.vars.get(V1)!.precio = 199_999n;
-    const c = exito(await crearPedidoCheckout(f, cuerpo({ payment_method: 'sistecredito' }), AHORA));
+    const c = exito(await crearPedidoCheckout(f, cuerpo({ payment_method: 'addi' }), AHORA));
     // 199999 × 12,5 % = 24999,875 → 25000
     expect(c.order).toMatchObject({ surcharge: '25000', total_customer: '224999' });
     expect(soloPedido(f).fila.financing_surcharge_pct).toBe('12.50');
+  });
+
+  it('Sistecrédito activo en el panel pero pendiente de documentación → 400 en payment_method, sin pedido (D-032)', async () => {
+    const f = fuenteDePrueba();
+    expect(f.config.get('CO')!.metodos.find((m) => m.method === 'sistecredito')?.is_enabled).toBe(true);
+    const r = await crearPedidoCheckout(f, cuerpo({ payment_method: 'sistecredito' }), AHORA);
+    expect(r).toMatchObject({ ok: false, status: 400, cuerpo: { error: 'INVALID_INPUT' } });
+    if (!r.ok) expect(r.cuerpo.issues?.map((i) => i.path)).toContainEqual('payment_method');
+    expect(f.pedidos.size).toBe(0);
+    expect(f.llamadas).not.toContain('crearPedido');
   });
 
   it('método inactivo del país → 400 en payment_method', async () => {
@@ -320,7 +335,7 @@ describe('POST /api/checkout: crear pedido', () => {
     it.each<[string, Record<string, unknown>]>([
       ['otra cantidad', { items: [{ variant_id: V1, quantity: 2 }] }],
       ['otra línea', { items: [{ variant_id: V1, quantity: 1 }, { variant_id: V2, quantity: 1 }] }],
-      ['otro método', { payment_method: 'sistecredito' }],
+      ['otro método', { payment_method: 'cod' }],
       ['un código', { discount_code: 'DESC10' }],
       [
         'otra dirección',

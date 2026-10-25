@@ -23,6 +23,29 @@ export function isFinancingMethod(method: string): method is FinancingProvider {
   return method === 'addi' || method === 'sistecredito';
 }
 
+/**
+ * Estado de la integración de cada método (D-032). `pendiente_documentacion`: el adaptador no puede cobrar (sin
+ * documentación oficial), así que el método no se ofrece ni se acepta en el checkout aunque el panel lo tenga
+ * activo, y el panel no debe permitir activarlo. Se cambia aquí solo cuando el adaptador esté implementado.
+ */
+export const ESTADO_INTEGRACION_METODO = Object.freeze({
+  wompi: 'lista',
+  addi: 'lista',
+  sistecredito: 'pendiente_documentacion',
+  cod: 'lista',
+} as const satisfies Record<PaymentMethod, 'lista' | 'pendiente_documentacion'>);
+export type EstadoIntegracionMetodo = (typeof ESTADO_INTEGRACION_METODO)[PaymentMethod];
+
+/** `true` si el método existe y su integración puede cobrar. Para el checkout y el panel (`guardarMetodo`). */
+export function metodoVendible(method: string): method is PaymentMethod {
+  return (PAYMENT_METHODS as readonly string[]).includes(method) && ESTADO_INTEGRACION_METODO[method as PaymentMethod] === 'lista';
+}
+
+/** Copia de las filas de `payment_method_settings` con `is_enabled = false` en los métodos no vendibles. */
+export function soloMetodosVendibles<T extends { method: string; is_enabled: boolean }>(metodos: readonly T[]): T[] {
+  return metodos.map((m) => (m.is_enabled && !metodoVendible(m.method) ? { ...m, is_enabled: false } : m));
+}
+
 export type PaymentPurpose = 'full' | 'cod_deposit' | 'financing';
 
 export type PaymentStatus =
