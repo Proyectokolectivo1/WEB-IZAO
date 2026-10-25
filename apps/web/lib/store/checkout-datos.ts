@@ -5,7 +5,7 @@
  */
 import 'server-only';
 import { unstable_cache } from 'next/cache';
-import { DOCUMENT_TYPES } from '@izao/core/contracts';
+import { DOCUMENT_TYPES, soloMetodosVendibles } from '@izao/core/contracts';
 import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
 import { TOKEN_EJEMPLO } from './checkout/adaptador';
 import type { ConfigCheckout, EnlaceLegal, MetodoActivo, PoliticaLegal, MetodoReal, OpcionGeo } from './checkout/tipos';
@@ -88,7 +88,7 @@ const leerConfigSupabase = unstable_cache(
         .maybeSingle(),
       db
         .from('payment_method_settings')
-        .select('method,display_name,description,sort_order')
+        .select('method,display_name,description,sort_order,is_enabled')
         .eq('country_code', upper(pais))
         .eq('is_enabled', true)
         .order('sort_order'),
@@ -99,8 +99,12 @@ const leerConfigSupabase = unstable_cache(
     const pct = (ajustes.financing_surcharge_pct ?? {}) as Record<string, unknown>;
     const recargo: Record<string, string> = {};
     for (const [k, v] of Object.entries(pct)) if (typeof v === 'number' || typeof v === 'string') recargo[k] = String(v);
-    const metodos: MetodoActivo[] = ((ok(pm, 'payment_method_settings') ?? []) as Fila[])
-      .filter((m) => METODOS.includes(m.method as MetodoReal) && (m.method !== 'cod' || codHabilitado))
+    // Sistecrédito y cualquier método sin integración lista salen apagados aunque el panel los tenga activos.
+    const filasMetodos = soloMetodosVendibles(
+      ((ok(pm, 'payment_method_settings') ?? []) as Fila[]).map((m): Fila & { method: string; is_enabled: boolean } => ({ ...m, method: String(m.method), is_enabled: m.is_enabled === true })),
+    );
+    const metodos: MetodoActivo[] = filasMetodos
+      .filter((m) => m.is_enabled && METODOS.includes(m.method as MetodoReal) && (m.method !== 'cod' || codHabilitado))
       .map((m) => ({
         method: m.method as MetodoReal,
         nombre: texto(m.display_name) ?? String(m.method),
