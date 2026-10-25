@@ -3845,12 +3845,15 @@ export type Database = {
       admin_guardar_producto: { Args: { p: Json }; Returns: Json }
       admin_importar_catalogo: { Args: { p: Json }; Returns: Json }
       admin_producto_estado: { Args: { p_product_id: string }; Returns: Json }
+      admin_publicar_pagina: { Args: { p: Json }; Returns: Json }
       admin_sync_producto_interno: {
         Args: { p: Json; p_completo: boolean }
         Returns: Json
       }
       admin_textos: { Args: { v: Json }; Returns: string[] }
+      anonimizar_cliente: { Args: { p_id: string }; Returns: Json }
       aplicar_transicion_pedido: { Args: { p: Json }; Returns: Json }
+      cancelar_pedido: { Args: { p: Json }; Returns: Json }
       catalog_item_json: {
         Args: { cl: Database["public"]["Tables"]["catalog_listing"]["Row"] }
         Returns: Json

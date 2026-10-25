@@ -8,6 +8,8 @@
 - 20261025141454 tops del dashboard + `media.kind='expense'` (pgTAP 30 47/47). Rendimiento con 100 000 pedidos CO en 12 meses
   (en transacción revertida): ciudades 83 ms, deptos 75, productos 105, códigos 36, influencers 34, fuentes 70, guías 171;
   las 8 llamadas en serie 586 ms; 30 días 12 ms (Index Scan orders_country_atribucion_idx). Advisors: solo INFO.
+- 20261025143040 RPC atómicas del panel (pgTAP 31 52/52; envoltorios `lib/db/panel-atomicas.ts`). Rating al moderar: ya lo hace
+  el trigger `catalog_listing_refresh` de reviews (sin cambios; probado en 31).
 ## Contratos vigentes (detalle en el commit de cada migración)
 - `crear_pedido_checkout(p jsonb)` → `{ok, estado:'creado'|'existente'|'rechazado', order|motivo}` (motivos en 20261020213954).
 - `pages.kind` (general, quienes_somos, envios, tratamiento_datos, terminos, devoluciones); única publicada por (país, kind) → 23505.
@@ -23,10 +25,12 @@
   codigo|influencer|fuente, …)`, `metricas_panel_guias`. Firmas y columnas en la cabecera de 20261025141454.
 - `orders.sale_source` text not null generada (stored) = `fuente_venta(utm, click_ids)` (igual a `fuenteDeVenta` del panel).
   No se escribe nunca (insert/update con la columna → error). `media.kind` admite `expense`.
+- `anonimizar_cliente(p_id)` (definer) → `anonimizarClienteDb`; `cancelar_pedido(p)` → `cancelarPedidoDb` (cancela + libera la
+  reserva; stock ya confirmado no se devuelve); `admin_publicar_pagina(p)` → `publicarPaginaDb`. Formas en la cabecera de la migración.
 ## Pendiente
 1. Rendimiento T2.7: explain (analyze, buffers) y p95 de 50 corridas por RPC del catálogo. 2. pgTAP 01–22 remoto.
 3. Concurrencia de `crear_pedido_checkout` con dos sesiones (tests/concurrencia/run.sh). store_*: solo si izao-tienda lo pide.
-4. Opcional (izao-admin): `admin_publicar_pagina`; cancelar + liberar stock en una transacción.
+4. Decisión del líder: ¿cancelar un pedido pagado (stock confirmado) debe devolver las unidades al stock?
 ## Siguiente paso exacto: Pendiente 1 (explain de las RPC del catálogo) salvo nueva tarea del líder.
 ## Notas
 - pgTAP por el MCP: `insert into tap(l) select ...` (temp), sin begin/rollback, cierre `raise exception 'RESUMEN %'` (deshace todo).
