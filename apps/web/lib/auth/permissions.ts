@@ -137,7 +137,7 @@ export const MODULOS = {
     roles: SOLO_ADMIN,
     disponible: true,
   },
-  sistema: { etiqueta: 'Sistema', ruta: '/admin/sistema', roles: SOLO_ADMIN, disponible: false },
+  sistema: { etiqueta: 'Sistema', ruta: '/admin/sistema', roles: SOLO_ADMIN, disponible: true },
 } as const satisfies Record<string, ModuloDef>;
 
 export type ModuloId = keyof typeof MODULOS;
@@ -183,6 +183,8 @@ export const ACCIONES = {
   'descuentos.gestionar': SOLO_ADMIN,
   /** Fichas de influencers y su reporte (§17.2, §24.1). */
   'influencers.gestionar': SOLO_ADMIN,
+  /** Reintentar un job fallido de las colas desde Sistema (§24.1). Ver colas, errores y auditoría exige el módulo. */
+  'sistema.reintentar_job': SOLO_ADMIN,
   /** Colores, tipografía, logo y favicon, globales o por país (§8, §24.1). */
   'apariencia.gestionar': SOLO_ADMIN,
   /** Crear usuarios del panel, cambiar rol/estado, restablecer contraseña y reiniciar el MFA (§24.1). */
