@@ -11,6 +11,7 @@ import { traducirErrorBd } from '../crud/servidor';
 import { COLUMNAS_PEDIDO_METRICA, aPedidoMetrica, type FilaPedidoMetrica } from '../metricas/pedidos';
 import {
   centesimasATexto,
+  porcentajeACentesimas,
   reportePorInfluencer,
   type DatosInfluencer,
   type FilaReporteInfluencer,
@@ -199,7 +200,7 @@ export async function reporteInfluencers(
     : { data: [] };
   const lista = (fichas ?? []) as { id: string; name: string; handle: string | null; commission_pct: number | string | null }[];
   const comisiones = new Map(
-    lista.map((i) => [i.id, i.commission_pct === null ? null : Math.round(Number(i.commission_pct) * 100)] as const),
+    lista.map((i) => [i.id, i.commission_pct === null ? null : porcentajeACentesimas(String(i.commission_pct))] as const),
   );
   const porId = new Map(lista.map((i) => [i.id, i]));
   const agregadas = reportePorInfluencer(pedidos, comisiones);

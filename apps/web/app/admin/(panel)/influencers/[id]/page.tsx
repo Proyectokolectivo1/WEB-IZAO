@@ -53,7 +53,7 @@ export default async function EditarInfluencer({
           country_code: pais,
           phone: ficha?.phone ?? '',
           email: ficha?.email ?? '',
-          commission_pct: ficha?.commission_pct === null || ficha?.commission_pct === undefined ? '' : String(Number(ficha.commission_pct)),
+          commission_pct: ficha?.commission_pct === null || ficha?.commission_pct === undefined ? '' : String(ficha.commission_pct),
           notes: ficha?.notes ?? '',
           is_active: ficha?.is_active ?? true,
         }}

@@ -1,6 +1,7 @@
 /** GET /api/admin/influencers/reporte?pais=CO&rango=este_mes | desde=…&hasta=…: reporte por influencer en Excel. */
 import { NextResponse } from 'next/server';
 import { adminParaApiDe } from '@/lib/admin/crud/servidor';
+import { porcentajeACentesimas } from '@/lib/admin/descuentos/influencers';
 import { reporteInfluencers } from '@/lib/admin/descuentos/influencers-servidor';
 import { TIPO_XLSX, crearLibroXlsx } from '@/lib/admin/excel/libro';
 import { leerFiltroFechas } from '@/lib/admin/metricas/filtros';
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
         { tipo: 'entero', valor: f.devueltos },
         { tipo: 'monto', valor: f.ingresosConfirmados, moneda: f.moneda },
         f.ticketPromedio === null ? null : { tipo: 'monto', valor: f.ticketPromedio, moneda: f.moneda },
-        f.comisionPct === null ? null : { tipo: 'bp', valor: BigInt(Math.round(Number(f.comisionPct) * 100)) },
+        f.comisionPct === null ? null : { tipo: 'bp', valor: BigInt(porcentajeACentesimas(String(f.comisionPct)) ?? 0) },
         f.comision === null ? null : { tipo: 'monto', valor: f.comision, moneda: f.moneda },
       ]),
     },
