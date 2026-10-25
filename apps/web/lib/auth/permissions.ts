@@ -85,7 +85,7 @@ export const MODULOS = {
     roles: SOLO_ADMIN,
     disponible: true,
   },
-  resenas: { etiqueta: 'Reseñas', ruta: '/admin/resenas', roles: SOLO_ADMIN, disponible: false },
+  resenas: { etiqueta: 'Reseñas', ruta: '/admin/resenas', roles: SOLO_ADMIN, disponible: true },
   descuentos: {
     etiqueta: 'Descuentos',
     ruta: '/admin/descuentos',
@@ -183,6 +183,8 @@ export const ACCIONES = {
   'descuentos.gestionar': SOLO_ADMIN,
   /** Fichas de influencers y su reporte (§17.2, §24.1). */
   'influencers.gestionar': SOLO_ADMIN,
+  /** Moderar reseñas, escribir las de Izao, destacar en el home y borrar spam (§9.6, §24.1). */
+  'resenas.gestionar': SOLO_ADMIN,
   /** Orden, activación y contenido de las secciones del home por país (§8.5, §24.1). */
   'home.gestionar': SOLO_ADMIN,
   /** Reintentar un job fallido de las colas desde Sistema (§24.1). Ver colas, errores y auditoría exige el módulo. */
