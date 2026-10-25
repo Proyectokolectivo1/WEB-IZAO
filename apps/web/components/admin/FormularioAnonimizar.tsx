@@ -26,7 +26,7 @@ export function FormularioAnonimizar({
       <CampoTexto
         id="motivo"
         name="motivo"
-        etiqueta="Solicitud (quién la hizo y cuándo)"
+        etiqueta="Solicitud (número de radicado o fecha)"
         maxLength={300}
         required
         ayuda="Queda en la auditoría. No escribas datos personales del cliente."

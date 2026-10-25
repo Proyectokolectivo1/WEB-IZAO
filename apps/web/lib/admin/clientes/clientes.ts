@@ -83,7 +83,7 @@ export const esquemaAnonimizar = z.object({
   motivo: z
     .string()
     .trim()
-    .min(5, 'Anota quién lo pidió y cuándo (por ejemplo, el correo del radicado).')
+    .min(5, 'Anota el número de radicado o la fecha de la solicitud (sin datos personales de la persona).')
     .max(300, 'Máximo 300 caracteres.'),
 }).transform(({ id, motivo }): DatosAnonimizar => ({ id, motivo })) as unknown as z.ZodType<DatosAnonimizar, unknown>;
 
