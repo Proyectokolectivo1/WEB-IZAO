@@ -9,6 +9,7 @@ import { EncabezadoSeccion } from '@/components/store/ficha/EncabezadoSeccion';
 import { Galeria } from '@/components/store/ficha/Galeria';
 import { PiramideOlfativa } from '@/components/store/ficha/PiramideOlfativa';
 import { Relacionados } from '@/components/store/ficha/Relacionados';
+import { EscribirResena } from '@/components/store/ficha/EscribirResena';
 import { Resenas } from '@/components/store/ficha/Resenas';
 import { leerBeneficios } from '@/components/store/home/HomeSecciones';
 import { tienda } from '@/lib/store/datos';
@@ -149,6 +150,7 @@ export default async function FichaPerfume({ params }: Props) {
         <div id="resenas" className="scroll-mt-24">
           <EncabezadoSeccion n={siguiente()} titulo={T.ficha.resenas} />
           <Resenas resenas={ficha.reviews} pais={pais} />
+          <EscribirResena pais={pais} productoId={ficha.product_id} />
         </div>
       </Revelar>
 

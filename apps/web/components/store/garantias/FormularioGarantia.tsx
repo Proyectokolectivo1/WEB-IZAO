@@ -20,6 +20,7 @@ import {
 } from '@/lib/store/garantias/logica';
 import { TG } from '@/lib/store/garantias/textos';
 import type { CodigoPais } from '@/lib/store/types';
+import { useTurnstile } from '../useTurnstile';
 import { CLASE_CONTROL, Campo, NumeroPaso, propsControl } from '../checkout/Campo';
 
 interface Props {
@@ -66,13 +67,6 @@ function mensajeCampo(campo: CampoGarantia, codigo: string): string {
   }
 }
 
-interface TurnstileApi {
-  render: (el: HTMLElement, o: Record<string, unknown>) => string;
-  reset: (id?: string) => void;
-  remove: (id?: string) => void;
-}
-const turnstile = (): TurnstileApi | undefined => (window as unknown as { turnstile?: TurnstileApi }).turnstile;
-
 /** Formulario público de garantías (§19): pedido, celular, motivo, descripción y hasta 5 fotos o 1 video. */
 export function FormularioGarantia({ pais, motivos, diasPlazo, diasRespuesta, turnstileKey, enlaceDatos, enlaceAsesor }: Props) {
   const [valores, setValores] = useState({ pedido: '', celular: '', motivo: '', descripcion: '' });
@@ -85,44 +79,8 @@ export function FormularioGarantia({ pais, motivos, diasPlazo, diasRespuesta, tu
   const resumen = useRef<HTMLDivElement>(null);
   const banner = useRef<HTMLDivElement>(null);
   const confirmacion = useRef<HTMLHeadingElement>(null);
-  const token = useRef<string | null>(null);
-  const widget = useRef<string | null>(null);
-  const contenedorTs = useRef<HTMLDivElement>(null);
+  const { contenedor: contenedorTs, token, reiniciar } = useTurnstile(turnstileKey);
   const esquema = useMemo(() => esquemaGarantia(aCodigoCore(pais), motivos), [pais, motivos]);
-
-  // Turnstile: el script se carga solo si hay clave, y el widget solo se ve si Cloudflare pide interacción.
-  useEffect(() => {
-    if (!turnstileKey || !contenedorTs.current) return;
-    const montar = () => {
-      const api = turnstile();
-      if (!api || !contenedorTs.current || widget.current) return;
-      widget.current = api.render(contenedorTs.current, {
-        sitekey: turnstileKey,
-        appearance: 'interaction-only',
-        callback: (t: string) => {
-          token.current = t;
-        },
-        'expired-callback': () => {
-          token.current = null;
-        },
-        'error-callback': () => {
-          token.current = null;
-        },
-      });
-    };
-    if (turnstile()) montar();
-    else {
-      const s = document.createElement('script');
-      s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-      s.async = true;
-      s.onload = montar;
-      document.head.appendChild(s);
-    }
-    return () => {
-      if (widget.current) turnstile()?.remove(widget.current);
-      widget.current = null;
-    };
-  }, [turnstileKey]);
 
   useEffect(() => {
     if (listo) confirmacion.current?.focus();
@@ -213,8 +171,7 @@ export function FormularioGarantia({ pais, motivos, diasPlazo, diasRespuesta, tu
       setFalla(TG.fallas.red);
       requestAnimationFrame(() => banner.current?.focus());
     } finally {
-      token.current = null;
-      if (widget.current) turnstile()?.reset(widget.current);
+      reiniciar();
       setEnviando(false);
     }
   }

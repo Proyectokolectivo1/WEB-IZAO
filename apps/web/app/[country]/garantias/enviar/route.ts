@@ -13,7 +13,7 @@ import {
   type RespuestaGarantia,
 } from '@/lib/store/garantias/logica';
 import { procesarGarantia } from '@/lib/store/garantias/proceso';
-import { verificarTurnstile } from '@/lib/store/garantias/turnstile';
+import { verificarTurnstile } from '@/lib/store/turnstile';
 import { usarSupabase } from '@/lib/store/checkout-datos';
 
 /**

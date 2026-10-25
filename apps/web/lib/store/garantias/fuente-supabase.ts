@@ -8,12 +8,9 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
-import { escribirVariantes, raizMedia, rutaBase } from '@/lib/admin/media/guardar';
-import { procesarImagen } from '@/lib/admin/media/procesar';
-import { validarArchivo } from '@/lib/admin/media/validar';
+import { raizMedia, rutaBase } from '@/lib/admin/media/guardar';
+import { descartarMediaPublica, guardarFotoPublica, nombreSeguro } from '../media-publica';
 import type { FuenteGarantias } from './proceso';
-
-const nombreSeguro = (n: string) => path.basename(n).replace(/[^\p{L}\p{N}._ -]/gu, '_').slice(0, 200);
 
 export const fuenteGarantiasSupabase: FuenteGarantias = {
   async pedidoPorNumero(pais, numero) {
@@ -50,38 +47,8 @@ export const fuenteGarantiasSupabase: FuenteGarantias = {
     return (data as { number: string } | null)?.number ?? null;
   },
 
-  async guardarFoto(buffer, nombre) {
-    if (!validarArchivo({ buffer, nombre }).ok) return null;
-    let procesada;
-    try {
-      procesada = await procesarImagen({ buffer, recorte45: false });
-    } catch {
-      return null;
-    }
-    const id = randomUUID();
-    const base = rutaBase('warranty', new Date(), id);
-    const raiz = raizMedia();
-    const variants = await escribirVariantes(raiz, base, procesada.variantes);
-    const { error } = await crearClienteServicio()
-      .from('media')
-      .insert({
-        id,
-        kind: 'warranty',
-        base_path: base,
-        original_name: nombreSeguro(nombre),
-        width: procesada.ancho,
-        height: procesada.alto,
-        variants,
-        lqip: procesada.lqip,
-        alt: 'Foto enviada con una solicitud de garantía',
-        bytes: procesada.variantes.reduce((s, v) => s + v.buffer.length, 0),
-      });
-    if (error) {
-      await Promise.all(Object.values(variants).map((r) => rm(path.join(raiz, r), { force: true })));
-      throw new Error(`media: ${error.message}`);
-    }
-    return id;
-  },
+  guardarFoto: (buffer, nombre) =>
+    guardarFotoPublica({ kind: 'warranty', alt: 'Foto enviada con una solicitud de garantía', buffer, nombre }),
 
   async guardarVideo(buffer, tipo, nombre) {
     const id = randomUUID();
@@ -110,19 +77,7 @@ export const fuenteGarantiasSupabase: FuenteGarantias = {
     return id;
   },
 
-  async descartarMedia(ids) {
-    if (ids.length === 0) return;
-    const cliente = crearClienteServicio();
-    const { data } = await cliente.from('media').select('id, variants').in('id', ids);
-    const raiz = path.resolve(raizMedia());
-    for (const f of (data ?? []) as { id: string; variants: Record<string, string> | null }[]) {
-      for (const r of Object.values(f.variants ?? {})) {
-        const destino = path.resolve(raiz, r);
-        if (destino.startsWith(raiz + path.sep)) await rm(destino, { force: true });
-      }
-    }
-    await cliente.from('media').delete().in('id', ids);
-  },
+  descartarMedia: descartarMediaPublica,
 
   async crearCaso(c) {
     const { data, error } = await crearClienteServicio()
