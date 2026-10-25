@@ -16,8 +16,14 @@ test-backup-restore, test-restore-guard, test-deploy-rollback, test-nginx (1.27/
 ## Pendiente (esperan al MCP `contabo`)
 - T0.15 inventario del VPS + `docs/RUNBOOK.md`; T0.16 `setup-vps.sh`, primer despliegue, certificados, cron.
 - Restaurar un backup contra el esquema `auth` real de Supabase (hoy solo contra fixture tipo GoTrue).
-- Medir 429 de `izao_next_action` antes de F1 (B-n1). Decidir `data:` en la CSP de la tienda.
+- Medir 429 de `izao_next_action` antes de F1 (B-n1).
 - Limitador de checkout en Redis (código de izao-pagos).
+
+## Media, CSP, límite de garantías
+- `media.borrar_archivos` (4ea5711): cron */15, lee `media_file_deletions`, borra base_path+variants bajo MEDIA_ROOT y la fila; fallo -> attempts+1 y last_error; tope 10.
+- CSP tienda sin `data:` + Turnstile (D-037), probado en test-nginx.
+- Límite de garantías estaba en memoria; ahora Redis (`apps/web/lib/limite-tasa-redis.ts`, respaldo en memoria). `ipDe` de esa ruta acepta X-Forwarded-For: debería usar `ipCliente` (izao-tienda).
+- Correo: sin proveedor (SMTP_* vacías). Alerta/correo de garantía NO hecho hasta que el líder elija proveedor.
 
 ## Siguiente paso exacto
 Inventario del VPS con `vps_policy` y `vps_inventory` (T0.15) cuando el MCP `contabo` esté disponible.
