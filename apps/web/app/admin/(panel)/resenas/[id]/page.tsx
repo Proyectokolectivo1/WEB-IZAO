@@ -38,6 +38,23 @@ export default async function DetalleResena({ params }: { params: Promise<{ id: 
             {r.city ? ` · ${r.city}` : ''}
           </p>
           <p style={{ whiteSpace: 'pre-wrap' }}>{r.body ?? 'Sin texto'}</p>
+          {r.fotos.length > 0 ? (
+            <ul className="adm-lista-simple" aria-label="Fotos de la reseña">
+              {r.fotos.map((f) => (
+                <li key={f.id}>
+                  <a href={`/media/${f.ruta}`} target="_blank" rel="noopener noreferrer">
+                    <img className="adm-miniatura" src={`/media/${f.ruta}`} alt={f.alt} loading="lazy" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {r.order_id && r.orders ? (
+            <p>
+              Pedido: <Link href={`/admin/pedidos/${r.order_id}`}>{r.orders.number}</Link>
+              {r.is_verified_purchase ? ' · compra verificada' : ' · compra sin verificar'}
+            </p>
+          ) : null}
           <p className="adm-suave adm-chico">
             {ETIQUETA_ESTADO_RESENA[r.status]} · {ETIQUETA_FUENTE[r.source]} · {r.products ? r.products.name : 'Reseña de la tienda'} ·{' '}
             {fechaHoraBogota(r.created_at)}

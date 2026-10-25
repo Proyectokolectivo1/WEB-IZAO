@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Paginacion } from '@/components/admin/Paginacion';
 import { fechaHoraBogota } from '@/lib/admin/formato';
+import { ETIQUETA_ESTADO_PEDIDO } from '@/lib/admin/pedidos/etiquetas';
 import {
   ESTADOS_RESENA,
   ETIQUETA_ESTADO_RESENA,
@@ -114,6 +115,26 @@ export default async function PaginaResenas({
                 <p className="adm-alerta" role="alert">
                   Este texto afirma originalidad o autenticidad: no la publiques tal cual (la tienda no puede garantizarlo).
                 </p>
+              ) : null}
+              {r.fotos.length > 0 ? (
+                <ul className="adm-lista-simple" aria-label="Fotos de la reseña">
+                  {r.fotos.map((f) => (
+                    <li key={f.id}>
+                      <a href={`/media/${f.ruta}`} target="_blank" rel="noopener noreferrer">
+                        <img className="adm-miniatura" src={`/media/${f.ruta}`} alt={f.alt} loading="lazy" />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {r.order_id && r.orders ? (
+                <p className="adm-chico">
+                  Pedido:{' '}
+                  <Link href={`/admin/pedidos/${r.order_id}`}>{r.orders.number}</Link>{' '}
+                  <span className="adm-suave">({ETIQUETA_ESTADO_PEDIDO[r.orders.status] ?? r.orders.status})</span>
+                </p>
+              ) : r.source === 'customer' ? (
+                <p className="adm-suave adm-chico">Sin pedido ligado: no se pudo verificar la compra.</p>
               ) : null}
               <p className="adm-suave adm-chico">
                 {r.country_code} · {ETIQUETA_FUENTE[r.source]} · {r.products ? `Producto: ${r.products.name}` : 'Reseña de la tienda'} ·{' '}

@@ -54,6 +54,45 @@ describe('listar y contar', () => {
   });
 });
 
+describe('pedido ligado y fotos en la bandeja', () => {
+  const O = '88888888-8888-4888-8888-888888888888';
+  it('trae el número del pedido, la marca de compra verificada y hasta 3 fotos de la reseña, en una sola consulta a media', async () => {
+    const { cliente, llamadas, filtros } = clienteFalso({
+      'reviews.select': {
+        data: [
+          resena({ order_id: O, orders: { number: 'IZ-CO-000042', status: 'entregado' }, media_ids: ['m1', 'm2', 'm3', 'm4'] }),
+          resena({ id: 'r2', order_id: null, orders: null, media_ids: null, is_verified_purchase: false }),
+        ],
+        count: 2,
+      },
+      'media.select': {
+        data: [
+          { id: 'm1', variants: { '400': 'review/2026/10/a-400.webp' }, alt: 'Frasco' },
+          { id: 'm3', variants: { '800': 'review/2026/10/c-800.webp' }, alt: null },
+          { id: 'm4', variants: { '400': 'review/2026/10/d-400.webp' }, alt: 'No debe salir (es la cuarta)' },
+        ],
+      },
+    });
+    const r = await listarResenas(cliente, leerFiltrosResena({}));
+    expect(r.filas[0]).toMatchObject({ order_id: O, orders: { number: 'IZ-CO-000042', status: 'entregado' }, is_verified_purchase: true });
+    // Solo las 3 primeras; la que no existe en media se omite; sin alt usa un texto por defecto.
+    expect(r.filas[0]!.fotos).toEqual([
+      { id: 'm1', ruta: 'review/2026/10/a-400.webp', alt: 'Frasco' },
+      { id: 'm3', ruta: 'review/2026/10/c-800.webp', alt: 'Foto de la reseña' },
+    ]);
+    expect(r.filas[1]).toMatchObject({ order_id: null, orders: null, fotos: [] });
+    expect(llamadas.filter((l) => l.clave === 'media.select')).toHaveLength(1);
+    expect(filtros.find((f) => f.tabla === 'media' && f.metodo === 'in')?.args).toEqual(['id', ['m1', 'm2', 'm3']]);
+    expect(filtros.some((f) => f.tabla === 'media' && f.metodo === 'eq' && f.args[0] === 'kind' && f.args[1] === 'review')).toBe(true);
+  });
+
+  it('sin fotos no consulta media', async () => {
+    const { cliente, llamadas } = clienteFalso({ 'reviews.select': { data: [resena({ media_ids: [] })], count: 1 } });
+    await listarResenas(cliente, leerFiltrosResena({}));
+    expect(llamadas.some((l) => l.clave === 'media.select')).toBe(false);
+  });
+});
+
 describe('moderarResenaBd', () => {
   it('aprobar invalida la ficha del producto y el contenido del país', async () => {
     const { cliente, llamadas } = clienteFalso({ 'reviews.select': { data: resena() }, 'reviews.update': {} });

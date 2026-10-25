@@ -36,12 +36,52 @@ export type FilaResena = {
   featured_home: boolean;
   created_at: string;
   products: { name: string; slug: string } | null;
+  /** Pedido ligado por la tienda (reseña de cliente con celular y pedido coincidentes). */
+  order_id: string | null;
+  orders: { number: string; status: string } | null;
+  /** Hasta 3 fotos que subió quien opinó (públicas una vez aprobada la reseña, como siempre). */
+  fotos: { id: string; ruta: string; alt: string }[];
 };
 
-const COLUMNAS = 'id, country_code, product_id, author_name, city, rating, body, source, is_verified_purchase, status, featured_home, created_at, products(name, slug)';
+const MAX_FOTOS = 3;
+
+const COLUMNAS = 'id, country_code, product_id, author_name, city, rating, body, source, is_verified_purchase, status, featured_home, created_at, order_id, media_ids, products(name, slug), orders(number, status)';
 const MENSAJE_ORIGINALIDAD = 'Esta reseña afirma originalidad o autenticidad: no se puede publicar ni destacar (regla de la tienda). Recházala.';
 const unico = <T>(v: T[] | T | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null));
-const normal = (f: FilaResena & { products: unknown }): FilaResena => ({ ...f, products: unico(f.products as FilaResena['products'] | FilaResena['products'][]) });
+type FilaCruda = Omit<FilaResena, 'fotos' | 'products' | 'orders'> & { products: unknown; orders: unknown; media_ids: string[] | null };
+
+function normal(f: FilaCruda): FilaResena & { media_ids: string[] } {
+  const { media_ids, ...resto } = f;
+  return {
+    ...resto,
+    products: unico(f.products as FilaResena['products'] | FilaResena['products'][]),
+    orders: unico(f.orders as FilaResena['orders'] | FilaResena['orders'][]),
+    fotos: [],
+    media_ids: (media_ids ?? []).slice(0, MAX_FOTOS),
+  };
+}
+
+/** Pone las fotos (una sola consulta a `media` para toda la página). */
+async function conFotos(cliente: Cliente, filas: (FilaResena & { media_ids: string[] })[]): Promise<FilaResena[]> {
+  const ids = [...new Set(filas.flatMap((f) => f.media_ids))];
+  const porId = new Map<string, { ruta: string; alt: string }>();
+  if (ids.length > 0) {
+    const { data, error } = await cliente.from('media').select('id, variants, alt').in('id', ids).eq('kind', 'review');
+    if (error) throw new Error(`No se pudieron leer las fotos de las reseñas: ${error.message}`);
+    for (const m of (data ?? []) as { id: string; variants: Record<string, string> | null; alt: string | null }[]) {
+      const v = m.variants ?? {};
+      const ruta = v['400'] ?? Object.values(v)[0];
+      if (ruta) porId.set(m.id, { ruta, alt: m.alt ?? 'Foto de la reseña' });
+    }
+  }
+  return filas.map(({ media_ids, ...f }) => ({
+    ...f,
+    fotos: media_ids.flatMap((id) => {
+      const m = porId.get(id);
+      return m ? [{ id, ...m }] : [];
+    }),
+  }));
+}
 
 export async function listarResenas(cliente: Cliente, f: FiltrosResena): Promise<{ filas: FilaResena[]; total: number }> {
   let q = cliente.from('reviews').select(COLUMNAS, { count: 'exact' });
@@ -52,7 +92,7 @@ export async function listarResenas(cliente: Cliente, f: FiltrosResena): Promise
   const [desde, hasta] = rangoPagina(f.pagina);
   const { data, error, count } = await q.order('created_at', { ascending: false }).range(desde, hasta);
   if (error) throw new Error(`No se pudieron listar las reseñas: ${error.message}`);
-  return { filas: ((data ?? []) as unknown as FilaResena[]).map(normal), total: count ?? 0 };
+  return { filas: await conFotos(cliente, ((data ?? []) as unknown as FilaCruda[]).map(normal)), total: count ?? 0 };
 }
 
 /** Reseñas por estado (pestañas de la bandeja), respetando el país elegido. */
@@ -72,7 +112,8 @@ export async function contarResenas(cliente: Cliente, pais: Pais | ''): Promise<
 export async function obtenerResena(cliente: Cliente, id: string): Promise<FilaResena | null> {
   const { data, error } = await cliente.from('reviews').select(COLUMNAS).eq('id', id).maybeSingle();
   if (error) throw new Error(`No se pudo leer la reseña: ${error.message}`);
-  return data ? normal(data as unknown as FilaResena) : null;
+  if (!data) return null;
+  return (await conFotos(cliente, [normal(data as unknown as FilaCruda)]))[0] ?? null;
 }
 
 function invalidar(r: { country_code: Pais; product_id: string | null }): void {
