@@ -53,6 +53,13 @@ describe('aPedidoMetrica', () => {
     expect(() => aPedidoMetrica(fila({ total_customer: 2 ** 60 }))).toThrow();
   });
 
+  it('la comisión de plataforma acepta enteros en texto pero no texto raro, decimales ni negativos', () => {
+    const c = (plataforma: unknown) => aPedidoMetrica(fila({ carrier_fees: { plataforma } }))?.comisionPlataforma;
+    expect(c('800')).toBe(800n);
+    expect(c(' 1500 ')).toBe(1500n);
+    for (const raro of ['8.5', '-3', 'abc', '', '1e3', 800.5, -1, null, {}]) expect(c(raro), String(raro)).toBe(0n);
+  });
+
   it('tolera carrier_fees vacío o con forma vieja', () => {
     expect(aPedidoMetrica(fila({ carrier_fees: {} }))?.comisionPlataforma).toBe(0n);
     expect(aPedidoMetrica(fila({ carrier_fees: null }))?.comisionPlataforma).toBe(0n);

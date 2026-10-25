@@ -46,7 +46,9 @@ const ESTADOS = new Set<string>(ORDER_STATUSES);
 function comisionPlataforma(carrierFees: unknown): bigint {
   if (carrierFees && typeof carrierFees === 'object') {
     const v = (carrierFees as Record<string, unknown>).plataforma;
+    // La billetera puede guardar el monto como número o como texto de entero: ambos valen; cualquier otra forma, no.
     if (typeof v === 'number' && Number.isSafeInteger(v) && v > 0) return BigInt(v);
+    if (typeof v === 'string' && /^\d{1,15}$/.test(v.trim())) return BigInt(v.trim());
   }
   return 0n;
 }
