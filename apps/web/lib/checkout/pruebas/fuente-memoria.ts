@@ -86,6 +86,18 @@ export class FuenteMemoria implements FuenteCheckout {
     return c ? { ...c, customer_usage_count: null } : null;
   }
 
+  /** Código → influencer (`discount_codes.influencer_id`). */
+  readonly influencerPorCodigo = new Map<string, string>();
+  readonly influencers = new Map<string, { pais: CountryCode; activo: boolean }>();
+
+  async influencerDeCodigo(codigo: string, pais: CountryCode) {
+    this.marca('influencerDeCodigo');
+    const c = this.codigos.find((x) => x.code === codigo && x.is_active && x.country_code === pais);
+    const id = c ? this.influencerPorCodigo.get(c.code) : undefined;
+    const inf = id ? this.influencers.get(id) : undefined;
+    return id && inf?.activo && inf.pais === pais ? id : null;
+  }
+
   async usosDelCliente() {
     this.marca('usosDelCliente');
     return this.usosPrevios;

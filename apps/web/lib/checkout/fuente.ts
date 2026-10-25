@@ -75,7 +75,7 @@ export interface PedidoCreado {
 }
 
 /** Fila de `orders` lista para insertar (montos en texto: JSON no transporta bigint). */
-export type FilaPedido = Record<string, string | number | boolean | null>;
+export type FilaPedido = Record<string, string | number | boolean | null | Readonly<Record<string, string>>>;
 export type FilaItem = Record<string, string | number | boolean | null>;
 
 /**
@@ -107,6 +107,11 @@ export interface FuenteCheckout {
   codigo(texto: string): Promise<PricingDiscountCode | null>;
   /** Usos `reserved|confirmed` del código por el mismo cliente (documento, celular o correo). */
   usosDelCliente(codigoId: string, documento: string, celularE164: string, correo: string | null): Promise<number>;
+  /**
+   * Atribución: `influencer_id` del código (texto en mayúsculas) solo si el código está activo y es del país, y el
+   * influencer está activo y es del país; si no, `null`.
+   */
+  influencerDeCodigo(codigo: string, pais: CountryCode): Promise<string | null>;
   /** `null` si la región no es del país o la ciudad no es de la región. */
   ubicacion(pais: CountryCode, regionId: string, cityId: string): Promise<UbicacionEnvio | null>;
   /**

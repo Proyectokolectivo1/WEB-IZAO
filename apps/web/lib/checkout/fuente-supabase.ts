@@ -274,6 +274,25 @@ export const fuenteSupabase: FuenteCheckout = {
     return data ? mapearCodigo(validar('discount_codes', filaCodigo, data)) : null;
   },
 
+  async influencerDeCodigo(codigo, pais) {
+    const normal = codigo.replace(/\s+/g, '').toUpperCase();
+    if (!PATRON_CODIGO.test(normal)) return null;
+    const db = clienteDb();
+    const c = await db
+      .from('discount_codes')
+      .select('influencer_id')
+      .eq('code', normal)
+      .eq('country_code', pais)
+      .eq('is_active', true)
+      .maybeSingle();
+    revisar('discount_codes', c.error);
+    const id = c.data ? validar('discount_codes', z.object({ influencer_id: uuid.nullable() }), c.data).influencer_id : null;
+    if (!id) return null;
+    const i = await db.from('influencers').select('id').eq('id', id).eq('country_code', pais).eq('is_active', true).maybeSingle();
+    revisar('influencers', i.error);
+    return i.data ? id : null;
+  },
+
   async usosDelCliente(codigoId, documento, celularE164, correo) {
     // Mismas claves que `reservar_canje` (documento normalizado, celular E.164 y correo del pedido).
     const claves = await llamarRpc(

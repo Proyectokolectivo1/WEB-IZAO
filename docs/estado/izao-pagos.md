@@ -11,6 +11,8 @@
   - 05a94ea cliente de Addi: `Location` solo en `ADDI_ENDPOINTS[ambiente].dominiosRedireccion`; token compartido por proceso (D-036).
   - ceb228e aprobado sobre `cancelado`: nunca toca stock/canje/transportadora; reentrega → `sin_cambio`, dinero nuevo → alerta `pago_tras_cancelacion` (D-037).
 
+- 6fb63be atribución en `POST /api/checkout`: `influencer_id`, `utm`, `click_ids` desde las cookies (`atribucionDelPedido`), influencer revalidado en la base (`FuenteCheckout.influencerDeCodigo`: código e influencer activos y del país).
+
 ## Contratos para compañeros
 - izao-admin: en `guardarMetodo` bloquear activar un método con `!metodoVendible(method)` (`@izao/core/contracts`).
 - izao-tienda: `lib/store/checkout-datos.ts` debe filtrar con `soloMetodosVendibles` (hoy muestra Sistecrédito si el panel lo activa; el servidor ya lo rechaza).

@@ -99,6 +99,13 @@ describe('rutas HTTP del checkout', () => {
     expect(ids[0]).toBe([...d.fuenteMem.pedidos.keys()][0]);
   });
 
+  it('checkout: lee la atribución de la cabecera Cookie de la petición', async () => {
+    const d = deps();
+    const utm = encodeURIComponent(JSON.stringify({ utm_source: 'tiktok' }));
+    expect((await manejarCheckout(req(checkout, { cookie: `izao_utm=${utm}; otra=1` }), d)).status).toBe(201);
+    expect([...d.fuenteMem.pedidos.values()][0]!.fila.utm).toEqual({ utm_source: 'tiktok' });
+  });
+
   it('checkout: si el encolado del recálculo falla, el pedido igual responde 201', async () => {
     const d = {
       ...deps(),

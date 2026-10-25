@@ -119,7 +119,7 @@ export async function manejarCheckout(req: Request, deps: DepsCheckout): Promise
   const ahora = (deps.ahora ?? (() => new Date()))();
   let r: Awaited<ReturnType<typeof crearPedidoCheckout>>;
   try {
-    r = await crearPedidoCheckout(deps.fuente(), lectura.valor, ahora);
+    r = await crearPedidoCheckout(deps.fuente(), lectura.valor, ahora, { cookie: req.headers.get('cookie') });
   } catch (e) {
     return fallaInterna('checkout', e);
   }

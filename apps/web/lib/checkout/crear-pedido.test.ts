@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { orderSummarySchema } from '@izao/core/schemas';
+import { COOKIE_CLICK_IDS, COOKIE_REF, COOKIE_UTM, serializarClickIds, serializarUtm } from '@/lib/store/atribucion/captura';
 import { crearPedidoCheckout, type RespuestaPedido } from './crear-pedido';
 import {
   AHORA,
@@ -517,5 +518,87 @@ describe('POST /api/checkout: crear pedido', () => {
     const f = fuenteDePrueba();
     f.config.delete('CO');
     expect((await crearPedidoCheckout(f, cuerpo({ idempotency_key: CLAVE2 }), AHORA)).status).toBe(503);
+  });
+});
+
+describe('atribución del pedido (influencer, UTM y click IDs desde las cookies)', () => {
+  const INF_ANA = 'a1000000-0000-4000-8000-000000000001';
+  const INF_DESC = 'a1000000-0000-4000-8000-000000000002';
+  const INF_EC = 'a1000000-0000-4000-8000-000000000003';
+  const INF_INACTIVO = 'a1000000-0000-4000-8000-000000000004';
+  const UTM = { utm_source: 'instagram', utm_campaign: 'navidad' };
+  const CLK = { fbclid: 'IwAR123' };
+
+  const galleta = (p: { ref?: string; utm?: Record<string, string>; clk?: Record<string, string> }) =>
+    [
+      p.ref ? `${COOKIE_REF}=${p.ref}` : '',
+      p.utm ? `${COOKIE_UTM}=${encodeURIComponent(serializarUtm(p.utm))}` : '',
+      p.clk ? `${COOKIE_CLICK_IDS}=${encodeURIComponent(serializarClickIds(p.clk))}` : '',
+    ]
+      .filter(Boolean)
+      .join('; ');
+
+  function conInfluencers() {
+    const f = fuenteDePrueba();
+    const base = f.codigos.find((c) => c.code === 'DESC10')!;
+    f.codigos.push(
+      { ...base, id: ID_CODIGO(9).replace(/9$/, 'a'), code: 'ANA10' },
+      { ...base, id: ID_CODIGO(9).replace(/9$/, 'b'), code: 'ANAEC', country_code: 'EC' },
+      { ...base, id: ID_CODIGO(9).replace(/9$/, 'c'), code: 'ANAOFF', is_active: false },
+      { ...base, id: ID_CODIGO(9).replace(/9$/, 'd'), code: 'INFOFF' },
+    );
+    f.influencerPorCodigo.set('ANA10', INF_ANA).set('DESC10', INF_DESC).set('ANAEC', INF_EC).set('ANAOFF', INF_ANA).set('INFOFF', INF_INACTIVO);
+    f.influencers
+      .set(INF_ANA, { pais: 'CO', activo: true })
+      .set(INF_DESC, { pais: 'CO', activo: true })
+      .set(INF_EC, { pais: 'EC', activo: true })
+      .set(INF_INACTIVO, { pais: 'CO', activo: false });
+    return f;
+  }
+
+  it('ref de la cookie con influencer activo del país, UTM y click IDs → van a la fila del pedido', async () => {
+    const f = conInfluencers();
+    exito(await crearPedidoCheckout(f, cuerpo(), AHORA, { cookie: galleta({ ref: 'ANA10', utm: UTM, clk: CLK }) }));
+    expect(soloPedido(f).fila).toMatchObject({ influencer_id: INF_ANA, utm: UTM, click_ids: CLK });
+  });
+
+  it('el influencer del código aplicado gana sobre el ref de la cookie', async () => {
+    const f = conInfluencers();
+    exito(await crearPedidoCheckout(f, cuerpo({ discount_code: 'DESC10' }), AHORA, { cookie: galleta({ ref: 'ANA10' }) }));
+    expect(soloPedido(f).fila.influencer_id).toBe(INF_DESC);
+  });
+
+  it.each(['ANAEC', 'ANAOFF', 'INFOFF', 'NOEXISTE', 'mal<formato>'])('ref %s (otro país, inactivo o inexistente) → sin influencer', async (ref) => {
+    const f = conInfluencers();
+    exito(await crearPedidoCheckout(f, cuerpo(), AHORA, { cookie: galleta({ ref }) }));
+    expect(soloPedido(f).fila.influencer_id).toBeNull();
+  });
+
+  it('sin cookies: influencer null y objetos vacíos', async () => {
+    const f = conInfluencers();
+    exito(await crearPedidoCheckout(f, cuerpo(), AHORA));
+    expect(soloPedido(f).fila).toMatchObject({ influencer_id: null, utm: {}, click_ids: {} });
+  });
+
+  it('si la búsqueda del influencer falla, el pedido se crea igual sin influencer', async () => {
+    const f = conInfluencers();
+    f.fallar.add('influencerDeCodigo');
+    const r = await crearPedidoCheckout(f, cuerpo({ discount_code: 'DESC10' }), AHORA, { cookie: galleta({ ref: 'ANA10', utm: UTM }) });
+    expect(r.status).toBe(201);
+    expect(soloPedido(f).fila).toMatchObject({ influencer_id: null, utm: UTM });
+  });
+
+  it('con financiación el código se retira: no atribuye por él, sí por la cookie', async () => {
+    const f = conInfluencers();
+    exito(await crearPedidoCheckout(f, cuerpo({ payment_method: 'addi', discount_code: 'DESC10' }), AHORA, { cookie: galleta({ ref: 'ANA10' }) }));
+    expect(soloPedido(f).fila.influencer_id).toBe(INF_ANA);
+  });
+
+  it('la atribución no entra en la huella: misma clave con otras cookies → 200 repeated', async () => {
+    const f = conInfluencers();
+    exito(await crearPedidoCheckout(f, cuerpo(), AHORA, { cookie: galleta({ ref: 'ANA10' }) }));
+    const r = await crearPedidoCheckout(f, cuerpo(), AHORA, { cookie: galleta({ utm: UTM }) });
+    expect(r.status).toBe(200);
+    expect(f.pedidos.size).toBe(1);
   });
 });

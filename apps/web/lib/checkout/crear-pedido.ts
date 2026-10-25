@@ -10,7 +10,9 @@
  *
  * El cobro lo prepara `http.ts`: Wompi con `pago-wompi.ts` y Addi con `pago-addi.ts`; el abono de contra entrega
  * lo encola. Sistecrédito no se acepta mientras su integración esté pendiente (`soloMetodosVendibles`, D-032).
- * Pendiente: UTM y click IDs, `customer_id` y `gateway_fee_estimated`.
+ * Atribución (`influencer_id`, `utm`, `click_ids` → `orders.sale_source`): de las cookies con
+ * `atribucionDelPedido`, validada en el servidor; nunca bloquea la venta ni entra en la huella.
+ * Pendiente: `customer_id` y `gateway_fee_estimated`.
  */
 import { z } from 'zod';
 import { problemasClienteAddi } from '@izao/addi';
@@ -24,6 +26,7 @@ import {
 import { isFinancingMethod, soloMetodosVendibles, type RedemptionRejectReason } from '@izao/core/contracts';
 import type { OrderStatus } from '@izao/core/order-state';
 import { checkoutInputSchemaFor, countryCodeSchema, orderSummarySchema, type CheckoutInput } from '@izao/core/schemas';
+import { atribucionDelPedido, type AtribucionPedido } from '@/lib/store/atribucion/pedido';
 import { cruzarCarrito } from './carrito';
 import type { FilaItem, FilaPedido, FuenteCheckout, PedidoCreado } from './fuente';
 import { huellaSolicitud, solicitudDeEntrada } from './huella';
@@ -205,9 +208,13 @@ function filaPedido(
   ahora: Date,
   politicaVigente: string,
   huella: string,
+  atribucion: AtribucionPedido,
 ): FilaPedido {
   const metodo = entrada.payment_method;
   return {
+    influencer_id: atribucion.influencer_id,
+    utm: atribucion.utm,
+    click_ids: atribucion.click_ids,
     country_code: entrada.country_code,
     currency_code: r.currency,
     contact_first_name: entrada.contact.first_name,
@@ -244,10 +251,46 @@ function filaPedido(
   };
 }
 
+export interface ContextoCheckout {
+  /** Cabecera `Cookie` de la petición (`izao_ref`, `izao_utm`, `izao_clk`). */
+  cookie?: string | null;
+}
+
+/**
+ * Influencer, UTM y click IDs del pedido. El influencer sale del código aplicado (si quedó aplicado) o del `ref`
+ * de la cookie, siempre revalidado en la base (código e influencer activos y del país). Un fallo deja `null`.
+ */
+async function atribucion(
+  fuente: FuenteCheckout,
+  pais: CountryCode,
+  codigoAplicado: string | null,
+  cookie: string | null | undefined,
+): Promise<AtribucionPedido> {
+  let delCodigo: string | null = null;
+  if (codigoAplicado) {
+    try {
+      delCodigo = await fuente.influencerDeCodigo(codigoAplicado, pais);
+    } catch (e) {
+      registrar('atribucion', e);
+    }
+  }
+  try {
+    return await atribucionDelPedido({
+      cookie,
+      influencerDelCodigoAplicado: delCodigo,
+      influencerDeCodigo: (texto) => fuente.influencerDeCodigo(texto, pais),
+    });
+  } catch (e) {
+    registrar('atribucion', e);
+    return { influencer_id: null, utm: {}, click_ids: {} };
+  }
+}
+
 export async function crearPedidoCheckout(
   fuente: FuenteCheckout,
   cuerpo: unknown,
   ahora: Date,
+  contexto: ContextoCheckout = {},
 ): Promise<ResultadoCheckout> {
   // 1. País primero: los métodos válidos dependen de él.
   const pre = z.object({ country_code: countryCodeSchema }).safeParse(cuerpo);
@@ -376,7 +419,8 @@ export async function crearPedidoCheckout(
     const codigoId = dc?.status === 'applied' ? dc.id : null;
 
     // 4. Guardar antes de cualquier pasarela (§10.2), en una sola transacción de la base
-    const fila = filaPedido(entrada, r, ubic, codigoId, costoTotal, ahora, politica, huella);
+    const atrib = await atribucion(fuente, pais, dc?.status === 'applied' ? dc.code : null, contexto.cookie);
+    const fila = filaPedido(entrada, r, ubic, codigoId, costoTotal, ahora, politica, huella, atrib);
     const c = await fuente.crearPedido(fila, items);
     if (c.ok && !c.repetido) return respuesta(c.pedido, false, warnings);
     if (c.ok) {
