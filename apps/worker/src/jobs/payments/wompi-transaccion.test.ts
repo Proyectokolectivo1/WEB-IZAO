@@ -211,6 +211,37 @@ describe('job wompi.transaccion (§12.2): reconsulta, asocia y transiciona', () 
     expect(s.registro.alertas).toEqual(['pago_tardio']);
   });
 
+  describe('pago sobre un pedido cancelado (D-035: cancelar ya devolvió el stock)', () => {
+    it('reentrega del aprobado que ya pagó el pedido → sin_cambio, sin tocar stock, sin alerta ni transportadora', async () => {
+      const s = escenario({
+        pedido: { status: 'cancelado', stock_state: 'released' },
+        pagos: [pago({ status: 'approved', provider_transaction_id: TX_ID })],
+      });
+      const r = await s.correr();
+      expect(r.accion).toBe('sin_cambio');
+      expect(s.pedido.status).toBe('cancelado');
+      expect(s.registro.stockConfirmado).toBe(0);
+      expect(s.registro.transportadora).toEqual([]);
+      expect(s.registro.alertas).toEqual([]);
+      expect(s.registro.eventos).toEqual([]);
+      expect(s.registro.webhooks).toEqual([{ ok: true }]);
+    });
+
+    it('aprobado nuevo tras la cancelación → alerta para reembolsar; nunca vuelve a reservar stock ni despacha', async () => {
+      const s = escenario({ pedido: { status: 'cancelado', stock_state: 'released' } });
+      const r = await s.correr();
+      expect(r.accion).toBe('pago_tras_cancelacion');
+      expect(s.pedido.status).toBe('cancelado');
+      expect(s.pagos[0]!.status).toBe('approved');
+      expect(s.registro.stockConfirmado).toBe(0);
+      expect(s.registro.canjeConfirmado).toBe(0);
+      expect(s.registro.transportadora).toEqual([]);
+      expect(s.registro.alertas).toEqual(['pago_tras_cancelacion']);
+      expect(s.registro.eventos).toEqual([]);
+      expect(s.registro.webhooks).toEqual([{ ok: true }]);
+    });
+  });
+
   it('APPROVED sobre pago_rechazado (reintento) → pendiente_pago → pagado, dos eventos', async () => {
     const s = escenario({ pedido: { status: 'pago_rechazado' } });
     const r = await s.correr();
@@ -392,6 +423,17 @@ describe('job wompi.transaccion: abono de contra entrega (purpose cod_deposit, �
     expect(s.pedido.status).toBe('requiere_reembolso');
     expect(s.registro.alertas).toContain('abono_tardio_sin_stock');
     expect(s.registro.transportadora).toEqual([]);
+  });
+
+  it('abono aprobado tras la cancelación → alerta para reembolsar, sin stock ni transportadora ni recordatorios', async () => {
+    const s = abono({ pedido: { status: 'cancelado', stock_state: 'released' } });
+    const r = await s.correr();
+    expect(r.accion).toBe('pago_tras_cancelacion');
+    expect(s.pedido.status).toBe('cancelado');
+    expect(s.registro.stockConfirmado).toBe(0);
+    expect(s.registro.transportadora).toEqual([]);
+    expect(s.registro.alertas).toEqual(['pago_tras_cancelacion']);
+    expect(s.registro.eventos).toEqual([]);
   });
 
   it('segundo abono aprobado (otro link) → alerta pago_duplicado sin transición', async () => {

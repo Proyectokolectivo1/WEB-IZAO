@@ -5,6 +5,9 @@
  *   confirma canje y encola la transportadora.
  * - `pagado` (reentrega o reintento tras falla parcial) → repite los pasos idempotentes.
  * - `expirado` → `requiere_reembolso` con alerta `pago_tardio` (no se despacha).
+ * - `cancelado` (terminal, §16; `cancelar_pedido` ya devolvió el stock, D-035) → nunca se vuelve a reservar stock
+ *   ni se despacha: reentrega del aprobado que ya pagó el pedido → `sin_cambio`; aprobado nuevo → alerta
+ *   `pago_tras_cancelacion` para que el admin reembolse (`pagoSobreCancelado`, D-037).
  * - Otro pago aprobado del mismo propósito → alerta `pago_duplicado`, sin transición.
  * Las transiciones las hace `paso` del job (siempre `transicionar` + `aplicarTransicion` condicional).
  */
@@ -25,6 +28,7 @@ export type AccionPago =
   | 'pago_rechazado'
   | 'sin_cambio'
   | 'requiere_reembolso'
+  | 'pago_tras_cancelacion'
   | 'pago_duplicado'
   | 'sin_stock'
   | 'monto_no_coincide'
@@ -82,6 +86,23 @@ export async function despuesDePagar(deps: DepsAprobacion, pedido: PedidoFila, r
   await deps.encolarTransportadora(pedido.id);
 }
 
+/**
+ * Aprobado sobre un pedido `cancelado`. `pago.status` es el leído **antes** de este job: `approved` = reentrega del
+ * pago que ya se aplicó (el pedido se pagó y luego se canceló) → nada que hacer. Otro → dinero nuevo sobre un
+ * pedido cerrado: alerta para reembolsar. En ningún caso se toca el stock (ya devuelto) ni la transportadora.
+ */
+export async function pagoSobreCancelado(
+  deps: Pick<DepsAprobacion, 'fuente'>,
+  pedido: PedidoFila,
+  pago: PagoFila,
+  ref: Record<string, string>,
+  terminar: Terminar,
+): Promise<ResultadoJob> {
+  if (pago.status === 'approved') return terminar('sin_cambio', pedido.id, true);
+  await deps.fuente.registrarAlerta(pedido.id, 'pago_tras_cancelacion', ref);
+  return terminar('pago_tras_cancelacion', pedido.id, true);
+}
+
 export async function aprobarPagoCompleto(
   deps: DepsAprobacion,
   pedido: PedidoFila,
@@ -123,6 +144,8 @@ export async function aprobarPagoCompleto(
       return terminar('requiere_reembolso', pedido.id, true);
     case 'requiere_reembolso':
       return terminar('sin_cambio', pedido.id, true);
+    case 'cancelado':
+      return pagoSobreCancelado(deps, pedido, pago, ref, terminar);
     default:
       if (DESPUES_DEL_PAGO.has(pedido.status)) return terminar('ya_pagado', pedido.id, true);
       await fuente.registrarAlerta(pedido.id, 'pago_en_estado_inesperado', { ...ref, estado: pedido.status });

@@ -239,6 +239,16 @@ describe('job addi.callback (§12.3): asocia por referencia, compara monto y tra
     expect(s.registro.transportadora).toEqual([]);
   });
 
+  it('APPROVED sobre cancelado → alerta para reembolsar, sin volver a reservar stock ni despachar (D-035)', async () => {
+    const s = escenario({ pedido: { status: 'cancelado', stock_state: 'released' } });
+    const r = await s.correr();
+    expect(r.accion).toBe('pago_tras_cancelacion');
+    expect(s.pedido.status).toBe('cancelado');
+    expect(s.registro.alertas).toEqual(['pago_tras_cancelacion']);
+    expect(s.registro.stockConfirmado).toBe(0);
+    expect(s.registro.transportadora).toEqual([]);
+  });
+
   it('otro pago de financiación ya aprobado → alerta de pago duplicado sin transición', async () => {
     const s = escenario({
       pedido: { status: 'pagado' },

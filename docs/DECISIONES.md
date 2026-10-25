@@ -249,3 +249,10 @@ Decisiones de `izao-admin` en T0.13:
 - **Regla:** solo se entrega al navegador una `Location` https, sin usuario ni puerto, cuyo host sea uno de `ADDI_ENDPOINTS[ambiente].dominiosRedireccion` o un subdominio suyo (sandbox `addi-staging.com`, `addi.com`; producción `addi.com`). Otra → `RESPUESTA_INVALIDA` (no reintentable, intento `error`, pedido sigue pendiente). La lista vive en la configuración del ambiente y se puede reemplazar por opción del cliente.
 - **Token:** caché en memoria del proceso por (ambiente, client ID, huella SHA-256 del secreto) y transporte `fetch`, hasta 60 s antes de vencer; una sola solicitud de token en vuelo; un 401 borra solo el token rechazado. Rotar el secreto en el panel cambia la llave.
 - **[VERIFICAR] pendiente:** confirmar en el sandbox real el host del `Location` (si Addi usa otro dominio, agregarlo a `dominiosRedireccion` del ambiente).
+
+## D-037 — Pago aprobado sobre un pedido cancelado (2026-10-25, izao-pagos)
+
+- **Contexto:** con D-035 `cancelar_pedido` devuelve el stock. `cancelado` es terminal (§16, `ORDER_TRANSITIONS.cancelado = []`) y solo se llega desde `pendiente_manual`, `enviado_transportadora`, `en_preparacion` o `requiere_reembolso`: un pedido cancelado ya estaba pagado o nunca tuvo cobro por pasarela.
+- **Regla (Wompi `full`, abono `cod_deposit` y Addi):** un aprobado sobre `cancelado` nunca llama a `confirmar_stock` (descontaría otra vez el stock devuelto), ni confirma canje, ni encola la transportadora, ni transiciona. Si el pago leído antes del job ya estaba `approved` (reentrega del pago que pagó el pedido) → `sin_cambio`. Si es dinero nuevo → alerta `pago_tras_cancelacion` para que el admin reembolse; el webhook queda procesado.
+- **No se revive** un pedido cancelado aunque haya stock: la cancelación es decisión del admin o de la transportadora. La reactivación con stock o `requiere_reembolso` sin stock aplica a `abandonado` (§12.2) y `expirado → requiere_reembolso`, ya implementados.
+- **Para el líder:** si se quiere `cancelado → requiere_reembolso` como estado visible, es un cambio de §16 y de `aplicar_transicion_pedido` (izao-db).

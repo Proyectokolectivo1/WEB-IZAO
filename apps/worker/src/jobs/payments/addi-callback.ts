@@ -20,7 +20,7 @@ import {
   type AccionPago,
   type ResultadoJob,
 } from './aprobacion.js';
-import type { FuenteFinanciacionWorker } from './fuente.js';
+import type { FuenteFinanciacionWorker, PagoFila } from './fuente.js';
 
 export interface DepsJobAddi {
   fuente: FuenteFinanciacionWorker;
@@ -44,8 +44,10 @@ export async function procesarCallbackAddi(datos: DatosJobAddi, deps: DepsJobAdd
     return { accion, order_id: orderId };
   };
 
-  const [pago] = await fuente.pagosPorReferencia(cb.orderId);
-  if (!pago) return terminar('pago_no_encontrado', null, false);
+  const [fila] = await fuente.pagosPorReferencia(cb.orderId);
+  if (!fila) return terminar('pago_no_encontrado', null, false);
+  // Copia: lo que sigue decide con el estado leído antes de este job (p. ej. reentrega de un aprobado).
+  const pago: PagoFila = { ...fila };
   if (pago.purpose !== 'financing') return terminar('proposito_no_soportado', pago.order_id, false);
 
   const pedido = await fuente.pedido(pago.order_id);

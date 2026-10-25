@@ -28,6 +28,7 @@ import {
   aprobarPagoCompleto,
   despuesDePagar,
   duplicado,
+  pagoSobreCancelado,
   type AccionPago,
   type Paso,
   type ResultadoJob,
@@ -78,8 +79,10 @@ export async function procesarTransaccionWompi(datos: DatosJobWompi, deps: DepsJ
   let candidatos = await fuente.pagosPorReferencia(tx.reference);
   if (candidatos.length === 0 && tx.payment_link_id) candidatos = await fuente.pagosPorLink(tx.payment_link_id);
   // Con varias filas de la misma referencia (carrera al crear el intento) se usa la más antigua: mismo pedido y monto.
-  const pago = candidatos[0];
-  if (!pago) return terminar('pago_no_encontrado', null, false);
+  const fila = candidatos[0];
+  if (!fila) return terminar('pago_no_encontrado', null, false);
+  // Copia: lo que sigue decide con el estado leído antes de este job (p. ej. reentrega de un aprobado).
+  const pago: PagoFila = { ...fila };
   // La financiación (Addi/Sistecrédito) no pasa por Wompi: se deja sin procesar.
   if (pago.purpose !== 'full' && pago.purpose !== 'cod_deposit') {
     return terminar('proposito_no_soportado', pago.order_id, false);
@@ -200,6 +203,9 @@ async function aprobarAbono(
     }
     case 'requiere_reembolso':
       return terminar('sin_cambio', pedido.id, true);
+    case 'cancelado':
+      // Sin recordatorios que cancelar: `cancelar_pedido` no deja el pedido en un estado de cobro.
+      return pagoSobreCancelado(deps, pedido, pago, ref, terminar);
     default:
       if (DESPUES_DEL_PAGO.has(pedido.status)) return terminar('ya_pagado', pedido.id, true);
       await fuente.registrarAlerta(pedido.id, 'pago_en_estado_inesperado', { ...ref, estado: pedido.status });
