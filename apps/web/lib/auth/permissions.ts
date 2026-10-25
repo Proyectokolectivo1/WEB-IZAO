@@ -90,13 +90,13 @@ export const MODULOS = {
     etiqueta: 'Descuentos',
     ruta: '/admin/descuentos',
     roles: SOLO_ADMIN,
-    disponible: false,
+    disponible: true,
   },
   influencers: {
     etiqueta: 'Influencers',
     ruta: '/admin/influencers',
     roles: SOLO_ADMIN,
-    disponible: false,
+    disponible: true,
   },
   leads: { etiqueta: 'Leads', ruta: '/admin/leads', roles: SOLO_ADMIN, disponible: false },
   gastos: { etiqueta: 'Gastos', ruta: '/admin/gastos', roles: SOLO_ADMIN, disponible: false },
@@ -177,6 +177,10 @@ export const ACCIONES = {
   'pagos.gestionar': SOLO_ADMIN,
   /** Alta de agentes de impresión (token), activarlos/desactivarlos y editar su configuración remota (§24.1). */
   'agente.gestionar': SOLO_ADMIN,
+  /** Crear, editar, activar, eliminar y generar lotes de códigos de descuento (§17.1, §24.1). */
+  'descuentos.gestionar': SOLO_ADMIN,
+  /** Fichas de influencers y su reporte (§17.2, §24.1). */
+  'influencers.gestionar': SOLO_ADMIN,
 } as const satisfies Record<string, readonly Rol[]>;
 
 export type AccionId = keyof typeof ACCIONES;

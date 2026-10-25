@@ -1,6 +1,7 @@
 import 'server-only';
 /** Ayudas de servidor compartidas por los módulos CRUD del panel. */
 import { revalidateTag } from 'next/cache';
+import { NextResponse } from 'next/server';
 import { ErrorSinPermiso, requerirAdmin, type ContextoAdmin } from '@/lib/auth/guard';
 import type { AccionId, ModuloId } from '@/lib/auth/permissions';
 import type { ErroresCampo, ResultadoAccion } from './comun';
@@ -76,6 +77,19 @@ export async function adminDeAccion(
     return { admin: await requerirAdmin({ modulo, accion }) };
   } catch (e) {
     if (e instanceof ErrorSinPermiso) return { error: { ok: false, mensaje: e.message } };
+    throw e;
+  }
+}
+
+/**
+ * Entrada común de las rutas API del panel (descargas): sesión completa, módulo y acción, o una respuesta 403
+ * lista para devolver.
+ */
+export async function adminParaApiDe(modulo: ModuloId, accion: AccionId): Promise<ContextoAdmin | NextResponse> {
+  try {
+    return await requerirAdmin({ modulo, accion });
+  } catch (e) {
+    if (e instanceof ErrorSinPermiso) return NextResponse.json({ error: 'sin-permiso' }, { status: 403 });
     throw e;
   }
 }

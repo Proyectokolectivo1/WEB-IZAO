@@ -79,7 +79,7 @@ export function montoATexto(valor: unknown, moneda: CurrencyCode): string {
   return toDecimalString({ amount: fromDbAmount(valor as number | string | bigint), currency: moneda });
 }
 
-function montoOpcional(moneda: CurrencyCode, etiqueta: string, requerido: boolean) {
+export function montoOpcional(moneda: CurrencyCode, etiqueta: string, requerido: boolean) {
   return z.string().transform((v, ctx): bigint | null => {
     const t = v.trim().replace(',', '.');
     if (t === '') {
@@ -103,7 +103,7 @@ function montoOpcional(moneda: CurrencyCode, etiqueta: string, requerido: boolea
 }
 
 /** Porcentaje decimal con hasta 2 decimales y rango 0–100, o vacío. */
-function porcentaje(etiqueta: string, max = 100) {
+export function porcentaje(etiqueta: string, max = 100) {
   return z.string().transform((v, ctx): number | null => {
     const t = v.trim().replace(',', '.');
     if (t === '') return null;
@@ -115,7 +115,7 @@ function porcentaje(etiqueta: string, max = 100) {
   });
 }
 
-function entero(etiqueta: string, min: number, max: number) {
+export function entero(etiqueta: string, min: number, max: number) {
   return z
     .string()
     .trim()
