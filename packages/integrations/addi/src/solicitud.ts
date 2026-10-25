@@ -77,6 +77,32 @@ const REFERENCIA = /^[A-Za-z0-9-]{1,60}$/;
 const ORIGEN_HTTPS = /^https:\/\/[^\s/?#]+$/;
 const CELULAR_CO = /^\+57(3\d{9})$/;
 
+const DOCUMENTO = /^\d{5,15}$/;
+
+export interface ProblemaClienteAddi {
+  /** Ruta del campo en la entrada del checkout. */
+  path: 'document.type' | 'document.number' | 'contact.email' | 'contact.phone';
+  message: string;
+}
+
+/**
+ * Requisitos de Addi sobre los datos del cliente, para rechazar en el checkout **antes** de crear el pedido
+ * (mismas reglas que `construirSolicitudAddi`): cédula de ciudadanía, correo y celular colombiano.
+ */
+export function problemasClienteAddi(c: {
+  document_type: string | null;
+  document_number: string | null;
+  contact_email: string | null;
+  contact_phone_e164: string;
+}): ProblemaClienteAddi[] {
+  const p: ProblemaClienteAddi[] = [];
+  if (c.document_type !== 'CC') p.push({ path: 'document.type', message: 'Addi solo acepta cédula de ciudadanía.' });
+  else if (!DOCUMENTO.test(c.document_number?.trim() ?? '')) p.push({ path: 'document.number', message: 'Número de cédula inválido.' });
+  if ((c.contact_email?.trim() ?? '') === '') p.push({ path: 'contact.email', message: 'Addi pide un correo electrónico.' });
+  if (!CELULAR_CO.test(c.contact_phone_e164)) p.push({ path: 'contact.phone', message: 'Addi pide un celular colombiano.' });
+  return p;
+}
+
 /** Referencia del intento `n` (1, 2, …) del pedido. */
 export function referenciaAddi(numero: string, n: number): string {
   if (!Number.isSafeInteger(n) || n < 1) throw new RangeError('Intento inválido.');
@@ -108,7 +134,7 @@ export function construirSolicitudAddi(
   }
 
   const documento = p.document_number?.trim() ?? '';
-  if (p.document_type !== 'CC' || !/^\d{5,15}$/.test(documento)) return { ok: false, motivo: 'documento' };
+  if (p.document_type !== 'CC' || !DOCUMENTO.test(documento)) return { ok: false, motivo: 'documento' };
   const correo = p.contact_email?.trim() ?? '';
   if (correo === '') return { ok: false, motivo: 'correo' };
   const celular = CELULAR_CO.exec(p.contact_phone_e164);

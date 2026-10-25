@@ -8,10 +8,11 @@
  * `crear_pedido_checkout` (izao-db): pedido, líneas, `reservar_stock`, `reservar_canje` y evento `created` en
  * una sola transacción; un rechazo no deja nada escrito.
  *
- * El cobro de Wompi lo prepara `pago-wompi.ts` (lo llama `http.ts`). Pendiente: Addi, Sistecrédito, abono,
- * UTM y click IDs, `customer_id` y `gateway_fee_estimated`.
+ * El cobro lo prepara `http.ts`: Wompi con `pago-wompi.ts` y Addi con `pago-addi.ts`; el abono de contra entrega
+ * lo encola. Pendiente: Sistecrédito (D-032), UTM y click IDs, `customer_id` y `gateway_fee_estimated`.
  */
 import { z } from 'zod';
+import { problemasClienteAddi } from '@izao/addi';
 import { COUNTRY_CURRENCY, type CountryCode } from '@izao/core/money';
 import {
   calcularPrecios,
@@ -77,9 +78,9 @@ export interface RespuestaPedido {
   repeated: boolean;
   warnings: string[];
   /**
-   * Aditivo, solo con `next_step = pay_wompi`: intento de pago listo (`checkout_url` https del Web Checkout y
-   * vencimiento ISO). `null` si no se pudo preparar (p. ej. sin credenciales): la página del pedido lo reintenta
-   * con `POST /api/checkout/pago`.
+   * Aditivo, con `next_step = pay_wompi` o `pay_addi`: intento de pago listo (`checkout_url` https del Web
+   * Checkout o de la solicitud de Addi, y vencimiento ISO). `null` si no se pudo preparar (p. ej. sin
+   * credenciales o la entidad caída): la página del pedido lo reintenta con `POST /api/checkout/pago`.
    */
   payment?: { checkout_url: string; expires_at: string } | null;
 }
@@ -259,6 +260,16 @@ export async function crearPedidoCheckout(
     const parsed = checkoutInputSchemaFor(activos).safeParse(cuerpo);
     if (!parsed.success) return invalido(parsed.error);
     const entrada = parsed.data;
+    if (entrada.payment_method === 'addi') {
+      // Addi solo recibe cédula de ciudadanía, correo y celular colombiano: se avisa antes de crear el pedido.
+      const problemas = problemasClienteAddi({
+        document_type: entrada.document.type,
+        document_number: entrada.document.number,
+        contact_email: entrada.contact.email,
+        contact_phone_e164: entrada.contact.phone_e164,
+      });
+      if (problemas.length > 0) return falla(400, { error: 'INVALID_INPUT', issues: problemas.map(({ path, message }) => ({ path, message })) });
+    }
 
     // 2. Idempotencia (doble clic, reintento del navegador): misma clave y mismo contenido
     const huella = huellaSolicitud(solicitudDeEntrada(entrada));

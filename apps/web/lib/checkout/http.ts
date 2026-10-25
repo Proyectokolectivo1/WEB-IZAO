@@ -7,6 +7,8 @@ import { z } from 'zod';
 import { crearPedidoCheckout } from './crear-pedido';
 import type { FuenteCheckout } from './fuente';
 import { ipCliente, type LimitadorTasa } from './limite-tasa';
+import type { AddiCredentials, ClienteAddi } from '@izao/addi';
+import { prepararPagoAddi, type FuentePagosAddi, type ResultadoPagoAddi } from './pago-addi';
 import { prepararPagoWompi, type FuentePagos, type PedidoParaPago, type ResultadoPago } from './pago-wompi';
 import { entradaVistaPreviaSchema, paisEntradaSchema, vistaPrevia } from './vista-previa';
 
@@ -14,6 +16,10 @@ export interface DepsPagos {
   fuente: () => FuentePagos;
   /** Origen https del sitio para el `redirect-url` (`SITE_URL`). */
   urlSitio: string;
+  /** Si está, el checkout con Addi deja lista la solicitud de crédito (`payment` con la URL de Addi). */
+  addi?: () => FuentePagosAddi;
+  /** Solo pruebas: cliente de Addi con `fetch` falso. */
+  clienteAddi?: (c: AddiCredentials) => ClienteAddi;
 }
 
 export interface DepsCheckout {
@@ -122,6 +128,18 @@ export async function manejarCheckout(req: Request, deps: DepsCheckout): Promise
     }
     return json({ ...r.cuerpo, payment: null }, r.status);
   }
+  if (r.ok && r.cuerpo.next_step === 'pay_addi' && deps.pagos?.addi) {
+    // El pedido ya existe: si la solicitud no queda lista, `payment: null` y la página la reintenta.
+    let payment: { checkout_url: string; expires_at: string } | null = null;
+    try {
+      const p = await pagoAddi(deps.pagos, r.order_id, ahora);
+      if (p?.ok) payment = { checkout_url: p.pago.checkout_url, expires_at: p.pago.expires_at.toISOString() };
+      else console.error(`[checkout] solicitud de Addi no preparada: ${p ? p.motivo : 'pedido_no_encontrado'}`);
+    } catch (e) {
+      console.error(`[checkout] solicitud de Addi no preparada: ${e instanceof Error ? e.name : 'error'}`);
+    }
+    return json({ ...r.cuerpo, payment }, r.status);
+  }
   if (!r.ok || r.cuerpo.next_step !== 'pay_wompi' || !deps.pagos) return json(r.cuerpo, r.status);
   // El pedido ya existe: si el cobro no queda listo, se informa `payment: null` y la página lo reintenta.
   let payment: { checkout_url: string; expires_at: string } | null = null;
@@ -136,24 +154,42 @@ export async function manejarCheckout(req: Request, deps: DepsCheckout): Promise
   return json({ ...r.cuerpo, payment }, r.status);
 }
 
+/** Solicitud de Addi del pedido (crear o reutilizar). `null` si el pedido no existe. */
+async function pagoAddi(pagos: DepsPagos, orderId: string, ahora: Date): Promise<ResultadoPagoAddi | null> {
+  if (!pagos.addi) return { ok: false, motivo: 'metodo' };
+  const fuente = pagos.addi();
+  const pedido = await fuente.pedidoAddiPorId(orderId);
+  if (!pedido) return null;
+  return prepararPagoAddi(fuente, pedido, {
+    ahora,
+    urlSitio: pagos.urlSitio,
+    ...(pagos.clienteAddi ? { cliente: pagos.clienteAddi } : {}),
+  });
+}
+
 const entradaPagoSchema = z.object({
   country: paisEntradaSchema,
   token: z.string().min(16).max(128).regex(/^[A-Za-z0-9_-]+$/),
 });
 
-const ESTADO_HTTP: Record<Exclude<ResultadoPago, { ok: true }>['motivo'], number> = {
+const ESTADO_HTTP: Record<Exclude<ResultadoPago | ResultadoPagoAddi, { ok: true }>['motivo'], number> = {
   metodo: 409,
   estado: 409,
   pagado: 409,
   vencido: 410,
   conflicto: 409,
   sin_credenciales: 503,
+  datos_cliente: 422,
+  rechazado_entidad: 409,
+  entidad_no_disponible: 503,
 };
 
 /**
- * `POST /api/checkout/pago` `{country, token}`: deja listo (o devuelve) el intento de pago con Wompi del pedido
- * con ese `public_token`. 200 `{checkout_url, expires_at, reused}`; 404 si no existe; 409/410/503 con
- * `{error: 'PAYMENT_NOT_AVAILABLE', reason}`. El monto sale del pedido, nunca de la petición.
+ * `POST /api/checkout/pago` `{country, token}`: deja listo (o devuelve) el intento de pago del pedido con ese
+ * `public_token`: Web Checkout de Wompi o solicitud de crédito de Addi, según `payment_method`.
+ * 200 `{checkout_url, expires_at, reused}`; 404 si no existe; 409/410/422/503 con
+ * `{error: 'PAYMENT_NOT_AVAILABLE', reason}` (Addi: `datos_cliente`, `rechazado_entidad` → la página ofrece otros
+ * métodos; `entidad_no_disponible` → reintentar). El monto sale del pedido, nunca de la petición.
  */
 export async function manejarPago(req: Request, deps: DepsPago): Promise<Response> {
   const d = deps.limitador.consumir(`pago:${ipCliente(req.headers)}`);
@@ -166,10 +202,12 @@ export async function manejarPago(req: Request, deps: DepsPago): Promise<Respons
     const fuente = deps.pagos.fuente();
     const pedido: PedidoParaPago | null = await fuente.pedidoPorToken(entrada.data.country, entrada.data.token);
     if (!pedido) return json({ error: 'NOT_FOUND' }, 404);
-    const r = await prepararPagoWompi(fuente, pedido, {
-      ahora: (deps.ahora ?? (() => new Date()))(),
-      urlSitio: deps.pagos.urlSitio,
-    });
+    const ahora = (deps.ahora ?? (() => new Date()))();
+    const r =
+      pedido.payment_method === 'addi'
+        ? await pagoAddi(deps.pagos, pedido.id, ahora)
+        : await prepararPagoWompi(fuente, pedido, { ahora, urlSitio: deps.pagos.urlSitio });
+    if (!r) return json({ error: 'NOT_FOUND' }, 404);
     if (!r.ok) return json({ error: 'PAYMENT_NOT_AVAILABLE', reason: r.motivo }, ESTADO_HTTP[r.motivo]);
     return json({ checkout_url: r.pago.checkout_url, expires_at: r.pago.expires_at.toISOString(), reused: r.reutilizado }, 200);
   } catch (e) {

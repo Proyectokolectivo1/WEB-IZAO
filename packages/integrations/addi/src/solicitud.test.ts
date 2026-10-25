@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { construirSolicitudAddi, referenciaAddi, type PedidoFinanciado } from './solicitud';
+import { construirSolicitudAddi, problemasClienteAddi, referenciaAddi, type PedidoFinanciado } from './solicitud';
 
 /** Caso 4 de §11.3: 1 × 90.000 con Addi, código retirado, recargo 9.000, total 99.000. */
 function caso4(extra: Partial<PedidoFinanciado> = {}): PedidoFinanciado {
@@ -118,3 +118,25 @@ describe('solicitud de crédito en línea de Addi (POST /v1/online-applications)
     expect(() => referenciaAddi('IZ-CO-000123', 0)).toThrow(RangeError);
   });
 });
+
+describe('problemasClienteAddi (validación temprana en el checkout)', () => {
+  const ok = { document_type: 'CC', document_number: '1020304050', contact_email: 'ana@example.com', contact_phone_e164: '+573001234567' };
+
+  it('cédula de ciudadanía, correo y celular colombiano → sin problemas', () => {
+    expect(problemasClienteAddi(ok)).toEqual([]);
+  });
+
+  it('otro documento, sin correo o fijo → un problema por campo, con la ruta del formulario', () => {
+    expect(
+      problemasClienteAddi({ document_type: 'CE', document_number: '123', contact_email: null, contact_phone_e164: '+576041234567' }).map(
+        (p) => p.path,
+      ),
+    ).toEqual(['document.type', 'contact.email', 'contact.phone']);
+    expect(problemasClienteAddi({ ...ok, document_number: '12' }).map((p) => p.path)).toEqual(['document.number']);
+  });
+
+  it('lo que pasa la validación temprana también lo acepta construirSolicitudAddi (mismas reglas)', () => {
+    expect(problemasClienteAddi({ ...ok, contact_email: '  ' }).map((p) => p.path)).toEqual(['contact.email']);
+  });
+});
+
