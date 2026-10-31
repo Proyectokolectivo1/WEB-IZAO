@@ -7,7 +7,7 @@
 export const JOB_CHAT_PURGAR = 'chat.purgar_conversaciones';
 export const CRON_CHAT_PURGAR = '45 3 * * *';
 export const DIAS_RETENCION_CHAT = 180;
-export const LOTE_CHAT = 500;
+export const LOTE_CHAT = 100;
 const MAX_LOTES = 200;
 
 export interface FuenteChat {

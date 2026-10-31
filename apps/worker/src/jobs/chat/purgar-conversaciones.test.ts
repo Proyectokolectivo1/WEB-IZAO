@@ -57,4 +57,12 @@ describe('fuenteChatPostgrest', () => {
     expect(decodeURIComponent(urls[1] ?? '')).toContain('last_message_at.is.null');
     expect(urls[2]).toContain('id=in.(a,b)');
   });
+
+  it('el DELETE de un lote completo cabe en una URL de menos de 8 KB', async () => {
+    const fetchImpl = vi.fn().mockImplementation(async () => new Response('[]', { status: 200 }));
+    const f = fuenteChatPostgrest({ supabaseUrl: 'https://abcdefghijklmnopqrst.supabase.co', secretKey: 'k', fetchImpl });
+    const ids = Array.from({ length: LOTE_CHAT }, () => crypto.randomUUID());
+    await f.borrarMensajes(ids);
+    expect(String(fetchImpl.mock.calls[0]?.[0]).length).toBeLessThan(8_000);
+  });
 });
