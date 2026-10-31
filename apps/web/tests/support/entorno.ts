@@ -40,7 +40,11 @@ export function entornoDePrueba(): Record<string, string> {
     SUPABASE_PUBLISHABLE_KEY: 'llave-publica-de-prueba',
     SUPABASE_SECRET_KEY: 'llave-de-servicio-de-prueba',
     APP_ENCRYPTION_KEY: CLAVE_DE_PRUEBA,
-    ...(MODO_EJEMPLO ? { STORE_DATOS: 'ejemplo', NEXT_PUBLIC_STORE_DATOS: 'ejemplo' } : {}),
+    // Los límites por IP no deben afectar a las pruebas (todas salen de 127.0.0.1); se prueban aparte con valores bajos.
+    REVIEWS_RATE_LIMIT_PER_10MIN: '10000',
+    WARRANTY_RATE_LIMIT_PER_10MIN: '10000',
+    CHAT_RATE_LIMIT_PER_10MIN: '10000',
+    ...(MODO_EJEMPLO ? { STORE_DATOS: 'ejemplo' } : {}),
   };
 }
 

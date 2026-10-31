@@ -75,7 +75,8 @@ const r = spawnSync(process.execPath, [path.resolve(origen, '../../node_modules/
     NODE_ENV: 'production',
     NEXT_TELEMETRY_DISABLED: '1',
     STORE_DATOS: 'ejemplo',
-    NEXT_PUBLIC_STORE_DATOS: 'ejemplo',
+    // Sin NEXT_PUBLIC_STORE_DATOS: el checkout llama a /api/checkout de verdad y las pruebas lo simulan con page.route.
+    NEXT_PUBLIC_STORE_DATOS: '',
   },
 });
 process.exit(r.status ?? 1);
