@@ -39,6 +39,10 @@ Revisión (izao-revisor) con cambios requeridos: corregidos los hallazgos 1–10
 Decisiones del dueño abiertas: reserva de Addi (60 min) vs aprobación tardía (`requiere_reembolso`); `cancelado → requiere_reembolso` (D-037, recomendado no tocar); comprobantes de gastos públicos por uuid o privados; proveedor de correo (garantías, respaldo de cobro, alertas).
 Pendiente técnico: e2e/Lighthouse (izao-qa, hay que quitar `fixme`), widget Iza, Meta Ads y "Sincronizar ahora", "Probar conexión" OpenRouter, cierre de oleada con revisor, F0b del VPS. Regla vigente: un agente a la vez (CLAUDE.md, "Ahorro de tokens").
 
+## Avance 2026-10-31
+Hecho: chat de Iza (API SSE, widget, presupuesto micro-USD con `chat_registrar_uso`, filtro de regla 7, purga a 180 días en lotes de 100); Integraciones OpenRouter, Meta Ads, Meta Pixel, GA4 y TikTok (con [VERIFICAR] de Graph y tokens de eventos); sitemap/robots; e2e + axe + Lighthouse (docs/fases/F1.md); correcciones de las dos revisiones. Abierto: error de hidratación #418 intermitente (~0,3–3 %, sin causa; posible carrera Next 15.5/React 19), LCP ~2,7 s en el equipo de QA, `messages_count` no atómico (pedir RPC a izao-db), `CHAT_RETENCION_DIAS` sin documentar en `infra/.env.example`. Sin medir sin llaves: p95 del catálogo, k6, checkout real, Iza con OpenRouter real.
+Bloqueado por el dueño: acceso SSH/VNC al VPS y despliegue (F0b), llaves reales, proveedor de correo, documentación de Sistecrédito.
+
 ## Oleada en curso
 Oleada 2 (F1 catálogo; F2 contenido va después). Contratos de la tienda para el panel de contenido: claves `content_slots` `medios_de_pago`, `asesoria` y `busquedas_populares`; los beneficios y la asesoría del home salen de `home_sections.config` (`items[{icon,title,text}]` y `title/body/cta_label/cta_url`). Páginas legales: la tienda lee solo `pages.status = 'published'`. Reemplaza al texto siguiente cuando se cierre.
 En curso: abono de contra entrega + WhatsApp (izao-pagos). Siguiente: izao-logistica (MasterShop), Addi/Sistecrédito, reseñas (POST /api/reviews), widget Iza, métricas. Espacios `nota_envio`/`valor_envio` ya sembrados.
