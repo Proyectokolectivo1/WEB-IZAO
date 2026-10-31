@@ -74,12 +74,15 @@ test.describe('F1 listado infinito (§7.1)', () => {
   });
 
   test('§7.1 al volver desde una ficha se restauran los lotes cargados y la posición de scroll', async ({ page }) => {
-    await abrirListado(page, 'co');
+    // El catálogo completo (más de 75 productos en ambos conjuntos de datos); una categoría puede tener menos de 3 lotes.
+    await page.goto(RUTAS.catalogo('co'));
+    await expect(page.locator(SEL.tarjeta).first()).toBeVisible();
     // 1. Cargar al menos 3 lotes (75 tarjetas) bajando.
-    for (const lotes of [2, 3]) {
-      await page.mouse.wheel(0, 99_999);
-      await expect(page.locator(SEL.tarjeta)).toHaveCount(LOTE * lotes);
-    }
+    // (en móvil un solo gesto puede encadenar varios lotes, así que se espera "al menos" 3)
+    await expect(async () => {
+      await page.mouse.wheel(0, 4_000);
+      expect(await page.locator(SEL.tarjeta).count()).toBeGreaterThanOrEqual(LOTE * 3);
+    }).toPass({ timeout: 20_000 });
     const antes = await slugsEnPantalla(page);
     // 2. Abrir una tarjeta del tercer lote.
     const objetivo = page.locator(SEL.tarjeta).nth(LOTE * 2 + 3);

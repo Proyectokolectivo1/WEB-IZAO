@@ -13,8 +13,8 @@
 import { expect, test, type Browser } from '@playwright/test';
 import { URL_WEB } from '../support/entorno';
 
-const CARGAS = 80;
-const EN_PARALELO = 20;
+const CARGAS = 100;
+const EN_PARALELO = 10;
 
 async function cargar(browser: Browser, ruta: string, bloqueado: boolean): Promise<string[]> {
   const context = await browser.newContext({ baseURL: URL_WEB, viewport: { width: 1440, height: 900 } });
@@ -33,23 +33,31 @@ async function cargar(browser: Browser, ruta: string, bloqueado: boolean): Promi
   page.on('pageerror', (e) => errores.push(e.message.slice(0, 120)));
   await page.goto(ruta);
   await page.waitForTimeout(1_200);
+  // Cuando React recupera el error re-renderiza el layout y la página puede quedar sin <title> (axe: document-title).
+  if (!(await page.title())) errores.push('la página quedó sin <title>');
   await context.close();
   return errores;
 }
 
-for (const [ruta, bloqueado] of [
+const ESCENARIOS = [
   ['/co', false],
   ['/co', true],
   ['/co/carrito', false],
-] as const) {
-  test(`hidratación: ${CARGAS} cargas de ${ruta} (${bloqueado ? 'localStorage bloqueado' : 'almacenamiento normal'}) sin errores de hidratación`, async ({ browser, isMobile }) => {
-    test.skip(isMobile, 'la carrera se provoca con muchas pestañas a la vez; basta el proyecto de escritorio');
-    test.setTimeout(120_000);
+] as const;
+
+// Un solo test que recorre los escenarios uno tras otro: la carrera necesita carga, pero no tanta como para agotar la máquina.
+test(`hidratación: ${CARGAS} cargas por escenario (home, home con localStorage bloqueado, carrito) sin errores de hidratación`, async ({ browser, isMobile }) => {
+  test.skip(isMobile, 'la carrera se provoca con muchas pestañas a la vez; basta el proyecto de escritorio');
+  test.setTimeout(300_000);
+  const resumen: Record<string, string[]> = {};
+  for (const [ruta, bloqueado] of ESCENARIOS) {
     const errores: string[] = [];
     for (let i = 0; i < CARGAS; i += EN_PARALELO) {
       const lote = await Promise.all(Array.from({ length: EN_PARALELO }, () => cargar(browser, ruta, bloqueado)));
       errores.push(...lote.flat());
     }
-    expect(errores, `${errores.length} errores en ${CARGAS} cargas`).toEqual([]);
-  });
-}
+    resumen[`${ruta} (${bloqueado ? 'localStorage bloqueado' : 'almacenamiento normal'}): ${errores.length} errores en ${CARGAS} cargas`] = [...new Set(errores)];
+  }
+  const conErrores = Object.fromEntries(Object.entries(resumen).filter(([clave]) => !clave.includes(': 0 errores')));
+  expect(conErrores, JSON.stringify(resumen, null, 1)).toEqual({});
+});

@@ -10,6 +10,9 @@ import path from 'node:path';
 import { DIR_RESULTADOS, MODO_EJEMPLO, RAIZ_WEB } from './entorno';
 import type { ProductoSemilla } from './semilla';
 
+/** Categorías que conocen los datos de ejemplo (`perteneceACategoria` en repo-ejemplo.ts). */
+const CATEGORIAS = ['mujer', 'hombre', 'arabes', 'oud', 'ambar'];
+
 export const ARCHIVO_EJEMPLO = path.join(DIR_RESULTADOS, 'ejemplo.json');
 
 type Repo = {
@@ -49,8 +52,7 @@ export default async function globalSetup(): Promise<void> {
         gender_slug: item.gender_slug,
         family_slug: item.family_slug,
         concentration_slug: item.concentration_slug,
-        // El listado de ejemplo no filtra por categoría: todo producto visible "pertenece" a cualquier categoría.
-        category_slugs: ['mujer', 'hombre', 'arabes', 'oud', 'ambar'],
+        category_slugs: [] as string[],
         countries: {},
         variants: (ficha?.variants ?? []).map((v) => ({ sku: v.id, countries: {} })),
       };
@@ -64,6 +66,18 @@ export default async function globalSetup(): Promise<void> {
         };
       });
       porSlug.set(item.slug, actual);
+    }
+  }
+  // Pertenencia a categorías: la decide el propio filtro `category` de los datos de ejemplo. Solo con los datos de CO:
+  // en el ejemplo, un mismo slug tiene género y familia distintos en cada país (otra semilla), y los atributos del
+  // producto de prueba son los de CO.
+  for (const pais of ['co'] as const) {
+    for (const categoria of CATEGORIAS) {
+      const pagina = await repo.catalogo(pais, { filtros: { category: categoria }, orden: 'featured', cursor: null, limite: 100_000 });
+      for (const item of pagina.items) {
+        const producto = porSlug.get(item.slug);
+        if (producto && !producto.category_slugs.includes(categoria)) producto.category_slugs.push(categoria);
+      }
     }
   }
   fs.mkdirSync(DIR_RESULTADOS, { recursive: true });

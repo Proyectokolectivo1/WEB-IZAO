@@ -38,8 +38,12 @@ export async function agregarDesdeFicha(page: Page, pais: Pais, slug: string, ve
     await page.getByTestId('boton-agregar').first().click();
     await expect(page.getByTestId('contador-carrito')).toHaveText(String(i + 1));
     if (dejarAbierto && i === veces - 1) return;
+    // Esc solo cierra cuando el cajón terminó de abrirse y tiene el foco.
+    const cajon = page.getByRole('dialog');
+    await expect(cajon).toBeVisible();
+    await expect(cajon).toBeFocused().catch(() => undefined);
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog')).toBeHidden();
+    await expect(cajon).toBeHidden();
   }
 }
 

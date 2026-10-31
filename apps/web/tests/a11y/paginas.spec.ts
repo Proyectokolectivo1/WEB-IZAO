@@ -17,7 +17,16 @@ const ETIQUETAS_WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 /** Vacío a propósito. Cualquier regla que se agregue aquí necesita una decisión en docs/DECISIONES.md. */
 const REGLAS_DESACTIVADAS: string[] = [];
 
+/** Espera a que terminen las animaciones finitas (axe mide el contraste con la opacidad de ese instante). */
+async function esperarAnimaciones(page: Page) {
+  await page.evaluate(async () => {
+    const finitas = document.getAnimations().filter((a) => a.effect?.getComputedTiming().iterations !== Infinity);
+    await Promise.race([Promise.all(finitas.map((a) => a.finished.catch(() => undefined))), new Promise((r) => setTimeout(r, 3_000))]);
+  });
+}
+
 async function auditar(page: Page) {
+  await esperarAnimaciones(page);
   const resultado = await new AxeBuilder({ page }).withTags(ETIQUETAS_WCAG).disableRules(REGLAS_DESACTIVADAS).analyze();
   const resumen = resultado.violations.map((v) => ({
     regla: v.id,
