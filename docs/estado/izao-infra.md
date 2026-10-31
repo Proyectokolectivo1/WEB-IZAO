@@ -24,6 +24,7 @@ test-backup-restore, test-restore-guard, test-deploy-rollback, test-nginx (1.27/
 - CSP tienda sin `data:` + Turnstile (D-037), probado en test-nginx.
 - Límite de garantías estaba en memoria; ahora Redis (`apps/web/lib/limite-tasa-redis.ts`, respaldo en memoria). `ipDe` de esa ruta acepta X-Forwarded-For: debería usar `ipCliente` (izao-tienda).
 - Correo: sin proveedor (SMTP_* vacías). Alerta/correo de garantía NO hecho hasta que el líder elija proveedor.
+- `chat.purgar_conversaciones` (cron 03:45, por lotes de 500): borra chat_messages y chat_sessions con más de 180 días (env opcional `CHAT_RETENCION_DIAS`, mín. 30; no es configurable en chat_settings); no toca chat_usage_monthly.
 
 ## Siguiente paso exacto
 Inventario del VPS con `vps_policy` y `vps_inventory` (T0.15) cuando el MCP `contabo` esté disponible.

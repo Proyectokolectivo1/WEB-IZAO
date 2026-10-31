@@ -3,6 +3,7 @@ import { CRON_BARRIDO_PEDIDOS, JOB_BARRIDO_PEDIDOS } from './jobs/cod/barrido.js
 import { CRON_BILLETERA_MASTERSHOP, CRON_POLLING_MASTERSHOP, JOB_BILLETERA_MASTERSHOP, JOB_POLLING_MASTERSHOP } from './jobs/sync/index.js';
 import { JOB_METRICS_RECOMPUTE_RECENT } from './jobs/metrics/recalcular-dia.js';
 import { CRON_MEDIA_BORRAR_ARCHIVOS, JOB_MEDIA_BORRAR_ARCHIVOS } from './jobs/media/borrar-archivos.js';
+import { CRON_CHAT_PURGAR, JOB_CHAT_PURGAR } from './jobs/chat/purgar-conversaciones.js';
 import { JOB_PURGAR_AUDIT_LOG } from './jobs/purgar-audit-log.js';
 
 /**
@@ -49,5 +50,11 @@ export async function registrarCron(colaSistema: Queue): Promise<void> {
     JOB_MEDIA_BORRAR_ARCHIVOS,
     { pattern: CRON_MEDIA_BORRAR_ARCHIVOS, tz: 'America/Bogota' },
     { name: JOB_MEDIA_BORRAR_ARCHIVOS, data: {} },
+  );
+  // Retención del chatbot (180 días): borra conversaciones viejas por lotes, 03:45 Bogotá; idempotente.
+  await colaSistema.upsertJobScheduler(
+    JOB_CHAT_PURGAR,
+    { pattern: CRON_CHAT_PURGAR, tz: 'America/Bogota' },
+    { name: JOB_CHAT_PURGAR, data: {} },
   );
 }

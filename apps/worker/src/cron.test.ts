@@ -58,3 +58,12 @@ describe('registrarCron media', () => {
     expect(llamadas.find(([id]) => id === 'media.borrar_archivos')?.[1].pattern).toBe('*/15 * * * *');
   });
 });
+
+describe('registrarCron chat', () => {
+  it('programa chat.purgar_conversaciones de madrugada en Bogotá', async () => {
+    const upsertJobScheduler = vi.fn().mockResolvedValue(undefined);
+    await registrarCron({ upsertJobScheduler } as unknown as Queue);
+    const llamadas = upsertJobScheduler.mock.calls as [string, { pattern: string; tz: string }, unknown][];
+    expect(llamadas.find(([id]) => id === 'chat.purgar_conversaciones')?.[1]).toEqual({ pattern: '45 3 * * *', tz: 'America/Bogota' });
+  });
+});

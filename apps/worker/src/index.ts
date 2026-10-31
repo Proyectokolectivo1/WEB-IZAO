@@ -27,6 +27,7 @@ import {
 } from './jobs/metrics/recalcular-dia.js';
 import { recalculadorMetricasDesdeEnv } from './jobs/metrics/tras-transicion.js';
 import { borrarArchivosPendientes, dependenciasBorradosDesdeEnv, JOB_MEDIA_BORRAR_ARCHIVOS } from './jobs/media/borrar-archivos.js';
+import { dependenciasChatDesdeEnv, JOB_CHAT_PURGAR, purgarConversacionesChat } from './jobs/chat/purgar-conversaciones.js';
 import { registrarCron } from './cron.js';
 import { createConnection, createQueue, createWorker, crearProcesadorSistema, QUEUE_NAMES } from './queues.js';
 
@@ -45,6 +46,7 @@ async function main(): Promise<void> {
       [JOB_METRICS_RECOMPUTE_DAY]: crearManejadorRecalculoDia(dependenciasMetricasDesdeEnv()),
       [JOB_METRICS_RECOMPUTE_RECENT]: crearManejadorRecalculoReciente(cola),
       [JOB_MEDIA_BORRAR_ARCHIVOS]: async () => borrarArchivosPendientes(dependenciasBorradosDesdeEnv()),
+      [JOB_CHAT_PURGAR]: async () => purgarConversacionesChat(dependenciasChatDesdeEnv()),
       [JOB_BARRIDO_PEDIDOS]: async () =>
         barrerPedidos(
           dependenciasBarridoDesdeEnv(colaCod, (id) => cancelarJobsCod(colaCod, id), recalcularMetricas),
