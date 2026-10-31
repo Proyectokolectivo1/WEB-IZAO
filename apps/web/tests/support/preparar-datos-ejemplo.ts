@@ -38,6 +38,7 @@ export default async function globalSetup(): Promise<void> {
   const porSlug = new Map<string, ProductoSemilla>();
   for (const pais of ['co', 'ec'] as const) {
     const pagina = await repo.catalogo(pais, { filtros: {}, orden: 'featured', cursor: null, limite: 100_000 });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const item of pagina.items as unknown as Record<string, any>[]) {
       const ficha = await repo.producto(pais, item.slug);
       const actual: ProductoSemilla = porSlug.get(item.slug) ?? {

@@ -46,7 +46,9 @@ for (const pais of ['co', 'ec'] as const) {
     test('§7.6 JSON-LD: Product + Offer + AggregateRating, con moneda del país y sin campo brand', async ({ page }) => {
       await page.goto(RUTAS.ficha(pais, producto.slug));
       const bloques = await page.locator('script[type="application/ld+json"]').allTextContents();
-      const datos = bloques.map((b) => JSON.parse(b) as Record<string, any>);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      type JsonLd = Record<string, any>;
+      const datos = bloques.map((b) => JSON.parse(b) as JsonLd);
       const p = datos.find((d) => d['@type'] === 'Product');
       expect(p, 'falta el JSON-LD Product').toBeDefined();
       expect(p!.name).toBe(producto.name);

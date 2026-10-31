@@ -24,7 +24,8 @@ export function precioVisible(pais: Pais, unidadMenor: number): string {
 }
 
 /** El navegador pone espacios duros entre el símbolo y la cifra: se comparan como espacios normales. */
-export const sinEspaciosDuros = (t: string | null | undefined) => (t ?? '').replace(/[  ]/g, ' ').replace(/\s+/g, ' ').trim();
+export const sinEspaciosDuros = (t: string | null | undefined) =>
+  (t ?? '').split(String.fromCharCode(160)).join(' ').split(String.fromCharCode(8239)).join(' ').replace(/\s+/g, ' ').trim();
 
 /**
  * Abre la ficha y agrega la primera presentación al bolso `veces` veces. Agregar abre el cajón del bolso; se cierra

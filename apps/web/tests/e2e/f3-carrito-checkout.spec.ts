@@ -17,6 +17,8 @@ const PRECIO = v0.countries.co!.price; // 300000 en los datos de ejemplo
 const dinero = (n: number) => precioVisible('co', n);
 const texto = async (page: Page, selector: string) => sinEspaciosDuros(await page.locator(selector).first().innerText());
 
+// El cuerpo viene de JSON arbitrario del navegador: se inspecciona por campos.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type CuerpoPedido = Record<string, any>;
 
 /** Simula `POST /api/checkout`. Devuelve los cuerpos recibidos para inspeccionarlos. */
@@ -36,14 +38,14 @@ async function simularPedido(page: Page, respuesta: (n: number, cuerpo: CuerpoPe
 const CREADO = { order: { number: 'IZ-CO-000321' }, public_token: 'tokenPrueba0000000000001', next_step: 'manual_whatsapp' };
 
 /** Simula `POST /api/checkout/preview` como el servidor: recalcula con su propio criterio. */
-async function simularVistaPrevia(page: Page, hacer: (cuerpo: Record<string, any>) => unknown) {
+async function simularVistaPrevia(page: Page, hacer: (cuerpo: CuerpoPedido) => unknown) {
   await page.route('**/api/checkout/preview', async (ruta) => {
-    const cuerpo = ruta.request().postDataJSON() as Record<string, any>;
+    const cuerpo = ruta.request().postDataJSON() as CuerpoPedido;
     await ruta.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(hacer(cuerpo)) });
   });
 }
 
-function respuestaPrevia(cuerpo: Record<string, any>, extra: Record<string, unknown> = {}) {
+function respuestaPrevia(cuerpo: CuerpoPedido, extra: Record<string, unknown> = {}) {
   const cantidad = (cuerpo.items as { variant_id: string; quantity: number }[]).reduce((a, i) => a + i.quantity, 0);
   const subtotal = PRECIO * cantidad;
   return {
@@ -320,7 +322,7 @@ test.describe('F3 checkout (§10)', () => {
         ...base,
         discount: '30000',
         code: { status: 'applied', code: 'BIENVENIDA', reason: null, missing_amount: null },
-        lines: base.lines.map((l: any) => ({ ...l, line_discount: '30000' })),
+        lines: base.lines.map((l: { variant_id: string }) => ({ ...l, line_discount: '30000' })),
       };
     });
     await agregarDesdeFicha(page, 'co', producto.slug);

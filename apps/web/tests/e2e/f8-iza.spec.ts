@@ -36,6 +36,7 @@ const TARJETA = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Cuerpo = Record<string, any>;
 
 async function simularChat(page: Page, responder: (n: number, cuerpo: Cuerpo) => { status?: number; sse?: string; json?: unknown }) {
