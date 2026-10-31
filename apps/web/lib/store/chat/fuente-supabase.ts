@@ -110,10 +110,14 @@ async function llaveOpenRouter(): Promise<string | null> {
   }
 }
 
-/** OpenRouter con la credencial del panel; sin credencial (o sin base en desarrollo) responde el proveedor de prueba. */
-export async function crearProveedor(): Promise<LLMProvider> {
+/**
+ * OpenRouter con la credencial del panel. Sin credencial (o si no se puede descifrar) responde el proveedor de prueba SOLO
+ * donde se permiten datos de ejemplo (desarrollo y pruebas); en producción devuelve `null` y el chat queda en modo asesor
+ * por WhatsApp, nunca con respuestas de demostración.
+ */
+export async function crearProveedor(): Promise<LLMProvider | null> {
   const apiKey = await llaveOpenRouter().catch(() => null);
-  if (!apiKey) return crearMock();
+  if (!apiKey) return ejemploPermitido() ? crearMock() : null;
   return crearOpenRouter({ apiKey, sitio: process.env.SITE_URL ?? 'https://izaoperfumeria.com', titulo: 'Izao Perfumería' });
 }
 

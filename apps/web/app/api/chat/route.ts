@@ -109,6 +109,10 @@ export async function POST(req: Request) {
   });
   if (!veredicto.ok) return json({ estado: veredicto.estado, whatsapp: enlaceAsesor }, veredicto.status);
 
+  // Sin credencial utilizable de OpenRouter (y sin permiso de ejemplo) Iza descansa: la persona va al asesor por WhatsApp.
+  const proveedorTurno = await crearProveedor();
+  if (!proveedorTurno) return json({ estado: 'desactivado', whatsapp: enlaceAsesor }, 503);
+
   // Turnstile al abrir la sesión (primer mensaje); los siguientes ya van con una sesión creada por este visitante.
   if (!sesion) {
     const ipReal = /^[0-9a-fA-F:.]+$/.test(ip) ? ip : null;
@@ -125,7 +129,7 @@ export async function POST(req: Request) {
   const tarjeta = tarjetaDePais(pais);
   const productoActual = e.page?.producto ? await tarjeta(e.page.producto.toLowerCase()).catch(() => null) : null;
   const historial = conBase ? await historialSesion(sesionActiva.id, ajustes.turnos).catch(() => []) : [];
-  const proveedor = await crearProveedor();
+  const proveedor = proveedorTurno;
 
   const flujo = new ReadableStream<Uint8Array>({
     async start(controlador) {
