@@ -172,14 +172,33 @@ function clave(i: Interno, orden: ConsultaCatalogo['orden']): number {
       return i.sales;
     case 'newest':
       return Date.parse(i.item.published_at ?? '0');
+    // La lista se ordena de mayor a menor por esta clave: el menor precio primero es la clave más alta.
     case 'price_asc':
-      return i.item.min_price;
-    case 'price_desc':
       return -i.item.min_price;
+    case 'price_desc':
+      return i.item.min_price;
     case 'discount':
       return i.item.discount_pct ?? 0;
     default:
       return i.sort_featured;
+  }
+}
+
+/** Categorías del menú de ejemplo: por género, y «Árabes» (con Oud y Ámbar) para la familia oriental. */
+function perteneceACategoria(x: ItemCatalogo, categoria: string): boolean {
+  const n = Number(/(\d+)$/.exec(x.product_id)?.[1] ?? 0);
+  switch (categoria) {
+    case 'mujer':
+    case 'hombre':
+      return x.gender_slug === categoria;
+    case 'arabes':
+      return x.family_slug === 'oriental';
+    case 'oud':
+      return x.family_slug === 'oriental' && n % 2 === 0;
+    case 'ambar':
+      return x.family_slug === 'oriental' && n % 2 === 1;
+    default:
+      return false;
   }
 }
 
@@ -194,6 +213,7 @@ function seleccionar(pais: CodigoPais, c: ConsultaCatalogo): Interno[] {
     if (f.gender && x.gender_slug !== f.gender) return false;
     if (f.brands?.length && !f.brands.includes(x.brand_slug ?? '')) return false;
     if (f.families?.length && !f.families.includes(x.family_slug ?? '')) return false;
+    if (f.category && !perteneceACategoria(x, f.category)) return false;
     if (f.concentration && x.concentration_slug !== f.concentration) return false;
     if (f.availability && !x.in_stock) return false;
     if (f.price_min !== undefined && x.min_price < f.price_min) return false;
@@ -296,7 +316,13 @@ export const repoEjemplo: TiendaRepo = {
       marcas: MARCAS.map(([slug, name]) => ({ slug, name })),
       familias: FAMILIAS.map(([slug, name]) => ({ slug, name })),
       concentraciones: CONCENTRACIONES.map(([slug, name]) => ({ slug, name })),
-      categorias: [{ slug: 'arabes', name: 'Árabes' }],
+      categorias: [
+        { slug: 'mujer', name: 'Mujer' },
+        { slug: 'hombre', name: 'Hombre' },
+        { slug: 'arabes', name: 'Árabes' },
+        { slug: 'oud', name: 'Oud' },
+        { slug: 'ambar', name: 'Ámbar' },
+      ],
       precioMin: Math.min(...precios),
       precioMax: Math.max(...datos(pais).map((d) => d.item.max_price)),
     };
