@@ -7,6 +7,7 @@ import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { DOCUMENT_TYPES, soloMetodosVendibles } from '@izao/core/contracts';
 import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
+import { ejemploPermitido } from './modo-datos';
 import { TOKEN_EJEMPLO } from './checkout/adaptador';
 import type { ConfigCheckout, EnlaceLegal, MetodoActivo, PoliticaLegal, MetodoReal, OpcionGeo } from './checkout/tipos';
 import { aCodigoCore } from './pais';
@@ -18,7 +19,7 @@ type Fila = Record<string, unknown>;
 
 export function usarSupabase(): boolean {
   const forzado = process.env.STORE_DATOS;
-  if (forzado === 'ejemplo' && process.env.NODE_ENV !== 'production') return false;
+  if (forzado === 'ejemplo' && ejemploPermitido()) return false;
   if (forzado === 'supabase' || process.env.NODE_ENV === 'production') return true;
   return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SECRET_KEY);
 }

@@ -8,7 +8,9 @@ import { ErrorCheckout, RUTA_CHECKOUT, RespuestaPedidoCreado, type CuerpoCheckou
 
 export const TOKEN_EJEMPLO = 'ejemplo0000000000000000000000000';
 
-const USAR_MOCK = !SERVIDOR_DISPONIBLE || (process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_STORE_DATOS === 'ejemplo');
+// En el navegador solo existen las variables NEXT_PUBLIC_*: la de permiso es el espejo público de `STORE_DATOS_PERMITIR_EJEMPLO`.
+const PERMITE_EJEMPLO = process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_STORE_DATOS_PERMITIR_EJEMPLO === '1';
+const USAR_MOCK = !SERVIDOR_DISPONIBLE || (PERMITE_EJEMPLO && process.env.NEXT_PUBLIC_STORE_DATOS === 'ejemplo');
 
 export type ResultadoCrear =
   | { tipo: 'creado'; pedido: RespuestaPedidoCreado }
@@ -18,7 +20,7 @@ export type ResultadoCrear =
 
 export async function crearPedido(cuerpo: CuerpoCheckout, senal?: AbortSignal): Promise<ResultadoCrear> {
   if (USAR_MOCK) {
-    if (process.env.NODE_ENV === 'production') return { tipo: 'error', estado: 503, error: { error: 'UNAVAILABLE' } };
+    if (!PERMITE_EJEMPLO) return { tipo: 'error', estado: 503, error: { error: 'UNAVAILABLE' } };
     await new Promise((r) => setTimeout(r, 700));
     return {
       tipo: 'creado',

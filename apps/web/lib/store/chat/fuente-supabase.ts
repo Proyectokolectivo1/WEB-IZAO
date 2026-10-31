@@ -11,6 +11,7 @@ import { enlaceWhatsapp } from '../contacto';
 import { configCheckout, usarSupabase } from '../checkout-datos';
 import { lineaDe, varianteInicial, presentacionDe } from '../ficha-util';
 import { tienda } from '../datos';
+import { ejemploPermitido } from '../modo-datos';
 import { formatearPrecio } from '../pais';
 import type { CodigoPais } from '../types';
 import type { DepsHerramientas } from './herramientas';
@@ -120,7 +121,7 @@ export async function crearProveedor(): Promise<LLMProvider> {
 
 /** ¿Se muestra el botón de Iza? Sin base (desarrollo con datos de ejemplo) sí, con el proveedor de prueba. */
 export async function chatHabilitado(): Promise<boolean> {
-  if (!usarSupabase()) return process.env.NODE_ENV !== 'production';
+  if (!usarSupabase()) return ejemploPermitido();
   try {
     return (await leerAjustesChat()).habilitado;
   } catch {

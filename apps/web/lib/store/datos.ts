@@ -1,4 +1,5 @@
 import 'server-only';
+import { ejemploPermitido } from './modo-datos';
 import { repoEjemplo } from './repo-ejemplo';
 import type { TiendaRepo } from './repo';
 import { repoSupabase } from './repo-supabase';
@@ -9,7 +10,7 @@ import { repoSupabase } from './repo-supabase';
  */
 export function tienda(): TiendaRepo {
   const forzado = process.env.STORE_DATOS;
-  if (forzado === 'ejemplo' && process.env.NODE_ENV !== 'production') return repoEjemplo;
+  if (forzado === 'ejemplo' && ejemploPermitido()) return repoEjemplo;
   if (forzado === 'supabase' || process.env.NODE_ENV === 'production') return repoSupabase;
   return process.env.SUPABASE_URL && process.env.SUPABASE_SECRET_KEY ? repoSupabase : repoEjemplo;
 }
