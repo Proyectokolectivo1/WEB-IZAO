@@ -140,3 +140,41 @@ describe('OpenRouter (proveedor global)', () => {
     expect(redactarSecretos(`error con ${llave} dentro`, op, { api_key: llave })).not.toContain(llave);
   });
 });
+
+describe('marketing: Meta Ads y píxeles (§22, §23.1)', () => {
+  const casos = [
+    { id: 'meta_ads', campos: [['access_token', true, true], ['ad_account_id', false, true]], ok: { access_token: 'EAAtokendeprueba1234567890', ad_account_id: 'act_1234567890' } },
+    { id: 'meta_pixel', campos: [['pixel_id', false, true], ['capi_token', true, true]], ok: { pixel_id: '123456789012345', capi_token: 'EAAcapitokenprueba1234567890' } },
+    { id: 'ga4', campos: [['measurement_id', false, true], ['api_secret', true, false]], ok: { measurement_id: 'G-ABC123XYZ' } },
+    { id: 'tiktok_pixel', campos: [['pixel_id', false, true], ['events_api_token', true, true]], ok: { pixel_id: 'CABC123DEF456', events_api_token: 'tiktoktokenprueba1234567890' } },
+  ] as const;
+
+  it.each(casos)('$id: los campos son los de la especificación, por país y sin sandbox', ({ id, campos }) => {
+    const p = proveedorPorId(id)!;
+    expect(camposDe(p).map((c) => [c.key, c.secret, c.required])).toEqual(campos);
+    expect(ambitosDe(p)).toEqual(['CO', 'EC']);
+    expect(p.esquema.environments).toEqual(['production']);
+    expect(validarCredencial(p, 'global', 'production', {}).pais).toBeTruthy();
+  });
+
+  it.each(casos)('$id: acepta valores bien formados en cada país y exige los obligatorios', ({ id, ok }) => {
+    const p = proveedorPorId(id)!;
+    expect(validarCredencial(p, 'CO', 'production', ok)).toEqual({});
+    expect(validarCredencial(p, 'EC', 'production', ok)).toEqual({});
+    expect(Object.keys(validarCredencial(p, 'CO', 'production', {})).length).toBeGreaterThan(0);
+    expect(validarCredencial(p, 'CO', 'sandbox', ok).ambiente).toBeTruthy();
+  });
+
+  it('rechaza identificadores mal formados', () => {
+    expect(validarCredencial(proveedorPorId('meta_ads')!, 'CO', 'production', { access_token: 'EAAx12345678901234', ad_account_id: 'cuenta' }).ad_account_id).toBeTruthy();
+    expect(validarCredencial(proveedorPorId('meta_pixel')!, 'CO', 'production', { pixel_id: 'abc', capi_token: 'EAAx12345678901234' }).pixel_id).toBeTruthy();
+    expect(validarCredencial(proveedorPorId('ga4')!, 'CO', 'production', { measurement_id: 'UA-123' }).measurement_id).toBeTruthy();
+    expect(validarCredencial(proveedorPorId('tiktok_pixel')!, 'CO', 'production', { pixel_id: 'con espacio', events_api_token: 'tok12345678901' }).pixel_id).toBeTruthy();
+    expect(validarCredencial(proveedorPorId('meta_pixel')!, 'CO', 'production', { pixel_id: '123456789', capi_token: 'tiene espacio' }).capi_token).toBeTruthy();
+  });
+
+  it('el API secret de GA4 es opcional pero secreto: no se muestra completo', () => {
+    const p = proveedorPorId('ga4')!;
+    expect(vistaPrevia(p, { measurement_id: 'G-ABC123XYZ', api_secret: 'secretodeprueba12345' })).toMatchObject({ measurement_id: 'G-ABC123XYZ', api_secret: expect.stringMatching(/\*{4}/) });
+  });
+});

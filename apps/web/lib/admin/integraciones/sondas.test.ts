@@ -138,3 +138,43 @@ describe('sonda de OpenRouter', () => {
     expect((await s.openrouter({ ...entrada, valores: { api_key: 'corta' } })).ok).toBe(false);
   });
 });
+
+describe('sondas de marketing', () => {
+  const meta = { access_token: 'EAAtokendeprueba1234567890', ad_account_id: 'act_1234567890' };
+
+  it('Meta Ads real: lee la cuenta con el token como Bearer (el prefijo act_ no se duplica)', async () => {
+    const vistos: [string, string | null][] = [];
+    const f = fetchPorUrl((url, auth) => (vistos.push([url, auth]), 200));
+    const s = crearSondas('real', f);
+    expect((await s.meta_ads({ pais: 'CO', ambiente: 'production', valores: meta })).ok).toBe(true);
+    expect((await s.meta_ads({ pais: 'EC', ambiente: 'production', valores: { ...meta, ad_account_id: '1234567890' } })).ok).toBe(true);
+    expect(vistos.map((v) => v[0])).toEqual([expect.stringMatching(/graph\.facebook\.com\/v[\d.]+\/act_1234567890\?fields=id$/), expect.stringMatching(/\/act_1234567890\?fields=id$/)]);
+    expect(vistos[0]![1]).toBe(`Bearer ${meta.access_token}`);
+  });
+
+  it('Meta Ads real: traduce el rechazo y la cuenta inexistente, y no filtra el token', async () => {
+    const rechazo = await crearSondas('real', fetchPorUrl(() => 401)).meta_ads({ pais: 'CO', ambiente: 'production', valores: meta });
+    expect(rechazo.ok).toBe(false);
+    expect(rechazo.message).toMatch(/rechaz/);
+    expect((await crearSondas('real', fetchPorUrl(() => 404)).meta_ads({ pais: 'CO', ambiente: 'production', valores: meta })).message).toMatch(/cuenta/);
+    expect(JSON.stringify(rechazo)).not.toContain(meta.access_token);
+  });
+
+  it('píxeles: solo revisan el formato y lo dicen, sin tocar la red', async () => {
+    const f = fetchPorUrl(() => {
+      throw new Error('no debe llamar a la red');
+    });
+    const s = crearSondas('real', f);
+    const ok = await s.ga4({ pais: 'CO', ambiente: 'production', valores: { measurement_id: 'G-ABC123XYZ' } });
+    expect(ok).toMatchObject({ ok: true, message: expect.stringMatching(/No se enviaron eventos/) });
+    expect((await s.meta_pixel({ pais: 'CO', ambiente: 'production', valores: { pixel_id: 'xx', capi_token: 'EAAx12345678901234' } })).ok).toBe(false);
+    expect((await s.tiktok_pixel({ pais: 'EC', ambiente: 'production', valores: { pixel_id: 'CABC123DEF456', events_api_token: 'tok12345678901' } })).ok).toBe(true);
+  });
+
+  it('mock: valida el formato de todos sin red', async () => {
+    const s = crearSondas('mock', fetchPorUrl(() => 500));
+    expect((await s.meta_ads({ pais: 'CO', ambiente: 'production', valores: meta })).ok).toBe(true);
+    expect((await s.meta_ads({ pais: 'CO', ambiente: 'production', valores: { ...meta, ad_account_id: 'x' } })).ok).toBe(false);
+    expect((await s.ga4({ pais: 'CO', ambiente: 'production', valores: { measurement_id: 'UA-1' } })).ok).toBe(false);
+  });
+});

@@ -58,6 +58,18 @@ function sondaMock(id: ProveedorId): Sonda {
   };
 }
 
+const MENSAJE_SOLO_FORMATO =
+  'El formato es correcto. No se enviaron eventos de prueba: confirma la recepción en el administrador de eventos del proveedor.';
+
+function sondaSoloFormato(id: ProveedorId): Sonda {
+  return async ({ pais, ambiente, valores }) => {
+    const errores = validarCredencial(proveedorPorId(id)!, pais ?? 'global', ambiente, valores);
+    return Object.keys(errores).length > 0
+      ? { ok: false, message: 'Las credenciales no tienen el formato correcto.' }
+      : { ok: true, message: MENSAJE_SOLO_FORMATO };
+  };
+}
+
 function sondasReales(fetchImpl: typeof fetch): Record<ProveedorId, Sonda> {
   return {
     async mastershop({ valores }) {
@@ -92,6 +104,26 @@ function sondasReales(fetchImpl: typeof fetch): Record<ProveedorId, Sonda> {
       }
     },
 
+    async meta_ads({ valores }) {
+      // Lectura inocua de la cuenta publicitaria con el token (Graph API: nodo de la cuenta, solo el id).
+      const version = VERSION_GRAPH_POR_DEFECTO;
+      const cuenta = (valores.ad_account_id ?? '').replace(/^act_/, '');
+      const estado = await leer(fetchImpl, `https://graph.facebook.com/${version}/act_${encodeURIComponent(cuenta)}?fields=id`, {
+        authorization: `Bearer ${valores.access_token ?? ''}`,
+      });
+      if (estado === 'red') return { ok: false, message: 'No se pudo contactar a Meta. Inténtalo de nuevo.' };
+      if (estado === 200) return { ok: true, message: 'Conexión con Meta Ads correcta.' };
+      if (estado === 401 || estado === 403) return { ok: false, message: 'Meta rechazó el token o no tiene acceso a esa cuenta.' };
+      if (estado === 400 || estado === 404) return { ok: false, message: 'Meta no encontró esa cuenta publicitaria (revisa el número).' };
+      return { ok: false, message: `Meta respondió con un error (${estado}).` };
+    },
+
+    // Píxeles: no hay una lectura inocua y documentada que valide el token de eventos sin enviar uno. Se revisa el formato y se
+    // dice con claridad; la recepción de eventos se comprueba en el Administrador de eventos de cada plataforma.
+    meta_pixel: sondaSoloFormato('meta_pixel'),
+    ga4: sondaSoloFormato('ga4'),
+    tiktok_pixel: sondaSoloFormato('tiktok_pixel'),
+
     async openrouter({ valores }) {
       // GET /api/v1/key: informa de la llave actual; con una llave inválida responde 401 (doc de OpenRouter, «Get current API key»).
       const estado = await leer(fetchImpl, 'https://openrouter.ai/api/v1/key', { authorization: `Bearer ${valores.api_key ?? ''}` });
@@ -117,7 +149,7 @@ function sondasReales(fetchImpl: typeof fetch): Record<ProveedorId, Sonda> {
 }
 
 export function crearSondas(modo: ModoIntegraciones, fetchImpl: typeof fetch = fetch): Record<ProveedorId, Sonda> {
-  const base = modo === 'mock' ? { wompi: sondaMock('wompi'), mastershop: sondaMock('mastershop'), whatsapp: sondaMock('whatsapp'), openrouter: sondaMock('openrouter') } : sondasReales(fetchImpl);
+  const base = modo === 'mock' ? { wompi: sondaMock('wompi'), mastershop: sondaMock('mastershop'), whatsapp: sondaMock('whatsapp'), openrouter: sondaMock('openrouter'), meta_ads: sondaMock('meta_ads'), meta_pixel: sondaMock('meta_pixel'), ga4: sondaMock('ga4'), tiktok_pixel: sondaMock('tiktok_pixel') } : sondasReales(fetchImpl);
   // Defensa final: lo que devuelva una sonda se limpia de secretos y se acota.
   const salida = {} as Record<ProveedorId, Sonda>;
   for (const id of Object.keys(base) as ProveedorId[]) {

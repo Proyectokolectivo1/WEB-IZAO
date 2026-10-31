@@ -23,9 +23,9 @@
 
 ## Pendiente
 - Dashboard rápido (feat dashboard): `cargarDashboard` lee KPIs/serie de `daily_sales_stats`, tops y panel de las RPC `metricas_*` (caché Redis 5 min, falla abierta; `cache.ts`, `rapido.ts`) y avisa si las estadísticas van atrasadas frente al panel. `cargarDashboardDetallado` (desde `orders`) solo alimenta el Excel. Simulado con 12 meses: 0 consultas a `orders`, cálculo < 50 ms; en la base, 8 RPC en paralelo ≈ 170 ms (izao-db).
-- Gastos: botón "Sincronizar ahora" de Meta Ads (conector: izao-integraciones/worker). Comprobante hecho (`media.kind='expense'`, se sirve por `/media`: ruta con uuid, no listada).
+- Gastos: botón "Sincronizar ahora" de Meta Ads (el worker lee `integration_credentials` provider `meta_ads`, campos `access_token` y `ad_account_id`; píxeles: `meta_pixel`, `ga4`, `tiktok_pixel` para izao-tienda). Comprobante hecho (`media.kind='expense'`, se sirve por `/media`: ruta con uuid, no listada).
 - Garantías: formulario público y correo de recepción (izao-tienda/izao-pagos). Pedidos: filtros por ciudad/código/influencer/documento (§24.1).
-- Integraciones: esquemas de Addi, Sistecrédito, OpenRouter, Meta Ads y píxeles. `.env.example`: `INTEGRACIONES_MODO`, `SITE_URL`, `MASTERSHOP_WEBHOOK_PATH_SECRET` (infra).
+- Integraciones: faltan los esquemas de Addi y Sistecrédito (los de OpenRouter global, `meta_ads`, `meta_pixel`, `ga4` y `tiktok_pixel` ya están en `lib/admin/integraciones/catalogo.ts`; credencial global = `country_code null`). Formatos de ID de Meta Ads/píxeles/GA4/TikTok y probar conexión de píxeles [VERIFICAR] con la doc de cada plataforma. `.env.example`: `INTEGRACIONES_MODO`, `SITE_URL`, `MASTERSHOP_WEBHOOK_PATH_SECRET` (infra).
 - Reseñas/Home: el rating del catálogo (`catalog_listing.rating_*`) debe recalcularse al moderar (izao-db). Atómicas en uso: anonimizar cliente, cancelar pedido (MasterShop antes; devuelve stock y lo registra) y publicar página. Cancelar/marcar pagado encolan `metrics.recompute_day` (best effort).
 ## Decisiones / avisos
 - Sin `react-hook-form`: `useActionState` + zod del servidor. `cliente-falso` devuelve `filtros` y soporta `or`.
@@ -33,7 +33,7 @@
 - Heredocs de bash pierden barras invertidas; escribir archivos con Write. Cancelar con envío MasterShop 3+ se rechaza a propósito.
 
 ## Punto de retoma
-Todos los módulos de §24.1 en mi zona están construidos (web: lint, tsc y 1 143 pruebas verdes). Pendientes: ver "Pendiente". Mejora sugerida: "Probar conexión" de OpenRouter cuando exista su esquema en Integraciones.
+Todos los módulos de §24.1 en mi zona están construidos (web: lint, tsc y 1 143 pruebas verdes). Pendientes: ver "Pendiente". Para izao-db: `chat_settings.model_primary/model_fallback` quedan en null; el default va en `seed.sql` (el panel sugiere los modelos del listado de OpenRouter).
 
 ## Avisos al líder
 - Fuente de venta: ya la guarda izao-tienda (`orders.sale_source`). **Para izao-infra:** Nginx sirve `/media/` público; las fotos y el video de garantías (y los comprobantes de gastos) deben bloquearse ahí (`location ^~ /media/warranty/ { return 404; }`): el panel los sirve por `/api/admin/garantias/archivo/{id}` con sesión.
