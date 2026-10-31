@@ -13,12 +13,14 @@
 import { defineConfig, devices } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { DIR_RESULTADOS, entornoDePrueba, PUERTO_SUPABASE_FALSO, PUERTO_WEB, RAIZ_WEB, URL_WEB } from './support/entorno';
+import { DIR_RESULTADOS, DIR_SERVIDOR, entornoDePrueba, PUERTO_SUPABASE_FALSO, PUERTO_WEB, RAIZ_WEB, URL_WEB } from './support/entorno';
 
 const enCI = Boolean(process.env.CI);
 
-if (!process.env.E2E_SIN_COMPROBAR_BUILD && !fs.existsSync(path.join(RAIZ_WEB, '.next', 'BUILD_ID'))) {
-  throw new Error('No hay build de producción en apps/web/.next. Ejecuta `pnpm build` antes de `pnpm test:e2e`.');
+if (!process.env.E2E_SIN_COMPROBAR_BUILD && !fs.existsSync(path.join(DIR_SERVIDOR, '.next', 'BUILD_ID'))) {
+  throw new Error(
+    `No hay build de producción en ${DIR_SERVIDOR}/.next. Ejecuta "pnpm build" (o, con STORE_DATOS=ejemplo, "pnpm build:e2e") antes de "pnpm test:e2e".`,
+  );
 }
 
 const navegadorMovil = process.env.E2E_WEBKIT === '1' ? 'webkit' : 'chromium';
@@ -26,6 +28,7 @@ const navegadorMovil = process.env.E2E_WEBKIT === '1' ? 'webkit' : 'chromium';
 export default defineConfig({
   testDir: __dirname,
   testMatch: ['**/*.spec.ts'],
+  globalSetup: require.resolve('./support/preparar-datos-ejemplo'),
   outputDir: path.join(DIR_RESULTADOS, 'artefactos'),
   fullyParallel: true,
   forbidOnly: enCI,
@@ -69,8 +72,8 @@ export default defineConfig({
     },
     {
       // `next start` sirve el build con compresión gzip, igual que producción detrás de Nginx.
-      command: `pnpm exec next start -H 127.0.0.1 -p ${PUERTO_WEB}`,
-      cwd: RAIZ_WEB,
+      command: `node ${path.resolve(RAIZ_WEB, '../../node_modules/next/dist/bin/next')} start -H 127.0.0.1 -p ${PUERTO_WEB}`,
+      cwd: DIR_SERVIDOR,
       url: `${URL_WEB}/api/health`,
       reuseExistingServer: !enCI,
       timeout: 120_000,

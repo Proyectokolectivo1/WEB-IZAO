@@ -6,7 +6,7 @@ import type { Page, Response } from '@playwright/test';
 import { TAMANO_LOTE } from './entorno';
 import { SEL } from './rutas';
 
-export type ItemCatalogo = { slug: string; name?: string; minPrice?: number; [k: string]: unknown };
+export type ItemCatalogo = { slug: string; name?: string; min_price?: number; in_stock?: boolean; [k: string]: unknown };
 export type LoteCatalogo = { items: ItemCatalogo[]; nextCursor: string | null };
 
 /** Registra cada respuesta de `/api/catalog` (en orden) mientras la página la pide. */
@@ -45,6 +45,20 @@ export async function recorrerHastaElFinal(page: Page, maximoPasos = 60): Promis
   throw new Error(`El listado no llegó al final en ${maximoPasos} pasos`);
 }
 
+/**
+ * Baja como una persona: 500 px cada 100 ms hasta el fin de resultados. Sirve para medir CLS e INP;
+ * `recorrerHastaElFinal` salta al centinela (más rápido, para pruebas de contenido).
+ */
+export async function bajarGradualmenteHastaElFinal(page: Page, maximoPasos = 400): Promise<void> {
+  const fin = page.locator(SEL.finResultados);
+  for (let paso = 0; paso < maximoPasos; paso += 1) {
+    if (await fin.isVisible()) return;
+    await page.mouse.wheel(0, 500);
+    await page.waitForTimeout(100);
+  }
+  throw new Error(`El listado no llegó al final en ${maximoPasos} pasos graduales`);
+}
+
 /** Slugs de las tarjetas que hay en el DOM, en orden. */
 export async function slugsEnPantalla(page: Page): Promise<string[]> {
   return page.locator(SEL.tarjeta).evaluateAll((els) => els.map((e) => e.getAttribute('data-slug') ?? ''));
@@ -63,4 +77,12 @@ export async function medirCls(page: Page): Promise<() => Promise<number>> {
     }).observe({ type: 'layout-shift', buffered: true });
   });
   return () => page.evaluate(() => (window as unknown as { __cls: number }).__cls);
+}
+
+/** En pantallas estrechas el buscador está plegado tras el botón "Buscar"; en escritorio ya está visible. */
+export async function abrirBuscador(page: Page): Promise<void> {
+  const caja = page.locator(SEL.buscador).first();
+  if (await caja.isVisible()) return;
+  await page.getByRole('button', { name: 'Buscar', exact: true }).click();
+  await caja.waitFor({ state: 'visible' });
 }

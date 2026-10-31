@@ -9,7 +9,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { RAIZ_REPO, type Pais } from './entorno';
+import { DIR_RESULTADOS, MODO_EJEMPLO, RAIZ_REPO, type Pais } from './entorno';
 
 export type ProductoSemilla = {
   slug: string;
@@ -31,9 +31,17 @@ const ARCHIVO = path.join(RAIZ_REPO, 'packages/db/seed/data/productos.json');
 
 let cache: ProductoSemilla[] | null = null;
 
+/** Con STORE_DATOS=ejemplo los productos salen de los datos de ejemplo de la tienda (globalSetup los vuelca). */
+const ARCHIVO_EJEMPLO = path.join(DIR_RESULTADOS, 'ejemplo.json');
+
 export function productosSemilla(): ProductoSemilla[] {
-  cache ??= JSON.parse(fs.readFileSync(ARCHIVO, 'utf8')) as ProductoSemilla[];
+  cache ??= JSON.parse(fs.readFileSync(MODO_EJEMPLO ? ARCHIVO_EJEMPLO : ARCHIVO, 'utf8')) as ProductoSemilla[];
   return cache;
+}
+
+/** Cuántos productos visibles espera el listado de un país (400 con el seed; el total de ejemplo sin llaves). */
+export function totalVisiblesEn(pais: Pais): number {
+  return visiblesEn(pais).length;
 }
 
 export function esVisibleEn(p: ProductoSemilla, pais: Pais): boolean {

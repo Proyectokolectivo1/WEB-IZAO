@@ -2,14 +2,17 @@
  * Rutas y selectores de la tienda pública. Las rutas con URL definida en la especificación (§5.1, §27)
  * son firmes; lo marcado "POR CONFIRMAR" lo fija izao-tienda al publicar y se ajusta aquí, en un solo lugar.
  */
-import type { Pais } from './entorno';
+import { MODO_EJEMPLO, type Pais } from './entorno';
+
+/** Categoría con la que se prueba el listado: la del seed, o la única que traen los datos de ejemplo. */
+export const CATEGORIA_LISTADO = MODO_EJEMPLO ? 'arabes' : 'hombre';
 
 export const RUTAS = {
   home: (p: Pais) => `/${p}`,
   /** Catálogo completo del país (todos los productos visibles). */
   catalogo: (p: Pais) => `/${p}/catalogo`,
   /** Listado con scroll infinito: se prueba sobre una categoría del seed (URL de §27). */
-  listado: (p: Pais, categoria = 'hombre') => `/${p}/categoria/${categoria}`,
+  listado: (p: Pais, categoria = CATEGORIA_LISTADO) => `/${p}/categoria/${categoria}`,
   ficha: (p: Pais, slug: string) => `/${p}/perfume/${slug}`,
   busqueda: (p: Pais, q: string) => `/${p}/buscar?q=${encodeURIComponent(q)}`,
   apiCatalogo: '/api/catalog',

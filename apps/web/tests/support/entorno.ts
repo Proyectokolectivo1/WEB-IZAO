@@ -16,6 +16,13 @@ export const URL_SUPABASE_FALSO = `http://127.0.0.1:${PUERTO_SUPABASE_FALSO}`;
 
 /** Raíz de `apps/web` (donde está `.next`). */
 export const RAIZ_WEB = path.resolve(__dirname, '../..');
+/**
+ * `STORE_DATOS=ejemplo`: pruebas sin llaves. Se sirve la copia construida por `preparar-build-ejemplo.mjs`
+ * (apps/.e2e-web), que usa los datos de ejemplo de la tienda; las expectativas salen de ahí (`support/semilla.ts`).
+ */
+export const MODO_EJEMPLO = process.env.STORE_DATOS === 'ejemplo';
+/** Carpeta desde la que se sirve la tienda (`next start`) y donde está el build. */
+export const DIR_SERVIDOR = process.env.E2E_DIR_SERVIDOR ?? (MODO_EJEMPLO ? path.resolve(RAIZ_WEB, '../.e2e-web') : RAIZ_WEB);
 /** Raíz del monorepo. */
 export const RAIZ_REPO = path.resolve(RAIZ_WEB, '../..');
 /** Salidas locales (ignoradas por git). */
@@ -33,6 +40,7 @@ export function entornoDePrueba(): Record<string, string> {
     SUPABASE_PUBLISHABLE_KEY: 'llave-publica-de-prueba',
     SUPABASE_SECRET_KEY: 'llave-de-servicio-de-prueba',
     APP_ENCRYPTION_KEY: CLAVE_DE_PRUEBA,
+    ...(MODO_EJEMPLO ? { STORE_DATOS: 'ejemplo', NEXT_PUBLIC_STORE_DATOS: 'ejemplo' } : {}),
   };
 }
 

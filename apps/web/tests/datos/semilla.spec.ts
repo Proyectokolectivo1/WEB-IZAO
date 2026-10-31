@@ -3,18 +3,20 @@
  * Si estas cifras cambian, cambian los resultados esperados de todas las pruebas de catálogo.
  */
 import { expect, test } from '@playwright/test';
-import { VISIBLES_POR_PAIS } from '../support/entorno';
+import { MODO_EJEMPLO, VISIBLES_POR_PAIS } from '../support/entorno';
 import { productosSemilla, visiblesEn, visiblesSoloEn } from '../support/semilla';
 
 test.describe('datos de prueba del seed', () => {
   test('§30 F1 hay 520 productos y 400 visibles por país', () => {
+    test.skip(MODO_EJEMPLO, 'con STORE_DATOS=ejemplo los datos son los de ejemplo de la tienda, no el seed de 520');
     expect(productosSemilla()).toHaveLength(520);
     expect(visiblesEn('co')).toHaveLength(VISIBLES_POR_PAIS);
     expect(visiblesEn('ec')).toHaveLength(VISIBLES_POR_PAIS);
   });
 
   test('§5.2 hay productos visibles en un país y ausentes en el otro (para probar la visibilidad)', () => {
-    expect(visiblesSoloEn('ec', 'co').length).toBeGreaterThanOrEqual(1);
+    // Los datos de ejemplo de la tienda solo ocultan productos en EC; el seed los tiene exclusivos de cada país.
+    if (!MODO_EJEMPLO) expect(visiblesSoloEn('ec', 'co').length).toBeGreaterThanOrEqual(1);
     expect(visiblesSoloEn('co', 'ec').length).toBeGreaterThanOrEqual(1);
   });
 

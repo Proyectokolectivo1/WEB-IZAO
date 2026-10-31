@@ -31,13 +31,13 @@ async function auditar(page: Page) {
 type PaginaPublica = { nombre: string; ruta: (p: Pais) => string; listo: boolean; antes?: (page: Page) => Promise<void> };
 
 const PUBLICAS: PaginaPublica[] = [
-  { nombre: 'home', ruta: RUTAS.home, listo: false },
-  { nombre: 'listado', ruta: (p) => RUTAS.listado(p), listo: false },
-  { nombre: 'ficha', ruta: (p) => RUTAS.ficha(p, visiblesEn(p)[0]!.slug), listo: false },
-  { nombre: 'búsqueda', ruta: (p) => RUTAS.busqueda(p, 'nomada'), listo: false },
-  { nombre: 'carrito abierto', ruta: RUTAS.home, listo: false, antes: async (page) => { await page.getByTestId('abrir-carrito').click(); } },
-  { nombre: 'vista rápida', ruta: (p) => RUTAS.listado(p), listo: false, antes: async (page) => { await page.locator(SEL.botonVistaRapida).first().click(); } },
-  { nombre: 'checkout', ruta: (p) => `/${p}/checkout`, listo: false },
+  { nombre: 'home', ruta: RUTAS.home, listo: true },
+  { nombre: 'listado', ruta: (p) => RUTAS.listado(p), listo: true },
+  { nombre: 'ficha', ruta: (p) => RUTAS.ficha(p, visiblesEn(p)[0]!.slug), listo: true },
+  { nombre: 'búsqueda', ruta: (p) => RUTAS.busqueda(p, 'nomada'), listo: true },
+  { nombre: 'carrito abierto', ruta: RUTAS.home, listo: true, antes: async (page) => { await page.getByRole('button', { name: /Abrir tu bolso/ }).click(); } },
+  { nombre: 'vista rápida', ruta: (p) => RUTAS.listado(p), listo: true, antes: async (page) => { await page.locator(SEL.botonVistaRapida).first().click(); } },
+  { nombre: 'checkout', ruta: (p) => `/${p}/checkout`, listo: true },
 ];
 
 test.describe('accesibilidad WCAG 2.2 AA: panel', () => {
@@ -84,7 +84,7 @@ for (const pais of ['co', 'ec'] as const) {
       });
     }
 
-    test.fixme(`§8.8 objetivos táctiles de al menos 44x44 px en listado (${pais})`, async ({ page, context, isMobile }) => {
+    test(`§8.8 objetivos táctiles de al menos 44x44 px en listado (${pais})`, async ({ page, context, isMobile }) => {
       test.skip(!isMobile, 'solo táctil');
       await fijarPais(context, pais);
       await page.goto(RUTAS.listado(pais));
@@ -101,7 +101,7 @@ for (const pais of ['co', 'ec'] as const) {
       expect(pequenos).toEqual([]);
     });
 
-    test.fixme(`§8.8 todas las imágenes del listado tienen alt (${pais})`, async ({ page, context }) => {
+    test(`§8.8 todas las imágenes del listado tienen alt (${pais})`, async ({ page, context }) => {
       await fijarPais(context, pais);
       await page.goto(RUTAS.listado(pais));
       const sinAlt = await page.locator('img:not([alt])').count();

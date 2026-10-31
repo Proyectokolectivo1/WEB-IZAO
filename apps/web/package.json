@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
+    "build:e2e": "node tests/support/preparar-build-ejemplo.mjs",
     "test:e2e": "playwright test -c tests/playwright.config.ts",
     "test:e2e:humo": "playwright test -c tests/playwright.config.ts e2e/humo datos/",
     "test:a11y": "playwright test -c tests/playwright.config.ts a11y/",
