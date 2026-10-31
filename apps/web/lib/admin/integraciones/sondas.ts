@@ -20,7 +20,8 @@ import {
 export type ModoIntegraciones = 'real' | 'mock';
 export type ResultadoSonda = { ok: boolean; message: string };
 export type EntradaSonda = {
-  pais: PaisIntegracion;
+  /** `null` en los proveedores globales (OpenRouter). */
+  pais: PaisIntegracion | null;
   ambiente: AmbienteIntegracion;
   valores: Readonly<Record<string, string>>;
 };
@@ -49,7 +50,7 @@ async function leer(fetchImpl: typeof fetch, url: string, cabeceras: Record<stri
 function sondaMock(id: ProveedorId): Sonda {
   return async ({ pais, ambiente, valores }) => {
     const proveedor = proveedorPorId(id)!;
-    const errores = validarCredencial(proveedor, pais, ambiente, valores);
+    const errores = validarCredencial(proveedor, pais ?? 'global', ambiente, valores);
     if (Object.keys(errores).length > 0) {
       return { ok: false, message: 'Simulación: las credenciales no tienen el formato correcto.' };
     }
@@ -91,6 +92,15 @@ function sondasReales(fetchImpl: typeof fetch): Record<ProveedorId, Sonda> {
       }
     },
 
+    async openrouter({ valores }) {
+      // GET /api/v1/key: informa de la llave actual; con una llave inválida responde 401 (doc de OpenRouter, «Get current API key»).
+      const estado = await leer(fetchImpl, 'https://openrouter.ai/api/v1/key', { authorization: `Bearer ${valores.api_key ?? ''}` });
+      if (estado === 'red') return { ok: false, message: 'No se pudo contactar a OpenRouter. Inténtalo de nuevo.' };
+      if (estado === 200) return { ok: true, message: 'Conexión con OpenRouter correcta.' };
+      if (estado === 401 || estado === 403) return { ok: false, message: 'OpenRouter rechazó la llave de API.' };
+      return { ok: false, message: `OpenRouter respondió con un error (${estado}).` };
+    },
+
     async whatsapp({ valores }) {
       const version = valores.graph_version?.trim() || VERSION_GRAPH_POR_DEFECTO;
       const id = encodeURIComponent(valores.phone_number_id ?? '');
@@ -107,7 +117,7 @@ function sondasReales(fetchImpl: typeof fetch): Record<ProveedorId, Sonda> {
 }
 
 export function crearSondas(modo: ModoIntegraciones, fetchImpl: typeof fetch = fetch): Record<ProveedorId, Sonda> {
-  const base = modo === 'mock' ? { wompi: sondaMock('wompi'), mastershop: sondaMock('mastershop'), whatsapp: sondaMock('whatsapp') } : sondasReales(fetchImpl);
+  const base = modo === 'mock' ? { wompi: sondaMock('wompi'), mastershop: sondaMock('mastershop'), whatsapp: sondaMock('whatsapp'), openrouter: sondaMock('openrouter') } : sondasReales(fetchImpl);
   // Defensa final: lo que devuelva una sonda se limpia de secretos y se acota.
   const salida = {} as Record<ProveedorId, Sonda>;
   for (const id of Object.keys(base) as ProveedorId[]) {

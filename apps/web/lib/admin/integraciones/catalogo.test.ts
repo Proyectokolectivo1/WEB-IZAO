@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ambitosDe,
+  camposDe,
+  esAmbito,
+  esGlobal,
+  paisDb,
   mezclarConGuardados,
   proveedorPorId,
   redactarSecretos,
@@ -99,5 +104,39 @@ describe('vistaPrevia y redacción', () => {
     const t = redactarSecretos(`Error con ${WA.access_token} y ${WA.phone_number_id}`, whatsapp, WA);
     expect(t).not.toContain(WA.access_token);
     expect(t).toContain(WA.phone_number_id);
+  });
+});
+
+describe('OpenRouter (proveedor global)', () => {
+  const op = proveedorPorId('openrouter')!;
+  const llave = 'sk-or-v1-0123456789abcdef0123456789abcdef';
+
+  it('es global: un solo ámbito, sin país, solo producción, con la llave como único campo secreto', () => {
+    expect(esGlobal(op)).toBe(true);
+    expect(ambitosDe(op)).toEqual(['global']);
+    expect(op.esquema.environments).toEqual(['production']);
+    expect(camposDe(op).map((c) => [c.key, c.secret, c.required])).toEqual([['api_key', true, true]]);
+    expect(paisDb('global')).toBeNull();
+    expect(paisDb('CO')).toBe('CO');
+    expect(esAmbito('global')).toBe(true);
+    expect(esAmbito('MX')).toBe(false);
+  });
+
+  it('acepta la llave en el ámbito global y rechaza países, sandbox, llaves cortas y con espacios', () => {
+    expect(validarCredencial(op, 'global', 'production', { api_key: llave })).toEqual({});
+    expect(validarCredencial(op, 'CO', 'production', { api_key: llave }).pais).toMatch(/global/);
+    expect(validarCredencial(op, 'global', 'sandbox', { api_key: llave }).ambiente).toBeTruthy();
+    expect(validarCredencial(op, 'global', 'production', { api_key: 'corta' }).api_key).toBeTruthy();
+    expect(validarCredencial(op, 'global', 'production', { api_key: 'sk-or-v1-con espacio dentro 123456' }).api_key).toBeTruthy();
+    expect(validarCredencial(op, 'global', 'production', {}).api_key).toBeTruthy();
+  });
+
+  it('los proveedores por país no aceptan el ámbito global', () => {
+    expect(validarCredencial(proveedorPorId('mastershop')!, 'global', 'production', { api_key: llave }).pais).toBeTruthy();
+  });
+
+  it('la vista previa enmascara la llave y los mensajes la redactan', () => {
+    expect(vistaPrevia(op, { api_key: llave }).api_key).toMatch(/\*{4}.{4}$/);
+    expect(redactarSecretos(`error con ${llave} dentro`, op, { api_key: llave })).not.toContain(llave);
   });
 });

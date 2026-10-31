@@ -25,8 +25,11 @@ export type ValoresChatbot = {
 export function FormularioChatbot({
   inicial,
   accion,
+  modelos = [],
 }: {
   inicial: ValoresChatbot;
+  /** Sugerencias de modelos de OpenRouter (vacío = solo texto libre). */
+  modelos?: readonly { id: string; nombre: string }[];
   accion: (previo: ResultadoAccion, datos: FormData) => Promise<ResultadoAccion>;
 }) {
   const [estado, enviar, pendiente] = useActionState(accion, ESTADO_INICIAL);
@@ -47,6 +50,13 @@ export function FormularioChatbot({
 
       <fieldset className="adm-fieldset">
         <legend>Modelos</legend>
+        <datalist id="modelos-openrouter">
+          {modelos.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.nombre}
+            </option>
+          ))}
+        </datalist>
         <div className="adm-fila">
           <CampoTexto
             id="model_primary"
@@ -56,7 +66,8 @@ export function FormularioChatbot({
             placeholder="proveedor/modelo"
             autoComplete="off"
             spellCheck={false}
-            ayuda="El identificador exacto de OpenRouter."
+            list="modelos-openrouter"
+            ayuda="El identificador exacto de OpenRouter. Empieza a escribir para ver los modelos disponibles."
             error={errores.model_primary}
           />
           <CampoTexto
@@ -67,6 +78,7 @@ export function FormularioChatbot({
             placeholder="proveedor/modelo"
             autoComplete="off"
             spellCheck={false}
+            list="modelos-openrouter"
             ayuda="Más económico: se usa al acercarse al límite del mes."
             error={errores.model_fallback}
           />

@@ -51,6 +51,51 @@ async function filaCifrada(valores: Record<string, string>, extra: Record<string
 
 beforeEach(() => auditar.mockClear());
 
+describe('credencial global (OpenRouter, sin país)', () => {
+  const LLAVE = 'sk-or-v1-0123456789abcdef0123456789abcdef';
+
+  it('guarda con country_code null, cifra con el mismo contexto que lee el chat y busca lo previo con "is null"', async () => {
+    const { cliente, llamadas, filtros } = clienteFalso({
+      'integration_credentials.select': [{ data: null }, { data: [] }],
+      'integration_credentials.insert': { data: { id: ID } },
+      'integration_credentials.update': { data: null },
+    });
+    const r = await guardarCredencialBd({ cliente, ...comun, clave: CLAVE, proveedorId: 'openrouter', pais: 'global', ambiente: 'production', valores: { api_key: LLAVE } });
+    expect(r.ok).toBe(true);
+    const fila = llamadas.find((l) => l.clave === 'integration_credentials.insert')!.args[0] as Record<string, unknown>;
+    expect(fila).toMatchObject({ provider: 'openrouter', country_code: null, environment: 'production' });
+    expect(JSON.stringify(fila)).not.toContain(LLAVE);
+    expect((fila.masked_preview as Record<string, string>).api_key).toMatch(/\*\*\*\*/);
+    // El contexto de cifrado es el que usa la tienda para leerla: provider|null|ambiente.
+    const abierto = await descifrarCredenciales(CLAVE, { provider: 'openrouter', country_code: null, environment: 'production' }, {
+      data_encrypted: byteaDesdePostgrest(fila.data_encrypted as string),
+      iv: byteaDesdePostgrest(fila.iv as string),
+      key_version: Number(fila.key_version),
+    });
+    expect(abierto).toEqual({ api_key: LLAVE });
+    const sobre = filtros.filter((f) => f.tabla === 'integration_credentials').map((f) => [f.metodo, ...f.args]);
+    expect(sobre).toContainEqual(['is', 'country_code', null]);
+    expect(sobre.some((f) => f[0] === 'eq' && f[1] === 'country_code')).toBe(false);
+    expect(auditar).toHaveBeenCalledWith(expect.objectContaining({ accion: 'integracion.credencial_creada', diff: expect.objectContaining({ proveedor: 'openrouter', pais: null }) }));
+  });
+
+  it('un país no vale para un proveedor global', async () => {
+    const { cliente } = clienteFalso({});
+    const r = await guardarCredencialBd({ cliente, ...comun, clave: CLAVE, proveedorId: 'openrouter', pais: 'CO', ambiente: 'production', valores: { api_key: LLAVE } });
+    expect(r.ok).toBe(false);
+  });
+
+  it('Probar conexión descifra con país null y pasa la llave a la sonda', async () => {
+    const c = await cifrarCredenciales(CLAVE, { provider: 'openrouter', country_code: null, environment: 'production' }, { api_key: LLAVE });
+    const fila = { id: ID, provider: 'openrouter', country_code: null, environment: 'production', data_encrypted: byteaParaPostgrest(c.data_encrypted), iv: byteaParaPostgrest(c.iv), key_version: c.key_version, is_active: true };
+    const { cliente } = clienteFalso({ 'integration_credentials.select': { data: fila }, 'integration_credentials.update': { data: null } });
+    const sonda = vi.fn(async (_e: unknown) => ({ ok: true, message: 'Conexión con OpenRouter correcta.' }));
+    const r = await probarConexionBd({ cliente, ...comun, clave: CLAVE, id: ID, sondas: { openrouter: sonda } });
+    expect(r.ok).toBe(true);
+    expect(sonda).toHaveBeenCalledWith({ pais: null, ambiente: 'production', valores: { api_key: LLAVE } });
+  });
+});
+
 describe('listarCredenciales', () => {
   it('pide solo columnas públicas: nunca los bytes cifrados', async () => {
     const { cliente, llamadas } = clienteFalso({ 'integration_credentials.select': { data: [] } });

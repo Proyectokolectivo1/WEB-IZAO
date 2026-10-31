@@ -5,6 +5,8 @@ import { BotonConfirmar } from '@/components/admin/BotonConfirmar';
 import {
   ETIQUETA_AMBIENTE,
   PROVEEDORES,
+  ambitosDe,
+  paisDb,
   type AmbienteIntegracion,
   type PaisIntegracion,
 } from '@/lib/admin/integraciones/catalogo';
@@ -68,15 +70,16 @@ export default async function PaginaIntegraciones() {
         <section key={p.id} aria-labelledby={`h-${p.id}`}>
           <h2 id={`h-${p.id}`}>{p.nombre}</h2>
           <p className="adm-suave">{p.descripcion}</p>
-          {p.esquema.countries.map((pais) => {
-            const delPais = filas.filter((f) => f.provider === p.id && f.country_code === pais);
+          {ambitosDe(p).map((pais) => {
+            const delPais = filas.filter((f) => f.provider === p.id && f.country_code === paisDb(pais));
+            const nombreAmbito = pais === 'global' ? 'Todo el sitio' : NOMBRE_PAIS[pais];
             return (
               <div key={pais} className="adm-tarjeta">
-                <h3>{NOMBRE_PAIS[pais]}</h3>
+                <h3>{nombreAmbito}</h3>
                 <div className="adm-tabla-caja">
                   <table className="adm-tabla">
                     <caption className="adm-suave">
-                      Credenciales de {p.nombre} en {NOMBRE_PAIS[pais]}
+                      Credenciales de {p.nombre} en {nombreAmbito}
                     </caption>
                     <thead>
                       <tr>
@@ -137,7 +140,7 @@ export default async function PaginaIntegraciones() {
                                     {f.is_active ? (
                                       <BotonConfirmar
                                         etiqueta="Desactivar"
-                                        mensaje={`${p.nombre} dejará de funcionar en ${NOMBRE_PAIS[pais]} hasta que actives otra credencial. ¿Desactivar?`}
+                                        mensaje={`${p.nombre} dejará de funcionar en ${nombreAmbito} hasta que actives otra credencial. ¿Desactivar?`}
                                         etiquetaConfirmar="Sí, desactivar"
                                         accion={desactivarCredencial.bind(null, f.id)}
                                       />

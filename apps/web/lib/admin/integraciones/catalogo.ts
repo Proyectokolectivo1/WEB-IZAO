@@ -1,7 +1,8 @@
 /**
  * Proveedores con credenciales administrables desde el panel (§24.1, §26.3). Cada uno declara su esquema en
  * `packages/integrations/{proveedor}`; el panel genera el formulario desde ahí. Código puro (sin servidor).
- * Addi, Sistecrédito, OpenRouter y Meta Ads se agregan aquí cuando existan sus esquemas.
+ * Addi y Sistecrédito se agregan aquí cuando existan sus esquemas. OpenRouter es global (sin país); su esquema vive aquí
+ * porque no tiene paquete propio (el adaptador del chat está en `lib/store/chat/openrouter.ts`).
  */
 import type { CredentialField, CredentialSchema } from '@izao/core/contracts';
 import { maskedPreview, validateCredentials } from '@izao/core/contracts';
@@ -12,13 +13,35 @@ import type { ErroresCampo } from '../crud/comun';
 
 export type PaisIntegracion = 'CO' | 'EC';
 export type AmbienteIntegracion = 'sandbox' | 'production';
-export type ProveedorId = 'wompi' | 'mastershop' | 'whatsapp';
+/** `global` = credencial sin país (`country_code = null`), como OpenRouter. */
+export type AmbitoIntegracion = PaisIntegracion | 'global';
+export const AMBITO_GLOBAL = 'global' as const;
+export type ProveedorId = 'wompi' | 'mastershop' | 'whatsapp' | 'openrouter';
+
+/** Esquema de OpenRouter: una sola llave, sin país ni sandbox (la API no tiene entorno de pruebas). */
+export const OPENROUTER_CREDENTIALS: CredentialSchema = {
+  provider: 'openrouter',
+  countries: [],
+  environments: ['production'],
+  fields: [
+    {
+      key: 'api_key',
+      label: 'Llave de API de OpenRouter',
+      secret: true,
+      required: true,
+      kind: 'text',
+      help: 'Se crea en openrouter.ai. Ponle un límite de crédito: es el tope duro del gasto de Iza.',
+    },
+  ],
+};
 
 export type ProveedorPanel = {
   id: ProveedorId;
   nombre: string;
   descripcion: string;
   esquema: CredentialSchema;
+  /** `global`: una sola credencial para todo el sitio. Por defecto, una por país. */
+  ambito?: 'pais' | 'global';
 };
 
 export const PROVEEDORES: readonly ProveedorPanel[] = [
@@ -40,7 +63,32 @@ export const PROVEEDORES: readonly ProveedorPanel[] = [
     descripcion: 'Mensajes de cobro y recordatorio del abono, y plantillas aprobadas por Meta.',
     esquema: WHATSAPP_CREDENTIALS,
   },
+  {
+    id: 'openrouter',
+    nombre: 'OpenRouter (Iza)',
+    descripcion: 'Modelos de lenguaje del chatbot Iza. Una llave para todo el sitio.',
+    esquema: OPENROUTER_CREDENTIALS,
+    ambito: 'global',
+  },
 ];
+
+export function esGlobal(p: ProveedorPanel): boolean {
+  return p.ambito === 'global';
+}
+
+/** Ámbitos en que se configura un proveedor: sus países, o `global`. */
+export function ambitosDe(p: ProveedorPanel): readonly AmbitoIntegracion[] {
+  return esGlobal(p) ? [AMBITO_GLOBAL] : p.esquema.countries;
+}
+
+export function esAmbito(v: unknown): v is AmbitoIntegracion {
+  return v === AMBITO_GLOBAL || esPais(v);
+}
+
+/** Valor de `country_code` en la base para un ámbito (`global` → `null`). */
+export function paisDb(ambito: AmbitoIntegracion): PaisIntegracion | null {
+  return ambito === AMBITO_GLOBAL ? null : ambito;
+}
 
 export const ETIQUETA_AMBIENTE: Record<AmbienteIntegracion, string> = {
   sandbox: 'Pruebas (sandbox)',
@@ -75,8 +123,11 @@ export function validarCredencial(
   valores: Readonly<Record<string, string>>,
 ): ErroresCampo {
   const errores: ErroresCampo = {};
-  if (!esPais(pais) || !proveedor.esquema.countries.includes(pais)) {
-    errores.pais = `${proveedor.nombre} no está disponible para ese país.`;
+  const ambitoValido = esGlobal(proveedor)
+    ? pais === AMBITO_GLOBAL
+    : esPais(pais) && proveedor.esquema.countries.includes(pais);
+  if (!ambitoValido) {
+    errores.pais = esGlobal(proveedor) ? `${proveedor.nombre} es global: no se configura por país.` : `${proveedor.nombre} no está disponible para ese país.`;
   }
   if (!esAmbiente(ambiente) || !proveedor.esquema.environments.includes(ambiente)) {
     errores.ambiente = `${proveedor.nombre} no admite ese ambiente.`;
@@ -91,6 +142,9 @@ export function validarCredencial(
     if (!r.ok) for (const p of r.problemas) errores[p.key === '*' ? 'form' : p.key] ??= p.message;
   } else if (proveedor.id === 'mastershop') {
     if (parseMasterShopCredentials(valores) === null) errores.api_key = 'La llave de API no es válida.';
+  } else if (proveedor.id === 'openrouter') {
+    const llave = valores.api_key ?? '';
+    if (llave.length < 16 || /\s/.test(llave)) errores.api_key = 'La llave de OpenRouter no parece válida (sin espacios, mínimo 16 caracteres).';
   } else if (proveedor.id === 'whatsapp') {
     if (leerCredencialesWhatsApp(valores) === null) {
       errores.phone_number_id = 'Revisa los identificadores (solo números) y la versión de Graph (p. ej. v26.0).';

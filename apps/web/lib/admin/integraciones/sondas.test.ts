@@ -112,3 +112,29 @@ describe('sondas reales', () => {
     expect(r.ok).toBe(false);
   });
 });
+
+describe('sonda de OpenRouter', () => {
+  const valores = { api_key: 'sk-or-v1-0123456789abcdef0123456789abcdef' };
+  const entrada = { pais: null, ambiente: 'production' as const, valores };
+
+  it('real: lee /api/v1/key con la llave como Bearer', async () => {
+    const vistos: [string, string | null][] = [];
+    const f = fetchPorUrl((url, auth) => (vistos.push([url, auth]), 200));
+    expect((await crearSondas('real', f).openrouter(entrada)).ok).toBe(true);
+    expect(vistos).toEqual([['https://openrouter.ai/api/v1/key', `Bearer ${valores.api_key}`]]);
+  });
+
+  it('real: 401 es llave rechazada, otro código es error del proveedor y sin red lo dice; nunca filtra la llave', async () => {
+    const rechazo = await crearSondas('real', fetchPorUrl(() => 401)).openrouter(entrada);
+    expect(rechazo).toEqual({ ok: false, message: 'OpenRouter rechazó la llave de API.' });
+    expect((await crearSondas('real', fetchPorUrl(() => 503)).openrouter(entrada)).message).toMatch(/503/);
+    expect((await crearSondas('real', fetchPorUrl(() => 'red')).openrouter(entrada)).message).toMatch(/No se pudo contactar/);
+    expect(JSON.stringify(rechazo)).not.toContain(valores.api_key);
+  });
+
+  it('mock: valida el formato sin red', async () => {
+    const s = crearSondas('mock', fetchPorUrl(() => 500));
+    expect((await s.openrouter(entrada)).ok).toBe(true);
+    expect((await s.openrouter({ ...entrada, valores: { api_key: 'corta' } })).ok).toBe(false);
+  });
+});

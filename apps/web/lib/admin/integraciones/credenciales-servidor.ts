@@ -22,7 +22,8 @@ import type { ErroresCampo, ResultadoAccion } from '../crud/comun';
 import { traducirErrorBd } from '../crud/servidor';
 import {
   esAmbiente,
-  esPais,
+  esAmbito,
+  paisDb,
   mezclarConGuardados,
   proveedorPorId,
   redactarSecretos,
@@ -109,21 +110,23 @@ export async function guardarCredencialBd(
   if (!args.clave) return { ok: false, mensaje: MSG_CLAVE };
   const proveedor = proveedorPorId(args.proveedorId);
   if (!proveedor) return { ok: false, mensaje: 'Proveedor no válido.' };
-  if (!esPais(args.pais) || !esAmbiente(args.ambiente)) {
+  if (!esAmbito(args.pais) || !esAmbiente(args.ambiente)) {
     return {
       ok: false,
       mensaje: 'Revisa los campos marcados.',
       errores: validarCredencial(proveedor, args.pais, args.ambiente, {}),
     };
   }
-  const pais: PaisIntegracion = args.pais;
+  const ambito = args.pais;
+  const pais = paisDb(ambito); // `null` = credencial global (sin país)
   const ambiente: AmbienteIntegracion = args.ambiente;
 
-  const { data: previa, error: errPrevia } = await cliente
+  // El ámbito global es `country_code is null` (un `eq` con null no encuentra nada).
+  const consultaPrevia = cliente
     .from('integration_credentials')
     .select('id, provider, country_code, environment, data_encrypted, iv, key_version')
-    .eq('provider', proveedor.id)
-    .eq('country_code', pais)
+    .eq('provider', proveedor.id);
+  const { data: previa, error: errPrevia } = await (pais === null ? consultaPrevia.is('country_code', null) : consultaPrevia.eq('country_code', pais))
     .eq('environment', ambiente)
     .maybeSingle();
   if (errPrevia) return { ok: false, mensaje: traducirErrorBd(errPrevia).mensaje };
@@ -144,7 +147,7 @@ export async function guardarCredencialBd(
   }
 
   const valores = mezclarConGuardados(proveedor, args.valores, guardados);
-  const errores = validarCredencial(proveedor, pais, ambiente, valores);
+  const errores = validarCredencial(proveedor, ambito, ambiente, valores);
   if (Object.keys(errores).length > 0) return { ok: false, mensaje: 'Revisa los campos marcados.', errores };
 
   const cifrado = await cifrarCredenciales(args.clave, ctxDe(proveedor.id, pais, ambiente), valores);
@@ -176,12 +179,11 @@ export async function guardarCredencialBd(
 
   // Si es la primera credencial del proveedor en ese país, queda activa sola.
   let activada = false;
-  const { data: activas, error: errActivas } = await cliente
-    .from('integration_credentials')
-    .select('id')
-    .eq('provider', proveedor.id)
-    .eq('country_code', pais)
-    .eq('is_active', true);
+  const consultaActivas = cliente.from('integration_credentials').select('id').eq('provider', proveedor.id);
+  const { data: activas, error: errActivas } = await (pais === null ? consultaActivas.is('country_code', null) : consultaActivas.eq('country_code', pais)).eq(
+    'is_active',
+    true,
+  );
   if (!errActivas && ((activas as unknown[] | null) ?? []).length === 0) {
     const { error } = await cliente.from('integration_credentials').update({ is_active: true }).eq('id', id);
     activada = !error;
@@ -324,7 +326,7 @@ export async function probarConexionBd(
   let resultado: { ok: boolean; message: string };
   try {
     resultado = await sonda({
-      pais: fila.country_code as PaisIntegracion,
+      pais: fila.country_code as PaisIntegracion | null,
       ambiente: fila.environment as AmbienteIntegracion,
       valores,
     });

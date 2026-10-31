@@ -10,6 +10,7 @@ import {
   microsATexto,
   usoPresupuestoBp,
 } from '@/lib/admin/chatbot/chatbot';
+import { modelosOpenRouter } from '@/lib/admin/chatbot/modelos';
 import { conversionDelChat, consumoReciente, hayCredencialOpenRouter, leerAjustesChat } from '@/lib/admin/chatbot/servidor';
 import { porcentajeBp } from '@/lib/admin/formato';
 import { hoyBogota, leerFiltroFechas } from '@/lib/admin/metricas/filtros';
@@ -30,11 +31,12 @@ export default async function PaginaChatbot({
   const ahora = new Date();
   const fechas = leerFiltroFechas(sp, ahora, 'ultimos_7_dias');
   const cliente = crearClienteServicio();
-  const [ajustes, credencial, consumo, conversion] = await Promise.all([
+  const [ajustes, credencial, consumo, conversion, modelos] = await Promise.all([
     leerAjustesChat(cliente),
     hayCredencialOpenRouter(cliente),
     consumoReciente(cliente),
     conversionDelChat(cliente, fechas.rango),
+    modelosOpenRouter(),
   ]);
 
   if (!ajustes) {
@@ -121,6 +123,7 @@ export default async function PaginaChatbot({
         <h2 id="h-ajustes">Ajustes</h2>
         <FormularioChatbot
           accion={guardarAjustesChat}
+          modelos={modelos}
           inicial={{
             is_enabled: ajustes.is_enabled,
             model_primary: ajustes.model_primary ?? '',
