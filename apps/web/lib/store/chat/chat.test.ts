@@ -130,6 +130,8 @@ describe('OpenRouter', () => {
   });
   it('convierte costo en créditos a micro-USD y arma mensajes con herramientas', () => {
     expect(creditosAMicros(0.5)).toBe(500_000n);
+    expect(creditosAMicros(0.00042)).toBe(420n); // sin subir por ruido de coma flotante
+    expect(creditosAMicros(0.0000005)).toBe(1n); // hacia arriba
     expect(creditosAMicros(undefined)).toBeNull();
     expect(creditosAMicros(-1)).toBeNull();
     const m = mensajesAOpenAI([

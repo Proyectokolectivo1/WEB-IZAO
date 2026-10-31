@@ -13,7 +13,8 @@ export const URL_OPENROUTER = 'https://openrouter.ai/api/v1/chat/completions';
 /** Créditos de OpenRouter (USD) → micro-USD, sin float acumulado: se redondea una sola vez. */
 export function creditosAMicros(cost: unknown): bigint | null {
   if (typeof cost !== 'number' || !Number.isFinite(cost) || cost < 0) return null;
-  return BigInt(Math.round(cost * 1_000_000));
+  // Hacia arriba (nunca se subestima el gasto); `toFixed` quita el ruido de coma flotante (0,00042 · 1e6 = 420,00000000000006).
+  return BigInt(Math.ceil(Number((cost * 1_000_000).toFixed(3))));
 }
 
 export function mensajesAOpenAI(mensajes: MensajeLLM[]): unknown[] {
@@ -128,6 +129,8 @@ export function crearOpenRouter(o: OpcionesOpenRouter): LLMProvider {
           messages: mensajesAOpenAI(s.mensajes),
           tools: s.herramientas.map((h) => ({ type: 'function', function: { name: h.name, description: h.description, parameters: h.parameters } })),
           max_tokens: s.maxTokens,
+          // Sin retención ni entrenamiento con las conversaciones de clientes (datos personales).
+          provider: { data_collection: 'deny' },
           temperature: 0.4,
           stream: true,
         }),
