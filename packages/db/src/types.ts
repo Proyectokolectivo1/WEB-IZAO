@@ -3944,6 +3944,10 @@ export type Database = {
         Args: { p_country: string; p_limit?: number; p_q: string }
         Returns: Json
       }
+      chat_registrar_uso: {
+        Args: { p_ahora?: string; p_costo_micros: number; p_mensajes?: number }
+        Returns: number
+      }
       claves_cliente: {
         Args: { p_celular: string; p_correo: string; p_documento: string }
         Returns: string[]
