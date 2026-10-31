@@ -111,6 +111,22 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
     requestAnimationFrame(ir);
   }, []);
 
+  // Alto real de una tarjeta como referencia de las que están fuera de pantalla (`content-visibility`): con el alto fijo
+  // de antes, saltar al final del listado movía el pie al pintarse las tarjetas (CLS).
+  const primerId = lote.items[0]?.product_id ?? null;
+  useEffect(() => {
+    const g = rejilla.current;
+    const primera = g?.firstElementChild as HTMLElement | null | undefined;
+    if (!g || !primera) return;
+    const medir = () => {
+      if (primera.offsetHeight > 0) g.style.setProperty('--alto-tarjeta', `${primera.offsetHeight}px`);
+    };
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(primera);
+    return () => ro.disconnect();
+  }, [primerId]);
+
   useEffect(() => {
     vivo.current = true;
     scrollRef.current = window.scrollY;
@@ -294,6 +310,7 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
                 item={item}
                 pais={pais}
                 prioritaria={i < 4}
+                nivelTitulo="h2"
                 concentracion={item.concentration_slug ? nombreDe(opciones.concentraciones, item.concentration_slug) : null}
               />
             ))}

@@ -97,7 +97,8 @@
   /* Tarjetas fuera de pantalla no se pintan hasta acercarse (§7.1). */
   .diferir {
     content-visibility: auto;
-    contain-intrinsic-size: auto 26rem;
+    /* Alto de referencia medido por el listado (`--alto-tarjeta`); 26rem hasta que haya medida. */
+    contain-intrinsic-size: auto var(--alto-tarjeta, 26rem);
   }
 
   .solo-lectores {
