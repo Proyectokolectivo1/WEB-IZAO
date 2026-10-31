@@ -19,6 +19,7 @@ import { crearMock } from './mock';
 import { crearOpenRouter } from './openrouter';
 import type { ResultadoTurno, TarjetaChat } from './conversar';
 import { mesDeUso } from './presupuesto';
+import { registrarUsoMes, type ClienteRpc } from './uso';
 
 export interface AjustesChat {
   habilitado: boolean;
@@ -133,31 +134,9 @@ export async function gastadoDelMes(ahora = new Date()): Promise<bigint> {
   return BigInt(String((data as { cost_usd_micros?: number | string } | null)?.cost_usd_micros ?? 0));
 }
 
-/**
- * Suma costo y un mensaje al mes. No hay RPC atómica (pendiente de izao-db: `chat_registrar_uso`), así que se usa
- * comparar-y-cambiar: el `update` solo prospera si nadie sumó entre la lectura y la escritura; hasta 4 intentos.
- */
-export async function sumarUso(costoMicros: bigint, ahora = new Date()): Promise<void> {
-  const db = clienteDb();
-  const mes = mesDeUso(ahora);
-  for (let i = 0; i < 4; i++) {
-    const { data, error } = await db.from('chat_usage_monthly').select('cost_usd_micros,messages').eq('month', mes).maybeSingle();
-    if (error) throw new Error(`chat_usage_monthly: ${error.message}`);
-    if (!data) {
-      const ins = await db.from('chat_usage_monthly').insert({ month: mes, cost_usd_micros: String(costoMicros), messages: 1 });
-      if (!ins.error) return;
-      continue; // otra petición creó la fila: se reintenta como actualización
-    }
-    const f = data as { cost_usd_micros: number | string; messages: number };
-    const upd = await db
-      .from('chat_usage_monthly')
-      .update({ cost_usd_micros: String(BigInt(String(f.cost_usd_micros)) + costoMicros), messages: f.messages + 1 })
-      .eq('month', mes)
-      .eq('cost_usd_micros', f.cost_usd_micros)
-      .select('month');
-    if (!upd.error && (upd.data?.length ?? 0) > 0) return;
-  }
-  console.error('[iza] no se pudo sumar el consumo del mes (contención)');
+/** Suma el costo de un turno y un mensaje al mes con la RPC atómica `chat_registrar_uso` (ver `uso.ts`). */
+export async function sumarUso(costoMicros: bigint): Promise<void> {
+  await registrarUsoMes(clienteDb() as unknown as ClienteRpc, costoMicros);
 }
 
 // ── Sesiones y mensajes ──────────────────────────────────────────────────────────────────────────
