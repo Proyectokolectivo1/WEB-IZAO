@@ -1,0 +1,29 @@
+Resumen Playwright (2026-10-31; STORE_DATOS=ejemplo, copia apps/.e2e-web)
+Total: 277 pasan, 45 fallan, 116 omitidas, 0 inestables; duración 90 s
+
+Por archivo (pasan / fallan / omitidas)
+  datos/semilla.spec.ts              3 / 0 / 1
+  a11y/paginas.spec.ts               75 / 34 / 103
+  e2e/f1-catalogo.spec.ts            38 / 7 / 11
+  e2e/f1-ficha.spec.ts               35 / 0 / 1
+  e2e/f2-garantias.spec.ts           32 / 2 / 0
+  e2e/f2-resenas.spec.ts             22 / 2 / 0
+  e2e/f3-carrito-checkout.spec.ts    36 / 0 / 0
+  e2e/f8-iza.spec.ts                 26 / 0 / 0
+  e2e/humo.spec.ts                   10 / 0 / 0
+
+Pruebas que fallan (cada una es un defecto del producto; ver docs/fases/F1.md)
+  - a11y/paginas.spec.ts :: §8.8 home (co|ec, 360|768|1440 px) no tiene violaciones WCAG 2.2 AA  [escritorio]
+  - a11y/paginas.spec.ts :: §8.8 ficha (co|ec, 360|768|1440 px) no tiene violaciones WCAG 2.2 AA  [escritorio]
+  - a11y/paginas.spec.ts :: §8.8 ficha con formulario de reseña (co|ec, 360|768|1440 px) no tiene violaciones WCAG 2.2 AA  [escritorio]
+  - a11y/paginas.spec.ts :: §8.8 bolso abierto (co|ec, 360|768|1440 px) no tiene violaciones WCAG 2.2 AA  [escritorio]
+  - a11y/paginas.spec.ts :: §8.8 chat de Iza abierto (co|ec, 360|768|1440 px) no tiene violaciones WCAG 2.2 AA  [escritorio]
+  - a11y/paginas.spec.ts :: §8.8 checkout (con un producto) (co|ec, 360|768|1440 px) no tiene violaciones WCAG 2.2 AA  [escritorio]
+  - a11y/paginas.spec.ts :: §8.8 objetivos táctiles de al menos 44x44 px en listado (co)  [movil]
+  - a11y/paginas.spec.ts :: §8.8 objetivos táctiles de al menos 44x44 px en listado (ec)  [movil]
+  - e2e/f1-catalogo.spec.ts :: §7.1 al volver desde una ficha se restauran los lotes cargados y la posición de scroll  [escritorio, movil]
+  - e2e/f1-catalogo.spec.ts :: §7.1 aparece "Volver arriba" tras 2 pantallas de scroll y lleva al inicio  [escritorio, movil]
+  - e2e/f1-catalogo.spec.ts :: §5.2 §26 el sitemap de /co lista la ficha y el de /ec no  [escritorio, movil]
+  - e2e/f1-catalogo.spec.ts :: §7.7 con localStorage bloqueado el sitio sigue funcionando (try/catch)  [escritorio]
+  - e2e/f2-garantias.spec.ts :: §19 el campo trampa no se ve, no entra al teclado y NO se lee al enviar: si un bot lo llena, el envío debe llevarlo  [escritorio, movil]
+  - e2e/f2-resenas.spec.ts :: §9.6 el campo trampa no se ve ni entra al teclado, y si un bot lo llena el envío debe llevarlo  [escritorio, movil]

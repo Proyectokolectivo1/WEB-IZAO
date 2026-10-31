@@ -22,15 +22,25 @@ const path = require('node:path');
 const PUERTO = process.env.LHCI_PUERTO || '3100';
 const BASE = `http://127.0.0.1:${PUERTO}`;
 
+// STORE_DATOS=ejemplo: sin llaves. El servidor es la copia de apps/.e2e-web (ver tests/support/preparar-build-ejemplo.mjs)
+// y los productos salen de los datos de ejemplo que vuelca el globalSetup de Playwright (tests/.resultados/ejemplo.json).
+const EJEMPLO = process.env.STORE_DATOS === 'ejemplo';
 const productos = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, '../../../../packages/db/seed/data/productos.json'), 'utf8'),
+  fs.readFileSync(
+    EJEMPLO
+      ? path.resolve(__dirname, '../.resultados/ejemplo.json')
+      : path.resolve(__dirname, '../../../../packages/db/seed/data/productos.json'),
+    'utf8',
+  ),
 );
 const slugCo = productos.find((p) => p.status === 'active' && p.countries.co && p.countries.co.visible).slug;
 const slugEc = productos.find((p) => p.status === 'active' && p.countries.ec && p.countries.ec.visible).slug;
+const categoria = EJEMPLO ? 'arabes' : 'hombre';
 
 const urls = [
   `${BASE}/co`,
-  `${BASE}/co/categoria/hombre`,
+  `${BASE}/co/catalogo`,
+  `${BASE}/co/categoria/${categoria}`,
   `${BASE}/co/perfume/${slugCo}`,
   `${BASE}/ec`,
   `${BASE}/ec/perfume/${slugEc}`,
@@ -44,9 +54,14 @@ module.exports = {
     collect: {
       url: urls,
       numberOfRuns: Number(process.env.LHCI_CORRIDAS || 3), // mediana de 3 para absorber ruido
-      startServerCommand: `pnpm exec next start -H 127.0.0.1 -p ${PUERTO}`,
-      startServerReadyPattern: 'Ready|ready|Local:',
-      startServerReadyTimeout: 60000,
+      // LHCI_EXTERNO=1: el servidor ya está levantado (por ejemplo la copia de pruebas); si no, lhci levanta `next start`.
+      ...(process.env.LHCI_EXTERNO === '1'
+        ? {}
+        : {
+            startServerCommand: `pnpm exec next start -H 127.0.0.1 -p ${PUERTO}`,
+            startServerReadyPattern: 'Ready|ready|Local:',
+            startServerReadyTimeout: 60000,
+          }),
       settings: {
         formFactor: 'mobile',
         screenEmulation: { mobile: true, width: 390, height: 844, deviceScaleFactor: 3, disabled: false },

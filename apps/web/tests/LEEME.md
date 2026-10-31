@@ -36,10 +36,21 @@ de consultar la base. Cuando el catálogo corra contra Supabase real, la base de
 `support/pais.ts`: `fijarPais(context, 'co'|'ec')` (cookie `country`), `limpiarEstado(page)`, `iniciarSinEstado(context)`.
 `support/rutas.ts`: rutas y `data-testid` que se piden a izao-tienda; lo marcado "POR CONFIRMAR" se ajusta allí.
 
-## Pendientes de activar (`test.fixme`)
+## Sin llaves: `STORE_DATOS=ejemplo`
 
-`e2e/f1-catalogo.spec.ts` y los casos públicos de `a11y/paginas.spec.ts`: se activan quitando `fixme` cuando
-izao-tienda publique las rutas y los `data-testid` de `support/rutas.ts`.
+La tienda en producción nunca usa datos de ejemplo (`NODE_ENV=production` fuerza Supabase). Para probarla sin llaves:
+
+```bash
+pnpm build:e2e                      # copia apps/web -> apps/.e2e-web (ignorada por git), quita la compuerta de NODE_ENV en 4 archivos de la copia y construye
+STORE_DATOS=ejemplo pnpm test:e2e   # el config sirve esa copia con `next start`; el globalSetup vuelca los datos de ejemplo a .resultados/ejemplo.json
+```
+
+El código de la tienda no se modifica. Los datos esperados salen de `repo-ejemplo.ts` (no de la API probada). Lo que el ejemplo no tiene
+(imágenes, categorías, productos solo en EC, base real) se omite con una razón y está en `docs/fases/F1.md`, sección «No medido».
+Si el puerto 3100 está ocupado: `E2E_PUERTO_WEB=3110 E2E_PUERTO_SUPABASE=54310`. Resúmenes para la evidencia:
+`node tests/support/resumen-playwright.cjs <json>` y `node tests/lighthouse/resumen.cjs`.
+
+El servidor de pagos, garantías, reseñas e Iza se simulan con `page.route` (contratos en `lib/store/*/contrato.ts`); ninguna prueba llama a un proveedor.
 
 ## CI
 
