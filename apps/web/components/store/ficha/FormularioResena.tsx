@@ -93,6 +93,8 @@ export default function FormularioResena({ pais, productoId, turnstileKey }: Pro
 
   async function enviar(ev: React.FormEvent<HTMLFormElement>) {
     ev.preventDefault();
+    // Campo trampa: viaja tal cual; si un bot lo llenó, el servidor lo rechaza.
+    const trampa = String(new FormData(ev.currentTarget).get('sitio_web') ?? '');
     if (enviando) return;
     setIntentado(true);
     setFalla(null);
@@ -121,7 +123,7 @@ export default function FormularioResena({ pais, productoId, turnstileKey }: Pro
     cuerpo.set('estrellas', estrellas);
     for (const [k, v] of Object.entries(valores)) cuerpo.set(k, v);
     for (const f of fotos) cuerpo.append('fotos', f);
-    cuerpo.set('sitio_web', '');
+    cuerpo.set('sitio_web', trampa);
     if (token.current) cuerpo.set('cf-turnstile-response', token.current);
 
     setEnviando(true);
