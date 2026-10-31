@@ -285,6 +285,32 @@ describe('conversar', () => {
     expect(ev.at(-1)).toEqual({ tipo: 'fin' });
     expect((registrar.mock.calls as unknown as [{ modelo: string }][])[0]![0].modelo).toBe('modelo-b');
   });
+  it('si la llamada se corta, suma el costo estimado de lo procesado (prompt y texto ya emitido)', async () => {
+    const corta: LLMProvider & { llamadas: SolicitudLLM[] } = {
+      nombre: 'corta',
+      llamadas: [],
+      async *completar(s) {
+        corta.llamadas.push(s);
+        yield { tipo: 'texto', delta: 'x'.repeat(400) } as EventoLLM;
+        throw new Error('abortada');
+      },
+    };
+    const { deps, entrada, registrar } = armar(corta);
+    const ev = await recoger(conversar(deps, { ...entrada, modeloRespaldo: null }));
+    expect(ev.at(-1)).toEqual({ tipo: 'error', codigo: 'proveedor' });
+    const r = (registrar.mock.calls as unknown as [{ costoMicros: bigint; tokensOut: number }][])[0]![0];
+    expect(r.tokensOut).toBe(100); // 400 caracteres / 4
+    expect(r.costoMicros).toBeGreaterThan(0n);
+  });
+  it('un aborto de la persona no reintenta con el modelo de respaldo y también cuenta el costo', async () => {
+    const ctl = new AbortController();
+    ctl.abort();
+    const prov = guionado([new Error('AbortError'), [{ tipo: 'texto', delta: 'no debería' }, fin()]]);
+    const { deps, entrada, registrar } = armar(prov);
+    await recoger(conversar(deps, { ...entrada, senal: ctl.signal }));
+    expect(prov.llamadas).toHaveLength(1);
+    expect((registrar.mock.calls as unknown as [{ costoMicros: bigint }][])[0]![0].costoMicros).toBeGreaterThan(0n);
+  });
   it('si fallan los dos, avisa del error y aun así registra', async () => {
     const prov = guionado([new Error('x'), new Error('y')]);
     const { deps, entrada, registrar } = armar(prov);

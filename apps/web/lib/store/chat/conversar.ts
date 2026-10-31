@@ -106,6 +106,7 @@ export async function* conversar(deps: DepsConversar, e: EntradaTurno): AsyncGen
     const permitirHerramientas = ronda < MAX_ITERACIONES_HERRAMIENTAS;
     let llamadas: { id: string; nombre: string; argumentos: string }[] = [];
     let textoRonda = '';
+    let caracteresRonda = 0;
     try {
       for await (const ev of deps.proveedor.completar({
         modelo,
@@ -116,6 +117,7 @@ export async function* conversar(deps: DepsConversar, e: EntradaTurno): AsyncGen
       })) {
         if (ev.tipo === 'texto') {
           textoRonda += ev.delta;
+          caracteresRonda += ev.delta.length;
           yield* emitir(filtro.empujar(ev.delta));
         } else if (ev.tipo === 'herramientas') {
           llamadas = ev.llamadas;
@@ -126,9 +128,17 @@ export async function* conversar(deps: DepsConversar, e: EntradaTurno): AsyncGen
         }
       }
     } catch {
+      // OpenRouter solo informa el uso en el último chunk: si la llamada se corta o se aborta, el costo de lo que ya se
+      // procesó se estima por caracteres (≈ 4 por token, redondeando hacia arriba) para que el presupuesto no lo pierda.
+      const caracteresPrompt = JSON.stringify(mensajes).length + JSON.stringify(DEFINICIONES).length;
+      const tIn = Math.ceil(caracteresPrompt / 4);
+      const tOut = Math.ceil(caracteresRonda / 4);
+      tokensIn += tIn;
+      tokensOut += tOut;
+      costo += estimarCostoMicros(tIn, tOut, deps.precios);
       // Si falló antes de decir nada y hay otro modelo, se reintenta una vez con el de respaldo.
       const alterno = e.modeloRespaldo?.trim();
-      if (!huboSalida && !fallido && alterno && alterno !== modelo) {
+      if (!huboSalida && !fallido && !e.senal?.aborted && alterno && alterno !== modelo) {
         fallido = true;
         modelo = alterno;
         ronda--;
