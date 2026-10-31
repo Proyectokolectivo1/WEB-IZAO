@@ -55,7 +55,12 @@ export function IzaoImage({
   const caja: CSSProperties = { aspectRatio: String(ratio), ...style };
 
   if (!rutas) {
-    return <div role="img" aria-label={alt} className={`w-full bg-surface ${className}`} style={caja} />;
+    // Relleno sin foto: con texto alternativo es una imagen; sin él es decorativo (`role="img"` sin nombre rompe WCAG).
+    return alt ? (
+      <div role="img" aria-label={alt} className={`w-full bg-surface ${className}`} style={caja} />
+    ) : (
+      <div aria-hidden="true" className={`w-full bg-surface ${className}`} style={caja} />
+    );
   }
 
   const fondo: CSSProperties = media?.lqip

@@ -57,8 +57,10 @@ export function Galeria({ imagenes, nombre }: Props) {
         <button
           type="button"
           data-testid="galeria-principal"
-          aria-label={T.ficha.ampliarImagen}
-          aria-haspopup="dialog"
+          // Sin foto no hay nada que ampliar: el nombre es el texto visible (WCAG 2.5.3, el nombre incluye lo que se ve).
+          aria-label={actual ? T.ficha.ampliarImagen : T.ficha.sinFoto}
+          aria-haspopup={actual ? 'dialog' : undefined}
+          disabled={!actual}
           className="raton:cursor-zoom-in relative block aspect-[4/5] w-full touch-pan-y overflow-hidden bg-surface"
           onPointerEnter={alEntrar}
           onPointerMove={alMover}
