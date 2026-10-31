@@ -358,7 +358,8 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}
           aria-label={T.listado.volverArriba}
-          className="fixed bottom-4 right-4 z-30 inline-flex size-12 items-center justify-center rounded-md border border-ink bg-bg text-ink shadow-elev"
+          // Por encima del botón flotante de Iza (56 px, misma esquina): bottom-4 + 56 px + aire.
+          className="fixed bottom-[5.25rem] right-[1.25rem] z-30 inline-flex size-12 items-center justify-center rounded-md border border-ink bg-bg text-ink shadow-elev lg:bottom-[6.5rem] lg:right-[1.75rem]"
         >
           <Icono nombre="flechaArriba" />
         </button>
