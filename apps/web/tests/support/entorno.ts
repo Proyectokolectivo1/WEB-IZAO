@@ -17,12 +17,14 @@ export const URL_SUPABASE_FALSO = `http://127.0.0.1:${PUERTO_SUPABASE_FALSO}`;
 /** Raíz de `apps/web` (donde está `.next`). */
 export const RAIZ_WEB = path.resolve(__dirname, '../..');
 /**
- * `STORE_DATOS=ejemplo`: pruebas sin llaves. Se sirve la copia construida por `preparar-build-ejemplo.mjs`
- * (apps/.e2e-web), que usa los datos de ejemplo de la tienda; las expectativas salen de ahí (`support/semilla.ts`).
+ * `STORE_DATOS=ejemplo`: pruebas sin llaves. Se sirve el build de `pnpm build:e2e` (directorio `.next-ejemplo`), hecho con la
+ * variable oficial `STORE_DATOS_PERMITIR_EJEMPLO=1`; las expectativas salen de los datos de ejemplo (`support/semilla.ts`).
  */
 export const MODO_EJEMPLO = process.env.STORE_DATOS === 'ejemplo';
-/** Carpeta desde la que se sirve la tienda (`next start`) y donde está el build. */
-export const DIR_SERVIDOR = process.env.E2E_DIR_SERVIDOR ?? (MODO_EJEMPLO ? path.resolve(RAIZ_WEB, '../.e2e-web') : RAIZ_WEB);
+/** Directorio del build que se sirve (relativo a apps/web). */
+export const DIR_BUILD = process.env.NEXT_DIST_DIR ?? (MODO_EJEMPLO ? '.next-ejemplo' : '.next');
+/** Carpeta desde la que se sirve la tienda (`next start`). */
+export const DIR_SERVIDOR = RAIZ_WEB;
 /** Raíz del monorepo. */
 export const RAIZ_REPO = path.resolve(RAIZ_WEB, '../..');
 /** Salidas locales (ignoradas por git). */
@@ -44,7 +46,8 @@ export function entornoDePrueba(): Record<string, string> {
     REVIEWS_RATE_LIMIT_PER_10MIN: '10000',
     WARRANTY_RATE_LIMIT_PER_10MIN: '10000',
     CHAT_RATE_LIMIT_PER_10MIN: '10000',
-    ...(MODO_EJEMPLO ? { STORE_DATOS: 'ejemplo' } : {}),
+    NEXT_DIST_DIR: DIR_BUILD,
+    ...(MODO_EJEMPLO ? { STORE_DATOS: 'ejemplo', STORE_DATOS_PERMITIR_EJEMPLO: '1' } : {}),
   };
 }
 

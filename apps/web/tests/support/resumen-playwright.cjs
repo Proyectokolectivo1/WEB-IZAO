@@ -31,7 +31,7 @@ function recorrer(suite) {
 for (const s of j.suites) recorrer(s);
 
 const e = j.stats;
-let salida = `Resumen Playwright (${e.startTime.slice(0, 10)}; STORE_DATOS=ejemplo, copia apps/.e2e-web)\n`;
+let salida = `Resumen Playwright (${e.startTime.slice(0, 10)}; STORE_DATOS=ejemplo, build .next-ejemplo)\n`;
 salida += `Total: ${e.expected} pasan, ${e.unexpected} fallan, ${e.skipped} omitidas, ${e.flaky} inestables; duración ${Math.round(e.duration / 1000)} s\n\n`;
 salida += 'Por archivo (pasan / fallan / omitidas)\n';
 for (const [archivo, c] of Object.entries(porArchivo)) salida += `  ${archivo.padEnd(34)} ${c.ok} / ${c.fallo} / ${c.omitido}\n`;

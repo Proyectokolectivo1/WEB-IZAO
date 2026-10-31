@@ -38,14 +38,15 @@ de consultar la base. Cuando el catálogo corra contra Supabase real, la base de
 
 ## Sin llaves: `STORE_DATOS=ejemplo`
 
-La tienda en producción nunca usa datos de ejemplo (`NODE_ENV=production` fuerza Supabase). Para probarla sin llaves:
+La tienda en producción nunca usa datos de ejemplo salvo que el build lo pida con la variable oficial
+`STORE_DATOS_PERMITIR_EJEMPLO=1` (ver `lib/store/modo-datos.ts`). `pnpm build:e2e` hace ese build en `.next-ejemplo` y las pruebas lo sirven:
 
 ```bash
-pnpm build:e2e                      # copia apps/web -> apps/.e2e-web (ignorada por git), quita la compuerta de NODE_ENV en 4 archivos de la copia y construye
-STORE_DATOS=ejemplo pnpm test:e2e   # el config sirve esa copia con `next start`; el globalSetup vuelca los datos de ejemplo a .resultados/ejemplo.json
+pnpm build:e2e                      # next build de producción con STORE_DATOS=ejemplo y la variable de permiso
+STORE_DATOS=ejemplo pnpm test:e2e   # el config sirve `.next-ejemplo` con `next start`; el globalSetup vuelca los datos de ejemplo a .resultados/ejemplo.json
 ```
 
-El código de la tienda no se modifica. Los datos esperados salen de `repo-ejemplo.ts` (no de la API probada). Lo que el ejemplo no tiene
+Los datos esperados salen de `repo-ejemplo.ts` (no de la API probada). Lo que el ejemplo no tiene
 (imágenes, categorías, productos solo en EC, base real) se omite con una razón y está en `docs/fases/F1.md`, sección «No medido».
 Si el puerto 3100 está ocupado: `E2E_PUERTO_WEB=3110 E2E_PUERTO_SUPABASE=54310`. Resúmenes para la evidencia:
 `node tests/support/resumen-playwright.cjs <json>` y `node tests/lighthouse/resumen.cjs`.

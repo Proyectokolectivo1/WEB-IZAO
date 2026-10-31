@@ -22,7 +22,7 @@ const path = require('node:path');
 const PUERTO = process.env.LHCI_PUERTO || '3100';
 const BASE = `http://127.0.0.1:${PUERTO}`;
 
-// STORE_DATOS=ejemplo: sin llaves. El servidor es la copia de apps/.e2e-web (ver tests/support/preparar-build-ejemplo.mjs)
+// STORE_DATOS=ejemplo: sin llaves. El servidor sirve el build de `pnpm build:e2e` (.next-ejemplo; NEXT_DIST_DIR=.next-ejemplo al arrancarlo)
 // y los productos salen de los datos de ejemplo que vuelca el globalSetup de Playwright (tests/.resultados/ejemplo.json).
 const EJEMPLO = process.env.STORE_DATOS === 'ejemplo';
 const productos = JSON.parse(

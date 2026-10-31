@@ -13,13 +13,13 @@
 import { defineConfig, devices } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { DIR_RESULTADOS, DIR_SERVIDOR, entornoDePrueba, PUERTO_SUPABASE_FALSO, PUERTO_WEB, RAIZ_WEB, URL_WEB } from './support/entorno';
+import { DIR_BUILD, DIR_RESULTADOS, DIR_SERVIDOR, entornoDePrueba, PUERTO_SUPABASE_FALSO, PUERTO_WEB, RAIZ_WEB, URL_WEB } from './support/entorno';
 
 const enCI = Boolean(process.env.CI);
 
-if (!process.env.E2E_SIN_COMPROBAR_BUILD && !fs.existsSync(path.join(DIR_SERVIDOR, '.next', 'BUILD_ID'))) {
+if (!process.env.E2E_SIN_COMPROBAR_BUILD && !fs.existsSync(path.join(DIR_SERVIDOR, DIR_BUILD, 'BUILD_ID'))) {
   throw new Error(
-    `No hay build de producción en ${DIR_SERVIDOR}/.next. Ejecuta "pnpm build" (o, con STORE_DATOS=ejemplo, "pnpm build:e2e") antes de "pnpm test:e2e".`,
+    `No hay build de producción en ${DIR_SERVIDOR}/${DIR_BUILD}. Ejecuta "pnpm build" (o, con STORE_DATOS=ejemplo, "pnpm build:e2e") antes de "pnpm test:e2e".`,
   );
 }
 
