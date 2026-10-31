@@ -18,6 +18,8 @@ interface Mensaje {
   rol: 'iza' | 'persona';
   texto: string;
   tarjetas: TarjetaChat[];
+  /** Enlace de WhatsApp que Iza ofrece en este mensaje (regla 7). */
+  asesor?: string;
 }
 
 interface Estado {
@@ -177,6 +179,7 @@ export default function PanelIza({ pais, abierto, onCerrar, producto }: Props) {
               sesion.current = ev.datos.id;
               escribirAlmacen('session', claveSesion(pais), ev.datos.id);
             } else if (ev.evento === 'texto') parchar((m) => ({ ...m, texto: m.texto + ev.datos.t }));
+            else if (ev.evento === 'asesor') parchar((m) => ({ ...m, asesor: ev.datos.enlace }));
             else if (ev.evento === 'tarjeta') parchar((m) => ({ ...m, tarjetas: [...m.tarjetas, ev.datos] }));
             else if (ev.evento === 'fin' && ev.datos.restantes <= 0) setLimiteAlcanzado(true);
             else if (ev.evento === 'error') huboError = true;
@@ -288,6 +291,13 @@ export default function PanelIza({ pais, abierto, onCerrar, producto }: Props) {
                     <p className="whitespace-pre-line text-[1rem] leading-relaxed">{m.texto}</p>
                   ) : m.rol === 'iza' && enviando ? (
                     <p className="text-[0.9375rem] text-ink/70">{TI.pensando}</p>
+                  ) : null}
+                  {m.asesor ? (
+                    <a href={m.asesor} target="_blank" rel="noopener" className={`${clasesBoton({ variante: 'secundario', tamano: 'sm' })} mt-2`}>
+                      <Icono nombre="chat" tamano={18} />
+                      {TI.asesor}
+                      <span className="solo-lectores"> {TI.asesorNota}</span>
+                    </a>
                   ) : null}
                   {m.tarjetas.length > 0 ? (
                     <ul className="flex flex-col gap-2 pt-2">

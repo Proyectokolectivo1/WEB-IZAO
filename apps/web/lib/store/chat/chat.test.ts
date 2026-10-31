@@ -6,6 +6,7 @@ import { DEFINICIONES, ejecutarHerramienta, type DepsHerramientas } from './herr
 import type { EventoLLM, LLMProvider, SolicitudLLM } from './llm';
 import { FiltroMarcadores } from './marcadores';
 import { crearMock } from './mock';
+import { FiltroReglaSiete, MENSAJE_DERIVAR_ASESOR } from './regla7';
 import { creditosAMicros, eventosDeStream, mensajesAOpenAI } from './openrouter';
 import { elegirModelo, estimarCostoMicros, mesDeUso, nivelPresupuesto } from './presupuesto';
 import { PROMPT_BASE, construirPrompt, resumenCarrito } from './prompt';
@@ -374,5 +375,62 @@ describe('SSE', () => {
         { evento: 'fin', datos: { restantes: 29 } },
       ]);
     }
+  });
+});
+
+describe('regla 7 en la salida del modelo', () => {
+  const pasar = (trozos: string[]) => {
+    const f = new FiltroReglaSiete();
+    let t = '';
+    for (const x of trozos) t += f.empujar(x);
+    t += f.cerrar();
+    return { texto: t, reemplazo: f.huboReemplazo };
+  };
+  it('deja pasar texto normal, precios con punto y notas', () => {
+    const r = pasar(['Te sugiero este aroma fresco. ', 'Cuesta $ 150.000 y dura todo el día. ¿Te gusta?']);
+    expect(r.texto).toBe('Te sugiero este aroma fresco. Cuesta $ 150.000 y dura todo el día. ¿Te gusta?');
+    expect(r.reemplazo).toBe(false);
+  });
+  it.each([
+    'Es 100% original.',
+    'Todos nuestros perfumes son auténticos.',
+    'Tiene certificado de autenticidad.',
+    'Es una réplica de alta calidad.',
+    'Somos distribuidor oficial de la marca.',
+    'Es genuino, te lo garantizo.',
+    'Es una imitación muy lograda.',
+    'Estamos afiliados a la casa.',
+    'Es ORIGINAL de fábrica.',
+    'Garantizamos su originalidad.',
+  ])('reemplaza «%s» por el mensaje de asesor', (frase) => {
+    const r = pasar(['Mira este aroma. ', frase, ' ¿Te lo muestro?']);
+    expect(r.reemplazo).toBe(true);
+    expect(r.texto).toContain(MENSAJE_DERIVAR_ASESOR);
+    expect(r.texto).not.toMatch(/original|aut[eé]ntic|certificad|r[eé]plica|oficial|genuin|imitaci|afiliad/i);
+    expect(r.texto).toContain('Mira este aroma.');
+    expect(r.texto).toContain('¿Te lo muestro?');
+  });
+  it('funciona aunque la frase llegue partida y reemplaza una sola vez', () => {
+    const frase = 'Es original y auténtico. También es genuino.';
+    for (let corte = 1; corte < frase.length; corte++) {
+      const r = pasar([frase.slice(0, corte), frase.slice(corte)]);
+      expect(r.texto.split(MENSAJE_DERIVAR_ASESOR)).toHaveLength(2);
+    }
+  });
+  it('revisa también lo que queda sin punto final', () => {
+    expect(pasar(['Claro, es original']).texto).toBe(MENSAJE_DERIVAR_ASESOR);
+  });
+  it('en un turno completo ofrece contactar_asesor y lo registra', async () => {
+    const prov = guionado([[{ tipo: 'texto', delta: 'Sí, es auténtico. ' }, { tipo: 'texto', delta: 'Te muestro [[producto:aroma-uno]].' }, fin()]]);
+    const { deps, entrada, registrar } = armar(prov);
+    const ev = await recoger(conversar(deps, entrada));
+    const texto = ev.map((x) => (x.tipo === 'texto' ? x.texto : '')).join('');
+    expect(texto).toContain(MENSAJE_DERIVAR_ASESOR);
+    expect(texto).not.toMatch(/aut[eé]ntic/i);
+    expect(ev.find((x) => x.tipo === 'asesor')).toEqual({ tipo: 'asesor', enlace: 'https://wa.me/573000000000?text=hola' });
+    expect(ev.some((x) => x.tipo === 'tarjeta')).toBe(true);
+    const r = (registrar.mock.calls as unknown as [{ texto: string; herramientas: { nombre: string }[] }][])[0]![0];
+    expect(r.texto).not.toMatch(/aut[eé]ntic/i);
+    expect(r.herramientas.map((h) => h.nombre)).toContain('contactar_asesor');
   });
 });

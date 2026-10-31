@@ -12,6 +12,7 @@ import type { LLMProvider, MensajeLLM, TurnoGuardado } from './llm';
 import { FiltroMarcadores } from './marcadores';
 import { elegirModelo, estimarCostoMicros, type NivelPresupuesto, type PreciosModelo } from './presupuesto';
 import { construirPrompt, type ContextoPrompt } from './prompt';
+import { FiltroReglaSiete } from './regla7';
 
 export const MAX_TARJETAS_POR_RESPUESTA = 3;
 
@@ -32,6 +33,8 @@ export interface TarjetaChat {
 export type EventoChat =
   | { tipo: 'texto'; texto: string }
   | { tipo: 'tarjeta'; tarjeta: TarjetaChat }
+  /** Enlace de WhatsApp del asesor: se ofrece cuando se reemplazó una frase por la regla 7. */
+  | { tipo: 'asesor'; enlace: string }
   | { tipo: 'fin' }
   | { tipo: 'error'; codigo: 'proveedor' | 'sin_modelo' };
 
@@ -75,6 +78,7 @@ export async function* conversar(deps: DepsConversar, e: EntradaTurno): AsyncGen
 
   const mensajes: MensajeLLM[] = [{ role: 'system', content: construirPrompt(e.contexto) }, ...e.historial, { role: 'user', content: e.mensaje }];
   const filtro = new FiltroMarcadores();
+  const regla7 = new FiltroReglaSiete();
   const tarjetasEnviadas = new Set<string>();
   const herramientasUsadas: ResultadoTurno['herramientas'] = [];
   let textoFinal = '';
@@ -84,11 +88,13 @@ export async function* conversar(deps: DepsConversar, e: EntradaTurno): AsyncGen
   let huboSalida = false;
   let fallido = false;
 
-  async function* emitir(salida: { texto: string; slugs: string[] }): AsyncGenerator<EventoChat> {
-    if (salida.texto) {
-      textoFinal += salida.texto;
+  async function* emitir(salida: { texto: string; slugs: string[] }, cierre = false): AsyncGenerator<EventoChat> {
+    // Regla 7: lo que ve la persona pasa por el filtro determinista antes de salir (por oraciones completas).
+    const texto = regla7.empujar(salida.texto) + (cierre ? regla7.cerrar() : '');
+    if (texto) {
+      textoFinal += texto;
       huboSalida = true;
-      yield { tipo: 'texto', texto: salida.texto };
+      yield { tipo: 'texto', texto };
     }
     for (const slug of salida.slugs) {
       if (tarjetasEnviadas.has(slug) || tarjetasEnviadas.size >= MAX_TARJETAS_POR_RESPUESTA) continue;
@@ -159,7 +165,13 @@ export async function* conversar(deps: DepsConversar, e: EntradaTurno): AsyncGen
     }
   }
 
-  yield* emitir(filtro.cerrar());
+  yield* emitir(filtro.cerrar(), true);
+  if (regla7.huboReemplazo) {
+    herramientasUsadas.push({ nombre: 'contactar_asesor', argumentos: '{"motivo":"regla 7: originalidad o marcas"}' });
+    const r = await ejecutarHerramienta(deps.herramientas, 'contactar_asesor', JSON.stringify({ motivo: 'consulta sobre originalidad, autenticidad o marcas' }));
+    const enlace = (r.resultado as { enlace_whatsapp?: string }).enlace_whatsapp;
+    if (enlace) yield { tipo: 'asesor', enlace };
+  }
   await deps.registrar({ modelo, tokensIn, tokensOut, costoMicros: costo, texto: textoFinal.trim(), herramientas: herramientasUsadas });
   yield { tipo: 'fin' };
 }

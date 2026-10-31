@@ -5,6 +5,7 @@ export type EventoSSE =
   | { evento: 'sesion'; datos: { id: string } }
   | { evento: 'texto'; datos: { t: string } }
   | { evento: 'tarjeta'; datos: TarjetaChat }
+  | { evento: 'asesor'; datos: { enlace: string } }
   | { evento: 'fin'; datos: { restantes: number } }
   | { evento: 'error'; datos: { codigo: 'proveedor' | 'sin_modelo' | 'interno' } };
 

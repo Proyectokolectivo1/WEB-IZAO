@@ -167,6 +167,7 @@ export async function POST(req: Request) {
         )) {
           if (ev.tipo === 'texto') enviar({ evento: 'texto', datos: { t: ev.texto } });
           else if (ev.tipo === 'tarjeta') enviar({ evento: 'tarjeta', datos: ev.tarjeta });
+          else if (ev.tipo === 'asesor') enviar({ evento: 'asesor', datos: { enlace: ev.enlace } });
           else if (ev.tipo === 'error') enviar({ evento: 'error', datos: { codigo: ev.codigo } });
           else enviar({ evento: 'fin', datos: { restantes: Math.max(0, ajustes.maxMensajesSesion - sesionActiva.mensajes - 1) } });
         }
