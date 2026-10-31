@@ -9,6 +9,7 @@ export default tseslint.config(
       '**/.next*/**',
       '**/.turbo/**',
       '**/dist/**',
+      '**/tests/.resultados/**',
       '**/coverage/**',
       'apps/print-agent/**',
       'tools/**',
