@@ -144,7 +144,7 @@ export default function PanelIza({ pais, abierto, onCerrar, producto }: Props) {
             session_id: sesion.current,
             message: mensaje,
             page: producto ? { producto } : null,
-            cart: lineas.slice(0, 10).map((l) => ({ nombre: l.nombre, cantidad: l.cantidad })),
+            cart: lineas.slice(0, 10).map((l) => ({ slug: l.slug, cantidad: l.cantidad })),
             turnstile: sesion.current ? null : token.current,
           }),
         });

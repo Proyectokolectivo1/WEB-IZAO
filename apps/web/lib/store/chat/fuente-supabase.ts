@@ -207,10 +207,14 @@ export async function guardarTurno(sesion: SesionChat, mensaje: string, r: Resul
   }
   const ins = await db.from('chat_messages').insert(filas);
   if (ins.error) throw new Error(`chat_messages: ${ins.error.message}`);
-  await db
+  // El contador sale de contar los mensajes de la persona (no de «anterior + 1»): dos turnos a la vez no se pisan.
+  // Pendiente izao-db: RPC atómica para sumarlo en una sola sentencia.
+  const { count } = await db.from('chat_messages').select('id', { count: 'exact', head: true }).eq('session_id', sesion.id).eq('role', 'user');
+  const upd = await db
     .from('chat_sessions')
-    .update({ messages_count: sesion.mensajes + 1, last_message_at: ahora.toISOString() })
+    .update({ messages_count: count ?? sesion.mensajes + 1, last_message_at: ahora.toISOString() })
     .eq('id', sesion.id);
+  if (upd.error) console.error(`[iza] no se actualizó la sesión: ${upd.error.message}`);
 }
 
 // ── Herramientas y tarjetas ──────────────────────────────────────────────────────────────────────
@@ -276,21 +280,23 @@ export function herramientasDePais(pais: CodigoPais): DepsHerramientas {
       return { estado: o.status, guia: s?.tracking_code ? { transportadora: s.carrier_name, codigo: s.tracking_code, url: s.tracking_url } : null };
     },
     async codigosIza() {
-      const ahora = new Date().toISOString();
+      const ahora = Date.now();
       const { data, error } = await clienteDb()
         .from('discount_codes')
-        .select('code,type,value,starts_at,ends_at,usage_limit_total,usage_count,min_subtotal')
+        .select('code,type,value,max_discount_amount,starts_at,ends_at,usage_limit_total,usage_count,min_subtotal')
         .eq('country_code', upper)
         .eq('iza_can_offer', true)
         .eq('is_active', true);
       if (error) throw new Error(`discount_codes: ${error.message}`);
       return ((data ?? []) as Record<string, unknown>[])
-        .filter((c) => (!c.starts_at || String(c.starts_at) <= ahora) && (!c.ends_at || String(c.ends_at) > ahora))
+        // Fechas como instantes (no como texto): PostgREST puede devolver distintos formatos de zona horaria.
+        .filter((c) => (!c.starts_at || Date.parse(String(c.starts_at)) <= ahora) && (!c.ends_at || Date.parse(String(c.ends_at)) > ahora))
         .filter((c) => c.usage_limit_total == null || Number(c.usage_count) < Number(c.usage_limit_total))
         .map((c) => ({
           codigo: String(c.code),
           descripcion:
             (c.type === 'percent' ? `${c.value}% de descuento` : `${formatearPrecio(String(c.value), pais)} de descuento`) +
+            (c.type === 'percent' && c.max_discount_amount ? ` (tope de ${formatearPrecio(String(c.max_discount_amount), pais)})` : '') +
             (Number(c.min_subtotal) > 0 ? ` en compras desde ${formatearPrecio(String(c.min_subtotal), pais)}` : ''),
         }));
     },

@@ -50,7 +50,8 @@ const entradaSchema = z.object({
   session_id: z.guid().nullish(),
   message: z.string().max(4000),
   page: z.object({ producto: z.string().regex(/^[a-z0-9][a-z0-9-]{0,118}$/i).nullish() }).nullish(),
-  cart: z.array(z.object({ nombre: z.string().max(120), cantidad: z.number().int().min(1).max(99) })).max(10).nullish(),
+  // Solo slug y cantidad: los nombres los pone el servidor desde el catálogo (un nombre del navegador iría al prompt).
+  cart: z.array(z.object({ slug: z.string().regex(/^[a-z0-9][a-z0-9-]{0,118}$/i), cantidad: z.number().int().min(1).max(99) })).max(10).nullish(),
   turnstile: z.string().max(2048).nullish(),
 });
 
@@ -128,6 +129,9 @@ export async function POST(req: Request) {
   const herramientas = conWhatsapp(herramientasDePais(pais), tiendaAjustes?.whatsappAsesor ?? null, tiendaAjustes?.nombreTienda ?? 'Izao');
   const tarjeta = tarjetaDePais(pais);
   const productoActual = e.page?.producto ? await tarjeta(e.page.producto.toLowerCase()).catch(() => null) : null;
+  const carrito = (
+    await Promise.all((e.cart ?? []).map(async (l) => ({ nombre: (await tarjeta(l.slug.toLowerCase()).catch(() => null))?.nombre ?? '', cantidad: l.cantidad })))
+  ).filter((l) => l.nombre !== '');
   const historial = conBase ? await historialSesion(sesionActiva.id, ajustes.turnos).catch(() => []) : [];
   const proveedor = proveedorTurno;
 
@@ -158,7 +162,7 @@ export async function POST(req: Request) {
               moneda: tiendaAjustes?.moneda ?? (pais === 'co' ? 'COP' : 'USD'),
               instruccionesExtra: ajustes.instruccionesExtra,
               producto: productoActual ? { slug: productoActual.slug, nombre: productoActual.nombre } : null,
-              ...(e.cart ? { carrito: e.cart } : {}),
+              ...(carrito.length > 0 ? { carrito } : {}),
             },
             historial,
             mensaje,
@@ -179,7 +183,7 @@ export async function POST(req: Request) {
         if (conBase) {
           const r = resultado as ResultadoTurno | null;
           await guardarTurno(sesionActiva, mensaje, r).catch((x) => console.error(`[iza] no se guardó el turno: ${x instanceof Error ? x.name : 'error'}`));
-          if (r) await sumarUso(r.costoMicros).catch(() => undefined);
+          if (r) await sumarUso(r.costoMicros).catch((x) => console.error(`[iza] no se sumó el consumo: ${x instanceof Error ? x.name : 'error'}`));
         }
         controlador.close();
       }
