@@ -91,10 +91,22 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
     }
     if (!snap) return;
     restaurar({ items: snap.items, nextCursor: snap.nextCursor, total: snap.total });
-    let intentos = 0;
+    // Next también lleva la página nueva al inicio, y eso puede ocurrir tras nuestro primer `scrollTo` (ficha leída
+    // un rato, página regenerada, red lenta). Se vuelve a colocar hasta 3 s, y se deja de insistir en cuanto la
+    // persona mueve la pantalla ella misma.
+    const objetivo = snap.scrollY;
+    let cancelado = false;
+    const parar = () => {
+      cancelado = true;
+    };
+    const eventos = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const;
+    for (const e of eventos) window.addEventListener(e, parar, { once: true, passive: true });
+    const inicio = performance.now();
     const ir = () => {
-      window.scrollTo(0, snap.scrollY);
-      if (Math.abs(window.scrollY - snap.scrollY) > 4 && intentos++ < 10) window.setTimeout(ir, 60);
+      if (cancelado) return;
+      if (Math.abs(window.scrollY - objetivo) > 4) window.scrollTo(0, objetivo);
+      if (performance.now() - inicio < 3000) window.setTimeout(ir, 100);
+      else for (const e of eventos) window.removeEventListener(e, parar);
     };
     requestAnimationFrame(ir);
   }, []);
