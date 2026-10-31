@@ -2,18 +2,14 @@ Fecha de las corridas: 2026_10_31
 
 | URL | Rend. | Acces. | Prác. | SEO | FCP s | LCP s | CLS | TBT ms | JS KB | corridas |
 |---|---|---|---|---|---|---|---|---|---|---|
-| /co | 96 | 100 | 96 | 90 | 1.51 | 2.69 | 0.000 | 83 | 141 | 3 |
-| /co/catalogo | 96 | 98 | 96 | 90 | 1.50 | 2.68 | 0.000 | 87 | 149 | 3 |
-| /co/categoria/arabes | 95 | 98 | 96 | 91 | 1.59 | 2.74 | 0.000 | 92 | 149 | 3 |
-| /co/perfume/cuero-suave-casa-alba-11 | 95 | 100 | 96 | 90 | 1.59 | 2.75 | 0.000 | 75 | 148 | 3 |
-| /ec | 95 | 100 | 96 | 90 | 1.59 | 2.73 | 0.000 | 73 | 141 | 3 |
-| /ec/perfume/cuero-suave-casa-alba-11 | 95 | 100 | 96 | 90 | 1.59 | 2.75 | 0.000 | 76 | 148 | 3 |
+| /co | 96 | 100 | 96 | 91 | 1.50 | 2.66 | 0.000 | 62 | 141 | 3 |
+| /co/catalogo | 95 | 100 | 96 | 91 | 1.59 | 2.75 | 0.000 | 83 | 149 | 3 |
+| /co/categoria/arabes | 95 | 100 | 96 | 92 | 1.59 | 2.76 | 0.000 | 79 | 149 | 3 |
+| /co/perfume/cuero-suave-casa-alba-11 | 96 | 100 | 96 | 91 | 1.50 | 2.68 | 0.000 | 79 | 148 | 3 |
+| /ec | 95 | 100 | 96 | 91 | 1.59 | 2.73 | 0.000 | 74 | 141 | 3 |
+| /ec/perfume/cuero-suave-casa-alba-11 | 95 | 100 | 96 | 91 | 1.59 | 2.73 | 0.000 | 68 | 148 | 3 |
 
-Auditorías de accesibilidad fallidas: 
-- /co/catalogo: heading-order (Los elementos de encabezado no están ordenados en una secuencia descendente)
-- /co/categoria/arabes: heading-order (Los elementos de encabezado no están ordenados en una secuencia descendente)
-- /co/perfume/cuero-suave-casa-alba-11: label-content-name-mismatch (Los elementos con etiquetas de texto visibles no tienen nombres de accesibilidad que coincidan.)
-- /ec/perfume/cuero-suave-casa-alba-11: label-content-name-mismatch (Los elementos con etiquetas de texto visibles no tienen nombres de accesibilidad que coincidan.)
+Auditorías de accesibilidad fallidas: ninguna
 
 uses-text-compression: 1 []
-Elemento LCP (primera URL): <a aria-label="Izao Perfumería. Ir al inicio" class="justify-self-center lg:justify-self-start" href="/co">
+Elemento LCP (primera URL): <span class="font-display text-[1.625rem] leading-none lg:text-3xl">
