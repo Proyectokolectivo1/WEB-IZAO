@@ -20,12 +20,15 @@ interface Props {
   concentracion?: string | null;
   /** Primeras tarjetas de la página: cargan ansiosas (LCP). */
   prioritaria?: boolean;
+  /** Nivel del nombre: `h2` en listados (bajo el `h1` de la página), `h3` dentro de una sección con su propio `h2`. */
+  nivelTitulo?: 'h2' | 'h3';
 }
 
 const norm = (b: string) => b.toLowerCase().replace(/[\s-]+/g, '_');
 const TAMANOS = '(min-width:1536px) 18vw, (min-width:1024px) 23vw, (min-width:768px) 31vw, 47vw';
 
-export function TarjetaProducto({ item, pais, concentracion, prioritaria = false }: Props) {
+export function TarjetaProducto({ item, pais, concentracion, prioritaria = false, nivelTitulo = 'h3' }: Props) {
+  const Titulo = nivelTitulo;
   const { agregar, deseos, alternarDeseo } = useCarrito();
   const [hoverListo, setHoverListo] = useState(false);
   const [pagina, setPagina] = useState(0);
@@ -167,11 +170,12 @@ export function TarjetaProducto({ item, pais, concentracion, prioritaria = false
 
       <div className="flex h-[7.25rem] flex-col pt-3">
         <p className="etiqueta truncate text-ink/70">{[item.brand_name, concentracion].filter(Boolean).join(' · ')}</p>
-        <h3 className="mt-1 line-clamp-2 text-xl leading-tight">
-          <Link href={href} className="underline-offset-4 hover:underline">
+        <Titulo className="mt-1 text-xl leading-tight">
+          {/* Objetivo táctil de 44 px (§8.8) sin mover el diseño: el relleno se compensa con margen negativo. */}
+          <Link href={href} className="-my-2.5 line-clamp-2 block py-2.5 underline-offset-4 hover:underline">
             {item.name}
           </Link>
-        </h3>
+        </Titulo>
         <p className="mt-auto flex flex-wrap items-baseline gap-x-2 text-[0.9375rem]">
           {precioDesde ? <span className="text-ink/70">{T.tarjeta.desdePrecio}</span> : null}
           <span className="font-semibold tabular-nums">{formatearPrecio(item.min_price, pais)}</span>

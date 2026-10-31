@@ -34,7 +34,7 @@ export function Header({ pais, ajustes, anuncios, categorias, populares }: Props
             <div className="flex items-center lg:hidden">
               <MenuMovil pais={pais} categorias={categorias} />
             </div>
-            <Link href={`/${pais}`} aria-label={`${ajustes.nombreTienda}. ${T.marca.irInicio}`} className="justify-self-center lg:justify-self-start">
+            <Link href={`/${pais}`} aria-label={`${ajustes.nombreTienda}. ${T.marca.irInicio}`} className="inline-flex min-h-11 items-center justify-self-center lg:justify-self-start">
               {logo ? (
                 <img
                   src={logo.src}
