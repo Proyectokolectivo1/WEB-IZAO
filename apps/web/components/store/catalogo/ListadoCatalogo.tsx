@@ -130,24 +130,42 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
   useEffect(() => {
     vivo.current = true;
     scrollRef.current = window.scrollY;
+    // Al salir por un enlace (la ficha) la posición se guarda en el clic y queda congelada: Next lleva la página nueva al
+    // inicio y ese salto llega como un evento de scroll ANTES de que este componente se desmonte; sin congelar, se guardaba 0.
+    let congelado = false;
+    const descongelar = () => {
+      congelado = false;
+    };
+    const alClic = (e: MouseEvent) => {
+      const a = (e.target as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
+      if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target === '_blank') return;
+      if (new URL(a.href, window.location.href).origin !== window.location.origin) return;
+      guardar(window.scrollY);
+      congelado = true;
+    };
     const alScroll = () => {
+      if (congelado) return;
       scrollRef.current = window.scrollY;
       setMostrarSubir(window.scrollY > window.innerHeight * 2);
       if (temporizador.current) window.clearTimeout(temporizador.current);
       temporizador.current = window.setTimeout(() => vivo.current && guardar(scrollRef.current), 250);
     };
-    const alSalir = () => guardar(window.scrollY);
-    const alOcultar = () => document.visibilityState === 'hidden' && guardar(window.scrollY);
+    const alSalir = () => !congelado && guardar(window.scrollY);
+    const alOcultar = () => document.visibilityState === 'hidden' && !congelado && guardar(window.scrollY);
+    document.addEventListener('click', alClic, true);
+    for (const ev of ['wheel', 'touchmove', 'keydown'] as const) window.addEventListener(ev, descongelar, { passive: true });
     window.addEventListener('scroll', alScroll, { passive: true });
     window.addEventListener('pagehide', alSalir);
     document.addEventListener('visibilitychange', alOcultar);
     return () => {
       vivo.current = false;
       if (temporizador.current) window.clearTimeout(temporizador.current);
+      document.removeEventListener('click', alClic, true);
+      for (const ev of ['wheel', 'touchmove', 'keydown'] as const) window.removeEventListener(ev, descongelar);
       window.removeEventListener('scroll', alScroll);
       window.removeEventListener('pagehide', alSalir);
       document.removeEventListener('visibilitychange', alOcultar);
-      guardar(scrollRef.current);
+      if (!congelado) guardar(scrollRef.current);
     };
   }, [guardar]);
 
