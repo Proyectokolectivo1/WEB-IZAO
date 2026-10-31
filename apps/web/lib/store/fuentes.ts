@@ -19,14 +19,16 @@ import {
   Playfair_Display,
 } from 'next/font/google';
 
+// Pareja por defecto (precargada) con `optional`: si el archivo llega con el primer pintado se usa y, si no, la página conserva
+// la fuente de respaldo (ajustada de tamaño) sin cambiarla a mitad de carga; así el texto grande no se repinta (LCP) ni se mueve (CLS).
 const p1t = Cormorant_Garamond({
   subsets: ['latin'],
-  display: 'swap',
+  display: 'optional',
   weight: ['400', '500', '600', '700'],
   style: ['normal', 'italic'],
   variable: '--font-par1-titulos',
 });
-const p1x = Manrope({ subsets: ['latin'], display: 'swap', variable: '--font-par1-texto' });
+const p1x = Manrope({ subsets: ['latin'], display: 'optional', variable: '--font-par1-texto' });
 
 const p2t = Playfair_Display({ subsets: ['latin'], display: 'swap', preload: false, variable: '--font-par2-titulos' });
 const p2x = Jost({ subsets: ['latin'], display: 'swap', preload: false, variable: '--font-par2-texto' });
