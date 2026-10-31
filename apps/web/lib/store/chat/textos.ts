@@ -6,6 +6,11 @@
 export const TI = {
   nombre: 'Iza',
   lanzador: 'Habla con Iza',
+  burbuja: '¿Dudas sobre este aroma? Pregúntale a Iza.',
+  cerrarBurbuja: 'Cerrar el aviso',
+  tuMensaje: 'Tú',
+  izaDice: 'Iza',
+  cargando: 'Preparando el chat…',
   panelTitulo: 'Iza, tu asesora',
   cerrar: 'Cerrar el chat',
   bienvenidaDefecto: 'Hola, soy Iza, tu asesora de Izao. Cuéntame para quién es el perfume y te muestro opciones.',
@@ -19,7 +24,7 @@ export const TI = {
   asesor: 'Hablar con un asesor',
   asesorNota: '(se abre en otra pestaña)',
   mensajeAsesor: (contexto: string) => `Hola, vengo del chat con Iza.${contexto ? ` Quería saber: ${contexto}` : ''}`,
-  tarjeta: { comprar: 'Comprar', agregado: 'Agregado al bolso', verDetalle: 'Ver detalle', agotado: 'Agotado por ahora', verOpciones: 'Elegir presentación' },
+  tarjeta: { comprar: 'Comprar', agregado: 'Agregado al bolso', verDetalle: 'Ver detalle', agotado: 'Agotado por ahora', finalizar: 'Finalizar compra' },
   productoActual: (nombre: string) => `Ahora estás viendo ${nombre}. Pregúntame lo que quieras de este aroma.`,
   preguntaProducto: '¿Qué me puedes contar de este aroma?',
   estados: {

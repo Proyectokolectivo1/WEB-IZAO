@@ -12,15 +12,15 @@ const api = (): TurnstileApi | undefined => (window as unknown as { turnstile?: 
 /**
  * Cloudflare Turnstile para los formularios públicos (§26.1). El script se carga solo si hay clave y el widget solo se
  * ve si Cloudflare pide interacción. `contenedor` va en un `<div>` que se renderiza cuando hay clave; `token.current`
- * trae el último token vigente y `reiniciar()` pide otro (cada token vale una vez).
+ * trae el último token vigente (si el contenedor aparece después, p. ej. dentro de un diálogo, pasar `listo`) y `reiniciar()` pide otro (cada token vale una vez).
  */
-export function useTurnstile(siteKey: string | null) {
+export function useTurnstile(siteKey: string | null, listo = true) {
   const contenedor = useRef<HTMLDivElement>(null);
   const token = useRef<string | null>(null);
   const widget = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!siteKey || !contenedor.current) return;
+    if (!siteKey || !listo || !contenedor.current) return;
     const montar = () => {
       const t = api();
       if (!t || !contenedor.current || widget.current) return;
@@ -51,7 +51,7 @@ export function useTurnstile(siteKey: string | null) {
       widget.current = null;
       token.current = null;
     };
-  }, [siteKey]);
+  }, [siteKey, listo]);
 
   const reiniciar = useCallback(() => {
     token.current = null;

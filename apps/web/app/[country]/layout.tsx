@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 import { CarritoProvider } from '@/components/store/carrito/CarritoProvider';
 import { Footer } from '@/components/store/footer/Footer';
 import { Header } from '@/components/store/header/Header';
+import { LanzadorIza } from '@/components/store/iza/LanzadorIza';
+import { chatHabilitado } from '@/lib/store/chat/fuente-supabase';
 import { tienda } from '@/lib/store/datos';
 import { clasesFuentes } from '@/lib/store/fuentes';
 import { esPais } from '@/lib/store/pais';
@@ -30,7 +32,7 @@ export default async function LayoutPais({ children, params }: { children: React
   if (!esPais(pais)) notFound();
 
   const repo = tienda();
-  const [ajustes, anuncios, menu, populares, paginas, espacios, override] = await Promise.all([
+  const [ajustes, anuncios, menu, populares, paginas, espacios, override, iza] = await Promise.all([
     repo.ajustes(pais),
     repo.anuncios(pais),
     repo.menu(pais),
@@ -38,6 +40,7 @@ export default async function LayoutPais({ children, params }: { children: React
     repo.paginas(pais),
     repo.espacios(pais),
     temaDePais(pais),
+    chatHabilitado(),
   ]);
 
   // Nota y valor del envío editables en el panel (espacios `nota_envio` y `valor_envio`); sin ellos, los del seed.
@@ -52,6 +55,7 @@ export default async function LayoutPais({ children, params }: { children: React
           {children}
         </main>
         <Footer pais={pais} ajustes={ajustes} paginas={paginas} espacios={espacios} />
+        {iza ? <LanzadorIza pais={pais} /> : null}
       </CarritoProvider>
       {/* Los diálogos se montan aquí para heredar el tema del país. */}
       <div id="izao-portal" />
