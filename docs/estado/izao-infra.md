@@ -26,8 +26,12 @@ test-backup-restore, test-restore-guard, test-deploy-rollback, test-nginx (1.27/
 - Correo: sin proveedor (SMTP_* vacías). Alerta/correo de garantía NO hecho hasta que el líder elija proveedor.
 - `chat.purgar_conversaciones` (cron 03:45, por lotes de 100): borra chat_messages y chat_sessions con más de 180 días (env opcional `CHAT_RETENCION_DIAS`, mín. 30; no es configurable en chat_settings); no toca chat_usage_monthly.
 
+## F0b (2026-11-02)
+Redis, web y worker corriendo en el VPS (tag 68cdd45, healthy); Nginx con `izao.conf` propio sirve https://izaoperfumeria.com (200), www 301, `/media/warranty/` 404. Detalles en `docs/RUNBOOK.md` ("F0b"). Sin snapshot (API Contabo 401).
+Bloqueos: quitar enlace viejo y cron (root); `BACKUP_AGE_RECIPIENT` vacío; host sin `pg_dump` 17 ni `age`.
+
 ## Siguiente paso exacto
-Inventario del VPS con `vps_policy` y `vps_inventory` (T0.15) cuando el MCP `contabo` esté disponible.
+Tras los comandos del dueño: `bash infra/scripts/run-with-env.sh bash infra/scripts/backup.sh` en el VPS y `test-backup-restore`; arrancar `uptime`; `crear-admin`.
 
 ## Decisiones que necesitan al líder
 - Ninguna. Nota: el build de web puede fallar por WIP de la tienda; verificar en copia limpia de HEAD.

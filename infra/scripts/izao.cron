@@ -4,8 +4,8 @@
 # $ & ; espacios o comillas no ejecuta nada), a diferencia de `set -a; . .env`.
 SHELL=/bin/bash
 # Backup diario 03:00 Bogotá = 08:00 UTC
-0 8 * * * izao /srv/izao/app/infra/scripts/run-with-env.sh /srv/izao/app/infra/scripts/backup.sh >> /srv/izao/backups/backup.log 2>&1
+0 8 * * * izao /srv/izao/app/infra/scripts/run-with-env.sh bash /srv/izao/app/infra/scripts/backup.sh >> /srv/izao/backups/backup.log 2>&1
 # Keepalive de Supabase cada 3 días, 04:00 Bogotá = 09:00 UTC
-0 9 */3 * * izao /srv/izao/app/infra/scripts/run-with-env.sh /srv/izao/app/infra/scripts/keepalive.sh >> /srv/izao/backups/keepalive.log 2>&1
+0 9 */3 * * izao /srv/izao/app/infra/scripts/run-with-env.sh bash /srv/izao/app/infra/scripts/keepalive.sh >> /srv/izao/backups/keepalive.log 2>&1
 # Alertas de base y disco cada 6 horas
-15 */6 * * * izao /srv/izao/app/infra/scripts/run-with-env.sh /srv/izao/app/infra/scripts/check-alerts.sh >> /srv/izao/backups/alerts.log 2>&1
+15 */6 * * * izao /srv/izao/app/infra/scripts/run-with-env.sh bash /srv/izao/app/infra/scripts/check-alerts.sh >> /srv/izao/backups/alerts.log 2>&1

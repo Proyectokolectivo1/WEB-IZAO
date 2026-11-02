@@ -116,3 +116,12 @@ Job `agente-impresion` en `.github/workflows/ci.yml` (runner `windows-2022`, Pyt
 ## Tareas futuras
 
 - **B-n1 (antes de F1):** medir cuántos 429 produce la zona `izao_next_action` (60 por minuto por IP; todo POST con `Next-Action`). En Colombia muchos usuarios móviles comparten IP (CGNAT) y podrían saturarla durante el checkout. Revisar el log de Nginx (`limit_req`) con tráfico real y subir `rate`/`burst` si hace falta.
+
+## F0b: primer despliegue en el VPS (2026-11-02)
+
+- **Inventario previo:** Ubuntu 24.04, 4 CPU, 7,9 GB RAM, 93 GB libres, Nginx 1.24 del host en 80/443, sin contenedores ni otros proxies. El sitio estático anterior (`sites-available/izaoperfumeria` -> `/var/www/izaoperfumeria/dist`) se reemplaza por decisión del dueño.
+- **Contenedores:** `izao-redis-1`, `izao-web-1`, `izao-worker-1` (imágenes `izao-web:68cdd45`, `izao-worker:68cdd45`), healthy. `web` en `127.0.0.1:3000`. Una sola réplica: el upstream apunta también a 3001 (se marca caído por `max_fails`). Uptime Kuma no se arrancó.
+- **Despliegue:** el VPS no tiene `pnpm`; `deploy.sh --skip-tests` ya no ejecuta `pnpm install` (las imágenes lo instalan en el build). En el primer despliegue se ejecutaron a mano los pasos 4 y 5 (`docker compose build`/`up --wait` con `IZAO_TAG`) y se escribieron `/srv/izao/deploys.log` y `/srv/izao/ultimo-ok`.
+- **Snapshot:** la API de Contabo respondió 401; no hubo snapshot previo.
+- **Nginx:** `/srv/izao/nginx/izao.conf` contiene también `include izao-zones.conf` y el `upstream izao_web` (entra por `sites-enabled`, contexto http; no hace falta enlazar nada en `conf.d`). Los includes (`izao-{zones,proxy,security-headers,locations}.conf`) se copian a `/srv/izao/nginx/` desde `infra/nginx/`: **recopiarlos cuando cambien en el repo**. Reutiliza el certificado Let's Encrypt existente (ECDSA, authenticator nginx). `izao.conf` carga antes que `izaoperfumeria` y Nginx ignora los `server_name` duplicados del sitio viejo (solo avisos en `nginx -t`); el enlace viejo sigue sin quitarse (requiere root).
+- **Backups:** `backup.sh` aborta porque `BACKUP_AGE_RECIPIENT` no está en `infra/.env`. Además el host no tiene `pg_dump` ni `age`. `/etc/cron.d/izao` no se pudo instalar (root).

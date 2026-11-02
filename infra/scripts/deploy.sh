@@ -83,8 +83,9 @@ if [ "$DRY_RUN" -eq 1 ]; then NEW_SHA="<sha-nuevo>"; else NEW_SHA="$(git rev-par
 echo "Versión: $PREV_SHA -> $NEW_SHA"
 
 paso "2/7 Dependencias y pruebas"
-run pnpm install --frozen-lockfile
-if [ "$SKIP_TESTS" -eq 1 ]; then echo "(pruebas omitidas)"; else
+# El VPS no necesita pnpm: las imágenes instalan sus dependencias dentro del build de Docker.
+if [ "$SKIP_TESTS" -eq 1 ]; then echo "(instalación y pruebas omitidas)"; else
+  run pnpm install --frozen-lockfile
   run pnpm lint; run pnpm typecheck; run pnpm test
 fi
 
