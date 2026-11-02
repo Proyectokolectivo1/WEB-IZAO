@@ -13,6 +13,8 @@
 
 - 6fb63be atribución en `POST /api/checkout`: `influencer_id`, `utm`, `click_ids` desde las cookies (`atribucionDelPedido`), influencer revalidado en la base (`FuenteCheckout.influencerDeCodigo`: código e influencer activos y del país).
 
+- (este commit) barrido: solicitudes de Addi abiertas de pedidos `expirado` → `expired` en la base (D-040: Addi no cancela solicitudes pendientes; aprobación tardía → `requiere_reembolso`). Worker: barrido en `sistema` (cron.ts) y `addi.callback` en `pagos`, registrados.
+
 ## Contratos para compañeros
 - izao-admin: en `guardarMetodo` bloquear activar un método con `!metodoVendible(method)` (`@izao/core/contracts`).
 - izao-tienda: `lib/store/checkout-datos.ts` debe filtrar con `soloMetodosVendibles` (hoy muestra Sistecrédito si el panel lo activa; el servidor ya lo rechaza).
@@ -21,12 +23,13 @@
 - izao-db: (2) `pedidos_por_vencer`/`pago_rechazado` con reserva; (3) seed de plantillas (D-025).
 
 ## Pendiente
-- Cancelación de solicitudes de Addi al expirar o cambiar de método.
+- Reembolso de Addi (`POST /v1/online-applications/cancellations`) como acción del admin desde `requiere_reembolso` (D-040).
+- izao-db (sugerencia): índice parcial `payments (provider, status) where purpose = 'financing'` si crece la tabla.
 - [VERIFICAR] host real del `Location` de Addi en sandbox (D-036).
 - Sistecrédito: documentación del contrato. Proveedor de correo. Sandbox real de Wompi/Meta/Addi. Deduplicación BullMQ contra Redis real.
 
 ## Siguiente paso exacto
-Cancelación de solicitudes de Addi al expirar el pedido (barrido) y prueba en el sandbox de Addi con `.env.local`.
+Prueba en el sandbox de Addi con `.env.local` (host del `Location`, D-036) cuando haya credenciales; luego reembolso de Addi desde el panel si el líder lo aprueba.
 
 ## Decisiones que necesitan al líder
 - ¿`cancelado → requiere_reembolso` como estado visible? (hoy solo alerta, D-037; cambia §16 y la RPC de izao-db).

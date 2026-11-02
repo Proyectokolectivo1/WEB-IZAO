@@ -7,6 +7,10 @@
  *   2. Reservas huérfanas (`expirado`/`abandonado` con stock reservado): se liberan (las funciones son idempotentes).
  *   3. Contra entrega en `esperando_abono` sin `pay_links` (Redis caído en el checkout): encola `cod.iniciar` con el
  *      mismo id fijo del checkout, así sigue habiendo un solo creador del link.
+ *   4. Solicitudes de Addi abiertas (`created`/`pending`) de pedidos `expirado` → `expired` en la base, condicional al
+ *      estado (D-040). Addi no permite cancelar una solicitud pendiente, así que no se llama a su API: si Addi aprueba
+ *      después, `addi.callback` deja el pedido en `requiere_reembolso` con alerta `pago_tardio`. Un fallo se reintenta
+ *      solo en la siguiente corrida (la consulta lo vuelve a encontrar).
  * El arranque (izao-infra) lo registra en la cola `sistema` cada 5 minutos:
  *   case JOB_BARRIDO_PEDIDOS: return barrerPedidos(dependenciasBarridoDesdeEnv(colaCod));
  */
@@ -40,6 +44,8 @@ export interface ResultadoBarrido {
   vencidos: number;
   liberados: number;
   encolados: number;
+  /** Solicitudes de financiación marcadas `expired` en esta corrida. */
+  invalidadas: number;
   omitidos: number;
   errores: number;
 }
@@ -71,7 +77,7 @@ async function vencer(deps: DepsBarrido, f: PedidoPorVencer, ahora: Date): Promi
 
 export async function barrerPedidos(deps: DepsBarrido): Promise<ResultadoBarrido> {
   const ahora = (deps.ahora ?? (() => new Date()))();
-  const r: ResultadoBarrido = { vencidos: 0, liberados: 0, encolados: 0, omitidos: 0, errores: 0 };
+  const r: ResultadoBarrido = { vencidos: 0, liberados: 0, encolados: 0, invalidadas: 0, omitidos: 0, errores: 0 };
   const fallo = (paso: string, id: string, e: unknown) => {
     r.errores += 1;
     console.error(`[worker] barrido ${paso} falló (pedido ${id}): ${e instanceof Error ? e.message.slice(0, 120) : 'error'}`);
@@ -100,7 +106,15 @@ export async function barrerPedidos(deps: DepsBarrido): Promise<ResultadoBarrido
       fallo('encolar', id, e);
     }
   }
-  if (r.vencidos + r.liberados + r.encolados + r.errores > 0) console.log(`[worker] ${JOB_BARRIDO_PEDIDOS}: ${JSON.stringify(r)}`);
+  // Después de vencer: las de esta misma corrida ya aparecen como `expirado`.
+  for (const sol of await deps.fuente.solicitudesFinanciacionVencidas(LIMITE)) {
+    try {
+      if (await deps.fuente.invalidarSolicitudFinanciacion(sol.payment_id)) r.invalidadas += 1;
+    } catch (e) {
+      fallo('invalidar solicitud', sol.order_id, e);
+    }
+  }
+  if (r.vencidos + r.liberados + r.encolados + r.invalidadas + r.errores > 0) console.log(`[worker] ${JOB_BARRIDO_PEDIDOS}: ${JSON.stringify(r)}`);
   return r;
 }
 

@@ -239,6 +239,33 @@ describe('job addi.callback (§12.3): asocia por referencia, compara monto y tra
     expect(s.registro.transportadora).toEqual([]);
   });
 
+  it('APPROVED tardío sobre una solicitud que el barrido invalidó (pago expired, pedido expirado) → requiere_reembolso (D-040)', async () => {
+    const s = escenario({ pedido: { status: 'expirado', stock_state: 'released' }, pagos: [pago({ status: 'expired' })] });
+    const r = await s.correr();
+    expect(r.accion).toBe('requiere_reembolso');
+    expect(s.pagos[0]!.status).toBe('approved');
+    expect(s.pedido.status).toBe('requiere_reembolso');
+    expect(s.registro.alertas).toEqual(['pago_tardio']);
+    expect(s.registro.stockConfirmado).toBe(0);
+    expect(s.registro.transportadora).toEqual([]);
+  });
+
+  it('PENDING tardío sobre una solicitud invalidada por el barrido → no la reabre ni toca el pedido (D-040)', async () => {
+    const s = escenario({ pedido: { status: 'expirado' }, pagos: [pago({ status: 'expired' })] });
+    expect((await s.correr({ status: 'PENDING', approvedAmount: '0.0' })).accion).toBe('sin_cambio');
+    expect(s.pagos[0]!.status).toBe('expired');
+    expect(s.pedido.status).toBe('expirado');
+    expect(s.registro.eventos).toEqual([]);
+  });
+
+  it('REJECTED tardío sobre una solicitud invalidada → guarda el estado de Addi, el pedido sigue expirado', async () => {
+    const s = escenario({ pedido: { status: 'expirado' }, pagos: [pago({ status: 'expired' })] });
+    expect((await s.correr({ status: 'REJECTED', approvedAmount: '0.0' })).accion).toBe('sin_cambio');
+    expect(s.pagos[0]!.status).toBe('declined');
+    expect(s.pedido.status).toBe('expirado');
+    expect(s.registro.eventos).toEqual([]);
+  });
+
   it('APPROVED sobre cancelado → alerta para reembolsar, sin volver a reservar stock ni despachar (D-035)', async () => {
     const s = escenario({ pedido: { status: 'cancelado', stock_state: 'released' } });
     const r = await s.correr();

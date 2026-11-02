@@ -108,4 +108,27 @@ export interface FuenteBarrido {
   pedidosSinLink(creadosAntes: Date, ahora: Date, limite: number): Promise<string[]>;
   /** `expirado`/`abandonado` con el stock aún reservado (falla entre la transición y la liberación). */
   reservasHuerfanas(limite: number): Promise<string[]>;
+  /**
+   * Intentos de financiación (`purpose = financing`) de `PROVEEDORES_SOLICITUD_LOCAL` en `created`/`pending` cuyo
+   * pedido ya está `expirado` (D-040). Los más viejos primero.
+   */
+  solicitudesFinanciacionVencidas(limite: number): Promise<SolicitudFinanciacionAbierta[]>;
+  /**
+   * Marca el intento como `expired` solo si sigue `created`/`pending` (condicional: un callback que llegó en medio
+   * gana). `true` si cambió la fila. No llama al proveedor.
+   */
+  invalidarSolicitudFinanciacion(paymentId: string): Promise<boolean>;
+}
+
+/**
+ * Proveedores de financiación cuya solicitud abierta se invalida solo en la base al vencer el pedido (D-040).
+ * Addi no ofrece cancelar una solicitud pendiente: su único endpoint de cancelación es para créditos ya aprobados
+ * (`POST /v1/online-applications/cancellations`), que es un reembolso y lo decide el admin.
+ */
+export const PROVEEDORES_SOLICITUD_LOCAL = ['addi'] as const;
+
+export interface SolicitudFinanciacionAbierta {
+  payment_id: string;
+  order_id: string;
+  provider: (typeof PROVEEDORES_SOLICITUD_LOCAL)[number];
 }

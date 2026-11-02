@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { OrderStatus, OrderStatusEvent } from '@izao/core/order-state';
 import { barrerPedidos, encoladorInicioCod, type DepsBarrido } from './barrido.js';
-import type { PedidoCod, PedidoPorVencer } from './fuente.js';
+import type { PedidoCod, PedidoPorVencer, SolicitudFinanciacionAbierta } from './fuente.js';
 
 const AHORA = new Date('2026-10-21T15:05:00.000Z');
 const id = (n: number) => `00000000-0000-4000-8000-0000000000${String(n).padStart(2, '0')}`;
@@ -27,14 +27,31 @@ function pedido(n: number, status: OrderStatus, o: Partial<PedidoCod> = {}): Ped
   };
 }
 
-function escenario(o: { pedidos: PedidoCod[]; vencer?: PedidoPorVencer[]; sinLink?: string[]; huerfanas?: string[]; stockFalla?: string }) {
+interface PagoFinanciacion {
+  id: string;
+  order_id: string;
+  provider: string;
+  status: string;
+}
+
+function escenario(o: {
+  pedidos: PedidoCod[];
+  vencer?: PedidoPorVencer[];
+  sinLink?: string[];
+  huerfanas?: string[];
+  stockFalla?: string;
+  pagos?: PagoFinanciacion[];
+  invalidarFalla?: string;
+}) {
   const pedidos = new Map(o.pedidos.map((p) => [p.id, p]));
   const transiciones: { id: string; ev: OrderStatusEvent; fechas?: { abandoned_at?: Date } }[] = [];
   const liberados: string[] = [];
   const canjes: string[] = [];
   const encolados: string[] = [];
   const cancelados: string[] = [];
-  const consultas: { sinLink?: [Date, Date, number] } = {};
+  const consultas: { sinLink?: [Date, Date, number]; solicitudes?: number } = {};
+  const pagos = o.pagos ?? [];
+  const invalidadas: string[] = [];
   const deps: DepsBarrido = {
     fuente: {
       async pedidosPorVencer() {
@@ -46,6 +63,22 @@ function escenario(o: { pedidos: PedidoCod[]; vencer?: PedidoPorVencer[]; sinLin
       },
       async reservasHuerfanas() {
         return o.huerfanas ?? [];
+      },
+      // Igual que la consulta real: intentos `created`/`pending` de Addi cuyo pedido ya está `expirado`.
+      async solicitudesFinanciacionVencidas(limite) {
+        consultas.solicitudes = limite;
+        return pagos
+          .filter((p) => p.provider === 'addi' && ['created', 'pending'].includes(p.status) && pedidos.get(p.order_id)?.status === 'expirado')
+          .map((p): SolicitudFinanciacionAbierta => ({ payment_id: p.id, order_id: p.order_id, provider: 'addi' }));
+      },
+      // Condicional por estado, como el PATCH real: si el callback ya lo cambió, no se toca.
+      async invalidarSolicitudFinanciacion(paymentId) {
+        if (paymentId === o.invalidarFalla) throw new Error('PostgREST 503');
+        const p = pagos.find((x) => x.id === paymentId);
+        if (!p || !['created', 'pending'].includes(p.status)) return false;
+        p.status = 'expired';
+        invalidadas.push(paymentId);
+        return true;
       },
       async pedido(x) {
         return pedidos.get(x) ?? null;
@@ -75,13 +108,13 @@ function escenario(o: { pedidos: PedidoCod[]; vencer?: PedidoPorVencer[]; sinLin
     cancelarJobsCod: async (x) => void cancelados.push(x),
     ahora: () => AHORA,
   };
-  return { deps, pedidos, transiciones, liberados, canjes, encolados, cancelados, consultas };
+  return { deps, pedidos, pagos, invalidadas, transiciones, liberados, canjes, encolados, cancelados, consultas };
 }
 
 describe('barrido de pedidos (cron)', () => {
   it('pendiente_pago vencido → expirado por aplicar_transicion_pedido, libera stock y canje', async () => {
     const s = escenario({ pedidos: [pedido(1, 'pendiente_pago')], vencer: [{ order_id: id(1), estado_actual: 'pendiente_pago', nuevo_estado: 'expirado' }] });
-    expect(await barrerPedidos(s.deps)).toEqual({ vencidos: 1, liberados: 0, encolados: 0, omitidos: 0, errores: 0 });
+    expect(await barrerPedidos(s.deps)).toEqual({ vencidos: 1, liberados: 0, encolados: 0, invalidadas: 0, omitidos: 0, errores: 0 });
     expect(s.transiciones).toEqual([
       { id: id(1), ev: expect.objectContaining({ from_status: 'pendiente_pago', to_status: 'expirado', actor: 'system', payload: { motivo: 'reserva_vencida' } }) },
     ]);
@@ -140,6 +173,83 @@ describe('barrido de pedidos (cron)', () => {
     expect(s.encolados).toEqual([id(8)]);
     expect(s.consultas.sinLink![0]).toEqual(new Date(AHORA.getTime() - 120_000));
     expect(s.consultas.sinLink![1]).toEqual(AHORA);
+  });
+});
+
+describe('barrido: solicitudes de Addi de pedidos vencidos (D-040)', () => {
+  const addi = (n: number, status: OrderStatus) => pedido(n, status, { payment_method: 'addi' });
+  const pagoAddi = (n: number, order: number, status: string): PagoFinanciacion => ({
+    id: `pago-${n}`,
+    order_id: id(order),
+    provider: 'addi',
+    status,
+  });
+
+  it('Addi vencido en la misma corrida: expirado, libera stock y la solicitud abierta queda expired (sin llamar a Addi)', async () => {
+    const s = escenario({
+      pedidos: [addi(20, 'pendiente_pago')],
+      vencer: [{ order_id: id(20), estado_actual: 'pendiente_pago', nuevo_estado: 'expirado' }],
+      pagos: [pagoAddi(1, 20, 'declined'), pagoAddi(2, 20, 'pending')],
+    });
+    expect(await barrerPedidos(s.deps)).toEqual({ vencidos: 1, liberados: 0, encolados: 0, invalidadas: 1, omitidos: 0, errores: 0 });
+    expect(s.pedidos.get(id(20))!.status).toBe('expirado');
+    expect(s.liberados).toEqual([id(20)]);
+    expect(s.invalidadas).toEqual(['pago-2']);
+    expect(s.pagos.map((p) => p.status)).toEqual(['declined', 'expired']);
+    expect(s.consultas.solicitudes).toBe(200);
+  });
+
+  it('idempotente: una segunda corrida no encuentra nada que invalidar', async () => {
+    const s = escenario({ pedidos: [addi(21, 'expirado')], pagos: [pagoAddi(3, 21, 'created')] });
+    expect(await barrerPedidos(s.deps)).toMatchObject({ invalidadas: 1, errores: 0 });
+    expect(await barrerPedidos(s.deps)).toMatchObject({ invalidadas: 0, errores: 0 });
+    expect(s.invalidadas).toEqual(['pago-3']);
+  });
+
+  it('pedido aún pendiente o ya pagado: la solicitud no se toca', async () => {
+    const s = escenario({
+      pedidos: [addi(22, 'pendiente_pago'), addi(23, 'pagado')],
+      pagos: [pagoAddi(4, 22, 'pending'), pagoAddi(5, 23, 'approved')],
+    });
+    // La reserva del 22 sigue vigente: no está en `vencer`.
+    expect(await barrerPedidos(s.deps)).toMatchObject({ vencidos: 0, invalidadas: 0 });
+    expect(s.pagos.map((p) => p.status)).toEqual(['pending', 'approved']);
+  });
+
+  it('carrera con el callback (ya aprobado entre la consulta y el PATCH): no cuenta ni falla', async () => {
+    const s = escenario({ pedidos: [addi(24, 'expirado')], pagos: [pagoAddi(6, 24, 'pending')] });
+    const leer = s.deps.fuente.solicitudesFinanciacionVencidas.bind(s.deps.fuente);
+    s.deps.fuente.solicitudesFinanciacionVencidas = async (l) => {
+      const r = await leer(l);
+      s.pagos[0]!.status = 'approved';
+      return r;
+    };
+    expect(await barrerPedidos(s.deps)).toMatchObject({ invalidadas: 0, errores: 0 });
+    expect(s.pagos[0]!.status).toBe('approved');
+  });
+
+  it('un fallo al invalidar cuenta como error, no detiene el resto y se reintenta en la siguiente corrida', async () => {
+    const opciones: Parameters<typeof escenario>[0] = {
+      pedidos: [addi(25, 'expirado'), addi(26, 'expirado')],
+      pagos: [pagoAddi(7, 25, 'pending'), pagoAddi(8, 26, 'created')],
+      invalidarFalla: 'pago-7',
+    };
+    const s = escenario(opciones);
+    const errores: string[] = [];
+    const original = console.error;
+    console.error = (...a: unknown[]) => void errores.push(a.join(' '));
+    try {
+      expect(await barrerPedidos(s.deps)).toMatchObject({ invalidadas: 1, errores: 1 });
+    } finally {
+      console.error = original;
+    }
+    expect(s.invalidadas).toEqual(['pago-8']);
+    expect(errores).toHaveLength(1);
+    expect(errores[0]).toContain('invalidar');
+    expect(errores[0]).toContain(id(25));
+    delete opciones.invalidarFalla;
+    expect(await barrerPedidos(s.deps)).toMatchObject({ invalidadas: 1, errores: 0 });
+    expect(s.invalidadas).toEqual(['pago-8', 'pago-7']);
   });
 });
 

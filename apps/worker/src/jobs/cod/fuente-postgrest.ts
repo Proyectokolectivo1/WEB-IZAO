@@ -12,7 +12,16 @@ import type { OrderStatus } from '@izao/core/order-state';
 import { leerCredencialesWhatsApp, type PlantillaWhatsApp } from '@izao/whatsapp';
 import { parseWompiCredentials } from '@izao/wompi';
 import { aplicarTransicionRpc, crearClientePostgrest, eq, ErrorPostgrest, type Fila, type OpcionesPostgrest } from '../postgrest.js';
-import type { AbonoFila, FuenteBarrido, FuenteCod, MensajeFila, PayLinkFila, PedidoPorVencer } from './fuente.js';
+import {
+  PROVEEDORES_SOLICITUD_LOCAL,
+  type AbonoFila,
+  type FuenteBarrido,
+  type FuenteCod,
+  type MensajeFila,
+  type PayLinkFila,
+  type PedidoPorVencer,
+  type SolicitudFinanciacionAbierta,
+} from './fuente.js';
 
 const COLUMNAS_PEDIDO =
   'id,number,public_token,status,country_code,currency_code,payment_method,stock_state,cod_deposit_amount,cod_collect_amount,' +
@@ -277,6 +286,32 @@ export function crearFuenteCodPostgrest(o: OpcionesPostgrest): FuenteCod & Fuent
       return (await filas('orders', `orders?status=in.(expirado,abandonado)&stock_state=eq.reserved&select=id&limit=${limite}`)).map((f) =>
         String(f.id),
       );
+    },
+    async solicitudesFinanciacionVencidas(limite) {
+      const proveedores = PROVEEDORES_SOLICITUD_LOCAL.join(',');
+      return (
+        await filas(
+          'payments',
+          `payments?provider=in.(${proveedores})&purpose=eq.financing&status=in.(created,pending)` +
+            `&select=id,order_id,provider,orders!inner(status)&orders.status=eq.expirado&order=created_at.asc&limit=${limite}`,
+        )
+      )
+        .filter((f) => (PROVEEDORES_SOLICITUD_LOCAL as readonly unknown[]).includes(f.provider))
+        .map(
+          (f): SolicitudFinanciacionAbierta => ({
+            payment_id: String(f.id),
+            order_id: String(f.order_id),
+            provider: f.provider as SolicitudFinanciacionAbierta['provider'],
+          }),
+        );
+    },
+    async invalidarSolicitudFinanciacion(paymentId) {
+      const r = (await pedir('payments', `payments?id=${eq(paymentId)}&status=in.(created,pending)&select=id`, {
+        method: 'PATCH',
+        headers: { prefer: 'return=representation' },
+        body: JSON.stringify({ status: 'expired' satisfies PaymentStatus }),
+      })) as Fila[] | null;
+      return (r ?? []).length > 0;
     },
   };
 }

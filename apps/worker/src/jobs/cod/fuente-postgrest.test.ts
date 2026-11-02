@@ -236,5 +236,31 @@ describe('fuente PostgREST de contra entrega', () => {
       expect(await fuente.reservasHuerfanas(20)).toEqual([ORDER]);
       expect(llamadas[0]!.url).toContain('orders?status=in.(expirado,abandonado)&stock_state=eq.reserved&select=id&limit=20');
     });
+
+    it('solicitudesFinanciacionVencidas: intentos abiertos de Addi cuyo pedido ya está expirado (D-040)', async () => {
+      const { fuente, llamadas } = fuenteCon(() => ({
+        status: 200,
+        cuerpo: [{ id: 'pago-1', order_id: ORDER, provider: 'addi', orders: { status: 'expirado' } }],
+      }));
+      expect(await fuente.solicitudesFinanciacionVencidas(30)).toEqual([{ payment_id: 'pago-1', order_id: ORDER, provider: 'addi' }]);
+      expect(llamadas[0]!.metodo).toBe('GET');
+      expect(llamadas[0]!.url).toContain(
+        'payments?provider=in.(addi)&purpose=eq.financing&status=in.(created,pending)' +
+          '&select=id,order_id,provider,orders!inner(status)&orders.status=eq.expirado&order=created_at.asc&limit=30',
+      );
+    });
+
+    it('invalidarSolicitudFinanciacion: PATCH condicional a created/pending; sin fila (el callback ganó) → false', async () => {
+      let filas: unknown[] = [{ id: 'pago-1' }];
+      const { fuente, llamadas } = fuenteCon(() => ({ status: 200, cuerpo: filas }));
+      expect(await fuente.invalidarSolicitudFinanciacion('pago-1')).toBe(true);
+      const l = llamadas[0]!;
+      expect(l.metodo).toBe('PATCH');
+      expect(l.url).toContain('payments?id=eq.pago-1&status=in.(created,pending)&select=id');
+      expect(l.cuerpo).toEqual({ status: 'expired' });
+      expect(l.cabeceras.get('prefer')).toBe('return=representation');
+      filas = [];
+      expect(await fuente.invalidarSolicitudFinanciacion('pago-1')).toBe(false);
+    });
   });
 });
