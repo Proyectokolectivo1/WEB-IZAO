@@ -1,17 +1,8 @@
 {
   "mcpServers": {
-    "contabo-vps-manager": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@ai.com.mcp/contabo"
-      ],
-      "env": {
-        "CONTABO_CLIENT_ID": "INT-15555166",
-        "CONTABO_CLIENT_SECRET": "lQIe8j26WIs2SVgeveOOfGMROr6Xzsv4htsQAfsoyUkj2JDPJI7GZZVHfEzG2ZMCp3iuXtK5vxMnF9tX6yuYbb",
-        "CONTABO_API_PASSWORD": "43iCH7rQJ3vx",
-        "CONTABO_API_USER": "sebastianmontesg@gmail.com"
-      }
+    "contabo": {
+      "command": "node",
+      "args": ["tools/contabo-mcp/dist/src/index.js"]
     }
   }
 }
