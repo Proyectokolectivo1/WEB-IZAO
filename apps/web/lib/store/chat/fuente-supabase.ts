@@ -7,6 +7,7 @@ import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { byteaDesdePostgrest, descifrarCredenciales } from '@izao/core/credentials';
 import { clienteDb } from '@/lib/db/cliente';
+import { registrarTurnoChatDb, type MensajeTurnoChat } from '@/lib/db/chat';
 import { enlaceWhatsapp } from '../contacto';
 import { configCheckout, usarSupabase } from '../checkout-datos';
 import { lineaDe, varianteInicial, presentacionDe } from '../ficha-util';
@@ -190,31 +191,24 @@ export async function historialSesion(sesionId: string, turnos: number): Promise
     .map((m) => ({ role: m.role, content: m.content ?? '' }));
 }
 
-export async function guardarTurno(sesion: SesionChat, mensaje: string, r: ResultadoTurno | null, ahora = new Date()): Promise<void> {
-  const db = clienteDb();
-  const filas: Record<string, unknown>[] = [{ session_id: sesion.id, role: 'user', content: mensaje }];
+/**
+ * Guarda el turno completo (pregunta y respuesta) con la RPC atómica `chat_registrar_turno`: inserta los mensajes y suma
+ * `messages_count` / `last_message_at` en una sola transacción, así dos turnos a la vez no se pisan. Devuelve el contador nuevo.
+ */
+export async function guardarTurno(sesion: SesionChat, mensaje: string, r: ResultadoTurno | null, ahora = new Date()): Promise<number> {
+  const mensajes: MensajeTurnoChat[] = [{ role: 'user', content: mensaje }];
   if (r && (r.texto || r.herramientas.length > 0)) {
-    filas.push({
-      session_id: sesion.id,
+    mensajes.push({
       role: 'assistant',
       content: r.texto || null,
       tool_calls: r.herramientas.length > 0 ? r.herramientas : null,
       model: r.modelo,
       tokens_in: r.tokensIn,
       tokens_out: r.tokensOut,
-      cost_usd_micros: String(r.costoMicros),
+      cost_usd_micros: r.costoMicros,
     });
   }
-  const ins = await db.from('chat_messages').insert(filas);
-  if (ins.error) throw new Error(`chat_messages: ${ins.error.message}`);
-  // El contador sale de contar los mensajes de la persona (no de «anterior + 1»): dos turnos a la vez no se pisan.
-  // Pendiente izao-db: RPC atómica para sumarlo en una sola sentencia.
-  const { count } = await db.from('chat_messages').select('id', { count: 'exact', head: true }).eq('session_id', sesion.id).eq('role', 'user');
-  const upd = await db
-    .from('chat_sessions')
-    .update({ messages_count: count ?? sesion.mensajes + 1, last_message_at: ahora.toISOString() })
-    .eq('id', sesion.id);
-  if (upd.error) console.error(`[iza] no se actualizó la sesión: ${upd.error.message}`);
+  return registrarTurnoChatDb(sesion.id, mensajes, ahora);
 }
 
 // ── Herramientas y tarjetas ──────────────────────────────────────────────────────────────────────

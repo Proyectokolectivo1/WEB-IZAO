@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { CarritoProvider } from '@/components/store/carrito/CarritoProvider';
 import { Footer } from '@/components/store/footer/Footer';
+import { LimiteError } from '@/components/store/LimiteError';
 import { Header } from '@/components/store/header/Header';
 import { LanzadorIza } from '@/components/store/iza/LanzadorIza';
 import { chatHabilitado } from '@/lib/store/chat/fuente-supabase';
@@ -52,7 +53,7 @@ export default async function LayoutPais({ children, params }: { children: React
       <CarritoProvider pais={pais} notaEnvio={envio.nota} valorEnvio={envio.valor}>
         <Header pais={pais} ajustes={ajustes} anuncios={anuncios} categorias={menu} populares={populares} />
         <main id="contenido" tabIndex={-1} className="outline-none">
-          {children}
+          <LimiteError pais={pais}>{children}</LimiteError>
         </main>
         <Footer pais={pais} ajustes={ajustes} paginas={paginas} espacios={espacios} />
         {iza ? <LanzadorIza pais={pais} /> : null}
