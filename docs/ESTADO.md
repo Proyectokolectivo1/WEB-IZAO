@@ -5,7 +5,7 @@ Lo mantiene el líder. Leer esto y `CLAUDE.md` antes que cualquier otra cosa; la
 ## Dónde está todo
 - Repo: `C:\Proyectos\WEB-IZAO` (NTFS), rama `main`, GitHub `Proyectokolectivo1/WEB-IZAO` (remoto sin conectar, sin `push`). Git funciona sin `safe.directory`.
 - Supabase `wyxjmlgrcjclelbrluvd` (eu-central-1). Migraciones por el MCP de Supabase; archivos en `packages/db/supabase/migrations/` con la versión remota.
-- VPS Contabo (Hub Europe, `169.58.102.153`): solo por el MCP `contabo`, que aún no tiene `tools/contabo-mcp/.env`. F0b sin hacer.
+- VPS Contabo (Hub Europe, `169.58.102.153`): solo por el MCP `contabo`, con `tools/contabo-mcp/.env` ya configurado (ver Avance 2026-11-01). F0b sin hacer.
 - Decisiones: `docs/DECISIONES.md` (D-001 a D-023). Procedimientos: `docs/RUNBOOK.md`, `docs/MANUAL_ADMIN.md`. Cierres: `docs/fases/oleada-0.md`, `oleada-1.md`.
 
 ## Hecho (una línea por área)
@@ -42,6 +42,11 @@ Pendiente técnico: e2e/Lighthouse (izao-qa, hay que quitar `fixme`), widget Iza
 ## Avance 2026-10-31
 Hecho: chat de Iza (API SSE, widget, presupuesto micro-USD con `chat_registrar_uso`, filtro de regla 7, purga a 180 días en lotes de 100); Integraciones OpenRouter, Meta Ads, Meta Pixel, GA4 y TikTok (con [VERIFICAR] de Graph y tokens de eventos); sitemap/robots; e2e + axe + Lighthouse (docs/fases/F1.md); correcciones de las dos revisiones. Abierto: error de hidratación #418 intermitente (~0,3–3 %, sin causa; posible carrera Next 15.5/React 19), LCP ~2,7 s en el equipo de QA, `messages_count` no atómico (pedir RPC a izao-db), `CHAT_RETENCION_DIAS` sin documentar en `infra/.env.example`. Sin medir sin llaves: p95 del catálogo, k6, checkout real, Iza con OpenRouter real.
 Bloqueado por el dueño: acceso SSH/VNC al VPS y despliegue (F0b), llaves reales, proveedor de correo, documentación de Sistecrédito.
+
+## Avance 2026-11-01 (acceso al VPS)
+Hecho: `tools/contabo-mcp/.env` listo y `npm run check` da SSH OK (usuario `izao`, grupo docker; Docker 29 y Compose v5 ya instalados; `setup-vps.sh` ya corrió). `.mcp.json` registra el MCP `contabo` del proyecto (c273e5f) y ya no tiene credenciales. Supabase `wyxjmlgrcjclelbrluvd` tiene aplicadas las 37 migraciones del repo (nada pendiente). `infra/.env` real ya está en el VPS (`/srv/izao/app/infra/.env`, 600).
+Pendiente del dueño: (1) cerrar root temporal en la consola VNC: `rm /etc/ssh/sshd_config.d/00-temporal.conf && systemctl restart ssh`; (2) API de Contabo da 401 (solo afecta snapshots): regenerar Client Secret y API Password y actualizar `.env` del MCP; (3) crear repo vacío privado en GitHub y pasar la URL (el código aún no está en el VPS; `/srv/izao/app` solo tiene `infra/.env`); (4) confirmar DNS de `izaoperfumeria.com` (A para `@` y `www` → 169.58.102.153); (5) rotar secretos que pasaron por el chat y el historial local (Contabo, Supabase secret key, APP_ENCRYPTION_KEY: si se rota, cambiarla en ambos `.env`); (6) borrar `apps/web/.env - copia.example` y `apps/web/Nuevo Documento de texto.txt` (sin commit; pueden tener claves).
+Siguiente paso exacto (líder, chat nuevo con MCP `contabo` cargado): `vps_policy` y `vps_inventory`; llevar el código a `/srv/izao/app` (git clone si ya hay repo, si no, otra vía acordada); `vps_exec` con `snapshot_first: true` solo si la API de Contabo funciona; primer despliegue con `izao-despliegue`; Nginx con el bloque `/media/warranty/`; certificados (F0b); backups con `BACKUP_AGE_RECIPIENT`; luego `crear-admin`. Guía para el dueño: `docs/PENDIENTES_DUENO.md`.
 
 ## Oleada en curso
 Oleada 2 (F1 catálogo; F2 contenido va después). Contratos de la tienda para el panel de contenido: claves `content_slots` `medios_de_pago`, `asesoria` y `busquedas_populares`; los beneficios y la asesoría del home salen de `home_sections.config` (`items[{icon,title,text}]` y `title/body/cta_label/cta_url`). Páginas legales: la tienda lee solo `pages.status = 'published'`. Reemplaza al texto siguiente cuando se cierre.
