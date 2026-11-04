@@ -67,14 +67,15 @@ begin
     ids := ids || array(select i ->> 'product_id' from jsonb_array_elements(r -> 'items') i);
     c := r -> 'next_cursor';
     n := n + 1;
-    exit when c is null or n > 20;
+    -- next_cursor llega como null de JSON en la última página (no como NULL de SQL)
+    exit when c is null or c = 'null'::jsonb or n > 20;
   end loop;
   return ids;
 end $$;
 
 select is(array(select i ->> 'slug' from jsonb_array_elements(public.catalog_page('CO', '{"brands":["marca-rpc-test"]}', 'featured', null, 100) -> 'items') i),
-  array['rpc-dos', 'rpc-uno', 'rpc-tres', 'rpc-cuatro', 'rpc-cinco'],
-  'featured: destacados por rank, luego el resto por fecha, agotado al final; sin oculto ni borrador');
+  array['rpc-dos', 'rpc-uno', 'rpc-cuatro', 'rpc-tres', 'rpc-cinco'],
+  'featured: destacados por rank, luego el resto del más nuevo al más viejo, agotado al final; sin oculto ni borrador');
 select is(array(select i ->> 'slug' from jsonb_array_elements(public.catalog_page('EC', '{"brands":["marca-rpc-test"]}', 'featured', null, 100) -> 'items') i),
   array['rpc-seis'], 'visibilidad por país: el producto oculto en CO aparece solo en EC');
 select is((select count(*)::int from jsonb_array_elements(public.catalog_page('CO', '{"brands":["marca-rpc-test"]}', 'featured', null, 100) -> 'items') i
@@ -99,10 +100,11 @@ update public.country_settings set hide_out_of_stock = false where country_code 
 select throws_ok($$select public.catalog_page('CO', '{}', 'featured', '{"o":"featured","s":1,"v":"abc","id":"x"}')$$, '22023', 'cursor_invalido', 'cursor mal formado se rechaza');
 select throws_ok($$select public.catalog_page('CO', '{}', 'inventado')$$, '22023', 'orden_invalido', 'orden desconocido se rechaza');
 
-select is(public.catalog_search_page('CO', 'ambar', '{}') -> 'items' -> 0 ->> 'slug', 'rpc-uno', 'búsqueda tolerante a tildes: "ambar" encuentra "Ámbar"');
+-- Filtrado por la marca de prueba: en una base con catálogo real hay otros "Ámbar"
+select is(public.catalog_search_page('CO', 'ambar', '{"brands":["marca-rpc-test"]}') -> 'items' -> 0 ->> 'slug', 'rpc-uno', 'búsqueda tolerante a tildes: "ambar" encuentra "Ámbar"');
 select is(public.catalog_search_page('CO', 'ambaar rpc uno', '{}') -> 'items' -> 0 ->> 'slug', 'rpc-uno', 'búsqueda tolerante a errores de tipeo');
-select ok((public.catalog_suggest('CO', 'amb', 5) -> 'productos' -> 0 ->> 'slug') = 'rpc-uno'
-          and (public.catalog_suggest('CO', 'amb', 5) -> 'productos' -> 0 -> 'img_primary') is not null
+select ok((public.catalog_suggest('CO', 'ambar rpc', 5) -> 'productos' -> 0 ->> 'slug') = 'rpc-uno'
+          and (public.catalog_suggest('CO', 'ambar rpc', 5) -> 'productos' -> 0 -> 'img_primary') is not null
           and jsonb_array_length(public.catalog_suggest('CO', 'marca rpc', 5) -> 'marcas') = 1
           and jsonb_array_length(public.catalog_suggest('CO', 'familia rp', 5) -> 'familias') = 1, 'sugerencias: producto con miniatura, marca y familia');
 

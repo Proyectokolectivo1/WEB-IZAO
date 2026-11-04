@@ -27,12 +27,15 @@
 - `media_file_deletions` (service_role): el worker borra `base_path` y `variants`, luego la fila (si falla: attempts+1, last_error).
 - `chat_registrar_uso(p_costo_micros bigint, p_mensajes int = 1, p_ahora timestamptz = now())` → bigint total del mes (Bogotá).
 - `chat_registrar_turno(p_session_id uuid, p_mensajes jsonb[1..20], p_ahora = now())` → int messages_count (P0002/22023).
+- pgTAP remoto 13–28 en verde (310/310). 16 fallaba por la prueba, no por la base (orden featured = published_at desc,
+  `next_cursor` es null de JSON, búsquedas sin filtrar chocaban con el catálogo real).
 ## Pendiente
-1. pgTAP 13–33 remoto con el corredor por savepoints (01–12 y 34 hechos). 2. izao-tienda: usar `registrarTurnoChatDb`.
+1. pgTAP 29–33 remoto (corredor en `packages/db/tests/remoto/`). 2. izao-tienda: usar `registrarTurnoChatDb`.
 3. Concurrencia de `crear_pedido_checkout` con dos sesiones (tests/concurrencia/run.sh). store_*: solo si izao-tienda lo pide.
 4. Worker (izao-infra/izao-pagos): job que vacíe `media_file_deletions`. Admin: etiquetas de `stock_devuelto`/`stock_retenido`.
-## Siguiente paso exacto: Pendiente 1 (pgTAP 13–33 remoto) salvo nueva tarea del líder.
+## Siguiente paso exacto: desde tests/, `PYTHONIOENCODING=utf-8 python remoto/tap2mcp.py 29_*.sql 30_*.sql` → `execute_sql`;
+  luego 31 solo y 32+33. Si falla: cierre con `string_agg(l) from tap where l ~ '^not ok'` antes del rollback.
 ## Notas
-- pgTAP por el MCP: `begin;` + `savepoint f` por archivo, `insert into tap(l) select ...`, conteos en secuencias temp
-  (setval no se deshace), `rollback to savepoint f`; cierre `raise exception 'RESUMEN %'` (deshace todo).
+- pgTAP por el MCP: savepoint por archivo, conteos en secuencias temp, `raise exception 'RESUMEN %'` deshace todo.
+  La base remota tiene catálogo real (520 prod.): las pruebas filtran por sus propias marcas/slugs.
 - Versión: la de `list_migrations`. Tipos: JSON de `generate_typescript_types` (tool-results) → `types` a `src/types.ts` con python.
