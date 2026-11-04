@@ -8,6 +8,8 @@
   Catálogo (520 prod., 800 filas): p95 de 50 corridas ≤ 5,2 ms por RPC, sin seq scan; sin índices nuevos. Advisors: solo INFO.
 - pgTAP remoto 13–33 en verde (477/477). 16 y 29 fallaban por la prueba, no por la base: orden featured, `next_cursor`
   null de JSON (D-041) y datos que chocaban con el catálogo y los agregados reales (29 usa fecha 2000-01-01).
+- Concurrencia del checkout remota (`tests/concurrencia/checkout-remoto.mjs`, PostgREST, limpia sus datos): N=20 × 3 rondas en
+  verde (última unidad, orden cruzado sin interbloqueos, misma clave/huella, límites de código). Sin fallas: sin migración.
 ## Contratos vigentes (detalle en el commit de cada migración)
 - `crear_pedido_checkout(p jsonb)` → `{ok, estado:'creado'|'existente'|'rechazado', order|motivo}` (motivos en 20261020213954).
 - `pages.kind` (general, quienes_somos, envios, tratamiento_datos, terminos, devoluciones); única publicada por (país, kind) → 23505.
@@ -31,9 +33,9 @@
 - `chat_registrar_turno(p_session_id uuid, p_mensajes jsonb[1..20], p_ahora = now())` → int messages_count (P0002/22023).
 ## Pendiente
 1. (hecho) pgTAP remoto: corredor en `packages/db/tests/remoto/`. 2. izao-tienda: usar `registrarTurnoChatDb`.
-3. Concurrencia de `crear_pedido_checkout` con dos sesiones (tests/concurrencia/run.sh). store_*: solo si izao-tienda lo pide.
+3. (hecho) Concurrencia del checkout. Dueño: publicar la política de datos de CO/EC (hoy solo borrador; sin ella el checkout rechaza).
 4. Worker (izao-infra/izao-pagos): job que vacíe `media_file_deletions`. Admin: etiquetas de `stock_devuelto`/`stock_retenido`.
-## Siguiente paso exacto: Pendiente 3 (concurrencia del checkout) salvo nueva tarea del líder.
+## Siguiente paso exacto: ninguno propio; esperar tarea del líder (Pendiente 4 es de otros agentes).
 ## Notas
 - pgTAP por el MCP: savepoint por archivo, conteos en secuencias temp, `raise exception 'RESUMEN %'` deshace todo.
   La base remota tiene catálogo real (520 prod.): las pruebas filtran por sus propias marcas/slugs.
