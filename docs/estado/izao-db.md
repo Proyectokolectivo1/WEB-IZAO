@@ -6,10 +6,8 @@
   33 `chat_registrar_uso` (9/9). Advisors siempre solo INFO.
 - 20261102050729 `chat_registrar_turno` (pgTAP 34 14/14, `registrarTurnoChatDb`). pgTAP 01–12 remoto 150/150.
   Catálogo (520 prod., 800 filas): p95 de 50 corridas ≤ 5,2 ms por RPC, sin seq scan; sin índices nuevos. Advisors: solo INFO.
-- pgTAP remoto 13–33 en verde (477/477). 16 y 29 fallaban por la prueba, no por la base: orden featured, `next_cursor`
-  null de JSON (D-041) y datos que chocaban con el catálogo y los agregados reales (29 usa fecha 2000-01-01).
-- Concurrencia del checkout remota (`tests/concurrencia/checkout-remoto.mjs`, PostgREST, limpia sus datos): N=20 × 3 rondas en
-  verde (última unidad, orden cruzado sin interbloqueos, misma clave/huella, límites de código). Sin fallas: sin migración.
+- pgTAP remoto 13–33 en verde (477/477); 16 y 29 fallaban por la prueba, no por la base (D-041; 29 usa fecha 2000-01-01).
+- Concurrencia del checkout remota (ab23cd3, `tests/concurrencia/checkout-remoto.mjs`): N=20 × 3 rondas en verde; sin migración.
 ## Contratos vigentes (detalle en el commit de cada migración)
 - `crear_pedido_checkout(p jsonb)` → `{ok, estado:'creado'|'existente'|'rechazado', order|motivo}` (motivos en 20261020213954).
 - `pages.kind` (general, quienes_somos, envios, tratamiento_datos, terminos, devoluciones); única publicada por (país, kind) → 23505.
