@@ -46,6 +46,8 @@ export interface MasterShopClientOptions {
   clock?: Clock;
   /** Tiempo de espera por solicitud (ms). */
   timeoutMs?: number;
+  /** Tiempo de espera de los listados (pedidos y billetera): en producción tardan ~13 s (D-042). */
+  listTimeoutMs?: number;
   /** Espera antes de reintentar un `409` por edición concurrente (ms). */
   concurrentEditRetryMs?: number;
   maxConcurrentEditRetries?: number;
@@ -95,7 +97,8 @@ const ListItemSchema = z.looseObject({
   externalOrderId: optText,
   orderStatus: optText,
   statusParent: optText,
-  hasNovelty: z.boolean().nullish(),
+  // Producción responde 0/1 (número), no booleano (sonda real del 2026-11-04, D-042).
+  hasNovelty: z.union([z.boolean(), z.number()]).nullish().transform((v) => v === true || v === 1),
   alerts: z.unknown().optional(),
   carrierName: optText,
   carrierTrackingCode: z.union([z.string(), z.number()]).nullish(),
@@ -324,6 +327,7 @@ export class MasterShopClient {
   private readonly baseUrl: string;
   private readonly clock: Clock;
   private readonly timeoutMs: number;
+  private readonly listTimeoutMs: number;
   private readonly concurrentEditRetryMs: number;
   private readonly maxConcurrentEditRetries: number;
   private readonly maxRateLimitWaits: number;
@@ -338,6 +342,7 @@ export class MasterShopClient {
     this.baseUrl = (options.baseUrl ?? MASTERSHOP_BASE_URL).replace(/\/+$/, '');
     this.clock = options.clock ?? systemClock;
     this.timeoutMs = options.timeoutMs ?? 10_000;
+    this.listTimeoutMs = options.listTimeoutMs ?? 45_000;
     this.concurrentEditRetryMs = options.concurrentEditRetryMs ?? 5_000;
     this.maxConcurrentEditRetries = options.maxConcurrentEditRetries ?? 3;
     this.maxRateLimitWaits = options.maxRateLimitWaits ?? 2;
@@ -361,7 +366,7 @@ export class MasterShopClient {
   private async send(
     method: 'GET' | 'POST' | 'PUT',
     path: string,
-    opts: { query?: Record<string, string>; body?: string } = {},
+    opts: { query?: Record<string, string>; body?: string; timeoutMs?: number } = {},
   ): Promise<RawResponse> {
     const url = new URL(this.baseUrl + path);
     for (const [k, v] of Object.entries(opts.query ?? {})) url.searchParams.set(k, v);
@@ -380,7 +385,7 @@ export class MasterShopClient {
             ...(opts.body === undefined ? {} : { 'content-type': 'application/json' }),
           },
           body: opts.body,
-          signal: AbortSignal.timeout(this.timeoutMs),
+          signal: AbortSignal.timeout(opts.timeoutMs ?? this.timeoutMs),
         });
       } catch (cause) {
         const timeout =
@@ -613,6 +618,7 @@ export class MasterShopClient {
     const res = await this.send('POST', '/api/orders/list', {
       query: { page: String(page), limit: String(limit) },
       body: JSON.stringify(body),
+      timeoutMs: this.listTimeoutMs,
     });
     if (res.status !== 200) throw this.fail(res, 'POST');
     const rows = this.parse(z.array(ListItemSchema), res.data, 'listar pedidos');
@@ -753,6 +759,7 @@ export class MasterShopClient {
     const res = await this.send('POST', '/api/wallets/movements/list', {
       query: { page: String(filter.page), limit: String(limit) },
       body: JSON.stringify(body),
+      timeoutMs: this.listTimeoutMs,
     });
     if (res.status !== 200) throw this.fail(res, 'POST');
     const rows = this.parse(z.array(WalletMovementSchema), res.data, 'movimientos de billetera');

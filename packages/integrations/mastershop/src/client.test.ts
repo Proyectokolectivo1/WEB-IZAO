@@ -288,6 +288,53 @@ describe('MasterShopClient.listOrders / listAllOrders', () => {
     });
   });
 
+  it('acepta la forma real de producción: hasNovelty 0/1 numérico y carrierTrackingCode vacío (D-042)', async () => {
+    const { mock, clock, client } = setup();
+    // Claves y tipos tomados de la sonda real del 2026-11-04 (valores ficticios).
+    const fila = (idOrder: number, hasNovelty: number) => ({
+      idOrder,
+      externalOrderId: `IZ-CO-00000${idOrder}`,
+      profileType: 'dropshipping',
+      carrierTrackingCode: '',
+      items: [{ name: 'Producto de prueba' }],
+      lastCarrierStatusUpdate: null,
+      lastShipmentStatusUpdate: null,
+      clientInfo: { city: 'Medellin', phone: '3000000000', state: 'Antioquia', address: 'Calle 1 2', district: null, fullName: 'Cliente Prueba' },
+      paymentMethod: 'cod',
+      totalOrder: 89900,
+      totalProvider: 50000,
+      shippingRate: 12000,
+      currency: 'COP',
+      orderStatus: 'Por confirmar',
+      statusParent: 'Por preparar',
+      carrierName: 'Transportadora',
+      createdAt: '2026-11-01T15:00:00.000Z',
+      shipmentDate: null,
+      hasNovelty,
+    });
+    mock.inject('list', { status: 200, body: [fila(1, 0), fila(2, 1)] });
+    const rows = await client.listOrders({ startDate: new Date(clock.now() - DAY), page: 1 });
+    expect(rows.map((r) => [r.idOrder, r.hasNovelty, r.trackingCode, r.statusId])).toEqual([
+      [1, false, null, 1],
+      [2, true, null, 1],
+    ]);
+  });
+
+  it('los listados usan listTimeoutMs (producción tarda ~13 s), las demás llamadas timeoutMs (D-042)', async () => {
+    const lento: typeof fetch = (_input, init) =>
+      new Promise((resolve, reject) => {
+        const t = setTimeout(() => resolve(new Response('[]', { status: 200 })), 60);
+        init?.signal?.addEventListener('abort', () => {
+          clearTimeout(t);
+          reject(Object.assign(new Error('abortado'), { name: 'TimeoutError' }));
+        });
+      });
+    const client = new MasterShopClient({ apiKey: KEY, fetch: lento, timeoutMs: 20, listTimeoutMs: 1_000 });
+    await expect(client.listOrders({ startDate: new Date(Date.now() - DAY), page: 1 })).resolves.toEqual([]);
+    await expect(client.listWalletMovements({ startDate: new Date(Date.now() - DAY), page: 1 })).resolves.toMatchObject({ filas: 0 });
+    await expectError(client.getOrder({ idOrder: 1 }), 'tiempo_agotado');
+  });
+
   it('un monto con decimales no tumba el listado: exacto si los decimales son cero, si no null con aviso (M6)', async () => {
     const { mock, clock, client } = setup();
     mock.inject('list', {

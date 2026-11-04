@@ -284,3 +284,11 @@ Decisiones de `izao-admin` en T0.13:
 
 - `catalog_page` / `catalog_search_page` devuelven `{"items": [...], "next_cursor": null}` en la última página: el null es de JSON, no NULL de SQL. Para el cliente TypeScript es lo mismo (`null`).
 - Quien recorra páginas desde SQL o plpgsql debe cortar con `c is null or c = 'null'::jsonb`; pasar ese null como cursor vuelve a la primera página. No se cambia la función (sin migración); la prueba 16 ya lo cubre.
+
+## D-042 — MasterShop: forma real de `/api/orders/list` y tiempo de espera de los listados (2026-11-04, izao-logistica)
+
+- **Sonda de solo lectura con la llave real** (desde `izao-worker-1`, imagen `68cdd45`; credencial descifrada en el servidor, sin imprimirla): `GET /api/products?page=1` → 200; `POST /api/orders/list` (45 días) → 200 con 4 pedidos externos a Izao (1 «Por Confirmar», 3 «Cancelada»); `POST /api/wallets/movements/list` (30 días) → 200 sin movimientos. Cabeceras `RateLimit-Limit: 500`, `RateLimit-Reset: 60` (ventana de 60 s).
+- **`hasNovelty` llega como número 0/1**, no booleano: el esquema `z.boolean()` rechazaba todo el listado («respuesta inesperada») y habría tumbado `mastershop.polling` en cuanto hubiera envíos abiertos. Se acepta `boolean | 0/1` (cliente y `noveltyBadge`) y el *mock* ahora responde 0/1 como producción.
+- **`/api/orders/list` tarda ~13 s** en producción: con el tiempo de espera general de 10 s fallaba por `tiempo_agotado`. Los listados (pedidos y billetera) usan `listTimeoutMs` (45 s por defecto); el resto sigue en 10 s.
+- Otras claves reales del listado (sin valores): `profileType`, `items[].name`, `clientInfo{city,phone,state,address,district,fullName}`, `paymentMethod`, `currency`, `shipmentDate`, `lastShipmentStatusUpdate`; `carrierTrackingCode` llega `""` sin guía (se toma como null).
+- La colección oficial (`docs/integraciones/mastershop.postman.json`) documenta `"hasNovelty": false` (booleano): producción no la sigue, así que se aceptan los dos tipos. `[VERIFICAR]` con soporte de MasterShop: tipo de `hasNovelty`/`alerts` en el cuerpo de los webhooks 16/17 (el cuerpo no se usa como verdad, pero se registra) y si `orderStatus` del listado puede venir con otra capitalización («Por Confirmar» frente a «Por confirmar»; hoy se normaliza sin distinguir mayúsculas).

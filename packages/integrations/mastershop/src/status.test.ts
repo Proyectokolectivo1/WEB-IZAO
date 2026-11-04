@@ -81,6 +81,9 @@ describe('noveltyBadge', () => {
   it('se muestra con hasNovelty o con alertas', () => {
     expect(noveltyBadge({ hasNovelty: false, alerts: [] })).toEqual({ show: false, alerts: [] });
     expect(noveltyBadge({ hasNovelty: true, alerts: [] }).show).toBe(true);
+    // Producción manda 0/1 (D-042).
+    expect(noveltyBadge({ hasNovelty: 1, alerts: [] }).show).toBe(true);
+    expect(noveltyBadge({ hasNovelty: 0, alerts: [] }).show).toBe(false);
     const r = noveltyBadge({
       hasNovelty: false,
       alerts: [{ idAlert: 3, name: 'Dirección incompleta', type: 'novedad' }],

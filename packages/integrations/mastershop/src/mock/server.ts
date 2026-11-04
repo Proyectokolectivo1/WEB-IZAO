@@ -799,7 +799,8 @@ export class MasterShopMock {
       createdAt: o.createdAt.toISOString(),
       currency: 'COP',
       externalOrderId: o.externalOrderId,
-      hasNovelty: o.hasNovelty,
+      // Trampa real (D-042): producción manda 0/1, no booleano.
+      hasNovelty: o.hasNovelty ? 1 : 0,
       idOrder: o.idOrder,
       items: [],
       lastCarrierStatusUpdate: null,

@@ -9,11 +9,11 @@
 - `942d1ad` contrato `docs/integraciones/agente-api.md` v1; `242e6f1` API `/api/agent/*` (heartbeat, jobs/claim, jobs/{id}/label, jobs/{id}/result, config). 19 pruebas.
 - `9643c4d` `registerWebhook`/`setWebhookEnabled`/`registrarWebhooksIzao` (16 y 17; la respuesta repite la llave: se descarta).
 - `0b8b261` D-027. lint/typecheck/test verdes.
+- 2026-11-04 sonda real (solo lectura, desde izao-worker-1): credencial CO/production se descifra; products/orders.list/wallets 200. Arreglado (D-042): `hasNovelty` 0/1 y `listTimeoutMs` 45 s (listado tarda ~13 s). Webhooks 16/17 ya registrados por el dueño (51026/51027). Worker 68cdd45 ya corre `mastershop.polling`/`billetera` (billetera `procesado` desde 06:07 UTC).
 
-## Para izao-infra (no edito cron.ts/index.ts)
-- `cron.ts`: `upsertJobScheduler(JOB_POLLING_MASTERSHOP, { pattern: CRON_POLLING_MASTERSHOP, tz: 'America/Bogota' }, { name: JOB_POLLING_MASTERSHOP, data: {} })` y lo mismo con `JOB_BILLETERA_MASTERSHOP`/`CRON_BILLETERA_MASTERSHOP` (`7 * * * *`). Import de `./jobs/sync/index.js`. Quitar el PENDIENTE.
-- `index.ts`, en `crearProcesadorSistema({...})`: `[JOB_POLLING_MASTERSHOP]: async () => pollingMasterShop(dependenciasPollingDesdeEnv(colaCarrier))`, `[JOB_BILLETERA_MASTERSHOP]: async () => billeteraMasterShop(dependenciasBilleteraDesdeEnv())`.
-- La web escribe en `MEDIA_ROOT/agent-screenshots/` (volumen media de la web, lectura/escritura) y lee `MEDIA_ROOT/labels/`.
+## Para izao-infra
+- Cron y procesadores de `mastershop.polling`/`billetera` ya cableados y en el VPS. Falta redesplegar con el arreglo D-042 (sin él, el polling falla al haber envíos abiertos).
+- La web escribe en `MEDIA_ROOT/agent-screenshots/` y lee `MEDIA_ROOT/labels/`.
 
 - Recálculo §21.4 (hallazgo del revisor): fuente carrier envuelta con `conRecalculoMetricas`; tarifa nueva sin transición y costos de billetera encolan `metrics.recompute_day`. Cableado mínimo en `apps/worker/src/index.ts` (avisado a izao-infra).
 - `6513e22` webhooks guardados en `integration_webhooks` (izao-db `6b71294`); `remote_config` leído con columnas explícitas.
@@ -29,4 +29,4 @@
 - Pedido real de prueba en producción: solo con aprobación explícita del dueño.
 
 ## Siguiente paso exacto
-Tras las columnas de izao-db: prueba de `estadoSaldo`/`guardarSaldo` reales y job "agente sin heartbeat".
+Redespliegue con D-042 (izao-infra). Luego, con aprobación del dueño: pedido real de bajo valor, etiqueta y cancelación `{idStatus: 9}`; probar `additional_charge` negativo (modo A/B).

@@ -125,7 +125,8 @@ export function noveltyBadge(input: { hasNovelty?: unknown; alerts?: unknown }):
           type: typeof a.type === 'string' ? a.type : null,
         }))
     : [];
-  return { show: input.hasNovelty === true || alerts.length > 0, alerts };
+  // Producción manda 0/1 (D-042).
+  return { show: input.hasNovelty === true || input.hasNovelty === 1 || alerts.length > 0, alerts };
 }
 
 // ---------------------------------------------------------------------------
