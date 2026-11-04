@@ -6,7 +6,7 @@
 .claude
 **/.env
 **/.env.*
-!**/.env.example
+# Sin negaciones (!): obligan a BuildKit a recorrer infra/data, que es de root/redis y falla con permission denied.
 infra/data
 logs
 **/logs
