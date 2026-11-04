@@ -28,5 +28,7 @@
 - Avisar a izao-agente-windows del contrato v1 (no estaba disponible por mensaje).
 - Pedido real de prueba en producción: solo con aprobación explícita del dueño.
 
+- 2026-11-04 preparación del pedido real (solo lectura): 249511 no existe en el catálogo de Izao (sin producto ni variante vinculada; no se creó nada). La API no usa códigos de municipio: `city`/`state` por nombre ("Marinilla"/"Antioquia"); la colección no tiene catálogo geo. No se creó pedido: la aprobación llegó reenviada por el líder, no del dueño en el chat ni por el sistema de permisos.
+
 ## Siguiente paso exacto
 Redespliegue con D-042 (izao-infra). Luego, con aprobación del dueño: pedido real de bajo valor, etiqueta y cancelación `{idStatus: 9}`; probar `additional_charge` negativo (modo A/B).
