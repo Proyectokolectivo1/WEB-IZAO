@@ -87,7 +87,7 @@ export interface MasterShopMockOptions {
   clock: Clock;
   /** Solicitudes por ventana; sin límite si se omite. */
   rateLimit?: { limit: number; windowSeconds: number };
-  /** `[VERIFICAR]`: si MasterShop acepta `additional_charge` negativo (modo A). */
+  /** Producción rechaza `additional_charge` negativo (D-043); `true` solo para pruebas del modo A. */
   acceptNegativeCharges?: boolean;
   firstOrderId?: number;
   /** Modo simulado del worker: al confirmar (1→2) adjunta guía y etiqueta al instante. */
@@ -483,15 +483,23 @@ export class MasterShopMock {
     ) {
       return this.badRequest(MS_ERRORS.documentPair, null, headers);
     }
-    if (
-      this.options.acceptNegativeCharges === false &&
-      charges.some((c) => (c.value as number) < 0)
-    ) {
+    // Producción (D-043) rechaza `value` < 0 con 400 "Datos del body inválidos": el modo A no existe.
+    const negative = charges.findIndex((c) => (c.value as number) < 0);
+    if (this.options.acceptNegativeCharges !== true && negative >= 0) {
       return this.json(
-        500,
+        400,
         {
-          data: null,
-          error: 'Código 400 - Cargo adicional inválido - Error interno del servidor',
+          data: [
+            {
+              origin: 'number',
+              code: 'too_small',
+              minimum: 0,
+              inclusive: true,
+              path: ['additional_charge', negative, 'value'],
+              message: 'Valor debe ser no negativo',
+            },
+          ],
+          error: 'Datos del body inválidos',
           success: false,
         },
         headers,
@@ -578,11 +586,15 @@ export class MasterShopMock {
         externalOrderId: order.externalOrderId,
         idOrder: order.idOrder,
         orderLogistics: {
-          carrierTracking: {
-            guide: order.guide,
-            orderTracking: order.orderTracking,
-            shippingLabel: order.shippingLabel,
-          },
+          // Como producción (D-043): sin guía, `carrierTracking` llega vacío.
+          carrierTracking:
+            order.guide === null
+              ? {}
+              : {
+                  guide: order.guide,
+                  orderTracking: order.orderTracking,
+                  shippingLabel: order.shippingLabel,
+                },
         },
         shippingAddress: {
           ...GET_ORDER_EXAMPLE.shippingAddress,

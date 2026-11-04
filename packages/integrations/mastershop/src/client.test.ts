@@ -69,8 +69,8 @@ describe('MasterShopClient.createOrder', () => {
     expect(req.body).not.toContain('"125000"');
   });
 
-  it('el modo A con additional_charge negativo cuadra exacto en el mock', async () => {
-    const { mock, client } = setup();
+  it('el modo A con additional_charge negativo cuadra exacto en el mock (solo si se habilita; producción lo rechaza)', async () => {
+    const { mock, client } = setup({ acceptNegativeCharges: true });
     await client.createOrder(
       body(
         {
@@ -111,17 +111,27 @@ describe('MasterShopClient.createOrder', () => {
     expect(e.providerMessage).toBe('Error interno del servidor');
   });
 
-  it('500 con "Código 400 - …" (rechazo de la plataforma) es validación, sin reintento (M4)', async () => {
-    const { client } = setup({ acceptNegativeCharges: false });
+  it('additional_charge negativo: 400 "Datos del body inválidos" como en producción, sin reintento (D-043)', async () => {
+    const { client } = setup();
     const e = await expectError(
       client.createOrder(
         body({ items: [makeItem({ line_discount: 9_000n })] }, 'additional_charge'),
       ),
       'validacion',
     );
-    expect(e.status).toBe(500);
+    expect(e.status).toBe(400);
     expect(e.retryable).toBe(false);
-    expect(e.providerMessage).toMatch(/Código 400 - Cargo adicional/);
+    expect(e.providerMessage).toBe('Datos del body inválidos');
+    expect(JSON.stringify(e.providerData)).toMatch(/additional_charge.*value/);
+  });
+
+  it('el detalle sin guía trae carrierTracking vacío y no falla (D-043)', async () => {
+    const { client } = setup();
+    const r = await client.createOrder(body());
+    const d = await client.getOrder({ idOrder: r.idOrder });
+    expect(d.guide).toBeNull();
+    expect(d.labelUrl).toBeNull();
+    expect((d.raw as { orderLogistics: { carrierTracking: object } }).orderLogistics.carrierTracking).toEqual({});
   });
 
   it.each([

@@ -28,7 +28,10 @@
 - Avisar a izao-agente-windows del contrato v1 (no estaba disponible por mensaje).
 - Pedido real de prueba en producción: solo con aprobación explícita del dueño.
 
-- 2026-11-04 preparación del pedido real (solo lectura): 249511 no existe en el catálogo de Izao (sin producto ni variante vinculada; no se creó nada). La API no usa códigos de municipio: `city`/`state` por nombre ("Marinilla"/"Antioquia"); la colección no tiene catálogo geo. No se creó pedido: la aprobación llegó reenviada por el líder, no del dueño en el chat ni por el sistema de permisos.
+- 2026-11-04 pedido real (D-043): modo A rechazado (400, nada creado) → modo B. **Creado MasterShop `idOrder 3076033` / `IZ-CO-PRUEBA-0001`**, estado 1 «Por Confirmar», sin guía (pide confirmar; alerta de bodega InterRapidisimo sin crear). No se creó producto en Izao. Arreglado `guide` opcional en el detalle. Script temporal en el VPS: `/tmp/izao/p.mjs` y `p2.mjs` (borrar tras cancelar).
+
+## Datos de prueba creados (limpiar)
+- MasterShop 3076033 (`IZ-CO-PRUEBA-0001`): **pendiente cancelar** con `{idStatus: 9}` según decida el líder (confirmar para ver etiqueta o cancelar ya).
 
 ## Siguiente paso exacto
-Redespliegue con D-042 (izao-infra). Luego, con aprobación del dueño: pedido real de bajo valor, etiqueta y cancelación `{idStatus: 9}`; probar `additional_charge` negativo (modo A/B).
+Decisión del líder sobre 3076033: (a) cancelar ya: `docker exec -i izao-worker-1 node --input-type=module - cancelar 3076033 < /tmp/izao/p.mjs` y luego `estado 3076033`; o (b) el dueño crea la bodega InterRapidisimo, se confirma (1→2), se descarga la etiqueta (`etiqueta 3076033`) y se cancela (2→9). Redesplegar con el arreglo D-043.

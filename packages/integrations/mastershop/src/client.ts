@@ -82,7 +82,8 @@ const DetailSchema = z.looseObject({
   orderLogistics: z
     .looseObject({
       carrierTracking: z
-        .looseObject({ guide: z.unknown(), orderTracking: optText, shippingLabel: optText })
+        // Sin guía, producción manda `carrierTracking: {}` (D-043): ninguna clave es obligatoria.
+        .looseObject({ guide: z.unknown().optional(), orderTracking: optText, shippingLabel: optText })
         .nullish(),
     })
     .nullish(),
