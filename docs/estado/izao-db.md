@@ -6,6 +6,8 @@
   33 `chat_registrar_uso` (9/9). Advisors siempre solo INFO.
 - 20261102050729 `chat_registrar_turno` (pgTAP 34 14/14, `registrarTurnoChatDb`). pgTAP 01–12 remoto 150/150.
   Catálogo (520 prod., 800 filas): p95 de 50 corridas ≤ 5,2 ms por RPC, sin seq scan; sin índices nuevos. Advisors: solo INFO.
+- pgTAP remoto 13–33 en verde (477/477). 16 y 29 fallaban por la prueba, no por la base: orden featured, `next_cursor`
+  null de JSON (D-041) y datos que chocaban con el catálogo y los agregados reales (29 usa fecha 2000-01-01).
 ## Contratos vigentes (detalle en el commit de cada migración)
 - `crear_pedido_checkout(p jsonb)` → `{ok, estado:'creado'|'existente'|'rechazado', order|motivo}` (motivos en 20261020213954).
 - `pages.kind` (general, quienes_somos, envios, tratamiento_datos, terminos, devoluciones); única publicada por (país, kind) → 23505.
@@ -27,14 +29,11 @@
 - `media_file_deletions` (service_role): el worker borra `base_path` y `variants`, luego la fila (si falla: attempts+1, last_error).
 - `chat_registrar_uso(p_costo_micros bigint, p_mensajes int = 1, p_ahora timestamptz = now())` → bigint total del mes (Bogotá).
 - `chat_registrar_turno(p_session_id uuid, p_mensajes jsonb[1..20], p_ahora = now())` → int messages_count (P0002/22023).
-- pgTAP remoto 13–28 en verde (310/310). 16 fallaba por la prueba, no por la base (orden featured = published_at desc,
-  `next_cursor` es null de JSON, búsquedas sin filtrar chocaban con el catálogo real).
 ## Pendiente
-1. pgTAP 29–33 remoto (corredor en `packages/db/tests/remoto/`). 2. izao-tienda: usar `registrarTurnoChatDb`.
+1. (hecho) pgTAP remoto: corredor en `packages/db/tests/remoto/`. 2. izao-tienda: usar `registrarTurnoChatDb`.
 3. Concurrencia de `crear_pedido_checkout` con dos sesiones (tests/concurrencia/run.sh). store_*: solo si izao-tienda lo pide.
 4. Worker (izao-infra/izao-pagos): job que vacíe `media_file_deletions`. Admin: etiquetas de `stock_devuelto`/`stock_retenido`.
-## Siguiente paso exacto: desde tests/, `PYTHONIOENCODING=utf-8 python remoto/tap2mcp.py 29_*.sql 30_*.sql` → `execute_sql`;
-  luego 31 solo y 32+33. Si falla: cierre con `string_agg(l) from tap where l ~ '^not ok'` antes del rollback.
+## Siguiente paso exacto: Pendiente 3 (concurrencia del checkout) salvo nueva tarea del líder.
 ## Notas
 - pgTAP por el MCP: savepoint por archivo, conteos en secuencias temp, `raise exception 'RESUMEN %'` deshace todo.
   La base remota tiene catálogo real (520 prod.): las pruebas filtran por sus propias marcas/slugs.

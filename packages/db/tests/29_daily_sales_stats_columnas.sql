@@ -29,21 +29,21 @@ select col_default_is('public', 'daily_sales_stats', 'shipping_estimated_count',
 
 -- Una fila nueva sin las columnas queda en 0; montos grandes caben en bigint.
 select lives_ok($$ insert into public.daily_sales_stats (date, country_code, payment_method, currency_code)
-                   values ('2026-10-01', 'CO', 'cod', 'COP') $$, 'insert sin las columnas nuevas');
+                   values ('2000-01-01', 'CO', 'cod', 'COP') $$, 'insert sin las columnas nuevas');
 select is((select (orders_abandoned, confirmed_revenue, carrier_platform_fees, shipping_estimated_count)::text
-             from public.daily_sales_stats where date = '2026-10-01' and country_code = 'CO' and payment_method = 'cod'),
+             from public.daily_sales_stats where date = '2000-01-01' and country_code = 'CO' and payment_method = 'cod'),
           '(0,0,0,0)', 'las cuatro columnas nacen en 0');
 select lives_ok($$ update public.daily_sales_stats set confirmed_revenue = 9000000000000, carrier_platform_fees = 3000000000000
-                   where date = '2026-10-01' and country_code = 'CO' and payment_method = 'cod' $$, 'montos bigint grandes');
+                   where date = '2000-01-01' and country_code = 'CO' and payment_method = 'cod' $$, 'montos bigint grandes');
 
 -- No negativos.
-select throws_ok($$ update public.daily_sales_stats set orders_abandoned = -1 where date = '2026-10-01' $$,
+select throws_ok($$ update public.daily_sales_stats set orders_abandoned = -1 where date = '2000-01-01' $$,
                  '23514', null, 'orders_abandoned negativo: viola el check');
-select throws_ok($$ update public.daily_sales_stats set confirmed_revenue = -1 where date = '2026-10-01' $$,
+select throws_ok($$ update public.daily_sales_stats set confirmed_revenue = -1 where date = '2000-01-01' $$,
                  '23514', null, 'confirmed_revenue negativo: viola el check');
-select throws_ok($$ update public.daily_sales_stats set carrier_platform_fees = -1 where date = '2026-10-01' $$,
+select throws_ok($$ update public.daily_sales_stats set carrier_platform_fees = -1 where date = '2000-01-01' $$,
                  '23514', null, 'carrier_platform_fees negativo: viola el check');
-select throws_ok($$ update public.daily_sales_stats set shipping_estimated_count = -1 where date = '2026-10-01' $$,
+select throws_ok($$ update public.daily_sales_stats set shipping_estimated_count = -1 where date = '2000-01-01' $$,
                  '23514', null, 'shipping_estimated_count negativo: viola el check');
 
 -- RLS intacto y sin acceso para anon/authenticated.
