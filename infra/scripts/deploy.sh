@@ -42,6 +42,10 @@ cd "$RAIZ"
 
 if [ "$DRY_RUN" -eq 0 ]; then
   [ -f "$INFRA/.env" ] || { echo "Falta $INFRA/.env (lo sube el usuario; ver docs/RUNBOOK.md)." >&2; exit 1; }
+  # Si el .env se subió desde Windows (CRLF), quita los retornos de carro sin imprimir su contenido.
+  if grep -q $'\r' "$INFRA/.env" 2>/dev/null; then
+    sed -i $'s/\r$//' "$INFRA/.env" && echo "AVISO: se normalizaron finales de línea CRLF de infra/.env."
+  fi
   PREV_GIT="$(git rev-parse HEAD)"
   # Tag a restaurar si algo falla: NO se toma de git (tras un despliegue fallido HEAD puede quedar
   # en el commit malo). Orden: 1) /srv/izao/ultimo-ok (último tag sano), 2) tag de la imagen del
