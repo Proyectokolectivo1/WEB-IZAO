@@ -33,5 +33,7 @@
 ## Datos de prueba creados (limpiar)
 - MasterShop 3076033 (`IZ-CO-PRUEBA-0001`): **pendiente cancelar** con `{idStatus: 9}` según decida el líder (confirmar para ver etiqueta o cancelar ya).
 
+- 2026-11-04 (después de que el dueño dijo «Ya hay una bodega creada»): el detalle de 3076033 **sigue** con la alerta «El proveedor no tiene la bodega de este pedido creada en InterRapidisimo», estado 1, sin guía. No se confirmó (paso 1 no cumplido).
+
 ## Siguiente paso exacto
 Decisión del líder sobre 3076033: (a) cancelar ya: `docker exec -i izao-worker-1 node --input-type=module - cancelar 3076033 < /tmp/izao/p.mjs` y luego `estado 3076033`; o (b) el dueño crea la bodega InterRapidisimo, se confirma (1→2), se descarga la etiqueta (`etiqueta 3076033`) y se cancela (2→9). Redesplegar con el arreglo D-043.
