@@ -125,3 +125,24 @@ Job `agente-impresion` en `.github/workflows/ci.yml` (runner `windows-2022`, Pyt
 - **Snapshot:** la API de Contabo respondió 401; no hubo snapshot previo.
 - **Nginx:** `/srv/izao/nginx/izao.conf` contiene también `include izao-zones.conf` y el `upstream izao_web` (entra por `sites-enabled`, contexto http; no hace falta enlazar nada en `conf.d`). Los includes (`izao-{zones,proxy,security-headers,locations}.conf`) se copian a `/srv/izao/nginx/` desde `infra/nginx/`: **recopiarlos cuando cambien en el repo**. Reutiliza el certificado Let's Encrypt existente (ECDSA, authenticator nginx). `izao.conf` carga antes que `izaoperfumeria` y Nginx ignora los `server_name` duplicados del sitio viejo (solo avisos en `nginx -t`); el enlace viejo sigue sin quitarse (requiere root).
 - **Backups:** `backup.sh` aborta porque `BACKUP_AGE_RECIPIENT` no está en `infra/.env`. Además el host no tiene `pg_dump` ni `age`. `/etc/cron.d/izao` no se pudo instalar (root).
+
+## Permisos de /srv/izao/media (sin 777)
+
+Modelo: dueño uid 100 (usuario `izao` de web y worker, que escriben `banners/`, `labels/`, `agent-screenshots/`, `warranty/`), grupo `www-data` (Nginx del host solo lee), carpetas 2750 y archivos 640. `warranty/`, `labels/` y `agent-screenshots/` quedan 700 para uid 100 y Nginx no los sirve (404). Nginx solo entrega webp, avif, jpg, jpeg, png y mp4 desde `/media/`, con `nosniff` y `Content-Security-Policy: default-src 'none'; sandbox`.
+
+El compose usa `IZAO_MEDIA_DIR` con valor por defecto `/srv/izao/media` (deploy.sh exporta el mismo valor, no chocan). En local defina `IZAO_MEDIA_DIR=./data/media` en `infra/.env`.
+
+Comandos del dueño, como root por VNC (teclado en inglés), uno por línea:
+
+    cd /srv/izao/app
+    git pull --ff-only
+    bash infra/scripts/permisos-media.sh
+    cp infra/nginx/izao-zones.conf /srv/izao/nginx/izao-zones.conf
+    cp infra/nginx/izao-locations.conf /srv/izao/nginx/izao-locations.conf
+    nginx -t
+    systemctl reload nginx
+    docker exec izao-web-1 touch /srv/izao/media/banners/prueba.txt
+    docker exec izao-worker-1 touch /srv/izao/media/labels/prueba.txt
+    rm -f /srv/izao/media/banners/prueba.txt /srv/izao/media/labels/prueba.txt
+
+Los dos `cp` son necesarios: Nginx lee las copias de `/srv/izao/nginx/`. El `git pull` debe traer el commit de este cambio antes de recargar Nginx. Si Nginx del host usa otro grupo que `www-data`, anteponga `NGINX_GRUPO=nombre` al comando del script. Después comprobar: `/media/banners/<archivo>.webp` responde 200 y `/media/labels/1.pdf` responde 404.

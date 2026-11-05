@@ -22,6 +22,12 @@ mkdir -p /srv/izao/media /srv/izao/certbot /etc/letsencrypt/live/izaoperfumeria.
 cp -r /cfg /srv/izao/nginx
 echo imagen > /srv/izao/media/a.webp
 mkdir -p /srv/izao/media/warranty/2026/10 && echo foto > /srv/izao/media/warranty/2026/10/x-640.webp
+echo '<script>1</script>' > /srv/izao/media/evil.html
+echo '<svg onload=alert(1)>' > /srv/izao/media/evil.svg
+mkdir -p /srv/izao/media/labels /srv/izao/media/agent-screenshots /srv/izao/media/banners
+echo pdf > /srv/izao/media/labels/1.pdf
+echo png > /srv/izao/media/agent-screenshots/s.png
+echo png > /srv/izao/media/banners/b.PNG
 openssl req -x509 -nodes -newkey rsa:2048 -days 1 -subj "/CN=izaoperfumeria.com" \
   -keyout /etc/letsencrypt/live/izaoperfumeria.com/privkey.pem \
   -out /etc/letsencrypt/live/izaoperfumeria.com/fullchain.pem 2>/dev/null
@@ -69,6 +75,16 @@ probar() { # etiqueta
   if echo "$csp" | grep -q "challenges.cloudflare.com"; then echo "OK   [$1] CSP de la tienda permite Turnstile"; else echo "FALLA [$1] CSP de la tienda sin challenges.cloudflare.com"; fallos=$((fallos+1)); fi
   c="$(curl -sk -o /dev/null -w '%{http_code}' -H 'Host: izaoperfumeria.com' "https://127.0.0.1/media/warranty/2026/10/x-640.webp")"
   if [ "$c" = 404 ]; then echo "OK   [$1] /media/warranty/ bloqueado (404)"; else echo "FALLA [$1] /media/warranty/ responde $c"; fallos=$((fallos+1)); fi
+  # /media: solo imágenes/video públicos; el resto y las rutas privadas dan 404; nosniff y CSP con sandbox.
+  for ruta in /media/evil.html /media/evil.svg /media/labels/1.pdf /media/agent-screenshots/s.png /media/labels/; do
+    c="$(curl -sk -o /dev/null -w '%{http_code}' -H 'Host: izaoperfumeria.com' "https://127.0.0.1$ruta")"
+    if [ "$c" = 404 ]; then echo "OK   [$1] $ruta bloqueado (404)"; else echo "FALLA [$1] $ruta responde $c"; fallos=$((fallos+1)); fi
+  done
+  c="$(curl -sk -o /dev/null -w '%{http_code}' -H 'Host: izaoperfumeria.com' "https://127.0.0.1/media/banners/b.PNG")"
+  if [ "$c" = 200 ]; then echo "OK   [$1] /media/banners/b.PNG 200"; else echo "FALLA [$1] /media/banners/b.PNG responde $c"; fallos=$((fallos+1)); fi
+  cab="$(curl -sk -D - -o /dev/null -H 'Host: izaoperfumeria.com' "https://127.0.0.1/media/a.webp")"
+  if echo "$cab" | grep -qi "^x-content-type-options: nosniff"; then echo "OK   [$1] /media con nosniff"; else echo "FALLA [$1] /media sin nosniff"; fallos=$((fallos+1)); fi
+  if [ "$(echo "$cab" | grep -ci '^content-security-policy: default-src .none.; sandbox')" = 1 ]; then echo "OK   [$1] /media con CSP default-src none; sandbox (una sola)"; else echo "FALLA [$1] /media sin CSP sandbox o duplicada"; fallos=$((fallos+1)); fi
   # Server Actions de Next: un POST con la cabecera Next-Action se ejecuta en CUALQUIER ruta, así que
   # se limita por cabecera además de por ruta (evita esquivar el límite de /admin/login con POST a /).
   n429=0; n200=0

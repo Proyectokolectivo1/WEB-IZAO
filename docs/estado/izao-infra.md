@@ -38,6 +38,9 @@ PROCEDIMIENTO: antes de deploy.sh, `git pull --ff-only` si el script cambió. St
 pull + `deploy.sh --skip-tests --migraciones-verificadas` (428 s; el script exige ese flag si hay migración nueva; verificada con list_migrations). Sin snapshot. web/worker healthy; /api/health, /co, /ec, /admin/login 200 https; HTML de /co precarga 2 woff2 y enlaza 2 css de `.next/static` (Dockerfile.web los copia). Build ~320 s, sin agotar memoria (6 GB libres).
 MEDIA CORREGIDO Y DESPLEGADO f573920 (376 s, sin snapshot; web/worker uid 100 escriben en /srv/izao/media, Nginx sirve /media/banners/ 200, prueba borrada; infra/data/media en el VPS estaba vacío): compose monta `${IZAO_DATA_DIR:-./data}/media`; sin IZAO_DATA_DIR en .env resuelve a `/srv/izao/app/infra/data/media` (root, 755, uid web=100) y NO a `/srv/izao/media` que sirve Nginx. Subir banners falla (EACCES) y no se servirían. Hice `chmod 777 /srv/izao/media` (inocuo). Arreglo: IZAO_DATA_DIR=/srv/izao en infra/.env (lo sube el dueño) migrando redis (hoy en infra/data/redis) o root: bind del dir correcto.
 
+## Endurecimiento de media (2026-11-05, solo repo, sin desplegar)
+Nginx `/media/`: solo webp|avif|jpe?g|png|mp4; warranty/, labels/ y agent-screenshots/ 404; resto 404; nosniff + CSP `default-src 'none'; sandbox` (map en izao-zones.conf). `infra/scripts/permisos-media.sh` (uid 100, grupo www-data, 2750/640; privados 700) y comandos del dueño en RUNBOOK. Compose: `IZAO_MEDIA_DIR` por defecto `/srv/izao/media` (local: `./data/media` en infra/.env). test-nginx ampliado, NO ejecutado (Docker Desktop no arranca en esta sesión): correr `bash infra/scripts/test-nginx.sh` antes de desplegar. Dueño: ejecutar RUNBOOK "Permisos de /srv/izao/media" tras pull.
+
 ## Siguiente paso exacto
 Dueño ejecuta la limpieza Nginx; luego `uptime`, `crear-admin`, restore real contra `auth`, snapshot (API Contabo).
 Nota: el build de web puede fallar por WIP de la tienda; verificar en copia limpia de HEAD.
