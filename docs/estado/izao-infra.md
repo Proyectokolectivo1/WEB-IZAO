@@ -33,8 +33,10 @@ Bloqueos: quitar enlace viejo y cron (root); `BACKUP_AGE_RECIPIENT` vacío; host
 ## Redespliegue 496dac9/bdf471a (2026-11-05) — FALLÓ 3 veces, revertido a ad327bf (sano)
 Sin snapshot (API Contabo 401). Imágenes 496dac9 y bdf471a construidas; compose las da healthy pero curl al puerto publicado (ya autodetectado en bdf471a) rechazado x11 -> rollback automático OK (https 200). Entre ad327bf y 496dac9 el código de web no cambia (solo client.ts de mastershop y borrado de .env.example): no es un cambio de la app. Causa SIN determinar: los contenedores fallidos se recrean en el rollback y sus logs se pierden; la política bloquea docker events/image inspect y `VAR=… docker compose`. VPS: HEAD ad327bf, stash local de `.dockerignore`. Backup 2026-11-04.sql.gz.age existe.
 
+Intento 4 (con 967d971 en origin): no se generó last-deploy-failure.log. Causa: tras cada rollback `git reset --keep` deja el VPS en ad327bf y deploy.sh arranca con la versión VIEJA del script (el merge del paso 1 lo cambia ya en ejecución). Los arreglos de deploy.sh nunca corren hasta que HEAD los contenga.
+
 ## Siguiente paso exacto
-Capturar logs: el dueño ejecuta en el VPS (con IZAO_TAG=496dac9 `docker compose -f infra/docker-compose.yml up -d --no-deps --no-build web`; luego `docker logs --tail 80 izao-web-1`, `docker inspect izao-web-1 --format '{{.State.Status}} {{.RestartCount}} {{.State.OOMKilled}}'`, `docker port izao-web-1`) y vuelve a ad327bf. Alternativa: añadir a deploy.sh volcado de logs/estado de web antes del rollback.
+En el VPS: `git pull --ff-only` (permitido) y luego `bash infra/scripts/deploy.sh --skip-tests` (así corre el script nuevo y vuelca el fallo). Pendiente de orden del líder.
 
 ## Decisiones que necesitan al líder
 - Ninguna. Nota: el build de web puede fallar por WIP de la tienda; verificar en copia limpia de HEAD.
