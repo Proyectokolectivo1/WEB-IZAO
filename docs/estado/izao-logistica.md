@@ -1,39 +1,34 @@
 # Bitácora de izao-logistica
 
 ## Hecho
-- Antes: `@izao/mastershop` (líneas, pedido, estados, cliente, adaptador, mock), `1dc959b` contrato cola `carrier`, `20acdf2` jobs carrier, `607beec` webhook, D-026.
-- `c611a9f` 23505 de `print_jobs_etiqueta_auto_unica_key` = ya existe (prueba en `carrier/fuente-postgrest.test.ts`); pre-chequeo solo `requested_by=auto`.
-- `97c4dd5` billetera en el paquete (`wallet.ts`: decimales sin float, costos por pedido idempotentes, gastos, saldo, alerta) + mock con trampas (7 días, limit 50).
-- `76aa22d` worker `jobs/sync/`: `mastershop.polling` (45 días, paginado hasta vacío) y `mastershop.billetera` (3 días). 24 pruebas contra el mock.
-- `e29de8c` `reintentarCrearEnvio` (paquete) + `reintentarEnvioMasterShop(orderId, estado)` en `apps/web/app/api/webhooks/mastershop/cola.ts`.
-- `942d1ad` contrato `docs/integraciones/agente-api.md` v1; `242e6f1` API `/api/agent/*` (heartbeat, jobs/claim, jobs/{id}/label, jobs/{id}/result, config). 19 pruebas.
-- `9643c4d` `registerWebhook`/`setWebhookEnabled`/`registrarWebhooksIzao` (16 y 17; la respuesta repite la llave: se descarta).
-- `0b8b261` D-027. lint/typecheck/test verdes.
-- 2026-11-04 sonda real (solo lectura, desde izao-worker-1): credencial CO/production se descifra; products/orders.list/wallets 200. Arreglado (D-042): `hasNovelty` 0/1 y `listTimeoutMs` 45 s (listado tarda ~13 s). Webhooks 16/17 ya registrados por el dueño (51026/51027). Worker 68cdd45 ya corre `mastershop.polling`/`billetera` (billetera `procesado` desde 06:07 UTC).
+- Paquete `@izao/mastershop` (líneas, pedido, estados, cliente, adaptador, mock con trampas), cola `carrier` (`1dc959b`, `20acdf2`), webhook (`607beec`), D-026/D-027.
+- `c611a9f` 23505 de etiqueta automática = ya existe. `97c4dd5` billetera. `76aa22d` jobs `mastershop.polling`/`billetera`. `e29de8c` reintento de envío.
+- `942d1ad` contrato `docs/integraciones/agente-api.md` v1; `242e6f1` API `/api/agent/*`. `9643c4d`/`6513e22` registro de webhooks (16/17) en `integration_webhooks`.
+- `6d77b62` D-042 (`hasNovelty` 0/1, listados 45 s). `e18c20a` D-043 (modo B; `guide` opcional en el detalle).
+- 2026-11-04: pedido 3076033 (`IZ-CO-PRUEBA-0001`) **cancelado por el dueño** (verificado: `idStatus 9`, «Cancelada Por Vendedor»).
+- 2026-11-04 D-044 (solo lectura): la transportadora **no se elige por API**; MasterShop la asigna. Historial: Marinilla salió con Coordinadora (2916057, con guía y PDF), Envia (2841592) e InterRapidisimo (sin guía).
 
 ## Para izao-infra
-- Cron y procesadores de `mastershop.polling`/`billetera` ya cableados y en el VPS. Falta redesplegar con el arreglo D-042 (sin él, el polling falla al haber envíos abiertos).
+- Redesplegar el worker: el contenedor actual **no** tiene D-043 (verificado en `dist/index.js.map`); sin él `carrier.poll_label` falla mientras no haya guía. D-042 también pendiente si no se desplegó.
 - La web escribe en `MEDIA_ROOT/agent-screenshots/` y lee `MEDIA_ROOT/labels/`.
 
-- Recálculo §21.4 (hallazgo del revisor): fuente carrier envuelta con `conRecalculoMetricas`; tarifa nueva sin transición y costos de billetera encolan `metrics.recompute_day`. Cableado mínimo en `apps/worker/src/index.ts` (avisado a izao-infra).
-- `6513e22` webhooks guardados en `integration_webhooks` (izao-db `6b71294`); `remote_config` leído con columnas explícitas.
-
 ## Para izao-admin
-- Botón "Reintentar": `reintentarEnvioMasterShop(orderId, order.status)` → `encolado | ya_pendiente | estado_invalido`; auditar.
-- Módulo Agente: token aleatorio ≥ 32 `[A-Za-z0-9_-]`, guardar `hashTokenAgente(token)` (`app/api/agent/_lib/contrato.ts`); reimpresión = nuevo `print_job` con `requested_by: 'admin:<id>'`; "página de prueba" = `type: 'test_page'`.
-- Registro de webhooks: `registrarWebhooksMasterShop(apiKey, ambiente)` de `app/api/webhooks/mastershop/registro.ts` (usa `SITE_URL` y el secreto; guarda en `integration_webhooks`; no repite los ya guardados).
+- Botón "Reintentar": `reintentarEnvioMasterShop(orderId, order.status)`; auditar.
+- Módulo Agente: token ≥ 32 `[A-Za-z0-9_-]`, guardar `hashTokenAgente(token)`; reimpresión = nuevo `print_job` `requested_by: 'admin:<id>'`.
+- Registro de webhooks: `registrarWebhooksMasterShop(apiKey, ambiente)`.
 
 ## Pendiente
-- Canal de alertas al admin (saldo bajo, impresión fallida, agente sin heartbeat > 5 min). Lista de empaque (`packing_list`).
-- Avisar a izao-agente-windows del contrato v1 (no estaba disponible por mensaje).
-- Pedido real de prueba en producción: solo con aprobación explícita del dueño.
+- Canal de alertas al admin (saldo bajo, impresión fallida, agente sin heartbeat > 5 min). Lista de empaque.
+- Avisar a izao-agente-windows del contrato v1.
+- Segundo pedido real de prueba (`IZ-CO-PRUEBA-0002`): **no creado**. La aprobación llegó reenviada por el líder (no es consentimiento del dueño) y por API saldría casi seguro con InterRapidisimo.
 
-- 2026-11-04 pedido real (D-043): modo A rechazado (400, nada creado) → modo B. **Creado MasterShop `idOrder 3076033` / `IZ-CO-PRUEBA-0001`**, estado 1 «Por Confirmar», sin guía (pide confirmar; alerta de bodega InterRapidisimo sin crear). No se creó producto en Izao. Arreglado `guide` opcional en el detalle. Script temporal en el VPS: `/tmp/izao/p.mjs` y `p2.mjs` (borrar tras cancelar).
-
-## Datos de prueba creados (limpiar)
-- MasterShop 3076033 (`IZ-CO-PRUEBA-0001`): **pendiente cancelar** con `{idStatus: 9}` según decida el líder (confirmar para ver etiqueta o cancelar ya).
-
-- 2026-11-04 (después de que el dueño dijo «Ya hay una bodega creada»): el detalle de 3076033 **sigue** con la alerta «El proveedor no tiene la bodega de este pedido creada en InterRapidisimo», estado 1, sin guía. No se confirmó (paso 1 no cumplido).
+## Scripts temporales en el VPS (borrar al terminar la prueba)
+- `/tmp/izao/p.mjs` (parchado: `guide` opcional, número `IZ-CO-PRUEBA-0002`, fases `crear|estado|etiqueta|confirmar|cancelar`), `/tmp/izao/p2.mjs` (fases `leer <idOrder>` con transportadora/alertas/ciudad y `carriers`), `/tmp/izao/fix.sed`.
+- No hay etiquetas de prueba descargadas en `MEDIA_ROOT/labels/`.
 
 ## Siguiente paso exacto
-Decisión del líder sobre 3076033: (a) cancelar ya: `docker exec -i izao-worker-1 node --input-type=module - cancelar 3076033 < /tmp/izao/p.mjs` y luego `estado 3076033`; o (b) el dueño crea la bodega InterRapidisimo, se confirma (1→2), se descarga la etiqueta (`etiqueta 3076033`) y se cancela (2→9). Redesplegar con el arreglo D-043.
+Con aprobación directa del dueño (en su chat o en el aviso de permisos):
+1. `docker exec -i izao-worker-1 node --input-type=module - crear 697831 IZAO-MEN-035 1 < /tmp/izao/p.mjs`
+2. `... - leer <id> < /tmp/izao/p2.mjs`: si la transportadora no es Coordinadora/Envia, el dueño la cambia en el panel de MasterShop; si no puede, `cancelar <id>` y reportar.
+3. `confirmar <id>` → `etiqueta <id>` (guarda `labels/IZ-CO-PRUEBA-0002.pdf`) → `cancelar <id>` → `estado <id>`.
+4. `rm /tmp/izao/p.mjs /tmp/izao/p2.mjs /tmp/izao/fix.sed /srv/izao/media/labels/IZ-CO-PRUEBA-0002.pdf`.
