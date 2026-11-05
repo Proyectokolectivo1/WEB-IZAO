@@ -21,6 +21,7 @@ done
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 INFRA="$RAIZ/infra"
 LOG="${DEPLOY_LOG:-/srv/izao/deploys.log}"
+HEALTH_URL_FIJO="${HEALTH_URL:-}"   # si viene de fuera, no se autodetecta el puerto publicado
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:3000/api/health}"
 ULTIMO_OK="${ULTIMO_OK:-/srv/izao/ultimo-ok}"   # último tag de imagen que pasó el healthcheck
 COMPOSE=(docker compose -f "$INFRA/docker-compose.yml" --project-directory "$INFRA")
@@ -155,7 +156,14 @@ actualizar_y_verificar() {
     echo "[dry-run] curl --fail --retry 10 --retry-delay 3 --retry-connrefused $HEALTH_URL"
     return 0
   fi
-  curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-connrefused "$HEALTH_URL" >/dev/null || return 1
+  # web publica un rango (3000-3001): tras recrearlo Docker puede asignar 3001. Si HEALTH_URL no se fijó
+  # a mano, se consulta el puerto realmente publicado.
+  local url="$HEALTH_URL" publicado
+  if [ -z "${HEALTH_URL_FIJO:-}" ]; then
+    publicado="$("${COMPOSE[@]}" port web 3000 2>/dev/null | head -1 | sed 's/^0\.0\.0\.0:/127.0.0.1:/' || true)"
+    [ -n "$publicado" ] && url="http://$publicado/api/health"
+  fi
+  curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-connrefused "$url" >/dev/null || return 1
   echo "Salud OK"
 }
 

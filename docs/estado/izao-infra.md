@@ -30,8 +30,12 @@ test-backup-restore, test-restore-guard, test-deploy-rollback, test-nginx (1.27/
 Redis, web y worker corriendo en el VPS (tag 68cdd45, healthy); Nginx con `izao.conf` propio sirve https://izaoperfumeria.com (200), www 301, `/media/warranty/` 404. Detalles en `docs/RUNBOOK.md` ("F0b"). Sin snapshot (API Contabo 401).
 Bloqueos: quitar enlace viejo y cron (root); `BACKUP_AGE_RECIPIENT` vacío; host sin `pg_dump` 17 ni `age`.
 
+## Redespliegue 496dac9 (2026-11-05) — FALLÓ, revertido a ad327bf (sano)
+Sin snapshot (API Contabo 401). Dos intentos: imágenes 496dac9 construidas (web y worker), contenedores "healthy", pero curl a 127.0.0.1:3000 rechazado x11 -> rollback automático OK (`ultimo-ok`=ad327bf, https 200). Causa probable: `ports: 3000-3001` de web; tras recrear, Docker pudo asignar 3001 (nginx admite ambos). No verificado: la política bloquea `env VAR=… docker compose` y `VAR=…` como prefijo. Corrección en `deploy.sh` (autodetecta el puerto con `compose port web 3000`; test-deploy-rollback OK), sin push ni desplegada. VPS: HEAD ad327bf, imágenes `izao-*:496dac9` listas, stash local de `.dockerignore` (duplicado de origin).
+Backup `2026-11-04.sql.gz.age` existe (462 KB, 08:00).
+
 ## Siguiente paso exacto
-Tras los comandos del dueño: `bash infra/scripts/run-with-env.sh bash infra/scripts/backup.sh` en el VPS y `test-backup-restore`; arrancar `uptime`; `crear-admin`.
+Push de la corrección de deploy.sh y reejecutar `bash infra/scripts/deploy.sh --skip-tests` en el VPS (build en caché ~1 min). Luego: `uptime`, `crear-admin`, restore real contra `auth`.
 
 ## Decisiones que necesitan al líder
 - Ninguna. Nota: el build de web puede fallar por WIP de la tienda; verificar en copia limpia de HEAD.
