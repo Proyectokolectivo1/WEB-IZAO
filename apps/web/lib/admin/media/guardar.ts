@@ -1,5 +1,5 @@
 /** Escritura de variantes en `MEDIA_ROOT/{kind}/{yyyy}/{mm}/{uuid}-{ancho}.webp` (§27.1). */
-import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
+import { copyFile, constants, link, mkdir, rm, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Variante } from './procesar';
 
@@ -29,11 +29,20 @@ export async function escribirVariantes(
     const destino = path.resolve(raizAbs, relativa);
     if (!destino.startsWith(raizAbs + path.sep)) throw new Error('Ruta de medios no permitida.');
     await mkdir(path.dirname(destino), { recursive: true });
-    // Atómico: archivo temporal y `rename`, así nunca se sirve un WebP a medio escribir. El UUID nunca se sobreescribe.
+    // Atómico y sin sobrescribir: se escribe un temporal y se publica con `link` (falla con EEXIST si el destino ya
+    // existe; `rename` lo reemplazaría en silencio). Un UUID nunca se sobrescribe.
     const temporal = `${destino}.${process.pid}.tmp`;
     try {
       await writeFile(temporal, v.buffer, { flag: 'wx' });
-      await rename(temporal, destino);
+      try {
+        await link(temporal, destino);
+      } catch (e) {
+        const codigo = (e as NodeJS.ErrnoException).code;
+        if (codigo !== 'EPERM' && codigo !== 'ENOTSUP' && codigo !== 'EXDEV' && codigo !== 'ENOSYS') throw e;
+        // Sistema de archivos sin enlaces duros: copia exclusiva (también falla si el destino existe).
+        await copyFile(temporal, destino, constants.COPYFILE_EXCL);
+      }
+      await unlink(temporal);
     } catch (e) {
       await rm(temporal, { force: true });
       throw e;

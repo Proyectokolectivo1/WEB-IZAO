@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { esquemaBanner } from '@/lib/admin/banners/banners';
+import { esUbicacion, esquemaBanner } from '@/lib/admin/banners/banners';
 import {
   alternarBannerBd,
   buscarProductosVisibles,
@@ -19,6 +19,11 @@ import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const esPais = (p: string): p is Pais => p === 'CO' || p === 'EC';
+
+/** Lista de banners del país y la ubicación; ambos vienen del cliente, así que se normalizan antes de redirigir. */
+function rutaLista(pais: string, ubicacion: string): string {
+  return `/admin/banners?pais=${esPais(pais) ? pais : 'CO'}&ubicacion=${esUbicacion(ubicacion) ? ubicacion : 'hero'}`;
+}
 
 async function contexto() {
   const entrada = await adminDeAccion('banners', 'banners.gestionar');
@@ -46,7 +51,7 @@ export async function guardarBanner(_previo: ResultadoAccion, formData: FormData
 
 export async function alternarBanner(pais: string, ubicacion: string, id: string, activo: boolean): Promise<void> {
   const ctx = await contexto();
-  const ruta = `/admin/banners?pais=${esPais(pais) ? pais : 'CO'}&ubicacion=${ubicacion}`;
+  const ruta = rutaLista(pais, ubicacion);
   if ('error' in ctx) return volver(ruta, ctx.error);
   if (!UUID.test(id)) return volver(ruta, { ok: false, mensaje: 'Identificador no válido.' });
   volver(ruta, await alternarBannerBd({ ...ctx, id, activo }));
@@ -54,7 +59,7 @@ export async function alternarBanner(pais: string, ubicacion: string, id: string
 
 export async function moverBanner(pais: string, ubicacion: string, id: string, direccion: 'arriba' | 'abajo'): Promise<void> {
   const ctx = await contexto();
-  const ruta = `/admin/banners?pais=${esPais(pais) ? pais : 'CO'}&ubicacion=${ubicacion}`;
+  const ruta = rutaLista(pais, ubicacion);
   if ('error' in ctx) return volver(ruta, ctx.error);
   if (!UUID.test(id) || (direccion !== 'arriba' && direccion !== 'abajo')) return volver(ruta, { ok: false, mensaje: 'Datos no válidos.' });
   volver(ruta, await moverBannerBd({ ...ctx, id, direccion }));
@@ -66,7 +71,7 @@ export async function eliminarBanner(pais: string, ubicacion: string, id: string
   if (!UUID.test(id)) return { ok: false, mensaje: 'Identificador no válido.' };
   const r = await eliminarBannerBd({ ...ctx, id });
   if (!r.ok) return r;
-  redirect(`/admin/banners?pais=${esPais(pais) ? pais : 'CO'}&ubicacion=${ubicacion}&eliminado=1`);
+  redirect(`${rutaLista(pais, ubicacion)}&eliminado=1`);
 }
 
 /** Buscador del formulario: productos visibles en el país. Devuelve datos, no redirige. */

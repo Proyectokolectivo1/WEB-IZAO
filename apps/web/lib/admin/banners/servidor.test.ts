@@ -25,7 +25,7 @@ const C = '55555555-5555-4555-8555-555555555555';
 const B = '66666666-6666-4666-8666-666666666666';
 const comun = { actor: 'u1', ip: null };
 const BASE = { country_code: 'CO', placement: 'hero', desktop_media_id: D, mobile_media_id: M, alt: 'Frasco sobre mármol', is_active: 'on' };
-const medios = { 'media.select': { data: [{ id: D }, { id: M }] } };
+const medios = { 'media.select': { data: [{ id: D, kind: 'banner' }, { id: M, kind: 'banner' }] } };
 
 beforeEach(() => {
   auditar.mockClear();
@@ -101,9 +101,27 @@ describe('guardar banner', () => {
   });
 
   it('una imagen que ya no existe se avisa en su campo', async () => {
-    const { cliente } = clienteFalso({ 'media.select': { data: [{ id: D }] } });
+    const { cliente } = clienteFalso({ 'media.select': { data: [{ id: D, kind: 'banner' }] } });
     const r = await guardarBannerBd({ cliente, datos: esquemaBanner.parse(BASE), ...comun });
     expect(r).toMatchObject({ ok: false, errores: { desktop_media_id: expect.any(String) } });
+  });
+
+  it('una imagen que no es de banner (garantía, reseña) se rechaza', async () => {
+    const { cliente, llamadas } = clienteFalso({ 'media.select': { data: [{ id: D, kind: 'banner' }, { id: M, kind: 'warranty' }] } });
+    const r = await guardarBannerBd({ cliente, datos: esquemaBanner.parse(BASE), ...comun });
+    expect(r).toMatchObject({ ok: false, errores: { desktop_media_id: expect.any(String) } });
+    expect(llamadas.some((l) => l.clave === 'banners.insert')).toBe(false);
+  });
+
+  it('un banner de Colombia no puede llevar a /ec/... ni a una categoría o producto no visibles en el país', async () => {
+    const base = { country_code: 'CO' as const, destino_producto_id: null, destino_variante_id: null, destino_categoria_id: null };
+    const { cliente } = clienteFalso({ 'category_countries.select': { data: [] }, 'catalog_listing.select': { data: null } });
+    expect(await resolverDestinoBd(cliente, { ...base, destino_tipo: 'url', destino_url: '/ec/categoria/para-ella' })).toMatchObject({ ok: false });
+    expect(await resolverDestinoBd(cliente, { ...base, destino_tipo: 'url', destino_url: '/co/categoria/oculta' })).toMatchObject({ ok: false });
+    expect(await resolverDestinoBd(cliente, { ...base, destino_tipo: 'url', destino_url: '/co/perfume/oculto' })).toMatchObject({ ok: false });
+    expect(await resolverDestinoBd(cliente, { ...base, destino_tipo: 'url', destino_url: '/co/catalogo' })).toEqual({ ok: true, url: '/co/catalogo' });
+    expect(esquemaBanner.safeParse({ ...BASE, destino_tipo: 'url', destino_url: '/ec/catalogo' }).success).toBe(false);
+    expect(esquemaBanner.safeParse({ ...BASE, country_code: 'EC', destino_tipo: 'url', destino_url: '/ec/catalogo' }).success).toBe(true);
   });
 
   it('editar guarda el diff e invalida el país nuevo y el anterior', async () => {

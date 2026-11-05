@@ -11,7 +11,7 @@ select throws_ok($$update public.site_settings set media_settings = '[1,2]'::jso
   'un arreglo JSON viola el check');
 select throws_ok($$update public.site_settings set media_settings = '85'::jsonb$$, '23514', null,
   'un escalar JSON viola el check');
-select lives_ok($$update public.site_settings set media_settings = '{"webp_quality": 82, "max_upload_mb": 10}'::jsonb$$,
+select lives_ok($$update public.site_settings set media_settings = '{"webp_quality": 82, "max_mb": 10}'::jsonb$$,
   'un objeto JSON se guarda');
 
 select * from finish();

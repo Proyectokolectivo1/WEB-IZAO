@@ -91,15 +91,21 @@ export function destinoDeUrl(url: string | null | undefined): Destino {
   return { tipo: 'url', url: u };
 }
 
+/** `/ec/...` dentro de un banner de Colombia (o al revés): lo comercial es por país, no se cruza. */
+export function apuntaAOtroPais(url: string, pais: PaisBanner): boolean {
+  const m = /^\/(co|ec)(?=[/?#]|$)/i.exec(url);
+  return m !== null && m[1]!.toUpperCase() !== pais;
+}
+
 /**
  * Una URL libre debe ser una ruta interna (`/co/pagina/envios`) o una dirección https. Se rechazan `javascript:`,
  * `//host`, barras invertidas y caracteres de control.
  */
-export function esUrlDestinoValida(url: string): boolean {
+export function esUrlDestinoValida(url: string, pais?: PaisBanner): boolean {
   if (url.length === 0 || url.length > 500) return false;
   // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f\s\\]/.test(url)) return false;
-  if (url.startsWith('/')) return !url.startsWith('//');
+  if (url.startsWith('/')) return !url.startsWith('//') && !(pais && apuntaAOtroPais(url, pais));
   try {
     const u = new URL(url);
     return u.protocol === 'https:' && u.hostname.includes('.');
@@ -215,7 +221,13 @@ export const esquemaBanner = z
     if (d.destino_tipo === 'categoria' && !d.destino_categoria_id) {
       ctx.addIssue({ code: 'custom', path: ['destino_categoria_id'], message: 'Elige la categoría a la que lleva el banner.' });
     }
-    if (d.destino_tipo === 'url' && !esUrlDestinoValida(d.destino_url)) {
+    if (d.destino_tipo === 'url' && d.destino_url.startsWith('/') && apuntaAOtroPais(d.destino_url, d.country_code)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['destino_url'],
+        message: `Este banner es de ${NOMBRE_PAIS_BANNER[d.country_code]}: no puede llevar a una página de otro país.`,
+      });
+    } else if (d.destino_tipo === 'url' && !esUrlDestinoValida(d.destino_url, d.country_code)) {
       ctx.addIssue({
         code: 'custom',
         path: ['destino_url'],

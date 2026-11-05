@@ -6,6 +6,7 @@ import { diffCampos, escaparBusqueda, type ResultadoAccion } from '../crud/comun
 import { invalidarContenido, traducirErrorBd, type Pais } from '../crud/servidor';
 import { moverEnLista } from '../catalogo/colecciones';
 import {
+  apuntaAOtroPais,
   columnasBanner,
   destinoDeUrl,
   esUrlDestinoValida,
@@ -190,10 +191,26 @@ export async function resolverDestinoBd(
   switch (d.destino_tipo) {
     case 'ninguno':
       return { ok: true, url: null };
-    case 'url':
-      return esUrlDestinoValida(d.destino_url)
-        ? { ok: true, url: urlDeDestino({ tipo: 'url', url: d.destino_url }, pais) }
-        : { ok: false, errores: { destino_url: 'La dirección no es válida.' } };
+    case 'url': {
+      if (!esUrlDestinoValida(d.destino_url)) return { ok: false, errores: { destino_url: 'La dirección no es válida.' } };
+      if (apuntaAOtroPais(d.destino_url, pais)) {
+        return { ok: false, errores: { destino_url: `Este banner es de ${nombrePais}: no puede llevar a una página de otro país.` } };
+      }
+      // Una ruta de categoría o producto escrita a mano se comprueba igual que la elegida en el selector.
+      const escrito = destinoDeUrl(d.destino_url);
+      if (escrito.tipo === 'categoria') {
+        const cats = await categoriasVisibles(cliente, pais);
+        if (!cats.some((x) => x.slug === escrito.slug)) {
+          return { ok: false, errores: { destino_url: `Esa categoría no está visible en ${nombrePais}.` } };
+        }
+      } else if (escrito.tipo === 'producto') {
+        const { data } = await cliente.from('catalog_listing').select('is_visible').eq('slug', escrito.slug).eq('country_code', pais).maybeSingle();
+        if (!(data as { is_visible: boolean } | null)?.is_visible) {
+          return { ok: false, errores: { destino_url: `Ese producto no está visible en ${nombrePais}.` } };
+        }
+      }
+      return { ok: true, url: urlDeDestino({ tipo: 'url', url: d.destino_url }, pais) };
+    }
     case 'producto': {
       const { data } = await cliente
         .from('catalog_listing')
@@ -252,8 +269,10 @@ export async function destinoEditable(cliente: Cliente, pais: Pais, linkUrl: str
 // ── Escritura ────────────────────────────────────────────────────────────────────────────────────
 
 async function mediaExiste(cliente: Cliente, ids: string[]): Promise<boolean> {
-  const { data } = await cliente.from('media').select('id').in('id', ids);
-  return new Set((data ?? []).map((m) => (m as { id: string }).id)).size === new Set(ids).size;
+  // Solo imágenes subidas como banner: no se enlaza una foto de garantía o de reseña (privadas) a una pieza pública.
+  const { data } = await cliente.from('media').select('id, kind').in('id', ids);
+  const validas = (data ?? []).filter((m) => (m as { kind: string }).kind === 'banner');
+  return new Set(validas.map((m) => (m as { id: string }).id)).size === new Set(ids).size;
 }
 
 export async function guardarBannerBd(args: Ctx & { datos: DatosBanner }): Promise<ResultadoAccion> {
@@ -349,7 +368,8 @@ export async function eliminarBannerBd(args: Ctx & { id: string }): Promise<Resu
   if (!antes) return { ok: true };
   const { error } = await cliente.from('banners').delete().eq('id', id);
   if (error) return { ok: false, ...traducirErrorBd(error) };
-  // Las imágenes quedan huérfanas en `media`; el job semanal de limpieza las borra pasados 7 días.
+  // Las imágenes quedan en `media` (huérfanas): hoy ningún job las limpia. Borrarlas del disco exige que
+  // `media_file_deletions` admita ese motivo (izao-db; su `reason` solo acepta 'anonimizacion'). Pendiente en la bitácora.
   await auditarCambio({ actor, accion: 'banners.eliminado', entidad: 'banners', entidadId: id, diff: { antes }, ip });
   invalidarContenido([(antes as { country_code: Pais }).country_code]);
   return { ok: true };

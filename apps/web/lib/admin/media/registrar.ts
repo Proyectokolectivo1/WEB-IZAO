@@ -9,7 +9,7 @@ import type { DatosSubida } from './esquema';
 import { bytesMaximos } from './ajustes';
 import { leerAjustesMedia } from './ajustes-servidor';
 import { escribirVariantes, raizMedia, rutaBase } from './guardar';
-import { ANCHOS_BANNER, procesarImagen } from './procesar';
+import { ANCHOS_BANNER, mensajeErrorImagen, procesarImagen } from './procesar';
 import { MENSAJES_VALIDACION, validarArchivo } from './validar';
 
 export type MediaSubida = {
@@ -53,11 +53,12 @@ export async function subirImagen(args: {
       buffer: args.buffer,
       recorte45: args.datos.recorte45 && args.datos.kind === 'product',
       calidad: ajustes.calidad,
+      origen: 'panel',
       // Banners: anchos propios de escritorio y móvil (el móvil es el de menor tamaño si no se indica la variante).
       ...(args.datos.kind === 'banner' ? { anchos: ANCHOS_BANNER[args.datos.variante ?? 'desktop'] } : {}),
     });
-  } catch {
-    return { ok: false, error: 'No se pudo leer la imagen. Prueba con otro archivo.' };
+  } catch (e) {
+    return { ok: false, error: mensajeErrorImagen(e) };
   }
 
   const id = randomUUID();
