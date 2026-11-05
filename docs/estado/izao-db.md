@@ -6,8 +6,8 @@
   33 `chat_registrar_uso` (9/9). Advisors siempre solo INFO.
 - 20261102050729 `chat_registrar_turno` (pgTAP 34 14/14, `registrarTurnoChatDb`). pgTAP 01–12 remoto 150/150.
   Catálogo (520 prod., 800 filas): p95 de 50 corridas ≤ 5,2 ms por RPC, sin seq scan; sin índices nuevos. Advisors: solo INFO.
-- pgTAP remoto 13–33 en verde (477/477); 16 y 29 fallaban por la prueba, no por la base (D-041; 29 usa fecha 2000-01-01).
-- Concurrencia del checkout remota (ab23cd3, `tests/concurrencia/checkout-remoto.mjs`): N=20 × 3 rondas en verde; sin migración.
+- pgTAP remoto 13–33 en verde (477/477; D-041). Concurrencia del checkout remota (ab23cd3, `tests/concurrencia/checkout-remoto.mjs`): N=20 × 3 rondas en verde; sin migración.
+- 20261105060857 `site_settings.media_settings` (aditiva, autorizada por el dueño; pgTAP 35 7/7 + 11 9/9; advisors sin cambios).
 ## Contratos vigentes (detalle en el commit de cada migración)
 - `crear_pedido_checkout(p jsonb)` → `{ok, estado:'creado'|'existente'|'rechazado', order|motivo}` (motivos en 20261020213954).
 - `pages.kind` (general, quienes_somos, envios, tratamiento_datos, terminos, devoluciones); única publicada por (país, kind) → 23505.
@@ -29,9 +29,9 @@
 - `media_file_deletions` (service_role): el worker borra `base_path` y `variants`, luego la fila (si falla: attempts+1, last_error).
 - `chat_registrar_uso(p_costo_micros bigint, p_mensajes int = 1, p_ahora timestamptz = now())` → bigint total del mes (Bogotá).
 - `chat_registrar_turno(p_session_id uuid, p_mensajes jsonb[1..20], p_ahora = now())` → int messages_count (P0002/22023).
+- `site_settings.media_settings` jsonb not null default '{}' (check objeto); rangos los valida el panel. Sin link_type/link_product_id en banners (decidido).
 ## Pendiente
-1. (hecho) pgTAP remoto: corredor en `packages/db/tests/remoto/`. 2. izao-tienda: usar `registrarTurnoChatDb`.
-3. (hecho) Concurrencia del checkout. Dueño: publicar la política de datos de CO/EC (hoy solo borrador; sin ella el checkout rechaza).
+1. izao-tienda: usar `registrarTurnoChatDb`. 2. Dueño: publicar la política de datos de CO/EC (sin ella el checkout rechaza).
 4. Worker (izao-infra/izao-pagos): job que vacíe `media_file_deletions`. Admin: etiquetas de `stock_devuelto`/`stock_retenido`.
 ## Siguiente paso exacto: ninguno propio; esperar tarea del líder (Pendiente 4 es de otros agentes).
 ## Notas

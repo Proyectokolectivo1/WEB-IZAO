@@ -3407,6 +3407,7 @@ export type Database = {
           id: boolean
           legal_info: Json
           logo_media_id: string | null
+          media_settings: Json
           og_image_media_id: string | null
           social_links: Json
           store_name: string
@@ -3421,6 +3422,7 @@ export type Database = {
           id?: boolean
           legal_info?: Json
           logo_media_id?: string | null
+          media_settings?: Json
           og_image_media_id?: string | null
           social_links?: Json
           store_name: string
@@ -3435,6 +3437,7 @@ export type Database = {
           id?: boolean
           legal_info?: Json
           logo_media_id?: string | null
+          media_settings?: Json
           og_image_media_id?: string | null
           social_links?: Json
           store_name?: string
