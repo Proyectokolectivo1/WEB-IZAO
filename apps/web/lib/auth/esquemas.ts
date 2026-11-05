@@ -17,6 +17,8 @@ export const esquemaLogin = z.object({
     .min(1, 'Escribe tu contraseña.')
     .max(200, 'La contraseña es demasiado larga.'),
   siguiente: z.string().max(300).optional(),
+  /** Token de Turnstile; vacío si el CAPTCHA está apagado o el widget aún no responde. */
+  captchaToken: z.string().max(2048).optional(),
 });
 
 export const esquemaCodigoTotp = z.object({

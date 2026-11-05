@@ -7,6 +7,7 @@ import { buscarAdminPorId } from '@/lib/auth/admin-users';
 import { contarEventos, contarNetos, huellaDeCorreo, registrarAuditoria, registrarEvento } from '@/lib/auth/auditoria';
 import { evaluarIntento, registrarUnaVez } from '@/lib/auth/bloqueo';
 import { ipDelCliente } from '@/lib/auth/cabeceras';
+import { esErrorCaptcha, opcionesCaptcha } from '@/lib/auth/captcha';
 import { RUTA_MFA_INSCRIBIR, RUTA_MFA_VERIFICAR, rutaSiguienteSegura } from '@/lib/auth/decision';
 import { esProduccion, secretoSesion } from '@/lib/auth/env';
 import { esquemaLogin, type EstadoFormulario } from '@/lib/auth/esquemas';
@@ -19,6 +20,7 @@ const MAX_FALLOS_POR_CORREO = 5;
 const MAX_FALLOS_POR_IP = 15;
 
 const MENSAJE_CREDENCIALES = 'El correo o la contraseña no son correctos.';
+const MENSAJE_CAPTCHA = 'No pudimos confirmar la verificación de seguridad. Espera a que termine e inténtalo de nuevo.';
 const MENSAJE_BLOQUEO = 'Hubo demasiados intentos. Espera 15 minutos e inténtalo de nuevo.';
 const MENSAJE_NO_DISPONIBLE = 'No pudimos verificar tu ingreso en este momento. Inténtalo de nuevo en unos minutos.';
 const MENSAJE_SIN_ACCESO = 'Esta cuenta no tiene acceso al panel. Consulta con el administrador.';
@@ -31,6 +33,7 @@ export async function iniciarSesion(
     correo: formData.get('correo'),
     contrasena: formData.get('contrasena'),
     siguiente: formData.get('siguiente') ?? undefined,
+    captchaToken: formData.get('captchaToken') ?? undefined,
   });
   if (!lectura.success) {
     const campos: NonNullable<EstadoFormulario['campos']> = {};
@@ -93,16 +96,19 @@ export async function iniciarSesion(
   const { data, error } = await supabase.auth.signInWithPassword({
     email: correo,
     password: contrasena,
+    options: opcionesCaptcha(lectura.data.captchaToken),
   });
 
   if (error || !data.user) {
+    // Sin token, vencido o inválido con el CAPTCHA encendido en Supabase: no es una contraseña errada.
+    const porCaptcha = esErrorCaptcha(error);
     await registrarAuditoria({
       actor: 'anonimo',
       accion: 'login_fallido',
-      diff: { huella_correo: huella, motivo: 'credenciales' },
+      diff: { huella_correo: huella, motivo: porCaptcha ? 'captcha' : 'credenciales' },
       ip,
     });
-    return { error: MENSAJE_CREDENCIALES };
+    return { error: porCaptcha ? MENSAJE_CAPTCHA : MENSAJE_CREDENCIALES };
   }
 
   const userId = data.user.id;

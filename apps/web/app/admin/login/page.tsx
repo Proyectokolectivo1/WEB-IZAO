@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { FormularioLogin } from '@/components/admin/FormularioLogin';
 import { PantallaAcceso } from '@/components/admin/PantallaAcceso';
+import { claveSitioCaptcha } from '@/lib/auth/captcha';
 import { rutaSiguienteSegura, type MotivoLogin } from '@/lib/auth/decision';
 
 export const metadata: Metadata = { title: 'Ingresar' };
@@ -24,7 +25,10 @@ export default async function PaginaLogin({ searchParams }: Props) {
           {aviso}
         </p>
       ) : null}
-      <FormularioLogin {...(destino !== '/admin' ? { siguiente: destino } : {})} />
+      <FormularioLogin
+        claveCaptcha={claveSitioCaptcha(process.env.TURNSTILE_SITE_KEY)}
+        {...(destino !== '/admin' ? { siguiente: destino } : {})}
+      />
     </PantallaAcceso>
   );
 }
