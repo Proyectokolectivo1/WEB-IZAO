@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { extraerArchivoLatin } from './precarga';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { archivoLatinDe, extraerArchivoLatin, reiniciarCachePrecarga, TTL_NEGATIVO_MS } from './precarga';
 
 const CSS =
   '@font-face{font-family:Cormorant Garamond;font-style:normal;font-weight:300 700;font-display:swap;src:url(/_next/static/media/aaa111-s.woff2) format("woff2");unicode-range:u+0460-052f,u+1c80-1c8a}' +
@@ -16,5 +16,28 @@ describe('extraerArchivoLatin', () => {
   it('devuelve null si la familia no está o la ruta no es de /_next/static/media', () => {
     expect(extraerArchivoLatin(CSS, 'Lora')).toBeNull();
     expect(extraerArchivoLatin('@font-face{font-family:Lora;font-style:normal;src:url(https://x.com/a.woff2);unicode-range:u+00??}', 'Lora')).toBeNull();
+  });
+});
+
+describe('archivoLatinDe (caché)', () => {
+  beforeEach(() => reiniciarCachePrecarga());
+  it('recuerda el resultado negativo durante el TTL y reintenta después', () => {
+    const leer = vi.fn(() => [CSS]);
+    expect(archivoLatinDe('Lora', 0, leer)).toBeNull();
+    expect(archivoLatinDe('Lora', TTL_NEGATIVO_MS - 1, leer)).toBeNull();
+    expect(leer).toHaveBeenCalledTimes(1);
+    expect(archivoLatinDe('Lora', TTL_NEGATIVO_MS + 1, leer)).toBeNull();
+    expect(leer).toHaveBeenCalledTimes(2);
+  });
+  it('un acierto se recuerda sin releer, y un fallo previo se corrige al reintentar', () => {
+    let css: string[] = [];
+    const leer = vi.fn(() => css);
+    expect(archivoLatinDe('Manrope', 0, leer)).toBeNull();
+    css = [CSS];
+    expect(archivoLatinDe('Manrope', 10, leer)).toBeNull(); // aún dentro del TTL
+    expect(archivoLatinDe('Manrope', TTL_NEGATIVO_MS + 1, leer)).toBe('/_next/static/media/man111-s.woff2');
+    const n = leer.mock.calls.length;
+    expect(archivoLatinDe('Manrope', 10 * TTL_NEGATIVO_MS, leer)).toBe('/_next/static/media/man111-s.woff2');
+    expect(leer).toHaveBeenCalledTimes(n);
   });
 });

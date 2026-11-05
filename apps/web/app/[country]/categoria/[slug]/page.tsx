@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { BannerFijo } from '@/components/store/home/BannerFijo';
 import { PaginaListado, type ParamsBusqueda } from '@/components/store/catalogo/PaginaListado';
-import { bannersDe } from '@/lib/store/banners';
+import { bannerDeCategoria } from '@/lib/store/banners';
 import { tienda } from '@/lib/store/datos';
 import { esPais } from '@/lib/store/pais';
 import { metaListado } from '@/lib/store/seo';
@@ -26,16 +26,16 @@ export default async function Pagina({ params, searchParams }: Props) {
   if (!esPais(pais)) notFound();
   const nombre = await buscar(pais, slug);
   if (!nombre) notFound();
-  // Banner `category` del panel (cabecera de la categoría); si no se puede leer, la página sigue sin él.
+  // Banner `category` de ESTA categoría (o el genérico sin categoría); si no se puede leer, la página sigue sin él.
   const banner = await tienda()
     .home(pais)
-    .then((h) => bannersDe(h.banners, 'category')[0] ?? null)
+    .then((h) => bannerDeCategoria(h.banners, slug))
     .catch(() => null);
   return (
     <>
       {banner ? (
         <div className="mx-auto w-full max-w-[96rem] px-4 pt-3 sm:px-8 sm:pt-4">
-          <BannerFijo banner={banner} ubicacion="category" />
+          <BannerFijo banner={banner} ubicacion="category" pais={pais} />
         </div>
       ) : null}
       <PaginaListado pais={pais} titulo={nombre} base={`/${pais}/categoria/${slug}`} fijos={{ category: slug }} searchParams={await searchParams} />

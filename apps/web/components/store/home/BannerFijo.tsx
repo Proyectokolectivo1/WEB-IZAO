@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { clasesBoton } from '@izao/ui';
 import { enlaceBanner } from '@/lib/store/banners';
-import type { Banner } from '@/lib/store/types';
+import type { Banner, CodigoPais } from '@/lib/store/types';
 import { ImagenResponsiva } from '../ImagenResponsiva';
 
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
@@ -24,8 +24,8 @@ const SIZES = '(min-width: 1536px) 1472px, (min-width: 640px) calc(100vw - 4rem)
  * Banner fijo (ubicaciones `mid` y `category`). Todo el recuadro es un enlace a `link_url` (tal cual lo guarda el panel);
  * el nombre accesible es el texto visible (botón o título) o, sin texto, el alternativo de la imagen.
  */
-export function BannerFijo({ banner: b, ubicacion }: { banner: Banner; ubicacion: 'mid' | 'category' }) {
-  const destino = enlaceBanner(b.link_url);
+export function BannerFijo({ banner: b, ubicacion, pais }: { banner: Banner; ubicacion: 'mid' | 'category'; pais: CodigoPais }) {
+  const destino = enlaceBanner(b.link_url, pais);
   const color = b.text_color && HEX.test(b.text_color) ? b.text_color : undefined;
   const textoEnlace = b.cta_label ?? b.title;
   const tieneTexto = Boolean(b.title || b.subtitle || b.cta_label);

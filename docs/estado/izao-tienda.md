@@ -11,6 +11,8 @@
   - Fuentes: `lib/tipografia/fuentes-tienda.ts` (`resolverFuentes` + `import()` de solo 2 módulos de `lib/tipografia/tienda/`, generados con `pnpm exec tsx scripts/generar-fuentes-tienda.ts`) y `precarga.ts` (preload de los 2 woff2 latin leídos del CSS compilado). `lib/store/fuentes.ts` eliminado; `pair` 1-6 sigue valiendo. CSS de las 38 declaraciones viaja (~6 KB gzip); solo se descargan 2 archivos.
   - Responsive 375/768/1280: carrito desbordaba 11 px en 375 (`grid-cols-1`), botón «Agregar al bolso» y «Filtrar y ordenar» ya no parten línea.
 
+- **Revisión (cambios pedidos por izao-revisor):** banners `category` por categoría (`banners.category_id` ya existe; la consulta trae `category:categories(slug)` → `Banner.category_slug`; `bannerDeCategoria` = el de esa categoría, si no el genérico sin categoría, nunca el de otra); `enlaceBanner(url, pais)` solo acepta `/{país}`, `/{país}/…` del país actual o https con host con punto y sin credenciales, y rechaza controles, s y \ (copia de la regla de `esUrlDestinoValida`: ese módulo trae zod); `Hero`/`BannerFijo` reciben `pais`; `precarga.ts` recuerda el fallo `TTL_NEGATIVO_MS` (60 s). Pruebas en `banners.test.ts` y `precarga.test.ts`.
+
 ## Decisiones propias
 - Sin TanStack Query (hook propio + sessionStorage). Beneficios/confianza/asesoría salen de `home_sections.config` y `content_slots` (`medios_de_pago`, `asesoria`, `busquedas_populares`). Microcopy en `lib/store/textos.ts` (`T`) y `textos-checkout.ts` (`TC`); quedan pocos aria-label sueltos (Pestañas, AnuncioBarra) por mover a `T`.
 - `STORE_DATOS=ejemplo` (+ `STORE_DATOS_PERMITIR_EJEMPLO=1` en build de producción) sirve la tienda sin llaves; `pnpm build:e2e` genera `.next-ejemplo`. En dev: `STORE_DATOS=ejemplo NEXT_DIST_DIR=.next-tienda next dev -p 3010`.
@@ -20,6 +22,8 @@
 - Heredado de Oleada 3 con otros dueños: izao-admin (esquema `openrouter` y `chat_settings.model_*`; la bandeja de garantías debe mostrar `media.variants.video`; reseñas pendientes con `order_id`/fotos), izao-db (RPC atómica `messages_count`), izao-infra (job `chat_messages` 180 d), izao-qa (conversaciones de regresión de Iza, e2e de reseñas).
 - Medir con llaves reales: Lighthouse con widget Iza, a11y con lector de pantalla, garantías/reseñas. Tag `product:{id}` en `repo-supabase.producto`. e2e de ficha/hero (izao-qa; testids: `hero-carrusel`, `hero-diapositiva`, `hero-punto`, `banner-mid`, `banner-category`).
 - LCP simulado 2,6-2,9 s (budget 2,5; ya estaba así: elemento LCP = título en fuente de marca). Con fotos reales el LCP será la imagen: medir entonces.
+- **izao-admin/izao-db:** no hay campo para el intervalo del carrusel (`AUTOPLAY_MS = 6000` queda como valor por defecto en `Hero.tsx`); haría falta una clave en `home_sections.config` del tipo `hero` (p. ej. `autoplay_ms`) o en `site_settings`. No inventé columnas.
+- **Retraso de banners programados:** `home` se cachea 300 s (`repo-supabase`) y las páginas son ISR `revalidate = 300`: un banner que empieza o termina por fecha puede tardar hasta ~5-10 min en aparecer o irse. Editar/guardar en el panel invalida `content:{PAÍS}` al instante. No bajé el TTL (habría que bajar también el ISR de home, layout y categoría); decisión del líder.
 
 ## Punto de retoma
 Siguiente: revisión con `izao-revisor` si el líder la pide; luego lo de Pendiente. Servidores de prueba sueltos que dejé corriendo (puertos 3010, 3100-3103) pueden cerrarse.

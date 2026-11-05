@@ -11,7 +11,7 @@ import path from 'node:path';
  * `@font-face` trae `font-family`, `font-style` y `src`. Si no hay CSS compilado (desarrollo) o algo cambia de forma,
  * no se precarga nada: la tienda funciona igual, solo sin la mejora.
  */
-const cache = new Map<string, string | null>();
+const cache = new Map<string, { ruta: string | null; hasta: number }>();
 let carpetaCss: string | null | undefined;
 
 function leerCss(): string[] {
@@ -41,18 +41,32 @@ export function extraerArchivoLatin(css: string, familia: string): string | null
   return latin?.match(/url\((\/_next\/static\/media\/[a-zA-Z0-9_.-]+\.woff2)\)/)?.[1] ?? null;
 }
 
-export function archivoLatinDe(familia: string): string | null {
-  if (cache.has(familia)) return cache.get(familia) ?? null;
+/** Cuánto se recuerda que NO se encontró el CSS de una familia (evita releer todos los CSS en cada petición). */
+export const TTL_NEGATIVO_MS = 60_000;
+
+/** Solo para pruebas: vacía lo recordado. */
+export function reiniciarCachePrecarga(): void {
+  cache.clear();
+  carpetaCss = undefined;
+}
+
+/**
+ * `ahora` y `leer` se pueden inyectar en pruebas. Un acierto se recuerda para siempre (el CSS compilado no cambia);
+ * un fallo, `TTL_NEGATIVO_MS`: pasado ese tiempo se vuelve a intentar (p. ej. si el CSS aún no existía al arrancar).
+ */
+export function archivoLatinDe(familia: string, ahora: number = Date.now(), leer: () => string[] = leerCss): string | null {
+  const previo = cache.get(familia);
+  if (previo && (previo.ruta !== null || previo.hasta > ahora)) return previo.ruta;
   let ruta: string | null = null;
-  for (const css of leerCss()) {
+  for (const css of leer()) {
     ruta = extraerArchivoLatin(css, familia);
     if (ruta) break;
   }
-  // Solo se recuerda un acierto: si aún no hay CSS (arranque) se vuelve a intentar en la siguiente petición.
-  if (ruta) cache.set(familia, ruta);
+  cache.set(familia, { ruta, hasta: ruta ? Infinity : ahora + TTL_NEGATIVO_MS });
+  if (!ruta) carpetaCss = undefined; // reintenta localizar la carpeta si el fallo fue por no existir aún
   return ruta;
 }
 
 export function archivosPrecarga(familias: readonly string[]): string[] {
-  return [...new Set(familias.map(archivoLatinDe).filter((r): r is string => r !== null))];
+  return [...new Set(familias.map((f) => archivoLatinDe(f)).filter((r): r is string => r !== null))];
 }

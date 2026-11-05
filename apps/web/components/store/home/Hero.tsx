@@ -5,9 +5,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icono, clasesBoton, useMenosMovimiento } from '@izao/ui';
 import { enlaceBanner } from '@/lib/store/banners';
 import { T } from '@/lib/store/textos';
-import type { Banner } from '@/lib/store/types';
+import type { Banner, CodigoPais } from '@/lib/store/types';
 import { ImagenResponsiva } from '../ImagenResponsiva';
 
+/** Valor por defecto: ni `home_sections.config` ni `site_settings` tienen hoy un campo de intervalo (pendiente izao-admin/izao-db). */
 const AUTOPLAY_MS = 6000;
 const UMBRAL_DESLIZAR_PX = 48;
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
@@ -31,7 +32,7 @@ const BOTON_FLECHA =
  * - Solo la primera diapositiva pide su imagen con prioridad; las demás se montan cuando les toca (la siguiente se precarga).
  * - Cada banner sigue `link_url` tal cual; si el destino es una ficha (`/…/perfume/{slug}?variante={sku}`) la ficha preselecciona la variante.
  */
-export function Hero({ banners }: { banners: Banner[] }) {
+export function Hero({ banners, pais }: { banners: Banner[]; pais: CodigoPais }) {
   const [i, setI] = useState(0);
   const [encima, setEncima] = useState(false);
   const [tocando, setTocando] = useState(false);
@@ -125,7 +126,7 @@ export function Hero({ banners }: { banners: Banner[] }) {
           {banners.map((b, k) => {
             const activo = k === i;
             const color = b.text_color && HEX.test(b.text_color) ? b.text_color : undefined;
-            const destino = enlaceBanner(b.link_url);
+            const destino = enlaceBanner(b.link_url, pais);
             // El texto del enlace es lo que se ve: el botón, o el título si no hay botón.
             const textoEnlace = b.cta_label ?? b.title;
             return (

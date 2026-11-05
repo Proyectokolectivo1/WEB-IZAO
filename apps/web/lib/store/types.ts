@@ -164,6 +164,8 @@ export interface CategoriaMenu {
 export interface Banner {
   id: string;
   placement: 'hero' | 'mid' | 'category';
+  /** Solo en `category`: slug de la categoría a la que pertenece (null = genérico del país). */
+  category_slug?: string | null;
   desktop: MediaRef;
   mobile: MediaRef;
   alt: string;

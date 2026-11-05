@@ -46,11 +46,11 @@ function Encabezado({ n, titulo, enlaceTodos, pais }: { n: number; titulo: strin
 
 const CONTENEDOR = 'mx-auto w-full max-w-[96rem] px-4 sm:px-8';
 
-function BannersMid({ banners }: { banners: Banner[] }) {
+function BannersMid({ banners, pais }: { banners: Banner[]; pais: CodigoPais }) {
   return (
     <section className={`${CONTENEDOR} flex flex-col gap-4 pt-20`}>
       {banners.map((b) => (
-        <BannerFijo key={b.id} banner={b} ubicacion="mid" />
+        <BannerFijo key={b.id} banner={b} ubicacion="mid" pais={pais} />
       ))}
     </section>
   );
@@ -60,7 +60,7 @@ function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; conten
   const titulo = texto(s.config['title']);
   switch (s.type) {
     case 'hero':
-      return <Hero banners={bannersDe(contenido.banners, 'hero')} />;
+      return <Hero banners={bannersDe(contenido.banners, 'hero')} pais={pais} />;
 
     case 'categories': {
       if (contenido.categorias.length === 0) return null;
@@ -108,7 +108,7 @@ function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; conten
 
     case 'banner': {
       if (bannersMid.length === 0) return null;
-      return <BannersMid banners={bannersMid} />;
+      return <BannersMid banners={bannersMid} pais={pais} />;
     }
 
     case 'collection_tabs': {
@@ -204,17 +204,17 @@ export function HomeSecciones({ contenido, pais }: { contenido: ContenidoHome; p
   let n = 0;
   return (
     <>
-      {!hayHero && bannersHero.length > 0 ? <Hero banners={bannersHero} /> : null}
+      {!hayHero && bannersHero.length > 0 ? <Hero banners={bannersHero} pais={pais} /> : null}
       {contenido.secciones.map((s, k) => {
         if (s.type !== 'hero') n += 1;
         return (
           <Fragment key={s.id}>
             <Seccion s={s} contenido={contenido} pais={pais} n={n} bannersMid={bannersMid} />
-            {!hayMid && bannersMid.length > 0 && k === indiceColecciones ? <BannersMid banners={bannersMid} /> : null}
+            {!hayMid && bannersMid.length > 0 && k === indiceColecciones ? <BannersMid banners={bannersMid} pais={pais} /> : null}
           </Fragment>
         );
       })}
-      {!hayMid && bannersMid.length > 0 && indiceColecciones < 0 ? <BannersMid banners={bannersMid} /> : null}
+      {!hayMid && bannersMid.length > 0 && indiceColecciones < 0 ? <BannersMid banners={bannersMid} pais={pais} /> : null}
     </>
   );
 }
