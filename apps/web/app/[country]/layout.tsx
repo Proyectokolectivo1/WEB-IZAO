@@ -8,7 +8,6 @@ import { Header } from '@/components/store/header/Header';
 import { LanzadorIza } from '@/components/store/iza/LanzadorIza';
 import { chatHabilitado } from '@/lib/store/chat/fuente-supabase';
 import { tienda } from '@/lib/store/datos';
-import { clasesFuentes } from '@/lib/store/fuentes';
 import { esPais } from '@/lib/store/pais';
 import { alternos } from '@/lib/store/seo';
 import { textosEnvio } from '@/lib/store/envio';
@@ -48,8 +47,9 @@ export default async function LayoutPais({ children, params }: { children: React
   const envio = textosEnvio(espacios);
 
   return (
-    <div id="tema-pais" className={override ? `tema-pais bg-bg text-ink ${clasesFuentes(override.par)}` : undefined}>
+    <div id="tema-pais" className={override ? `tema-pais bg-bg text-ink ${override.clasesFuentes}` : undefined}>
       {override ? <style dangerouslySetInnerHTML={{ __html: override.css }} /> : null}
+      {override?.precarga.map((href) => <link key={href} rel="preload" as="font" type="font/woff2" href={href} crossOrigin="anonymous" />)}
       <CarritoProvider pais={pais} notaEnvio={envio.nota} valorEnvio={envio.valor}>
         <Header pais={pais} ajustes={ajustes} anuncios={anuncios} categorias={menu} populares={populares} />
         <main id="contenido" tabIndex={-1} className="outline-none">

@@ -77,16 +77,28 @@ export function resolverTipografia(...capas: Json[]): TipografiaTema {
 }
 
 /**
+ * Pilas de fuente ya resueltas por la tienda (`var(--ft-{id}),Georgia,serif`). Solo se aceptan con esa forma exacta:
+ * nada que venga de la base llega al CSS sin pasar por el catálogo. Sin pilas, se usan las variables de las seis parejas.
+ */
+export interface PilasFuente {
+  readonly titulos: string;
+  readonly texto: string;
+}
+
+const PILA = /^var\(--ft-[a-z0-9-]{1,40}\),(?:Georgia,serif|system-ui,sans-serif)$/;
+const pilaValida = (p: string | undefined): string | null => (p && PILA.test(p) ? p : null);
+
+/**
  * Bloque `:root{…}` (o el `selector` dado, p. ej. un envoltorio con *override* de país) con todos los tokens. Se inyecta en el servidor, así que no hay parpadeo.
  * `--font-display` y `--font-body` apuntan a las variables que define `next/font` para la pareja elegida
  * (`--font-par{N}-titulos`, `--font-par{N}-texto`).
  */
-export function construirCssTema(colores: TemaColores, tipo: TipografiaTema, selector = ':root'): string {
+export function construirCssTema(colores: TemaColores, tipo: TipografiaTema, selector = ':root', fuentes?: PilasFuente): string {
   const lineas: string[] = [];
   for (const k of CLAVES_COLOR) lineas.push(`--color-${k}:${colores.colores[k]}`);
   lineas.push(`--color-line:${colores.linea ?? LINEA_POR_DEFECTO}`);
-  lineas.push(`--font-display:var(--font-par${tipo.par}-titulos),Georgia,serif`);
-  lineas.push(`--font-body:var(--font-par${tipo.par}-texto),system-ui,sans-serif`);
+  lineas.push(`--font-display:${pilaValida(fuentes?.titulos) ?? `var(--font-par${tipo.par}-titulos),Georgia,serif`}`);
+  lineas.push(`--font-body:${pilaValida(fuentes?.texto) ?? `var(--font-par${tipo.par}-texto),system-ui,sans-serif`}`);
   lineas.push(`--tema-base:${tipo.baseSizePx}px`);
   lineas.push(`--tema-peso-titulos:${tipo.pesoTitulos}`);
   lineas.push(`--tema-espaciado-titulos:${tipo.espaciadoTitulos}`);
