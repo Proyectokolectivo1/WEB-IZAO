@@ -7,10 +7,7 @@
 - Worker (`apps/worker/src/{index,queues,cron}.ts`): build con esbuild (`build.mjs`); colas sistema, pagos, contraentrega, carrier y whatsapp con sus procesadores; `crearProcesadorSistema(extra)` con manejadores inyectados.
 - Cron (America/Bogota): `pedidos.barrido` */5, `mastershop.polling` */10, `mastershop.billetera` 7 * * * *, `metrics.recompute_recent` 30 3 * * *, purga de audit_log 03:30.
 - Recalculador de métricas: `recalculadorMetricasDesdeEnv(cola)` pasado como último argumento a pagos, barrido y COD (D-034). `addi.callback` corre en la cola `pagos`, sin cola ni cron nuevos.
-- Verificado `@izao/addi`: dependencia en web y worker, lockfile y `transpilePackages` de web correctos.
-
 Pruebas de infra en `infra/scripts/test-*` (backup-restore, restore-guard, deploy-rollback, nginx, memoria, run-with-env).
-
 ## Pendiente
 - Restaurar un backup contra el esquema `auth` real de Supabase (hoy solo contra fixture tipo GoTrue).
 - Medir 429 de `izao_next_action` antes de F1 (B-n1).
@@ -34,8 +31,9 @@ PROCEDIMIENTO: antes de deploy.sh, `git pull --ff-only` si el script cambió. St
 ## Redespliegue 78e6c0f (2026-11-05) — OK
 `git pull --ff-only` + `deploy.sh --skip-tests` (359 s, sin snapshot). web y worker healthy, web en 127.0.0.1:3000 (volvió a 3000), /api/health 200 local y https, /admin/login 200. `/api/chat/estado?country=co|ec` 200 (usa `country`, no `pais`); logs web sin `BigInt`. Turnstile del login apagado: no hay TURNSTILE_SITE_KEY en el .env (no se tocó). `ultimo-ok`=78e6c0f.
 
-## Siguiente paso exacto
-`uptime`, `crear-admin`, restore real contra `auth`, snapshot cuando se arregle la API Contabo.
+## Limpieza Nginx (2026-11-05) — BLOQUEADA por política
+`sites-enabled/izaoperfumeria` -> sites-available (SPA estática vieja, root /var/www/izaoperfumeria/dist, mismo dominio; no hay otros proyectos en Nginx). `nginx -t` OK pero 5 avisos de server_name duplicado. La política no permite escribir en /etc/nginx ni `rm`. Comandos por VNC/root en el reporte. Después: verificar `sudo nginx -t` sin avisos y /api/health 200.
 
-## Decisiones que necesitan al líder
-- Ninguna. Nota: el build de web puede fallar por WIP de la tienda; verificar en copia limpia de HEAD.
+## Siguiente paso exacto
+Dueño ejecuta la limpieza Nginx; luego `uptime`, `crear-admin`, restore real contra `auth`, snapshot (API Contabo).
+Nota: el build de web puede fallar por WIP de la tienda; verificar en copia limpia de HEAD.
