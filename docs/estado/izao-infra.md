@@ -8,13 +8,10 @@
 - Cron (America/Bogota): `pedidos.barrido` */5, `mastershop.polling` */10, `mastershop.billetera` 7 * * * *, `metrics.recompute_recent` 30 3 * * *, purga de audit_log 03:30.
 - Recalculador de métricas: `recalculadorMetricasDesdeEnv(cola)` pasado como último argumento a pagos, barrido y COD (D-034). `addi.callback` corre en la cola `pagos`, sin cola ni cron nuevos.
 - Verificado `@izao/addi`: dependencia en web y worker, lockfile y `transpilePackages` de web correctos.
-- `.env.example`: SITE_URL, CHECKOUT_*, MASTERSHOP_MODO (bloqueado en producción), INTEGRACIONES_MODO (ignorado en producción).
 
-## Pruebas de infra (en `infra/scripts/`)
-test-backup-restore, test-restore-guard, test-deploy-rollback, test-nginx (1.27/1.24/1.18), test-memoria, test-run-with-env.
+Pruebas de infra en `infra/scripts/test-*` (backup-restore, restore-guard, deploy-rollback, nginx, memoria, run-with-env).
 
-## Pendiente (esperan al MCP `contabo`)
-- T0.15 inventario del VPS + `docs/RUNBOOK.md`; T0.16 `setup-vps.sh`, primer despliegue, certificados, cron.
+## Pendiente
 - Restaurar un backup contra el esquema `auth` real de Supabase (hoy solo contra fixture tipo GoTrue).
 - Medir 429 de `izao_next_action` antes de F1 (B-n1).
 - Limitador de checkout en Redis (código de izao-pagos).
