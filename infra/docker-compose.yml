@@ -44,7 +44,7 @@ services:
     ports:
       - "127.0.0.1:${WEB_PORT_RANGE:-3000-3001}:3000"
     volumes:
-      - ${IZAO_DATA_DIR:-./data}/media:/srv/izao/media
+      - ${IZAO_MEDIA_DIR:-${IZAO_DATA_DIR:-./data}/media}:/srv/izao/media
       - ${IZAO_DATA_DIR:-./data}/geo:/srv/izao/geo:ro
     deploy:
       replicas: ${WEB_REPLICAS:-1}
@@ -66,7 +66,7 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ${IZAO_DATA_DIR:-./data}/media:/srv/izao/media
+      - ${IZAO_MEDIA_DIR:-${IZAO_DATA_DIR:-./data}/media}:/srv/izao/media
     deploy:
       resources:
         limits:
@@ -97,7 +97,7 @@ services:
       - ./nginx:/srv/izao/nginx:ro
       - ./nginx/env/container/izao-http.conf:/etc/nginx/conf.d/00-izao-http.conf:ro
       - ./nginx/izao.local.conf:/etc/nginx/conf.d/default.conf:ro
-      - ${IZAO_DATA_DIR:-./data}/media:/srv/izao/media:ro
+      - ${IZAO_MEDIA_DIR:-${IZAO_DATA_DIR:-./data}/media}:/srv/izao/media:ro
     deploy:
       resources:
         limits:

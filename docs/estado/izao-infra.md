@@ -36,7 +36,7 @@ PROCEDIMIENTO: antes de deploy.sh, `git pull --ff-only` si el script cambió. St
 
 ## Redespliegue b79e94b (2026-11-05) — OK
 pull + `deploy.sh --skip-tests --migraciones-verificadas` (428 s; el script exige ese flag si hay migración nueva; verificada con list_migrations). Sin snapshot. web/worker healthy; /api/health, /co, /ec, /admin/login 200 https; HTML de /co precarga 2 woff2 y enlaza 2 css de `.next/static` (Dockerfile.web los copia). Build ~320 s, sin agotar memoria (6 GB libres).
-PROBLEMA MEDIA (sin resolver): compose monta `${IZAO_DATA_DIR:-./data}/media`; sin IZAO_DATA_DIR en .env resuelve a `/srv/izao/app/infra/data/media` (root, 755, uid web=100) y NO a `/srv/izao/media` que sirve Nginx. Subir banners falla (EACCES) y no se servirían. Hice `chmod 777 /srv/izao/media` (inocuo). Arreglo: IZAO_DATA_DIR=/srv/izao en infra/.env (lo sube el dueño) migrando redis (hoy en infra/data/redis) o root: bind del dir correcto.
+PROBLEMA MEDIA (corregido en compose+deploy.sh, falta desplegar; infra/data/media en el VPS estaba vacío): compose monta `${IZAO_DATA_DIR:-./data}/media`; sin IZAO_DATA_DIR en .env resuelve a `/srv/izao/app/infra/data/media` (root, 755, uid web=100) y NO a `/srv/izao/media` que sirve Nginx. Subir banners falla (EACCES) y no se servirían. Hice `chmod 777 /srv/izao/media` (inocuo). Arreglo: IZAO_DATA_DIR=/srv/izao en infra/.env (lo sube el dueño) migrando redis (hoy en infra/data/redis) o root: bind del dir correcto.
 
 ## Siguiente paso exacto
 Dueño ejecuta la limpieza Nginx; luego `uptime`, `crear-admin`, restore real contra `auth`, snapshot (API Contabo).

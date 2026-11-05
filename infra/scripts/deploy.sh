@@ -25,6 +25,8 @@ FALLO_LOG="${FALLO_LOG:-/srv/izao/last-deploy-failure.log}"
 HEALTH_URL_FIJO="${HEALTH_URL:-}"   # si viene de fuera, no se autodetecta el puerto publicado
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:3000/api/health}"
 ULTIMO_OK="${ULTIMO_OK:-/srv/izao/ultimo-ok}"   # último tag de imagen que pasó el healthcheck
+# Medios: en el VPS viven en /srv/izao/media (lo que sirve Nginx); en local, ./data/media.
+export IZAO_MEDIA_DIR="${IZAO_MEDIA_DIR:-/srv/izao/media}"
 COMPOSE=(docker compose -f "$INFRA/docker-compose.yml" --project-directory "$INFRA")
 
 paso() { echo; echo "==> $*"; }
