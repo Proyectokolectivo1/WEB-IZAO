@@ -108,9 +108,12 @@ describe('mock: etiqueta automática al confirmar', () => {
     });
     expect(put.status).toBe(200);
     expect(o.shippingLabel).toBe(`https://labels.example.com/MOCK${o.idOrder}.pdf`);
-    const pdf = await mock.fetch(o.shippingLabel!);
-    expect(pdf.headers.get('content-type')).toBe('application/pdf');
+    const ua = { headers: { 'user-agent': 'prueba/1.0' } };
+    const pdf = await mock.fetch(o.shippingLabel!, ua);
+    expect(pdf.headers.get('content-type')).toBe('application/octet-stream');
     expect(new Uint8Array(await pdf.arrayBuffer())).toEqual(mockLabelPdf(`MOCK${o.idOrder}`));
-    expect((await mock.fetch('https://labels.example.com/OTRA.pdf')).status).toBe(404);
+    expect((await mock.fetch('https://labels.example.com/OTRA.pdf', ua)).status).toBe(404);
+    // Trampa del CDN real (D-044): sin User-Agent, 403.
+    expect((await mock.fetch(o.shippingLabel!)).status).toBe(403);
   });
 });

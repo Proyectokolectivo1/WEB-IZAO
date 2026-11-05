@@ -285,11 +285,16 @@ export class MasterShopMock {
     const url = new URL(request.url);
     const now = this.options.clock.now();
     if (url.hostname === MOCK_LABEL_HOST && request.method === 'GET') {
+      // Como el CDN real (CloudFront): sin `User-Agent` responde 403 en HTML (D-044).
+      if ((request.headers.get('user-agent') ?? '').trim() === '') {
+        return new Response('<html>403 ERROR</html>', { status: 403, headers: { 'content-type': 'text/html' } });
+      }
       const guide = decodeURIComponent(url.pathname.replace(/^\/|\.pdf$/g, ''));
       const known = [...this.orders.values()].some((o) => o.guide === guide);
       if (!known) return new Response('No encontrado', { status: 404 });
       const pdf = mockLabelPdf(guide);
-      return new Response(pdf.buffer.slice(pdf.byteOffset, pdf.byteOffset + pdf.byteLength) as ArrayBuffer, { status: 200, headers: { 'content-type': 'application/pdf' } });
+      // Producción sirve las etiquetas como `application/octet-stream`.
+      return new Response(pdf.buffer.slice(pdf.byteOffset, pdf.byteOffset + pdf.byteLength) as ArrayBuffer, { status: 200, headers: { 'content-type': 'application/octet-stream' } });
     }
     const body = request.method === 'GET' ? null : await request.text();
     const headers: Record<string, string> = {};
