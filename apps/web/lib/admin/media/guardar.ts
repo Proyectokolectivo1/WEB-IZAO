@@ -1,5 +1,5 @@
 /** Escritura de variantes en `MEDIA_ROOT/{kind}/{yyyy}/{mm}/{uuid}-{ancho}.webp` (§27.1). */
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Variante } from './procesar';
 
@@ -29,7 +29,15 @@ export async function escribirVariantes(
     const destino = path.resolve(raizAbs, relativa);
     if (!destino.startsWith(raizAbs + path.sep)) throw new Error('Ruta de medios no permitida.');
     await mkdir(path.dirname(destino), { recursive: true });
-    await writeFile(destino, v.buffer, { flag: 'wx' }); // el UUID nunca se sobreescribe
+    // Atómico: archivo temporal y `rename`, así nunca se sirve un WebP a medio escribir. El UUID nunca se sobreescribe.
+    const temporal = `${destino}.${process.pid}.tmp`;
+    try {
+      await writeFile(temporal, v.buffer, { flag: 'wx' });
+      await rename(temporal, destino);
+    } catch (e) {
+      await rm(temporal, { force: true });
+      throw e;
+    }
     mapa[String(v.ancho)] = relativa;
   }
   return mapa;

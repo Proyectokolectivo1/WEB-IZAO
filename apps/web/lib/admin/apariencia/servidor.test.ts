@@ -94,7 +94,7 @@ describe('guardarAparienciaBd (país)', () => {
     const datos = esquemaApariencia('EC').parse({ ...vacioPais, color_accent: '#E8C9C9', pair: '5' });
     expect(await guardarAparienciaBd({ cliente, datos, ...comun })).toEqual({ ok: true, id: 'EC' });
     const up = llamadas.find((l) => l.clave === 'theme_overrides.upsert')!;
-    expect(up.args[0]).toEqual({ country_code: 'EC', tokens: { 'color-accent': '#E8C9C9', typography: { pair: 5 } } });
+    expect(up.args[0]).toEqual({ country_code: 'EC', tokens: { 'color-accent': '#E8C9C9', typography: { pair: 5, heading_font: 'Marcellus', body_font: 'Mulish' } } });
     expect(up.args[1]).toEqual({ onConflict: 'country_code' });
     expect(invalidar).toHaveBeenCalledTimes(1);
     expect(invalidar).toHaveBeenCalledWith('content:EC');

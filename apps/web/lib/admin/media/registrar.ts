@@ -6,8 +6,10 @@ import path from 'node:path';
 import { auditarCambio } from '@/lib/admin/auditoria';
 import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
 import type { DatosSubida } from './esquema';
+import { bytesMaximos } from './ajustes';
+import { leerAjustesMedia } from './ajustes-servidor';
 import { escribirVariantes, raizMedia, rutaBase } from './guardar';
-import { procesarImagen } from './procesar';
+import { ANCHOS_BANNER, procesarImagen } from './procesar';
 import { MENSAJES_VALIDACION, validarArchivo } from './validar';
 
 export type MediaSubida = {
@@ -36,14 +38,23 @@ export async function subirImagen(args: {
   actor: string;
   ip: string | null;
 }): Promise<ResultadoSubida> {
-  const validacion = validarArchivo({ buffer: args.buffer, nombre: args.nombre });
-  if (!validacion.ok) return { ok: false, error: MENSAJES_VALIDACION[validacion.error] };
+  const { ajustes } = await leerAjustesMedia();
+  const validacion = validarArchivo({ buffer: args.buffer, nombre: args.nombre, maxBytes: bytesMaximos(ajustes) });
+  if (!validacion.ok) {
+    return {
+      ok: false,
+      error: validacion.error === 'tamano' ? `La imagen supera los ${ajustes.maxMb} MB.` : MENSAJES_VALIDACION[validacion.error],
+    };
+  }
 
   let procesada;
   try {
     procesada = await procesarImagen({
       buffer: args.buffer,
       recorte45: args.datos.recorte45 && args.datos.kind === 'product',
+      calidad: ajustes.calidad,
+      // Banners: anchos propios de escritorio y móvil (el móvil es el de menor tamaño si no se indica la variante).
+      ...(args.datos.kind === 'banner' ? { anchos: ANCHOS_BANNER[args.datos.variante ?? 'desktop'] } : {}),
     });
   } catch {
     return { ok: false, error: 'No se pudo leer la imagen. Prueba con otro archivo.' };

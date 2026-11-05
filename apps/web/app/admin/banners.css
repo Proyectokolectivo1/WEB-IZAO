@@ -1,0 +1,200 @@
+/* Banners (§9.1, §24.1): lista de tarjetas (sirve en móvil y tablet) y formulario con vista previa. */
+.ban-pestanas {
+  margin-bottom: 0.5rem;
+}
+.ban-lista {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ban-tarjeta {
+  display: grid;
+  grid-template-columns: minmax(0, 14rem) minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: start;
+  padding: 0.75rem;
+  background: var(--adm-superficie);
+  border: 1px solid var(--adm-borde);
+  border-radius: var(--adm-radio);
+}
+.ban-tarjeta[data-estado='inactivo'],
+.ban-tarjeta[data-estado='vencido'] {
+  background: var(--adm-aviso-fondo);
+}
+.ban-miniaturas {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+.ban-miniaturas img {
+  display: block;
+  height: auto;
+  background: var(--adm-aviso-fondo);
+  border: 1px solid var(--adm-borde);
+  border-radius: 4px;
+  object-fit: cover;
+}
+.ban-min-escritorio {
+  width: 9rem;
+  aspect-ratio: 12 / 5;
+}
+.ban-min-movil {
+  width: 3.5rem;
+  aspect-ratio: 4 / 5;
+}
+.ban-info {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.ban-info h2 {
+  margin: 0;
+  font-size: 1.0625rem;
+  overflow-wrap: anywhere;
+}
+.ban-meta {
+  margin: 0;
+  color: var(--adm-texto-suave);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+.ban-controles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+.ban-controles form {
+  display: inline-flex;
+}
+.ban-controles .adm-boton,
+.ban-controles .adm-enlace-boton {
+  min-height: var(--adm-alto-toque);
+  min-width: var(--adm-alto-toque);
+}
+.ban-orden {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+/* Formulario */
+.ban-dos {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.ban-previas {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  align-items: start;
+}
+.ban-previa {
+  position: relative;
+  overflow: hidden;
+  background: var(--adm-aviso-fondo);
+  border: 1px solid var(--adm-borde);
+  border-radius: var(--adm-radio);
+}
+.ban-previa-escritorio {
+  aspect-ratio: 12 / 5;
+}
+.ban-previa-movil {
+  aspect-ratio: 4 / 5;
+}
+.ban-previa img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ban-previa-texto {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 6%;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+}
+.ban-previa-texto strong {
+  font-size: clamp(0.9rem, 2.6cqw, 1.5rem);
+}
+.ban-previa-boton {
+  align-self: flex-start;
+  padding: 0.25rem 0.75rem;
+  background: var(--adm-primario);
+  color: var(--adm-sobre-primario);
+  border-radius: 3px;
+  font-size: 0.8125rem;
+  text-shadow: none;
+}
+.ban-previa-vacia {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--adm-texto-suave);
+  font-size: 0.875rem;
+}
+.ban-resultados {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ban-resultado {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: var(--adm-alto-toque);
+  padding: 0.25rem 0.5rem;
+  background: var(--adm-superficie);
+  border: 1px solid var(--adm-borde);
+  border-radius: var(--adm-radio);
+  color: var(--adm-texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ban-resultado:hover {
+  border-color: var(--adm-borde-fuerte);
+}
+.ban-resultado img {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--adm-aviso-fondo);
+}
+.ban-elegido {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--adm-aviso-fondo);
+  border: 1px solid var(--adm-borde);
+  border-radius: var(--adm-radio);
+}
+
+@media (max-width: 52rem) {
+  .ban-tarjeta {
+    grid-template-columns: 1fr;
+  }
+  .ban-controles {
+    justify-content: flex-start;
+  }
+  .ban-dos,
+  .ban-previas {
+    grid-template-columns: 1fr;
+  }
+  .ban-previa-movil {
+    max-width: 16rem;
+  }
+}

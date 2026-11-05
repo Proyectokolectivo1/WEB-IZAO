@@ -23,7 +23,7 @@ describe('permisos de apariencia', () => {
   it('cada Server Action y la página exigen su permiso en el servidor', () => {
     const leer = (p: string) => readFileSync(path.join(RAIZ, p), 'utf8');
     const a = leer('admin/(panel)/apariencia/acciones.ts');
-    expect((a.match(/adminDeAccion\('apariencia', 'apariencia\.gestionar'\)/g) ?? []).length).toBe(2);
+    expect((a.match(/adminDeAccion\('apariencia', 'apariencia\.gestionar'\)/g) ?? []).length).toBe(3);
     expect(leer('admin/(panel)/apariencia/page.tsx')).toContain("requerirAdmin({ modulo: 'apariencia', accion: 'apariencia.gestionar' })");
   });
 });

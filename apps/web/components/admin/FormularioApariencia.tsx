@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from 'react';
 import { CLAVES_COLOR, PARES_TIPOGRAFICOS, type ClaveColor } from '@izao/ui/tema';
+import { descripcionPesos, fuentePorFamilia, pesoDisponible } from '@/lib/tipografia/catalogo';
 import {
   ETIQUETA_COLOR,
   PESOS_TITULOS,
@@ -14,12 +15,15 @@ import {
 import { ESTADO_INICIAL, type ResultadoAccion } from '@/lib/admin/crud/comun';
 import { CampoSelect } from './CampoSelect';
 import { CampoTexto } from './CampoTexto';
+import { SelectorFuente, familiaCss } from './SelectorFuente';
 import { SelectorImagen, type ImagenInicial } from './SelectorImagen';
 
 export type ValoresApariencia = {
   /** Valor propio del alcance; vacío en un país = hereda. */
   colores: Record<ClaveColor, string>;
-  pair: string;
+  /** Familia de Google Fonts del catálogo; vacío en un país = hereda. */
+  heading_font: string;
+  body_font: string;
   base_size_px: string;
   heading_weight: string;
   heading_letter_spacing: string;
@@ -44,7 +48,7 @@ export function FormularioApariencia({
   alcance: Alcance;
   inicial: ValoresApariencia;
   /** Colores y tipografía que el país hereda del global (en el global, los de fábrica). */
-  heredados: { colores: Record<ClaveColor, string>; pair: number; base: number; peso: number; espTitulos: string; espEtiquetas: string };
+  heredados: { colores: Record<ClaveColor, string>; titulos: string; texto: string; base: number; peso: number; espTitulos: string; espEtiquetas: string };
   logo: ImagenInicial;
   favicon: ImagenInicial;
   accion: (previo: ResultadoAccion, datos: FormData) => Promise<ResultadoAccion>;
@@ -53,7 +57,8 @@ export function FormularioApariencia({
   const errores = estado.ok ? {} : (estado.errores ?? {});
   const global = alcance === 'global';
   const [colores, setColores] = useState(inicial.colores);
-  const [pair, setPair] = useState(inicial.pair);
+  const [titulos, setTitulos] = useState(inicial.heading_font);
+  const [texto, setTexto] = useState(inicial.body_font);
   const [base, setBase] = useState(inicial.base_size_px);
   const [peso, setPeso] = useState(inicial.heading_weight);
   const [espT, setEspT] = useState(inicial.heading_letter_spacing);
@@ -67,8 +72,10 @@ export function FormularioApariencia({
   const contrastes = useMemo(() => contrastesDe(efectivos), [efectivos]);
   const graves = fallosGraves(contrastes);
 
-  const parId = Number(pair) || heredados.pair;
-  const par = PARES_TIPOGRAFICOS.find((p) => p.id === parId) ?? PARES_TIPOGRAFICOS[0]!;
+  const fuenteTitulos = fuentePorFamilia(titulos) ?? fuentePorFamilia(heredados.titulos);
+  const fuenteTexto = fuentePorFamilia(texto) ?? fuentePorFamilia(heredados.texto);
+  const pesoNum = Number(peso) || heredados.peso;
+  const pesoReal = fuenteTitulos ? pesoDisponible(fuenteTitulos, pesoNum) : pesoNum;
   const baseNum = Number(base) || heredados.base;
   const vista = {
     '--color-bg': efectivos.bg,
@@ -79,10 +86,10 @@ export function FormularioApariencia({
     '--color-ink-hover': efectivos['ink-hover'],
     '--color-success': efectivos.success,
     '--color-danger': efectivos.danger,
-    '--prev-display': `var(--font-par${par.id}-titulos), Georgia, serif`,
-    '--prev-body': `var(--font-par${par.id}-texto), system-ui, sans-serif`,
+    '--prev-display': fuenteTitulos ? familiaCss(fuenteTitulos) : 'Georgia, serif',
+    '--prev-body': fuenteTexto ? familiaCss(fuenteTexto) : 'system-ui, sans-serif',
     '--prev-base': `${Math.min(18, Math.max(15, baseNum))}px`,
-    '--prev-peso': String(Number(peso) || heredados.peso),
+    '--prev-peso': String(pesoReal),
     '--prev-esp-t': /^-?\d{1,2}(\.\d{1,3})?em$/.test(espT) ? espT : heredados.espTitulos,
     '--prev-esp-e': /^-?\d{1,2}(\.\d{1,3})?em$/.test(espE) ? espE : heredados.espEtiquetas,
   } as React.CSSProperties;
@@ -187,16 +194,56 @@ export function FormularioApariencia({
 
       <fieldset className="adm-fieldset">
         <legend>Tipografía</legend>
-        <CampoSelect
-          id="pair"
-          name="pair"
-          etiqueta="Pareja de tipografías"
-          vacio={global ? undefined : 'La del sitio'}
-          opciones={PARES_TIPOGRAFICOS.map((p) => ({ valor: String(p.id), etiqueta: `${p.id}. ${p.titulos} + ${p.texto} — ${p.caracter}` }))}
-          value={pair}
-          onChange={(e) => setPair(e.target.value)}
-          error={errores.pair}
-        />
+        <div className="adm-campo">
+          <label htmlFor="pareja-sugerida" className="adm-etiqueta">
+            Pareja sugerida (atajo)
+          </label>
+          <select
+            id="pareja-sugerida"
+            className="adm-input"
+            value={PARES_TIPOGRAFICOS.find((p) => p.titulos === titulos && p.texto === texto)?.id ?? ''}
+            onChange={(e) => {
+              const par = PARES_TIPOGRAFICOS.find((p) => String(p.id) === e.target.value);
+              if (!par) return;
+              setTitulos(par.titulos);
+              setTexto(par.texto);
+            }}
+          >
+            <option value="">Combinación propia (elige abajo)</option>
+            {PARES_TIPOGRAFICOS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.id}. {p.titulos} + {p.texto} — {p.caracter}
+              </option>
+            ))}
+          </select>
+          <p className="adm-suave adm-chico">Rellena las dos tipografías de una vez; después puedes cambiar cualquiera.</p>
+        </div>
+        <div className="fte-dos">
+          <SelectorFuente
+            nombre="heading_font"
+            etiqueta="Tipografía de los títulos"
+            uso="titulos"
+            valor={titulos}
+            onCambio={setTitulos}
+            heredada={global ? undefined : heredados.titulos}
+            error={errores.heading_font}
+          />
+          <SelectorFuente
+            nombre="body_font"
+            etiqueta="Tipografía del texto"
+            uso="texto"
+            valor={texto}
+            onCambio={setTexto}
+            heredada={global ? undefined : heredados.texto}
+            error={errores.body_font}
+          />
+        </div>
+        {fuenteTitulos ? (
+          <p className="adm-suave adm-chico">
+            Pesos de «{fuenteTitulos.familia}»: {descripcionPesos(fuenteTitulos)}.
+            {pesoReal !== pesoNum ? ` El peso ${pesoNum} no existe en esta fuente: la tienda usará ${pesoReal}.` : ''}
+          </p>
+        ) : null}
         <div className="adm-fila">
           <CampoTexto id="base_size_px" name="base_size_px" etiqueta="Tamaño base (15 a 18 px)" inputMode="numeric" value={base} onChange={(e) => setBase(e.target.value)} error={errores.base_size_px} />
           <CampoSelect

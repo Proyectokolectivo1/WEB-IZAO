@@ -9,6 +9,9 @@ import sharp from 'sharp';
 sharp.concurrency(2);
 
 export const ANCHOS = [400, 800, 1600] as const;
+/** Banners (skill izao-imagenes): escritorio 800/1600/2400 y móvil 400/800/1200, procesados por separado. */
+export const ANCHOS_BANNER = { desktop: [800, 1600, 2400], movil: [400, 800, 1200] } as const;
+export const CALIDAD_WEBP_POR_DEFECTO = 80;
 const LIMITE_PIXELES = 100_000_000;
 
 export type Variante = { ancho: number; alto: number; buffer: Buffer };
@@ -21,7 +24,17 @@ export type ImagenProcesada = {
   lqip: string;
 };
 
-export async function procesarImagen(args: { buffer: Buffer; recorte45: boolean }): Promise<ImagenProcesada> {
+export async function procesarImagen(args: {
+  buffer: Buffer;
+  recorte45: boolean;
+  /** Anchos de salida. Por defecto 400/800/1600. */
+  anchos?: readonly number[];
+  /** Calidad WebP 1–100 (configurable en el panel). Por defecto 80. */
+  calidad?: number;
+}): Promise<ImagenProcesada> {
+  const anchos = [...(args.anchos ?? ANCHOS)].sort((a, b) => a - b);
+  const techo = anchos.at(-1) ?? 1600;
+  const calidad = Math.min(100, Math.max(1, Math.round(args.calidad ?? CALIDAD_WEBP_POR_DEFECTO)));
   const abrir = () => sharp(args.buffer, { limitInputPixels: LIMITE_PIXELES, failOn: 'error' }).rotate();
 
   // Dimensiones reales después de rotar.
@@ -42,17 +55,17 @@ export async function procesarImagen(args: { buffer: Buffer; recorte45: boolean 
     base = sharp(recortada.data);
   }
 
-  const caben: number[] = ANCHOS.filter((a) => a <= ancho);
+  const caben: number[] = anchos.filter((a) => a <= ancho);
   const mayor = caben.at(-1) ?? 0;
-  // Nunca se agranda: si la original cae entre dos anchos (o es menor que 400), su ancho es el techo.
-  if (ancho > mayor && ancho < 1600) caben.push(ancho);
+  // Nunca se agranda: si la original cae entre dos anchos (o es menor que el menor), su ancho es el techo.
+  if (ancho > mayor && ancho < techo) caben.push(ancho);
 
   const variantes: Variante[] = [];
   for (const a of caben) {
     const { data, info } = await base
       .clone()
       .resize({ width: a, withoutEnlargement: true })
-      .webp({ quality: 80, effort: 5 }) // sin .withMetadata(): se eliminan EXIF y demás
+      .webp({ quality: calidad, effort: 5 }) // sin .withMetadata(): se eliminan EXIF y demás
       .toBuffer({ resolveWithObject: true });
     variantes.push({ ancho: info.width, alto: info.height, buffer: data });
   }

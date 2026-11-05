@@ -1,4 +1,7 @@
-/** Validación de subidas por magic bytes (§26.1, §27.1). Nunca se confía en la extensión. */
+/**
+ * Validación de subidas por magic bytes (§26.1, §27.1). Nunca se confía en la extensión: solo pasan JPG, PNG, WebP y AVIF
+ * (un SVG, GIF, PDF o ejecutable se rechaza). `MAX_BYTES` es el tope por defecto; el panel puede cambiarlo (`maxBytes`).
+ */
 
 export const MAX_BYTES = 15 * 1024 * 1024;
 
@@ -24,15 +27,15 @@ export type ResultadoValidacion =
   | { ok: false; error: 'vacio' | 'tamano' | 'tipo' };
 
 /** El nombre solo se recibe para dejar claro que NO se usa: decide el contenido. */
-export function validarArchivo(a: { buffer: Buffer; nombre: string }): ResultadoValidacion {
+export function validarArchivo(a: { buffer: Buffer; nombre: string; maxBytes?: number }): ResultadoValidacion {
   if (a.buffer.length === 0) return { ok: false, error: 'vacio' };
-  if (a.buffer.length > MAX_BYTES) return { ok: false, error: 'tamano' };
+  if (a.buffer.length > (a.maxBytes ?? MAX_BYTES)) return { ok: false, error: 'tamano' };
   const tipo = detectarTipo(a.buffer);
   return tipo ? { ok: true, tipo } : { ok: false, error: 'tipo' };
 }
 
 export const MENSAJES_VALIDACION: Record<'vacio' | 'tamano' | 'tipo', string> = {
   vacio: 'El archivo está vacío.',
-  tamano: 'La imagen supera los 15 MB.',
+  tamano: 'La imagen supera el peso máximo permitido.',
   tipo: 'Solo se aceptan imágenes JPG, PNG, WebP o AVIF.',
 };

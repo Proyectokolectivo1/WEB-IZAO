@@ -49,7 +49,7 @@ describe('esquemaApariencia (global)', () => {
   it('normaliza colores y números', () => {
     const d = esquemaApariencia('global').parse(COMPLETO);
     expect(d.colores).toMatchObject({ bg: '#FDFBF7', ink: '#382E2B', 'ink-hover': '#4A3D39' });
-    expect(d.tipografia).toEqual({ pair: 2, base_size_px: 17, heading_weight: 600, heading_letter_spacing: '0.02em', label_letter_spacing: '0.14em' });
+    expect(d.tipografia).toEqual({ pair: 2, heading_font: 'Playfair Display', body_font: 'Jost', base_size_px: 17, heading_weight: 600, heading_letter_spacing: '0.02em', label_letter_spacing: '0.14em' });
     expect(d.store_name).toBe('Izao Perfumería');
     expect(d.acepto_contraste).toBe(false);
     expect(d.logo_media_id).toBeNull();
@@ -80,7 +80,7 @@ describe('esquemaApariencia (país)', () => {
 
   it('solo se guarda lo que el país cambia, y lo inválido sigue fallando', () => {
     const d = esquemaApariencia('EC').parse({ ...vacio, color_accent: '#abc', pair: '4' });
-    expect(tokensDePais(d)).toEqual({ 'color-accent': '#AABBCC', typography: { pair: 4 } });
+    expect(tokensDePais(d)).toEqual({ 'color-accent': '#AABBCC', typography: { pair: 4, heading_font: 'Libre Caslon Display', body_font: 'Karla' } });
     expect(esquemaApariencia('EC').safeParse({ ...vacio, color_accent: 'x' }).success).toBe(false);
   });
 });
@@ -105,6 +105,35 @@ describe('qué se guarda', () => {
       base_size_px: 17,
       heading_weight: 600,
     });
+  });
+});
+
+describe('tipografías del catálogo', () => {
+  const vacio = Object.fromEntries(Object.keys(COMPLETO).map((k) => [k, ''])) as Record<string, string>;
+  const SIN_PAREJA = { ...COMPLETO, pair: '', heading_font: 'Prata', body_font: 'Figtree' };
+
+  it('elegir dos fuentes del catálogo las guarda y no inventa una pareja', () => {
+    const d = esquemaApariencia('global').parse(SIN_PAREJA);
+    expect(d.tipografia).toMatchObject({ pair: null, heading_font: 'Prata', body_font: 'Figtree' });
+    expect(tipografiaGlobal({ pair: 3, otra: 1 }, d.tipografia)).toMatchObject({ pair: 3, otra: 1, heading_font: 'Prata', body_font: 'Figtree' });
+  });
+
+  it('si las dos fuentes forman una pareja curada se guarda su número', () => {
+    const d = esquemaApariencia('global').parse({ ...COMPLETO, pair: '', heading_font: 'Fraunces', body_font: 'Inter Tight' });
+    expect(d.tipografia.pair).toBe(3);
+  });
+
+  it('rechaza fuentes fuera del catálogo (nada de nombres libres hacia la tienda)', () => {
+    const s = esquemaApariencia('global');
+    expect(s.safeParse({ ...SIN_PAREJA, heading_font: 'Comic Sans MS' }).success).toBe(false);
+    expect(s.safeParse({ ...SIN_PAREJA, body_font: "x'; } body{display:none" }).success).toBe(false);
+  });
+
+  it('en el global ambas fuentes son obligatorias; en un país se hereda lo vacío', () => {
+    expect(esquemaApariencia('global').safeParse({ ...COMPLETO, pair: '', heading_font: '', body_font: '' }).success).toBe(false);
+    expect(esquemaApariencia('global').safeParse({ ...COMPLETO, pair: '', heading_font: 'Prata', body_font: '' }).success).toBe(false);
+    const d = esquemaApariencia('EC').parse({ ...vacio, heading_font: 'Prata' });
+    expect(tokensDePais(d)).toEqual({ typography: { heading_font: 'Prata' } });
   });
 });
 

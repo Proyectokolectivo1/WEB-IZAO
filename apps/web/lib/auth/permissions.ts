@@ -79,6 +79,7 @@ export const MODULOS = {
     disponible: true,
   },
   home: { etiqueta: 'Home', ruta: '/admin/home', roles: SOLO_ADMIN, disponible: true },
+  banners: { etiqueta: 'Banners', ruta: '/admin/banners', roles: SOLO_ADMIN, disponible: true },
   contenido: {
     etiqueta: 'Contenido',
     ruta: '/admin/contenido',
@@ -191,6 +192,8 @@ export const ACCIONES = {
   'resenas.gestionar': SOLO_ADMIN,
   /** Orden, activación y contenido de las secciones del home por país (§8.5, §24.1). */
   'home.gestionar': SOLO_ADMIN,
+  /** Crear, editar, ordenar, programar, activar y borrar banners (carrusel, intermedio y de categoría) por país (§9.1, §24.1). */
+  'banners.gestionar': SOLO_ADMIN,
   /** Reintentar un job fallido de las colas desde Sistema (§24.1). Ver colas, errores y auditoría exige el módulo. */
   'sistema.reintentar_job': SOLO_ADMIN,
   /** Colores, tipografía, logo y favicon, globales o por país (§8, §24.1). */

@@ -48,7 +48,15 @@ export default async function PaginaHome({
                   {typeof s.config.title === 'string' && s.config.title ? <span className="adm-suave">«{s.config.title}»</span> : null}{' '}
                   <span className={s.is_active ? 'adm-insignia adm-insignia-ok' : 'adm-insignia'}>{s.is_active ? 'Visible' : 'Oculta'}</span>
                 </p>
-                <p className="adm-suave adm-chico">Contenido: {ORIGEN_CONTENIDO[s.type]}</p>
+                <p className="adm-suave adm-chico">
+                  Contenido: {ORIGEN_CONTENIDO[s.type]}
+                  {s.type === 'hero' || s.type === 'banner' ? (
+                    <>
+                      {' · '}
+                      <Link href={`/admin/banners?pais=${pais}&ubicacion=${s.type === 'hero' ? 'hero' : 'mid'}`}>Editar banners</Link>
+                    </>
+                  ) : null}
+                </p>
               </div>
               <div className="adm-acciones">
                 <form action={moverSeccion.bind(null, s.id, 'arriba', pais)}>

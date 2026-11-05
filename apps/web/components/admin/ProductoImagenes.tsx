@@ -137,7 +137,7 @@ export function ProductoImagenes({
           id={`${id}-archivos`}
           type="file"
           multiple
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/jpeg,image/png,image/webp,image/avif"
           disabled={subiendo}
           onChange={(e) => {
             void subir(e.target.files);
@@ -145,7 +145,7 @@ export function ProductoImagenes({
           }}
         />
         <p className="adm-suave adm-chico">
-          JPG, PNG o WebP hasta 15 MB. La primera es la principal; la segunda puede ser la de cursor. {subiendo ? 'Subiendo…' : ''}
+          JPG, PNG, WebP o AVIF; se convierten a WebP al subir. La primera es la principal; la segunda puede ser la de cursor. {subiendo ? 'Subiendo…' : ''}
         </p>
       </div>
       {mensaje ? (

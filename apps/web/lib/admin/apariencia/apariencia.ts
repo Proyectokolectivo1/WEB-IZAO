@@ -18,6 +18,7 @@ import {
   type ClaveColor,
   type ResultadoContraste,
 } from '@izao/ui/tema';
+import { fuentePorFamilia, parejaDe } from '../../tipografia/catalogo';
 
 export type Alcance = 'global' | 'CO' | 'EC';
 export const ALCANCES: readonly Alcance[] = ['global', 'CO', 'EC'];
@@ -58,7 +59,11 @@ export type DatosApariencia = {
   /** Global: los 8 colores. País: solo los que se cambian (`null` = hereda). */
   colores: Record<ClaveColor, string | null>;
   tipografia: {
+    /** Pareja curada 1–6 si las dos fuentes coinciden con una; `null` si no (o si el país hereda). */
     pair: number | null;
+    /** Familia de Google Fonts del catálogo (`lib/tipografia/catalogo.ts`). */
+    heading_font: string | null;
+    body_font: string | null;
     base_size_px: number | null;
     heading_weight: number | null;
     heading_letter_spacing: string | null;
@@ -88,6 +93,15 @@ export function esquemaApariencia(alcance: Alcance) {
       const hex = normalizarHex(v);
       if (!hex) ctx.addIssue({ code: 'custom', message: 'Usa un color como #382E2B.' });
       return hex;
+    });
+  const fuente = z
+    .string()
+    .trim()
+    .default('')
+    .transform((v, ctx): string | null => {
+      if (v === '') return null;
+      if (!fuentePorFamilia(v)) ctx.addIssue({ code: 'custom', message: 'Elige una tipografía de la lista.' });
+      return v;
     });
   const entero = (min: number, max: number, etiqueta: string) =>
     z
@@ -136,7 +150,22 @@ export function esquemaApariencia(alcance: Alcance) {
       color_ink_hover: color,
       color_success: color,
       color_danger: color,
-      pair: entero(1, PARES_TIPOGRAFICOS.length, 'La pareja'),
+      // `pair` solo se acepta como atajo (formularios anteriores): equivale a elegir las dos fuentes de esa pareja.
+      pair: z
+        .string()
+        .trim()
+        .default('')
+        .transform((v, ctx): number | null => {
+          if (v === '') return null;
+          const n = Number(v);
+          if (!Number.isInteger(n) || n < 1 || n > PARES_TIPOGRAFICOS.length) {
+            ctx.addIssue({ code: 'custom', message: `La pareja debe estar entre 1 y ${PARES_TIPOGRAFICOS.length}.` });
+            return null;
+          }
+          return n;
+        }),
+      heading_font: fuente,
+      body_font: fuente,
       base_size_px: entero(BASE_MIN_PX, BASE_MAX_PX, 'El tamaño base'),
       heading_weight: entero(300, 800, 'El peso de los títulos').refine((n) => n === null || n % 100 === 0, 'Usa 300, 400, 500, 600, 700 u 800.'),
       heading_letter_spacing: espaciado('El espaciado de títulos'),
@@ -151,8 +180,18 @@ export function esquemaApariencia(alcance: Alcance) {
       favicon_media_id: media,
       acepto_contraste: z.preprocess((v) => v === 'on' || v === 'true' || v === true, z.boolean()),
     })
+    .superRefine((d, ctx) => {
+      if (!global) return;
+      const par = d.pair !== null ? PARES_TIPOGRAFICOS.find((p) => p.id === d.pair) : undefined;
+      if (!(d.heading_font ?? par?.titulos)) ctx.addIssue({ code: 'custom', path: ['heading_font'], message: 'Elige la tipografía de los títulos.' });
+      if (!(d.body_font ?? par?.texto)) ctx.addIssue({ code: 'custom', path: ['body_font'], message: 'Elige la tipografía del texto.' });
+    })
     .transform(
-      (d): DatosApariencia => ({
+      (d): DatosApariencia => {
+        const par = d.pair !== null ? PARES_TIPOGRAFICOS.find((p) => p.id === d.pair) : undefined;
+        const titulos = d.heading_font ?? par?.titulos ?? null;
+        const texto = d.body_font ?? par?.texto ?? null;
+        return {
         alcance,
         colores: {
           bg: d.color_bg,
@@ -165,7 +204,9 @@ export function esquemaApariencia(alcance: Alcance) {
           danger: d.color_danger,
         },
         tipografia: {
-          pair: d.pair,
+          pair: titulos && texto ? parejaDe(titulos, texto) : null,
+          heading_font: titulos,
+          body_font: texto,
           base_size_px: d.base_size_px,
           heading_weight: d.heading_weight,
           heading_letter_spacing: d.heading_letter_spacing,
@@ -175,7 +216,8 @@ export function esquemaApariencia(alcance: Alcance) {
         logo_media_id: d.logo_media_id,
         favicon_media_id: d.favicon_media_id,
         acepto_contraste: d.acepto_contraste,
-      }),
+        };
+      },
     ) as unknown as z.ZodType<DatosApariencia, unknown>;
 }
 
@@ -216,14 +258,10 @@ export function tokensGlobales(previo: Record<string, unknown> | null, colores: 
 /** `site_settings.typography` (y el nombre de las fuentes de la pareja, que el seed también guarda). */
 export function tipografiaGlobal(previo: Record<string, unknown> | null, t: DatosApariencia['tipografia']): Record<string, unknown> {
   const salida: Record<string, unknown> = { ...(previo ?? {}) };
-  if (t.pair !== null) {
-    salida.pair = t.pair;
-    const par = PARES_TIPOGRAFICOS.find((p) => p.id === t.pair);
-    if (par) {
-      salida.heading_font = par.titulos;
-      salida.body_font = par.texto;
-    }
-  }
+  // `pair` solo se toca si las dos fuentes forman una pareja curada: así la tienda anterior sigue viendo algo coherente.
+  if (t.pair !== null) salida.pair = t.pair;
+  if (t.heading_font !== null) salida.heading_font = t.heading_font;
+  if (t.body_font !== null) salida.body_font = t.body_font;
   if (t.base_size_px !== null) salida.base_size_px = t.base_size_px;
   if (t.heading_weight !== null) salida.heading_weight = t.heading_weight;
   if (t.heading_letter_spacing !== null) salida.heading_letter_spacing = t.heading_letter_spacing;

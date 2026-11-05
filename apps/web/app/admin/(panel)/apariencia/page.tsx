@@ -5,9 +5,12 @@ import { FormularioApariencia, type ValoresApariencia } from '@/components/admin
 import { COLORES_POR_DEFECTO, CLAVES_COLOR, resolverColores, resolverTipografia, TIPOGRAFIA_POR_DEFECTO, type ClaveColor } from '@izao/ui/tema';
 import { ALCANCES, ETIQUETA_ALCANCE, leerAlcance } from '@/lib/admin/apariencia/apariencia';
 import { leerApariencia } from '@/lib/admin/apariencia/servidor';
+import { fuentePorFamilia, resolverFuentes } from '@/lib/tipografia/catalogo';
 import { requerirAdmin } from '@/lib/auth/guard';
 import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
-import { guardarApariencia, quitarAjustesPais } from './acciones';
+import { FormularioAjustesMedia } from '@/components/admin/FormularioAjustesMedia';
+import { leerAjustesMedia } from '@/lib/admin/media/ajustes-servidor';
+import { guardarAjustesMedia, guardarApariencia, quitarAjustesPais } from './acciones';
 
 export const metadata: Metadata = { title: 'Apariencia' };
 
@@ -22,10 +25,12 @@ export default async function PaginaApariencia({
   const sp = await searchParams;
   const alcance = leerAlcance(sp.alcance);
   const pais = alcance === 'global' ? null : alcance;
-  const a = await leerApariencia(crearClienteServicio(), pais);
+  const [a, media] = await Promise.all([leerApariencia(crearClienteServicio(), pais), leerAjustesMedia()]);
 
   const globalColores = resolverColores(a.colorTokens).colores;
   const globalTipo = resolverTipografia(a.typography);
+  const globalFuentes = resolverFuentes(a.typography);
+  const fabrica = resolverFuentes(null);
 
   // Global: se edita lo guardado y lo "heredado" es lo de fábrica. País: se edita solo su override.
   const coloresPropios = resolverColores(a.override).colores;
@@ -41,7 +46,8 @@ export default async function PaginaApariencia({
     alcance === 'global'
       ? {
           colores: inicialColores,
-          pair: String(globalTipo.par),
+          heading_font: globalFuentes.titulos.familia,
+          body_font: globalFuentes.texto.familia,
           base_size_px: String(globalTipo.baseSizePx),
           heading_weight: String(globalTipo.pesoTitulos),
           heading_letter_spacing: globalTipo.espaciadoTitulos,
@@ -50,7 +56,8 @@ export default async function PaginaApariencia({
         }
       : {
           colores: inicialColores,
-          pair: texto(overrideTipo['pair']),
+          heading_font: fuentePorFamilia(overrideTipo['heading_font'])?.familia ?? '',
+          body_font: fuentePorFamilia(overrideTipo['body_font'])?.familia ?? '',
           base_size_px: texto(overrideTipo['base_size_px']),
           heading_weight: texto(overrideTipo['heading_weight']),
           heading_letter_spacing: texto(overrideTipo['heading_letter_spacing']),
@@ -61,7 +68,8 @@ export default async function PaginaApariencia({
     alcance === 'global'
       ? {
           colores: { ...COLORES_POR_DEFECTO },
-          pair: TIPOGRAFIA_POR_DEFECTO.par,
+          titulos: fabrica.titulos.familia,
+          texto: fabrica.texto.familia,
           base: TIPOGRAFIA_POR_DEFECTO.baseSizePx,
           peso: TIPOGRAFIA_POR_DEFECTO.pesoTitulos,
           espTitulos: TIPOGRAFIA_POR_DEFECTO.espaciadoTitulos,
@@ -69,7 +77,8 @@ export default async function PaginaApariencia({
         }
       : {
           colores: globalColores,
-          pair: globalTipo.par,
+          titulos: globalFuentes.titulos.familia,
+          texto: globalFuentes.texto.familia,
           base: globalTipo.baseSizePx,
           peso: globalTipo.pesoTitulos,
           espTitulos: globalTipo.espaciadoTitulos,
@@ -106,6 +115,13 @@ export default async function PaginaApariencia({
         favicon={a.favicon}
         accion={guardarApariencia}
       />
+
+      {alcance === 'global' ? (
+        <section aria-labelledby="h-imagenes" className="adm-pila">
+          <h2 id="h-imagenes">Imágenes</h2>
+          <FormularioAjustesMedia inicial={media.ajustes} disponible={media.disponible} accion={guardarAjustesMedia} />
+        </section>
+      ) : null}
 
       {pais && tieneOverride ? (
         <section aria-labelledby="h-quitar">

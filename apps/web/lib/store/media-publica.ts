@@ -9,6 +9,8 @@ import { rm } from 'node:fs/promises';
 import path from 'node:path';
 import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
 import { escribirVariantes, raizMedia, rutaBase } from '@/lib/admin/media/guardar';
+import { bytesMaximos } from '@/lib/admin/media/ajustes';
+import { leerAjustesMedia } from '@/lib/admin/media/ajustes-servidor';
 import { procesarImagen } from '@/lib/admin/media/procesar';
 import { validarArchivo } from '@/lib/admin/media/validar';
 
@@ -16,10 +18,11 @@ export const nombreSeguro = (n: string) => path.basename(n).replace(/[^\p{L}\p{N
 
 /** Guarda una foto y devuelve el id de `media`; `null` si no es una imagen válida. Lanza si falla la base. */
 export async function guardarFotoPublica(args: { kind: 'warranty' | 'review'; alt: string; buffer: Buffer; nombre: string }): Promise<string | null> {
-  if (!validarArchivo({ buffer: args.buffer, nombre: args.nombre }).ok) return null;
+  const { ajustes } = await leerAjustesMedia();
+  if (!validarArchivo({ buffer: args.buffer, nombre: args.nombre, maxBytes: bytesMaximos(ajustes) }).ok) return null;
   let procesada;
   try {
-    procesada = await procesarImagen({ buffer: args.buffer, recorte45: false });
+    procesada = await procesarImagen({ buffer: args.buffer, recorte45: false, calidad: ajustes.calidad });
   } catch {
     return null;
   }
