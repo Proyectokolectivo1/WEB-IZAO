@@ -31,8 +31,11 @@ Redis, web y worker corriendo en el VPS (tag 68cdd45, healthy); Nginx con `izao.
 Bloqueos: quitar enlace viejo y cron (root); `BACKUP_AGE_RECIPIENT` vacío; host sin `pg_dump` 17 ni `age`.
 
 ## Redespliegue 967d971 (2026-11-05) — OK
-Tras 4 intentos fallidos (sin snapshot, API Contabo 401): el script viejo del VPS corría en cada intento (git reset del rollback). Con `git pull --ff-only` previo corrió el nuevo: web quedó en 127.0.0.1:3001 (Docker asignó 3001 del rango 3000-3001; antes el curl solo miraba 3000), autodetección OK. Desplegado 967d971 (incluye D-042/043/496dac9); web y worker healthy, 3001/api/health 200, https 200, `ultimo-ok`=967d971. Worker sin errores, polling (*/10) silencioso en logs. Etiqueta de prueba no verificada (requeriría pedido). Backup 2026-11-04 existe.
+El script viejo del VPS corría en cada intento (git reset del rollback); con `git pull --ff-only` previo corrió el nuevo. Puerto de web autodetectado (3000-3001). Backup 2026-11-04 existe.
 PROCEDIMIENTO: antes de deploy.sh, `git pull --ff-only` si el script cambió. Stash local de `.dockerignore` en VPS (inocuo).
+
+## Redespliegue 78e6c0f (2026-11-05) — OK
+`git pull --ff-only` + `deploy.sh --skip-tests` (359 s, sin snapshot). web y worker healthy, web en 127.0.0.1:3000 (volvió a 3000), /api/health 200 local y https, /admin/login 200. `/api/chat/estado?country=co|ec` 200 (usa `country`, no `pais`); logs web sin `BigInt`. Turnstile del login apagado: no hay TURNSTILE_SITE_KEY en el .env (no se tocó). `ultimo-ok`=78e6c0f.
 
 ## Siguiente paso exacto
 `uptime`, `crear-admin`, restore real contra `auth`, snapshot cuando se arregle la API Contabo.
