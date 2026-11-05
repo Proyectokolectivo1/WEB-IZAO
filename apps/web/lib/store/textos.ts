@@ -225,6 +225,9 @@ export const T = {
     anterior: 'Anterior',
     siguiente: 'Siguiente',
     diapositivaN: (n: number, total: number) => `${n} de ${total}`,
+    carrusel: 'Destacados',
+    pausar: 'Pausar el carrusel',
+    reanudar: 'Reanudar el carrusel',
     calificacion: (n: number) => `${n} de 5`,
   },
   errores: {

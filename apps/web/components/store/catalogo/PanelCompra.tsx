@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Chip, Icono } from '@izao/ui';
 import { lineaDe, presentacionDe, varianteInicial } from '@/lib/store/ficha-util';
 import { formatearPrecio } from '@/lib/store/pais';
@@ -18,13 +18,18 @@ interface Props {
   idBotonAgregar?: string;
   /** Avisa a la ficha qué variante está elegida (precio de la barra fija). */
   alElegir?: (variantId: string) => void;
+  /** Variante que debe quedar elegida (por `?variante={SKU}`); se aplica cuando llega. */
+  varianteIdPedida?: string | null;
 }
 
 /** Variantes en chips con precio, cantidad y botón de agregar. Lo comparten la vista rápida y la ficha. */
-export function PanelCompra({ ficha, pais, alAgregar, idBotonAgregar, alElegir }: Props) {
+export function PanelCompra({ ficha, pais, alAgregar, idBotonAgregar, alElegir, varianteIdPedida }: Props) {
   const { agregar } = useCarrito();
   const [elegida, setElegida] = useState(() => varianteInicial(ficha.variants)?.id ?? null);
   const [cantidad, setCantidad] = useState(1);
+  useEffect(() => {
+    if (varianteIdPedida) setElegida(varianteIdPedida);
+  }, [varianteIdPedida]);
   const v = ficha.variants.find((x) => x.id === elegida) ?? null;
   const precio = (n: number) => formatearPrecio(n, pais);
   const ahorro = v?.compare_at_price && v.compare_at_price > v.price ? v.compare_at_price - v.price : 0;
@@ -82,7 +87,7 @@ export function PanelCompra({ ficha, pais, alAgregar, idBotonAgregar, alElegir }
           id={idBotonAgregar}
           data-testid="boton-agregar"
           tamano="lg"
-          className="min-w-[12rem] flex-1"
+          className="min-w-[12rem] flex-1 whitespace-nowrap px-4!"
           disabled={!v || !v.in_stock}
           onClick={() => {
             if (!v) return;

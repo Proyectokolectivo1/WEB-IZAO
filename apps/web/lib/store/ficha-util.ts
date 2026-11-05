@@ -14,6 +14,17 @@ export function varianteInicial(variantes: readonly VarianteProducto[]): Variant
   );
 }
 
+/**
+ * Variante pedida por `?variante={SKU}` (enlaces de los banners). Compara el SKU sin distinguir mayúsculas; también
+ * acepta el id de la variante. Si no existe o está agotada devuelve `null` y la ficha conserva la variante por defecto.
+ */
+export function varianteDeSku(variantes: readonly VarianteProducto[], sku: string | null | undefined): VarianteProducto | null {
+  const clave = (sku ?? '').trim().toLowerCase();
+  if (!clave || clave.length > 80) return null;
+  const v = variantes.find((x) => (x.sku ?? '').toLowerCase() === clave || x.id.toLowerCase() === clave);
+  return v && v.in_stock ? v : null;
+}
+
 export function lineaDe(ficha: FichaProducto, v: VarianteProducto, cantidad = 1): Omit<LineaCarrito, 'cantidad'> & { cantidad: number } {
   const imagen = v.image ?? ficha.img_primary ?? ficha.images[0]?.media ?? null;
   return {

@@ -29,6 +29,7 @@ import type {
   Sugerencias,
   TipoPagina,
 } from './types';
+import { bannerVigente } from './banners';
 import { etiquetasPagina } from './etiquetas';
 import { normalizarTipo, ordenarPaginas } from './paginas';
 
@@ -221,7 +222,7 @@ const leerEspacios = conCache('espacios', 300, contenido, async (p): Promise<Esp
 });
 
 const leerHome = conCache('home', 300, (p: CodigoPais, ..._a: unknown[]) => [...contenido(p), ...catalogo(p)], async (p): Promise<ContenidoHome> => {
-  const ahora = new Date().toISOString();
+  const ahora = new Date();
   const [sec, ban, espacios, col, res, fam, menu] = await Promise.all([
     db().from('home_sections').select('id,type,config').eq('country_code', upper(p)).eq('is_active', true).order('sort_order'),
     db()
@@ -240,7 +241,7 @@ const leerHome = conCache('home', 300, (p: CodigoPais, ..._a: unknown[]) => [...
   ]);
   const secciones = lista(ok(sec, 'home_sections')) as unknown as SeccionHome[];
   const banners = lista(ok(ban, 'banners'))
-    .filter((b) => (!b.starts_at || String(b.starts_at) <= ahora) && (!b.ends_at || String(b.ends_at) > ahora))
+    .filter((b) => bannerVigente({ starts_at: b.starts_at as string | null, ends_at: b.ends_at as string | null }, ahora))
     .filter((b) => b.desktop && b.mobile) as unknown as Banner[];
   const colecciones: ContenidoHome['colecciones'] = await Promise.all(
     lista(ok(col, 'collections')).map(async (c) => {

@@ -42,6 +42,8 @@ const TRAZOS = {
   caja: ['M3.5 7.5 12 3.5l8.5 4v9L12 20.5l-8.5-4v-9Z', 'M3.5 7.5 12 11.5l8.5-4M12 11.5v9'],
   reloj: ['M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z', 'M12 8v4l3 2'],
   papelera: ['M5 7h14M10 7V5h4v2M7 7l.8 12h8.4L17 7'],
+  pausa: ['M9 6v12M15 6v12'],
+  reproducir: ['M8 5.5v13l10.5-6.5L8 5.5Z'],
   ordenar: ['M8 5v14M8 19l-3-3M8 19l3-3', 'M16 19V5M16 5l-3 3M16 5l3 3'],
 } as const satisfies Record<string, readonly string[]>;
 

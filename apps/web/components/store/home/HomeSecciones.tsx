@@ -1,9 +1,11 @@
 import Link from 'next/link';
+import { Fragment } from 'react';
 import { Icono, IzaoImage, Revelar, clasesBoton, type NombreIcono } from '@izao/ui';
 import type { ContenidoHome } from '@/lib/store/repo';
 import { T } from '@/lib/store/textos';
 import type { Banner, CodigoPais, SeccionHome } from '@/lib/store/types';
-import { ImagenResponsiva } from '../ImagenResponsiva';
+import { bannersDe } from '@/lib/store/banners';
+import { BannerFijo } from './BannerFijo';
 import { Hero } from './Hero';
 import { PestanasColecciones } from './PestanasColecciones';
 
@@ -44,11 +46,21 @@ function Encabezado({ n, titulo, enlaceTodos, pais }: { n: number; titulo: strin
 
 const CONTENEDOR = 'mx-auto w-full max-w-[96rem] px-4 sm:px-8';
 
+function BannersMid({ banners }: { banners: Banner[] }) {
+  return (
+    <section className={`${CONTENEDOR} flex flex-col gap-4 pt-20`}>
+      {banners.map((b) => (
+        <BannerFijo key={b.id} banner={b} ubicacion="mid" />
+      ))}
+    </section>
+  );
+}
+
 function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; contenido: ContenidoHome; pais: CodigoPais; n: number; bannersMid: Banner[] }) {
   const titulo = texto(s.config['title']);
   switch (s.type) {
     case 'hero':
-      return <Hero banners={contenido.banners.filter((b) => b.placement === 'hero')} />;
+      return <Hero banners={bannersDe(contenido.banners, 'hero')} />;
 
     case 'categories': {
       if (contenido.categorias.length === 0) return null;
@@ -60,8 +72,8 @@ function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; conten
               <li key={c.id}>
                 <Revelar indice={k}>
                   <Link href={`/${pais}/categoria/${c.slug}`} className="group block">
-                    <div className="overflow-hidden">
-                      <IzaoImage media={c.image} alt="" sizes="(min-width:1536px) 15vw, (min-width:1024px) 22vw, 45vw" className="transition-transform duration-500 ease-izao group-hover:scale-[1.03]" />
+                    <div className="overflow-hidden rounded-card">
+                      <IzaoImage media={c.image} alt="" sizes="(min-width:1536px) 15vw, (min-width:1024px) 22vw, 45vw" redondeo="none" className="transition-transform duration-500 ease-izao group-hover:scale-[1.03]" />
                     </div>
                     <span className="mt-3 block font-display text-2xl underline-offset-8 group-hover:underline">{c.name}</span>
                   </Link>
@@ -83,7 +95,7 @@ function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; conten
               <li key={f.slug}>
                 <Link
                   href={`/${pais}/familia/${f.slug}`}
-                  className="inline-flex min-h-12 items-center rounded-md border border-ink px-6 font-display text-xl transition-colors hover:bg-ink hover:text-bg"
+                  className="inline-flex min-h-12 items-center rounded-control border border-ink px-6 font-display text-xl transition-colors hover:bg-ink hover:text-bg"
                 >
                   {f.name}
                 </Link>
@@ -95,21 +107,8 @@ function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; conten
     }
 
     case 'banner': {
-      const b = bannersMid[0];
-      if (!b) return null;
-      const contenidoBanner = (
-        <div className="relative aspect-[4/5] overflow-hidden md:aspect-[12/5]">
-          <ImagenResponsiva escritorio={b.desktop} movil={b.mobile} alt={b.alt} />
-          {b.title || b.cta_label ? (
-            <div className="absolute inset-0 flex flex-col justify-center gap-3 px-6 md:px-16" style={{ color: b.text_color && /^#[0-9a-f]{3,6}$/i.test(b.text_color) ? b.text_color : undefined }}>
-              {b.subtitle ? <p className="etiqueta">{b.subtitle}</p> : null}
-              {b.title ? <h2 className="max-w-lg text-4xl md:text-5xl">{b.title}</h2> : null}
-              {b.cta_label ? <span className={`${clasesBoton({ tamano: 'lg' })} w-fit`}>{b.cta_label}</span> : null}
-            </div>
-          ) : null}
-        </div>
-      );
-      return <section className={`${CONTENEDOR} pt-20`}>{b.link_url ? <Link href={b.link_url} aria-label={b.alt}>{contenidoBanner}</Link> : contenidoBanner}</section>;
+      if (bannersMid.length === 0) return null;
+      return <BannersMid banners={bannersMid} />;
     }
 
     case 'collection_tabs': {
@@ -130,8 +129,8 @@ function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; conten
       const url = enlace(s.config['cta_url']);
       const imagen = contenido.espacios.find((e) => e.key === 'asesoria')?.media ?? null;
       return (
-        <section className="mt-20 bg-surface">
-          <div className={`${CONTENEDOR} grid items-center gap-8 py-14 md:grid-cols-2 md:gap-16`}>
+        <section className={`${CONTENEDOR} pt-20`}>
+          <div className="grid items-center gap-8 rounded-panel bg-surface px-6 py-12 md:grid-cols-2 md:gap-16 md:px-14 md:py-14">
             <div className="flex flex-col items-start gap-5">
               <span className="etiqueta text-ink/70 tabular-nums">{T.home.seccion(n)}</span>
               <h2 className="text-4xl md:text-5xl">{t}</h2>
@@ -142,7 +141,7 @@ function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; conten
                 </Link>
               ) : null}
             </div>
-            {imagen ? <IzaoImage media={imagen} alt="" sizes="(min-width:768px) 45vw, 100vw" proporcion={4 / 3} /> : null}
+            {imagen ? <IzaoImage media={imagen} alt="" sizes="(min-width:768px) 45vw, 100vw" proporcion={4 / 3} redondeo="card" /> : null}
           </div>
         </section>
       );
@@ -174,7 +173,7 @@ function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; conten
           <Encabezado n={n} titulo={titulo ?? T.home.resenas} />
           <ul className="sin-scroll-visible -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 sm:-mx-8 sm:px-8" tabIndex={0} aria-label={titulo ?? T.home.resenas}>
             {contenido.resenas.map((r) => (
-              <li key={r.id} className="w-[80%] shrink-0 snap-start border border-line p-6 sm:w-[26rem]">
+              <li key={r.id} className="w-[80%] shrink-0 snap-start rounded-card border border-line p-6 sm:w-[26rem]">
                 <p aria-label={T.home.calificacion(r.rating)} className="flex gap-0.5 pb-3">
                   {Array.from({ length: 5 }, (_, k) => (
                     <Icono key={k} nombre="estrella" tamano={16} className={k < r.rating ? 'fill-ink' : ''} />
@@ -195,14 +194,27 @@ function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; conten
 }
 
 export function HomeSecciones({ contenido, pais }: { contenido: ContenidoHome; pais: CodigoPais }) {
-  const bannersMid = contenido.banners.filter((b) => b.placement === 'mid');
+  const bannersMid = bannersDe(contenido.banners, 'mid');
+  const bannersHero = bannersDe(contenido.banners, 'hero');
+  // Los banners que crea el panel salen aunque la página de inicio no tenga la sección correspondiente:
+  // el carrusel `hero` siempre va arriba y los `mid` después de las colecciones (o al final).
+  const hayHero = contenido.secciones.some((s) => s.type === 'hero');
+  const hayMid = contenido.secciones.some((s) => s.type === 'banner');
+  const indiceColecciones = contenido.secciones.findIndex((s) => s.type === 'collection_tabs');
   let n = 0;
   return (
     <>
-      {contenido.secciones.map((s) => {
+      {!hayHero && bannersHero.length > 0 ? <Hero banners={bannersHero} /> : null}
+      {contenido.secciones.map((s, k) => {
         if (s.type !== 'hero') n += 1;
-        return <Seccion key={s.id} s={s} contenido={contenido} pais={pais} n={n} bannersMid={bannersMid} />;
+        return (
+          <Fragment key={s.id}>
+            <Seccion s={s} contenido={contenido} pais={pais} n={n} bannersMid={bannersMid} />
+            {!hayMid && bannersMid.length > 0 && k === indiceColecciones ? <BannersMid banners={bannersMid} /> : null}
+          </Fragment>
+        );
       })}
+      {!hayMid && bannersMid.length > 0 && indiceColecciones < 0 ? <BannersMid banners={bannersMid} /> : null}
     </>
   );
 }
