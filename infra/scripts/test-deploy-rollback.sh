@@ -56,7 +56,7 @@ escenario() { # nombre, esperado: rollback|sinimagen|ok|abortamig, variables... 
   local rc=0
   ULTIMO_OK_FILE="$STUB_DIR/ultimo-ok"
   [ -n "${SEMILLA_OK:-}" ] && echo "$SEMILLA_OK" > "$ULTIMO_OK_FILE"
-  env "$@" PATH="$T/bin:$PATH" STUB_DIR="$STUB_DIR" ULTIMO_OK="$ULTIMO_OK_FILE" STUB_RUNNING_TAG="${RUNNING_TAG:-}" DEPLOY_LOG="$T/deploys.log" HEALTH_URL=http://127.0.0.1:1/x \
+  env "$@" PATH="$T/bin:$PATH" STUB_DIR="$STUB_DIR" ULTIMO_OK="$ULTIMO_OK_FILE" STUB_RUNNING_TAG="${RUNNING_TAG:-}" DEPLOY_LOG="$T/deploys.log" FALLO_LOG="$T/fallo.log" HEALTH_URL=http://127.0.0.1:1/x \
     bash "$T/repo/infra/scripts/deploy.sh" --skip-tests ${EXTRA_ARGS:-} > "$STUB_DIR/salida.txt" 2>&1 || rc=$?
   local rb; rb="$(grep -E "^TAG=${RB_TAG:-aaa1111} docker compose .* up " "$STUB_DIR/calls.log" 2>/dev/null || true)"
   local ok=1
@@ -100,7 +100,7 @@ EXTRA_ARGS="--migraciones-verificadas" escenario "migraciones nuevas confirmadas
 echo "--- escenario: despliegue fallido antes del paso 5 no oculta migraciones al siguiente"
 export STUB_DIR="$T/s2"; rm -rf "$STUB_DIR"; mkdir -p "$STUB_DIR"
 echo "good111 aaa11110000" > "$STUB_DIR/ultimo-ok"
-correr() { env STUB_MIG_BASE=aaa11110000 PATH="$T/bin:$PATH" STUB_DIR="$STUB_DIR" ULTIMO_OK="$STUB_DIR/ultimo-ok" DEPLOY_LOG="$T/deploys.log" HEALTH_URL=http://127.0.0.1:1/x "$@" bash "$T/repo/infra/scripts/deploy.sh" ${ARGS:-} > "$STUB_DIR/salida.txt" 2>&1; }
+correr() { env STUB_MIG_BASE=aaa11110000 PATH="$T/bin:$PATH" STUB_DIR="$STUB_DIR" ULTIMO_OK="$STUB_DIR/ultimo-ok" DEPLOY_LOG="$T/deploys.log" FALLO_LOG="$T/fallo.log" HEALTH_URL=http://127.0.0.1:1/x "$@" bash "$T/repo/infra/scripts/deploy.sh" ${ARGS:-} > "$STUB_DIR/salida.txt" 2>&1; }
 rc1=0; ARGS="--migraciones-verificadas" correr STUB_PNPM_FAIL=1 || rc1=$?
 rc2=0; ARGS="" correr STUB_X=1 || rc2=$?
 if [ "$rc1" -ne 0 ] && [ "$rc2" -ne 0 ] && grep -q 'list_migrations' "$STUB_DIR/salida.txt"; then

@@ -21,6 +21,7 @@ done
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 INFRA="$RAIZ/infra"
 LOG="${DEPLOY_LOG:-/srv/izao/deploys.log}"
+FALLO_LOG="${FALLO_LOG:-/srv/izao/last-deploy-failure.log}"
 HEALTH_URL_FIJO="${HEALTH_URL:-}"   # si viene de fuera, no se autodetecta el puerto publicado
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:3000/api/health}"
 ULTIMO_OK="${ULTIMO_OK:-/srv/izao/ultimo-ok}"   # último tag de imagen que pasó el healthcheck
@@ -128,7 +129,30 @@ guardar_ultimo_ok() {
   echo "$1 $2" > "$ULTIMO_OK" 2>/dev/null || echo "AVISO: no se pudo escribir $ULTIMO_OK" >&2
 }
 
+# Antes de revertir se conserva el estado de los contenedores fallidos (el rollback los recrea y pierde sus logs).
+diagnosticar_fallo() {
+  [ "$DRY_RUN" -eq 1 ] && { echo "[dry-run] volcado de logs/estado de web y worker -> $FALLO_LOG"; return 0; }
+  {
+    echo "=== Fallo de despliegue $NEW_SHA ($(date -u +%FT%TZ)) ==="
+    echo "--- curl a ${url_salud:-$HEALTH_URL} ---"
+    curl --silent --show-error --max-time 5 -o /dev/null -w 'http=%{http_code}
+' "${url_salud:-$HEALTH_URL}" 2>&1 || true
+    local s cid
+    for s in web worker; do
+      cid="$("${COMPOSE[@]}" ps -aq "$s" 2>/dev/null | head -1 || true)"
+      echo "--- $s: estado ---"
+      if [ -n "$cid" ]; then
+        docker inspect --format 'status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{end}} restarts={{.RestartCount}} oomkilled={{.State.OOMKilled}} exit={{.State.ExitCode}} imagen={{.Config.Image}} puertos={{json .NetworkSettings.Ports}}' "$cid" 2>&1 || true
+        echo "--- $s: docker logs --tail 100 ---"
+        docker logs --tail 100 "$cid" 2>&1 || true
+      else echo "(sin contenedor)"; fi
+    done
+  } 2>&1 | sed -E 's/((KEY|SECRET|TOKEN|PASSWORD|PASS|DATABASE_URL|DSN|AUTH)[A-Za-z0-9_]*[=:] *)[^ ]+/***/Ig; s#(postgres(ql)?://[^:/@ ]+:)[^@ ]+@#***@#g; s/(Bearer |eyJ)[A-Za-z0-9._-]+/***/g' | tee "$FALLO_LOG" || true
+  echo "(volcado guardado en $FALLO_LOG)"
+}
+
 revertir() {
+  diagnosticar_fallo
   echo "Revirtiendo a la versión $PREV_SHA" >&2
   if [ "$DRY_RUN" -eq 1 ]; then
     echo "[dry-run] docker image inspect izao-web:$PREV_SHA izao-worker:$PREV_SHA"
@@ -163,6 +187,7 @@ actualizar_y_verificar() {
     publicado="$("${COMPOSE[@]}" port web 3000 2>/dev/null | head -1 | sed 's/^0\.0\.0\.0:/127.0.0.1:/' || true)"
     [ -n "$publicado" ] && url="http://$publicado/api/health"
   fi
+  url_salud="$url"
   curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-connrefused "$url" >/dev/null || return 1
   echo "Salud OK"
 }
