@@ -150,7 +150,7 @@ export function Hero({ banners }: { banners: Banner[] }) {
                 </div>
 
                 {b.title || b.subtitle || b.cta_label ? (
-                  <div className="absolute inset-0 flex flex-col justify-end px-6 pb-16 sm:px-10 md:justify-center md:pb-0 lg:px-16">
+                  <div className="absolute inset-0 flex flex-col justify-end px-6 pb-16 sm:px-10 md:justify-center md:px-20 md:pb-0">
                     <div
                       className={`flex max-w-xl flex-col gap-4 ${POSICION[b.text_position]} ${b.text_position === 'right' ? 'ml-auto' : b.text_position === 'center' ? 'mx-auto' : ''}`}
                       style={{ color }}
