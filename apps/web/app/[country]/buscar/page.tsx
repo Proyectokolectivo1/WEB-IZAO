@@ -36,7 +36,7 @@ export default async function Buscar({ params, searchParams }: Props) {
             <ul className="mt-3 flex flex-wrap gap-2">
               {populares.map((p) => (
                 <li key={p}>
-                  <Link href={`/${pais}/buscar?q=${encodeURIComponent(p)}`} className="inline-flex min-h-11 items-center rounded-md border border-line px-4 hover:border-ink hover:bg-surface">
+                  <Link href={`/${pais}/buscar?q=${encodeURIComponent(p)}`} className="inline-flex min-h-11 items-center rounded-control border border-line px-4 hover:border-ink hover:bg-surface">
                     {p}
                   </Link>
                 </li>

@@ -208,7 +208,7 @@ export function FormularioGarantia({ pais, motivos, diasPlazo, diasRespuesta, tu
   return (
     <form onSubmit={enviar} noValidate className="flex flex-col gap-12" data-testid="formulario-garantia">
       {intentado && lista.length > 0 ? (
-        <div ref={resumen} tabIndex={-1} role="alert" className="border border-danger p-4 outline-none">
+        <div ref={resumen} tabIndex={-1} role="alert" className="rounded-card border border-danger p-4 outline-none">
           <p className="font-semibold">{TG.resumenErrores(lista.length)}</p>
           <ul className="list-disc pl-5 pt-2 text-[0.9375rem]">
             {lista.map((c) => (
@@ -359,7 +359,7 @@ export function FormularioGarantia({ pais, motivos, diasPlazo, diasRespuesta, tu
       {turnstileKey ? <div ref={contenedorTs} aria-label={TG.turnstile} /> : null}
 
       {falla ? (
-        <div ref={banner} tabIndex={-1} role="alert" className="border border-danger p-4 text-[0.9375rem] outline-none">
+        <div ref={banner} tabIndex={-1} role="alert" className="rounded-card border border-danger p-4 text-[0.9375rem] outline-none">
           <p>{falla}</p>
           {enlaceAsesor ? (
             <a href={enlaceAsesor} target="_blank" rel="noopener" className="mt-2 inline-block underline underline-offset-4">

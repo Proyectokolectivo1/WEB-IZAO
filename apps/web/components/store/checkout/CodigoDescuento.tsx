@@ -49,7 +49,7 @@ export function CodigoDescuento({ id, codigo, revisando, onAplicar, onQuitar, av
           maxLength={40}
           aria-describedby={mensajeId}
           aria-invalid={codigo?.estado === 'rechazado' || undefined}
-          className="min-h-11 min-w-0 flex-1 rounded-md border border-line bg-bg px-3 uppercase focus:bg-surface"
+          className="min-h-11 min-w-0 flex-1 rounded-control border border-line bg-bg px-3 uppercase focus:bg-surface"
         />
         <Button type="button" variante="secundario" onClick={() => void enviar()} disabled={revisando || !escrito.trim()}>
           {revisando ? TC.resumen.aplicando : TC.resumen.aplicar}

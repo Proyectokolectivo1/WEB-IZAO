@@ -87,7 +87,7 @@ export function TarjetaProducto({ item, pais, concentracion, prioritaria = false
       className="diferir group relative flex flex-col"
       onPointerEnter={() => hayHover && setHoverListo(true)}
     >
-      <div className="relative aspect-[4/5] overflow-hidden bg-surface">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-card bg-surface">
         <Link href={href} aria-label={item.name} className="absolute inset-0 block">
           {/* Ratón: crossfade 450 ms con leve zoom */}
           <div className="absolute inset-0 hidden transition-transform duration-[450ms] ease-izao raton:block raton:group-hover:scale-[1.03]">

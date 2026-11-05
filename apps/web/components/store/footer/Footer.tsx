@@ -26,7 +26,7 @@ export function Footer({ pais, ajustes, paginas, espacios }: Props) {
   const enlace = 'inline-flex min-h-11 items-center underline-offset-4 hover:underline';
 
   return (
-    <footer className="mt-24 bg-ink text-bg">
+    <footer className="mt-24 rounded-t-panel bg-ink text-bg">
       <div className="mx-auto grid max-w-[96rem] gap-12 px-4 py-14 sm:px-8 md:grid-cols-12">
         <div className="md:col-span-5">
           <p className="font-display text-4xl leading-none">{ajustes.nombreTienda}</p>
@@ -90,7 +90,7 @@ export function Footer({ pais, ajustes, paginas, espacios }: Props) {
           {medios?.media ? (
             <div className="w-56">
               <p className="solo-lectores">{T.footer.medios}</p>
-              <IzaoImage media={medios.media} alt={medios.title ?? T.footer.medios} sizes="224px" proporcion={5} />
+              <IzaoImage media={medios.media} alt={medios.title ?? T.footer.medios} sizes="224px" proporcion={5} redondeo="none" />
             </div>
           ) : null}
         </div>

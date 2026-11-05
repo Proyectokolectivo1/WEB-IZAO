@@ -52,9 +52,9 @@ export function VistaRapida({ pais, slug, abierto, onCerrar }: Props) {
                         onClick={() => setActiva(k)}
                         aria-label={T.ficha.imagenN(k + 1, imagenes.length)}
                         aria-current={k === activa}
-                        className={`block w-full border ${k === activa ? 'border-ink' : 'border-transparent'}`}
+                        className={`block w-full overflow-hidden rounded-control border ${k === activa ? 'border-ink' : 'border-transparent'}`}
                       >
-                        <IzaoImage media={m} alt="" sizes="80px" />
+                        <IzaoImage media={m} alt="" sizes="80px" redondeo="control" />
                       </button>
                     </li>
                   ))}

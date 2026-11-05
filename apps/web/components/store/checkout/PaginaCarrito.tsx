@@ -45,10 +45,10 @@ export function PaginaCarrito() {
   filas.push({ clave: 'envio', etiqueta: T.carrito.envio, valor: valorEnvio });
 
   return (
-    <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-16 xl:grid-cols-[minmax(0,1fr)_26rem]">
+    <div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-16 xl:grid-cols-[minmax(0,1fr)_26rem]">
       <section aria-label={T.carrito.resumenAria(lineas.length)}>
         {vista.ajuste ? (
-          <p role="status" className="mb-6 rounded-md bg-surface px-4 py-3 text-[0.9375rem]">
+          <p role="status" className="mb-6 rounded-card bg-surface px-4 py-3 text-[0.9375rem]">
             {vista.ajuste === 'agotado' ? TC.checkout.agotadoQuitado : T.carrito.ajusteServidor}
           </p>
         ) : null}
@@ -84,7 +84,7 @@ export function PaginaCarrito() {
                       type="button"
                       onClick={() => quitar(l.variantId)}
                       aria-label={T.carrito.quitar(l.nombre)}
-                      className="inline-flex size-11 items-center justify-center rounded-md hover:bg-surface"
+                      className="inline-flex size-11 items-center justify-center rounded-control hover:bg-surface"
                     >
                       <Icono nombre="papelera" />
                     </button>
@@ -100,7 +100,7 @@ export function PaginaCarrito() {
       </section>
 
       <aside aria-labelledby="resumen-bolso" className="h-fit lg:sticky lg:top-28">
-        <div className="border border-line p-6">
+        <div className="rounded-card border border-line p-6">
           <p id="resumen-bolso" className="etiqueta pb-5">
             01 · {TC.carrito.resumen} · {TC.carrito.unidades(unidades)}
           </p>

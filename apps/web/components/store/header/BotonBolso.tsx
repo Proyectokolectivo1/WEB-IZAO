@@ -27,7 +27,7 @@ export function BotonBolso() {
       onClick={abrir}
       aria-label={T.header.carrito(listo ? unidades : 0)}
       aria-haspopup="dialog"
-      className="relative inline-flex size-11 items-center justify-center rounded-md hover:bg-surface"
+      className="relative inline-flex size-11 items-center justify-center rounded-control hover:bg-surface"
     >
       <span ref={ref} className="inline-flex">
         <Icono nombre="bolso" tamano={22} />

@@ -14,7 +14,7 @@ export function Chip({ seleccionado = false, className, children, type = 'button
       type={type}
       aria-pressed={seleccionado}
       className={[
-        'inline-flex min-h-11 items-center justify-center gap-2 rounded-md border px-4 text-[0.875rem] transition-colors duration-200',
+        'inline-flex min-h-11 items-center justify-center gap-2 rounded-control border px-4 text-[0.875rem] transition-colors duration-200',
         seleccionado
           ? 'border-ink bg-ink text-bg'
           : 'border-line bg-transparent text-ink hover:border-ink hover:bg-surface',
@@ -39,13 +39,13 @@ interface ChipQuitarProps {
 /** Chip de filtro activo, con botón para quitarlo. */
 export function ChipQuitar({ etiqueta, etiquetaQuitar, onQuitar, testId }: ChipQuitarProps) {
   return (
-    <span data-testid={testId} className="inline-flex min-h-11 items-center gap-1 rounded-md bg-surface pl-3 text-[0.875rem] text-ink">
+    <span data-testid={testId} className="inline-flex min-h-11 items-center gap-1 rounded-control bg-surface pl-3 text-[0.875rem] text-ink">
       {etiqueta}
       <button
         type="button"
         onClick={onQuitar}
         aria-label={etiquetaQuitar}
-        className="inline-flex size-11 items-center justify-center rounded-md hover:bg-accent/40"
+        className="inline-flex size-11 items-center justify-center rounded-control hover:bg-accent/40"
       >
         <Icono nombre="cerrar" tamano={16} />
       </button>

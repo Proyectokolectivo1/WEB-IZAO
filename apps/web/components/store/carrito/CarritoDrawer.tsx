@@ -184,7 +184,7 @@ export function CarritoDrawer() {
         ) : (
           <>
             {ajustado ? (
-              <p role="status" className="mx-5 mt-4 rounded-md bg-surface px-3 py-2 text-[0.875rem]">
+              <p role="status" className="mx-5 mt-4 rounded-card bg-surface px-3 py-2 text-[0.875rem]">
                 {T.carrito.ajusteServidor}
               </p>
             ) : null}
@@ -192,7 +192,7 @@ export function CarritoDrawer() {
               {lineas.map((l) => (
                 <li key={l.variantId} className="flex gap-4 py-5">
                   <Link href={`/${pais}/perfume/${l.slug}`} onClick={cerrar} className="w-20 shrink-0">
-                    <IzaoImage media={l.imagen} alt={l.nombre} sizes="80px" />
+                    <IzaoImage media={l.imagen} alt={l.nombre} sizes="80px" redondeo="control" />
                   </Link>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <Link href={`/${pais}/perfume/${l.slug}`} onClick={cerrar} className="font-display text-xl leading-tight">
@@ -216,7 +216,7 @@ export function CarritoDrawer() {
                         type="button"
                         onClick={() => quitar(l.variantId)}
                         aria-label={T.carrito.quitar(l.nombre)}
-                        className="inline-flex size-11 items-center justify-center rounded-md hover:bg-surface"
+                        className="inline-flex size-11 items-center justify-center rounded-control hover:bg-surface"
                       >
                         <Icono nombre="papelera" />
                       </button>
@@ -240,7 +240,7 @@ export function CarritoDrawer() {
                   maxLength={40}
                   aria-describedby="codigo-mensaje"
                   aria-invalid={codigo?.estado === 'rechazado' || undefined}
-                  className="min-h-11 min-w-0 flex-1 rounded-md border border-line bg-bg px-3 uppercase focus:bg-surface"
+                  className="min-h-11 min-w-0 flex-1 rounded-control border border-line bg-bg px-3 uppercase focus:bg-surface"
                 />
                 <Button type="submit" variante="secundario" disabled={revisando || !codigoEscrito.trim()}>
                   {revisando ? T.carrito.aplicando : T.carrito.aplicar}

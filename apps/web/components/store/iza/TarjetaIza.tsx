@@ -14,9 +14,9 @@ export function TarjetaIza({ tarjeta, pais, onNavegar }: { tarjeta: TarjetaChat;
   const [agregado, setAgregado] = useState(false);
 
   return (
-    <li className="flex gap-3 border border-line bg-bg p-3" data-testid="tarjeta-iza">
+    <li className="flex gap-3 rounded-card border border-line bg-bg p-3" data-testid="tarjeta-iza">
       <Link href={tarjeta.url} onClick={onNavegar} className="w-20 shrink-0" tabIndex={-1} aria-hidden="true">
-        <IzaoImage media={tarjeta.imagen} alt="" sizes="80px" />
+        <IzaoImage media={tarjeta.imagen} alt="" sizes="80px" redondeo="control" />
       </Link>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <p className="font-display text-xl leading-tight">{tarjeta.nombre}</p>

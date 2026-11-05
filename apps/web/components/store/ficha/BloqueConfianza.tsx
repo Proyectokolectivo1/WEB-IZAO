@@ -34,7 +34,7 @@ export function BloqueConfianza({ beneficios, medios }: { beneficios: Beneficio[
       {medios?.media ? (
         <div className="mt-5 w-56">
           <p className="solo-lectores">{T.footer.medios}</p>
-          <IzaoImage media={medios.media} alt={medios.title ?? T.footer.medios} sizes="224px" proporcion={5} />
+          <IzaoImage media={medios.media} alt={medios.title ?? T.footer.medios} sizes="224px" proporcion={5} redondeo="none" />
         </div>
       ) : null}
     </section>

@@ -131,7 +131,7 @@ export function Buscador({ pais, populares }: { pais: CodigoPais; populares: str
         onClick={() => setAbierto((v) => !v)}
         aria-label={abierto ? T.busqueda.cerrar : T.header.buscar}
         aria-expanded={abierto}
-        className="inline-flex size-11 items-center justify-center rounded-md hover:bg-surface lg:hidden"
+        className="inline-flex size-11 items-center justify-center rounded-control hover:bg-surface lg:hidden"
       >
         <Icono nombre={abierto ? 'cerrar' : 'buscar'} tamano={22} />
       </button>
@@ -165,11 +165,11 @@ export function Buscador({ pais, populares }: { pais: CodigoPais; populares: str
               setActivo(-1);
             }}
             onFocus={() => setEnfocado(true)}
-            className="min-h-11 w-full rounded-md border border-line bg-bg pl-10 pr-3 text-[0.9375rem] placeholder:text-ink/60 focus:bg-surface"
+            className="min-h-11 w-full rounded-control border border-line bg-bg pl-10 pr-3 text-[0.9375rem] placeholder:text-ink/60 focus:bg-surface"
           />
 
           {listaVisible ? (
-            <div data-testid="sugerencias-busqueda" className="absolute inset-x-0 top-full z-50 mt-1 max-h-[70dvh] overflow-y-auto rounded-md border border-line bg-bg py-2 shadow-elev lg:min-w-[22rem]">
+            <div data-testid="sugerencias-busqueda" className="absolute inset-x-0 top-full z-50 mt-1 max-h-[70dvh] overflow-y-auto rounded-card border border-line bg-bg py-2 shadow-elev lg:min-w-[22rem]">
               <ul id={`${uid}-lista`} role="listbox" aria-label={T.busqueda.sugerencias}>
                 {grupos.map((g) => {
                   const items = opciones.filter((o) => o.grupo === g.clave);
@@ -191,7 +191,7 @@ export function Buscador({ pais, populares }: { pais: CodigoPais; populares: str
                               >
                                 {prod ? (
                                   <span className="w-9 shrink-0">
-                                    <IzaoImage media={prod.img_primary} alt="" sizes="36px" />
+                                    <IzaoImage media={prod.img_primary} alt="" sizes="36px" redondeo="control" />
                                   </span>
                                 ) : null}
                                 <span className="min-w-0 flex-1 truncate">

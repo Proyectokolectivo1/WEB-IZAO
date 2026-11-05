@@ -54,7 +54,7 @@ export function MenuEscritorio({ pais, categorias }: { pais: CodigoPais; categor
                     <Icono nombre="chevronAbajo" tamano={14} />
                   </button>
                   {abierta === c.id ? (
-                    <div id={`mega-${c.id}`} className="absolute inset-x-0 top-full border-y border-line bg-bg shadow-elev">
+                    <div id={`mega-${c.id}`} className="absolute inset-x-0 top-full rounded-b-panel border-y border-line bg-bg shadow-elev">
                       <div className="mx-auto grid max-w-[96rem] grid-cols-[14rem_1fr] gap-10 px-8 py-8">
                         <div>
                           <p className="etiqueta pb-3 text-ink/70">{T.header.categorias}</p>

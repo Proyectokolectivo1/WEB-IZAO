@@ -115,7 +115,7 @@ export function ConfirmacionPedido({ pedido, whatsappAsesor, valorEnvio }: Props
       </div>
 
       <aside className="h-fit lg:sticky lg:top-28" aria-labelledby="resumen-pedido">
-        <div className="border border-line p-6">
+        <div className="rounded-card border border-line p-6">
           <p id="resumen-pedido" className="etiqueta pb-4">
             {TC.pedido.resumen}
           </p>

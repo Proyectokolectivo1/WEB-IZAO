@@ -387,7 +387,7 @@ export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
           </span>
           <span className="font-display text-2xl tabular-nums">{totalTexto}</span>
         </button>
-        <div id="panel-resumen" className={`${resumenAbierto ? 'block' : 'hidden'} pt-4 lg:block lg:border lg:border-line lg:p-6`}>
+        <div id="panel-resumen" className={`${resumenAbierto ? 'block' : 'hidden'} pt-4 lg:block lg:rounded-card lg:border lg:border-line lg:p-6`}>
           <p className="etiqueta hidden pb-4 lg:block">{TC.resumen.titulo}</p>
           <ResumenPedido
             lineas={lineas}
@@ -404,13 +404,13 @@ export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
 
       <div className="flex flex-col gap-12 lg:order-1">
         {aviso ? (
-          <p role="status" className="rounded-md bg-surface px-4 py-3 text-[0.9375rem]">
+          <p role="status" className="rounded-card bg-surface px-4 py-3 text-[0.9375rem]">
             {aviso}
           </p>
         ) : null}
 
         {intentado && listaErrores.length > 0 ? (
-          <div ref={resumenErrores} tabIndex={-1} role="alert" className="border border-danger p-4 outline-none">
+          <div ref={resumenErrores} tabIndex={-1} role="alert" className="rounded-card border border-danger p-4 outline-none">
             <p className="font-semibold">{TC.checkout.errores.resumen(listaErrores.length)}</p>
             <ul className="list-disc pl-5 pt-2 text-[0.9375rem]">
               {listaErrores.map((c) => (
@@ -714,7 +714,7 @@ export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
           </div>
 
           {errorGeneral ? (
-            <div ref={bannerError} tabIndex={-1} role="alert" className="mt-6 border border-danger p-4 text-[0.9375rem] outline-none">
+            <div ref={bannerError} tabIndex={-1} role="alert" className="mt-6 rounded-card border border-danger p-4 text-[0.9375rem] outline-none">
               {errorGeneral}
             </div>
           ) : null}

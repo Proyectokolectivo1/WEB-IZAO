@@ -38,7 +38,7 @@ export function ResumenPedido({ lineas, resumen, esContraEntrega, precio, codigo
         {lineas.map((l) => (
           <li key={l.variantId} className="flex gap-4 py-4">
             <div className="relative w-16 shrink-0">
-              <IzaoImage media={l.imagen} alt="" sizes="64px" />
+              <IzaoImage media={l.imagen} alt="" sizes="64px" redondeo="control" />
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="font-display text-lg leading-tight">{l.nombre}</span>

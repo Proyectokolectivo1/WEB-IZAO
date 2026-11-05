@@ -4,7 +4,7 @@ export type VarianteBoton = 'primario' | 'secundario' | 'texto';
 export type TamanoBoton = 'md' | 'lg' | 'sm';
 
 const BASE =
-  'inline-flex items-center justify-center gap-2 rounded-md text-[0.9375rem] font-semibold tracking-wide ' +
+  'inline-flex items-center justify-center gap-2 rounded-control text-[0.9375rem] font-semibold tracking-wide ' +
   'transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 select-none';
 
 const VARIANTES: Record<VarianteBoton, string> = {

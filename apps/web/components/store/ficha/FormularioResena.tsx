@@ -175,7 +175,7 @@ export default function FormularioResena({ pais, productoId, turnstileKey }: Pro
       </div>
 
       {intentado && lista.length > 0 ? (
-        <div ref={resumen} tabIndex={-1} role="alert" className="border border-danger p-4 outline-none">
+        <div ref={resumen} tabIndex={-1} role="alert" className="rounded-card border border-danger p-4 outline-none">
           <p className="font-semibold">{TR.resumenErrores(lista.length)}</p>
           <ul className="list-disc pl-5 pt-2 text-[0.9375rem]">
             {lista.map((c) => (
@@ -292,7 +292,7 @@ export default function FormularioResena({ pais, productoId, turnstileKey }: Pro
         ) : null}
       </div>
 
-      <fieldset className="grid gap-5 border border-line p-4 sm:grid-cols-2">
+      <fieldset className="grid gap-5 rounded-card border border-line p-4 sm:grid-cols-2">
         <legend className="px-2 text-[0.9375rem] font-medium">{TR.verificar.titulo}</legend>
         <p className="text-[0.9375rem] text-ink/80 sm:col-span-2">{TR.verificar.texto}</p>
         <Campo id="resena-pedido" etiqueta={TR.campos.pedido} error={campo('pedido')}>
@@ -334,7 +334,7 @@ export default function FormularioResena({ pais, productoId, turnstileKey }: Pro
       {turnstileKey ? <div ref={contenedor} aria-label={TR.turnstile} /> : null}
 
       {falla ? (
-        <div ref={banner} tabIndex={-1} role="alert" className="border border-danger p-4 text-[0.9375rem] outline-none">
+        <div ref={banner} tabIndex={-1} role="alert" className="rounded-card border border-danger p-4 text-[0.9375rem] outline-none">
           {falla}
         </div>
       ) : null}

@@ -97,7 +97,7 @@ export function ImagenAmpliada({ abierto, onCerrar, imagenes, indice, onIndice, 
     if (punteros.current.size < 2) gesto.current = null;
   }
 
-  const boton = 'inline-flex size-11 items-center justify-center rounded-md border border-line hover:bg-surface disabled:opacity-40';
+  const boton = 'inline-flex size-11 items-center justify-center rounded-control border border-line hover:bg-surface disabled:opacity-40';
 
   return (
     <Sheet
@@ -142,7 +142,7 @@ export function ImagenAmpliada({ abierto, onCerrar, imagenes, indice, onIndice, 
         data-testid="marco-zoom"
         role="group"
         aria-label={T.ficha.imagenAmpliada(nombre)}
-        className="relative h-full min-h-[50dvh] touch-none select-none overflow-hidden bg-surface"
+        className="relative h-full min-h-[50dvh] touch-none select-none overflow-hidden rounded-card bg-surface"
         onPointerDown={alBajar}
         onPointerMove={alMover}
         onPointerUp={alSoltar}

@@ -61,7 +61,7 @@ export function Galeria({ imagenes, nombre }: Props) {
           aria-label={actual ? T.ficha.ampliarImagen : T.ficha.sinFoto}
           aria-haspopup={actual ? 'dialog' : undefined}
           disabled={!actual}
-          className="raton:cursor-zoom-in relative block aspect-[4/5] w-full touch-pan-y overflow-hidden bg-surface"
+          className="raton:cursor-zoom-in relative block aspect-[4/5] w-full touch-pan-y overflow-hidden rounded-card bg-surface"
           onPointerEnter={alEntrar}
           onPointerMove={alMover}
           onPointerLeave={alSalir}
@@ -122,7 +122,7 @@ export function Galeria({ imagenes, nombre }: Props) {
                 aria-label={T.ficha.imagenN(k + 1, total)}
                 aria-current={k === indice}
                 data-testid="miniatura"
-                className={`relative block aspect-[4/5] w-full overflow-hidden border ${k === indice ? 'border-ink' : 'border-transparent hover:border-line'}`}
+                className={`relative block aspect-[4/5] w-full overflow-hidden rounded-control border ${k === indice ? 'border-ink' : 'border-transparent hover:border-line'}`}
               >
                 <IzaoImage media={m} alt="" sizes="80px" className="h-full object-cover" />
               </button>

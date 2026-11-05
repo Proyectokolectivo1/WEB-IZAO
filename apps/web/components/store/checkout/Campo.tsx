@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 /** Clases de un control de formulario: 44 px mínimo, borde fino, fondo champaña al enfocar (§8.1). */
 export const CLASE_CONTROL =
-  'min-h-12 w-full rounded-md border border-line bg-bg px-3 text-base text-ink placeholder:text-ink/50 ' +
+  'min-h-12 w-full rounded-control border border-line bg-bg px-3 text-base text-ink placeholder:text-ink/50 ' +
   'focus:bg-surface disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-danger';
 
 /** Atributos de accesibilidad de un control: error y ayuda asociados por `aria-describedby`. */

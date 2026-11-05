@@ -277,7 +277,7 @@ export default function PanelIza({ pais, abierto, onCerrar, producto }: Props) {
       ) : (
         <div className="flex flex-col gap-4 px-5 py-4">
           {descansando ? (
-            <p role="status" className="border border-line bg-surface px-4 py-3 text-[0.9375rem]">
+            <p role="status" className="rounded-card border border-line bg-surface px-4 py-3 text-[0.9375rem]">
               {estado.estado === 'agotado' ? TI.estados.agotado : TI.estados.desactivado}
             </p>
           ) : null}
@@ -314,7 +314,7 @@ export default function PanelIza({ pais, abierto, onCerrar, producto }: Props) {
           {sinPreguntas && !bloqueado ? (
             <div role="group" aria-label={TI.sugerenciasEtiqueta} className="flex flex-wrap gap-2">
               {sugerencias.map((s) => (
-                <button key={s} type="button" disabled={enviando} onClick={() => void enviar(s)} className="min-h-11 border border-ink px-3 text-[0.9375rem] hover:bg-surface">
+                <button key={s} type="button" disabled={enviando} onClick={() => void enviar(s)} className="min-h-11 rounded-control border border-ink px-3 text-[0.9375rem] hover:bg-surface">
                   {s}
                 </button>
               ))}

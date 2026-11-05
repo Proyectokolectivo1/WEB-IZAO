@@ -5,7 +5,7 @@
  */
 
 export function Skeleton({ className = '' }: { className?: string }) {
-  return <div aria-hidden="true" className={`animate-pulse rounded-sm bg-surface/70 ${className}`} />;
+  return <div aria-hidden="true" className={`animate-pulse ${className.includes('rounded-') ? '' : 'rounded-control'} bg-surface/70 ${className}`} />;
 }
 
 /** Alturas del bloque de texto de la tarjeta; las comparte `TarjetaProducto` en la tienda. */
@@ -14,7 +14,7 @@ export const ALTURA_TEXTO_TARJETA = 'h-[7.25rem]';
 export function TarjetaEsqueleto() {
   return (
     <div aria-hidden="true" data-testid="esqueleto-tarjeta" className="flex flex-col">
-      <Skeleton className="aspect-[4/5] w-full" />
+      <Skeleton className="aspect-[4/5] w-full rounded-card" />
       <div className={`flex flex-col gap-2 pt-3 ${ALTURA_TEXTO_TARJETA}`}>
         <Skeleton className="h-3 w-1/3" />
         <Skeleton className="h-4 w-4/5" />

@@ -19,7 +19,11 @@ interface Props extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'srcSe
   /** Solo para la imagen LCP: carga ansiosa y prioridad alta. */
   prioritaria?: boolean;
   raiz?: string;
+  /** Radio de las esquinas (tokens): `card` por defecto, `control` para miniaturas pequeñas, `none` si el contenedor ya recorta. */
+  redondeo?: 'card' | 'control' | 'none';
 }
+
+const REDONDEO = { card: 'rounded-card', control: 'rounded-control', none: '' } as const;
 
 export function rutasDeMedio(media: MediaJson | null | undefined, raiz = '/media/') {
   const entradas = Object.entries(media?.variants ?? {})
@@ -46,20 +50,22 @@ export function IzaoImage({
   proporcion = 4 / 5,
   prioritaria = false,
   raiz,
+  redondeo = 'card',
   className = '',
   style,
   ...resto
 }: Props) {
   const rutas = rutasDeMedio(media, raiz);
   const ratio = media?.width && media?.height ? media.width / media.height : proporcion;
+  const radio = REDONDEO[redondeo];
   const caja: CSSProperties = { aspectRatio: String(ratio), ...style };
 
   if (!rutas) {
     // Relleno sin foto: con texto alternativo es una imagen; sin él es decorativo (`role="img"` sin nombre rompe WCAG).
     return alt ? (
-      <div role="img" aria-label={alt} className={`w-full bg-surface ${className}`} style={caja} />
+      <div role="img" aria-label={alt} className={`w-full bg-surface ${radio} ${className}`} style={caja} />
     ) : (
-      <div aria-hidden="true" className={`w-full bg-surface ${className}`} style={caja} />
+      <div aria-hidden="true" className={`w-full bg-surface ${radio} ${className}`} style={caja} />
     );
   }
 
@@ -78,7 +84,7 @@ export function IzaoImage({
       loading={prioritaria ? 'eager' : 'lazy'}
       fetchPriority={prioritaria ? 'high' : undefined}
       decoding={prioritaria ? 'sync' : 'async'}
-      className={`block w-full ${className}`}
+      className={`block w-full ${radio} ${className}`}
       style={{ ...fondo, ...style }}
       {...resto}
     />

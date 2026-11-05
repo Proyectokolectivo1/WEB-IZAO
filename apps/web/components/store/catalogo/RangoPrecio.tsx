@@ -59,7 +59,7 @@ export function RangoPrecio({ pais, limites, valor, onCambio, sufijo = '' }: Pro
 
   const pct = (v: number) => ((v - ext.piso) / Math.max(ext.techo - ext.piso, 1)) * 100;
   const moneda = monedaDe(pais);
-  const campo = 'min-h-11 w-full rounded-md border border-line bg-transparent px-3 text-[0.9375rem] tabular-nums';
+  const campo = 'min-h-11 w-full rounded-control border border-line bg-transparent px-3 text-[0.9375rem] tabular-nums';
 
   return (
     <div>

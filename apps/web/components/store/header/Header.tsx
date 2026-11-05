@@ -23,7 +23,7 @@ export function Header({ pais, ajustes, anuncios, categorias, populares }: Props
     <header>
       <a
         href="#contenido"
-        className="solo-lectores focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-md focus:bg-ink focus:px-4 focus:py-3 focus:text-bg"
+        className="solo-lectores focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-control focus:bg-ink focus:px-4 focus:py-3 focus:text-bg"
       >
         {T.header.saltarContenido}
       </a>

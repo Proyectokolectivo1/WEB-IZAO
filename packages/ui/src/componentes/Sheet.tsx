@@ -36,11 +36,11 @@ function enfocables(raiz: HTMLElement): HTMLElement[] {
 }
 
 const POSICION: Record<LadoSheet, string> = {
-  derecha: 'inset-y-0 right-0 w-[min(100vw,26rem)]',
-  izquierda: 'inset-y-0 left-0 w-[min(100vw,24rem)]',
-  abajo: 'inset-x-0 bottom-0 max-h-[88dvh] rounded-t-lg',
+  derecha: 'inset-y-0 right-0 w-[min(100vw,26rem)] rounded-l-panel',
+  izquierda: 'inset-y-0 left-0 w-[min(100vw,24rem)] rounded-r-panel',
+  abajo: 'inset-x-0 bottom-0 max-h-[88dvh] rounded-t-panel',
   responsivo:
-    'inset-x-0 bottom-0 max-h-[92dvh] rounded-t-lg md:inset-auto md:left-1/2 md:top-1/2 md:w-[min(92vw,62rem)] md:max-h-[90dvh] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-lg',
+    'inset-x-0 bottom-0 max-h-[92dvh] rounded-t-panel md:inset-auto md:left-1/2 md:top-1/2 md:w-[min(92vw,62rem)] md:max-h-[90dvh] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-panel',
 };
 
 /** Diálogo modal accesible: portal, foco atrapado, `Esc`, bloqueo de scroll y retorno del foco. */
@@ -155,7 +155,7 @@ export function Sheet({
             type="button"
             onClick={onCerrar}
             aria-label={etiquetaCerrar}
-            className="-mr-3 inline-flex size-11 items-center justify-center rounded-md hover:bg-surface"
+            className="-mr-3 inline-flex size-11 items-center justify-center rounded-control hover:bg-surface"
           >
             <Icono nombre="cerrar" />
           </button>

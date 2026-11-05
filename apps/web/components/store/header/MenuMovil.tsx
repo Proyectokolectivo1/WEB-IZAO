@@ -20,7 +20,7 @@ export function MenuMovil({ pais, categorias }: { pais: CodigoPais; categorias: 
         onClick={() => setAbierto(true)}
         aria-label={T.header.menu}
         aria-haspopup="dialog"
-        className="inline-flex size-11 items-center justify-center rounded-md hover:bg-surface lg:hidden"
+        className="inline-flex size-11 items-center justify-center rounded-control hover:bg-surface lg:hidden"
       >
         <Icono nombre="menu" tamano={22} />
       </button>
