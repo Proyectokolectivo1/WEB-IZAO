@@ -30,13 +30,12 @@ test-backup-restore, test-restore-guard, test-deploy-rollback, test-nginx (1.27/
 Redis, web y worker corriendo en el VPS (tag 68cdd45, healthy); Nginx con `izao.conf` propio sirve https://izaoperfumeria.com (200), www 301, `/media/warranty/` 404. Detalles en `docs/RUNBOOK.md` ("F0b"). Sin snapshot (API Contabo 401).
 Bloqueos: quitar enlace viejo y cron (root); `BACKUP_AGE_RECIPIENT` vacío; host sin `pg_dump` 17 ni `age`.
 
-## Redespliegue 496dac9/bdf471a (2026-11-05) — FALLÓ 3 veces, revertido a ad327bf (sano)
-Sin snapshot (API Contabo 401). Imágenes 496dac9 y bdf471a construidas; compose las da healthy pero curl al puerto publicado (ya autodetectado en bdf471a) rechazado x11 -> rollback automático OK (https 200). Entre ad327bf y 496dac9 el código de web no cambia (solo client.ts de mastershop y borrado de .env.example): no es un cambio de la app. Causa SIN determinar: los contenedores fallidos se recrean en el rollback y sus logs se pierden; la política bloquea docker events/image inspect y `VAR=… docker compose`. VPS: HEAD ad327bf, stash local de `.dockerignore`. Backup 2026-11-04.sql.gz.age existe.
-
-Intento 4 (con 967d971 en origin): no se generó last-deploy-failure.log. Causa: tras cada rollback `git reset --keep` deja el VPS en ad327bf y deploy.sh arranca con la versión VIEJA del script (el merge del paso 1 lo cambia ya en ejecución). Los arreglos de deploy.sh nunca corren hasta que HEAD los contenga.
+## Redespliegue 967d971 (2026-11-05) — OK
+Tras 4 intentos fallidos (sin snapshot, API Contabo 401): el script viejo del VPS corría en cada intento (git reset del rollback). Con `git pull --ff-only` previo corrió el nuevo: web quedó en 127.0.0.1:3001 (Docker asignó 3001 del rango 3000-3001; antes el curl solo miraba 3000), autodetección OK. Desplegado 967d971 (incluye D-042/043/496dac9); web y worker healthy, 3001/api/health 200, https 200, `ultimo-ok`=967d971. Worker sin errores, polling (*/10) silencioso en logs. Etiqueta de prueba no verificada (requeriría pedido). Backup 2026-11-04 existe.
+PROCEDIMIENTO: antes de deploy.sh, `git pull --ff-only` si el script cambió. Stash local de `.dockerignore` en VPS (inocuo).
 
 ## Siguiente paso exacto
-En el VPS: `git pull --ff-only` (permitido) y luego `bash infra/scripts/deploy.sh --skip-tests` (así corre el script nuevo y vuelca el fallo). Pendiente de orden del líder.
+`uptime`, `crear-admin`, restore real contra `auth`, snapshot cuando se arregle la API Contabo.
 
 ## Decisiones que necesitan al líder
 - Ninguna. Nota: el build de web puede fallar por WIP de la tienda; verificar en copia limpia de HEAD.
