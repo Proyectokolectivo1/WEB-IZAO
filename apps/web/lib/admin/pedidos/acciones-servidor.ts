@@ -128,6 +128,13 @@ export async function cancelarPedidoBd(
       canceladoEnMasterShop = true;
     } catch (e) {
       console.error('[panel] no se pudo cancelar en MasterShop:', e instanceof Error ? e.name : 'error');
+      if (esEstadoNoEditable(e)) {
+        // D-044: MasterShop confirma solo (estado 3) y por API solo se cancela en 1 y 2; nuestro estado local iba atrasado.
+        return {
+          ok: false,
+          mensaje: `El pedido ya avanzó en MasterShop y no se puede cancelar desde aquí. Cancélalo directamente en MasterShop (pedido ${envio.provider_order_id}); Izao se actualizará cuando ellos lo confirmen. Este pedido no se cambió.`,
+        };
+      }
       return { ok: false, mensaje: 'MasterShop no aceptó la cancelación. No se cambió nada; inténtalo de nuevo o cancélalo allá.' };
     }
   }
@@ -165,6 +172,11 @@ export async function cancelarPedidoBd(
     },
   });
   return { ok: true, mensaje: 'Pedido cancelado.' };
+}
+
+/** `MasterShopError` con `kind: 'estado_no_editable'` (409 del `PUT`: el pedido ya no está en 1 o 2). Sin importar la clase: sobrevive a límites de módulo. */
+function esEstadoNoEditable(e: unknown): boolean {
+  return typeof e === 'object' && e !== null && (e as { kind?: unknown }).kind === 'estado_no_editable';
 }
 
 function mensajeCancelacion(motivo: 'transicion_invalida' | 'estado_cambiado' | 'pedido_inexistente' | 'datos_invalidos'): string {

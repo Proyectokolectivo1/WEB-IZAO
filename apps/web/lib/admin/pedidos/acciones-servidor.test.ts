@@ -108,6 +108,27 @@ describe('cancelarPedidoBd (RPC atómica cancelar_pedido)', () => {
     expect(auditar).not.toHaveBeenCalled();
   });
 
+  it('si MasterShop responde estado_no_editable (estado local atrasado en 1) explica que ya avanzó, da el id y no cambia nada', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('enviado_transportadora') }, 'shipments.select': { data: envio({ provider_status_id: 1, provider_order_id: 3084317 }) } });
+    const cancelar = okCancelar();
+    const r = await cancelarPedidoBd({
+      cliente,
+      ...comun,
+      orderId: ID,
+      motivo: 'El cliente ya no lo quiere',
+      cancelar,
+      cancelarEnMasterShop: async () => {
+        throw Object.assign(new Error('409'), { name: 'MasterShopError', kind: 'estado_no_editable' });
+      },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.mensaje).toMatch(/ya avanzó en MasterShop/);
+    expect(r.mensaje).toContain('3084317');
+    expect(r.mensaje).not.toMatch(/no aceptó/);
+    expect(cancelar).not.toHaveBeenCalled();
+    expect(auditar).not.toHaveBeenCalled();
+  });
+
   it('un envío que ya avanzó en MasterShop (3 o más) se cancela allá, no desde el panel', async () => {
     const { cliente } = clienteFalso({ 'orders.select': { data: pedido('en_preparacion') }, 'shipments.select': { data: envio({ provider_status_id: 3 }) } });
     const cancelar = okCancelar();
