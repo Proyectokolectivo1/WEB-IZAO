@@ -37,5 +37,7 @@
 
 - LCP (2,63 s en Lighthouse simulado): el elemento LCP es el logotipo en texto (fuente de marca) y el 83 % es retraso de render modelado por la simulación; con estrangulamiento real (devtools: 4G lenta + CPU 4x) LCP = FCP = 1,65 s, perf 99, CLS 0, TBT 60 ms. El hero ya es `eager` + `fetchpriority=high`. Sin cambios de código (no hay mejora clara; con fotos reales el LCP será la imagen: medir entonces). Descartado `experimental.inlineCss` (experimental, riesgo de hidratación). JS inicial /[country] 130 kB.
 
+- BigInt en caché (prod: `Do not know how to serialize a BigInt`, `unstable_cache` hace JSON.stringify de su resultado): causa única `leerAjustesChat` (`chat/fuente-supabase.ts`) cacheaba `presupuestoMicros: bigint`. Ahora la caché guarda el presupuesto como texto y `leerAjustesChat()` rehidrata a bigint (prueba `chat/ajustes-cache.test.ts`). Las demás `unstable_cache` (catálogo, ficha, relacionados, tema, checkout, garantías) no llevan bigint. Regla: nada de bigint dentro de `unstable_cache`.
+
 ## Punto de retoma
 Siguiente: medir Lighthouse/360-768-1440/axe de garantías, ficha con reseñas y widget Iza con llaves reales; cablear lo que pedí a otros dueños (arriba).

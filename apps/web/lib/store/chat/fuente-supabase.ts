@@ -55,18 +55,27 @@ const DEFECTOS: AjustesChat = {
 const texto = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);
 const entero = (v: unknown, d: number) => (typeof v === 'number' && Number.isInteger(v) && v > 0 ? v : d);
 
+/**
+ * Forma que se guarda en la caché de Next: `unstable_cache` serializa con JSON.stringify, que no admite `bigint`
+ * (regla 1: el dinero es entero exacto, nunca float). El presupuesto viaja como texto decimal y se rehidrata al leer.
+ */
+type AjustesChatCacheable = Omit<AjustesChat, 'presupuestoMicros'> & { presupuestoMicros: string };
+
+const aCacheable = (a: AjustesChat): AjustesChatCacheable => ({ ...a, presupuestoMicros: a.presupuestoMicros.toString() });
+const desdeCache = (a: AjustesChatCacheable): AjustesChat => ({ ...a, presupuestoMicros: BigInt(a.presupuestoMicros) });
+
 /** `chat_settings` (fila única) con caché corta; el panel invalida `content:{PAÍS}` al guardar. */
-export const leerAjustesChat = unstable_cache(
-  async (): Promise<AjustesChat> => {
+const leerAjustesChatCacheado = unstable_cache(
+  async (): Promise<AjustesChatCacheable> => {
     const { data, error } = await clienteDb().from('chat_settings').select('*').maybeSingle();
     if (error) throw new Error(`chat_settings: ${error.message}`);
-    if (!data) return DEFECTOS;
+    if (!data) return aCacheable(DEFECTOS);
     const f = data as Record<string, unknown>;
     const bienvenida: Record<string, string> = {};
     if (f.welcome_message && typeof f.welcome_message === 'object') {
       for (const [k, v] of Object.entries(f.welcome_message as Record<string, unknown>)) if (typeof v === 'string' && v.trim()) bienvenida[k.toUpperCase()] = v.trim();
     }
-    return {
+    return aCacheable({
       habilitado: f.is_enabled === true,
       modeloPrimario: texto(f.model_primary),
       modeloRespaldo: texto(f.model_fallback),
@@ -78,11 +87,15 @@ export const leerAjustesChat = unstable_cache(
       turnos: entero(f.history_turns, DEFECTOS.turnos),
       maxEntrada: entero(f.max_input_chars, DEFECTOS.maxEntrada),
       maxMensajesSesion: entero(f.max_messages_per_session, DEFECTOS.maxMensajesSesion),
-    };
+    });
   },
   ['chat-ajustes'],
   { revalidate: 30, tags: ['content:CO', 'content:EC'] },
 );
+
+export async function leerAjustesChat(): Promise<AjustesChat> {
+  return desdeCache(await leerAjustesChatCacheado());
+}
 
 // ── Proveedor ──────────────────────────────────────────────────────────────────────────────────────
 
