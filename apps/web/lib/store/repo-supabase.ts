@@ -29,7 +29,7 @@ import type {
   Sugerencias,
   TipoPagina,
 } from './types';
-import { bannerVigente, columnasFocal, esImagenUnica } from './banners';
+import { bannerVigente, esImagenUnica } from './banners';
 import { etiquetasPagina } from './etiquetas';
 import { normalizarTipo, ordenarPaginas } from './paginas';
 
@@ -228,7 +228,7 @@ const leerHome = conCache('home', 300, (p: CodigoPais, ..._a: unknown[]) => [...
     db()
       .from('banners')
       .select(
-        `id,placement,alt,title,subtitle,cta_label,link_url,text_position,text_color,desktop_media_id,mobile_media_id${columnasFocal()},starts_at,ends_at,category:categories!category_id(slug),desktop:media!desktop_media_id(${MEDIA}),mobile:media!mobile_media_id(${MEDIA})`,
+        `id,placement,alt,title,subtitle,cta_label,link_url,text_position,text_color,desktop_media_id,mobile_media_id,focal_x,focal_y,starts_at,ends_at,category:categories!category_id(slug),desktop:media!desktop_media_id(${MEDIA}),mobile:media!mobile_media_id(${MEDIA})`,
       )
       .eq('country_code', upper(p))
       .eq('is_active', true)
@@ -245,7 +245,7 @@ const leerHome = conCache('home', 300, (p: CodigoPais, ..._a: unknown[]) => [...
     .filter((b) => b.desktop)
     .map(({ category, desktop_media_id, mobile_media_id, ...b }) => {
       const unica = esImagenUnica({ desktop_media_id: desktop_media_id as string | null, mobile_media_id: mobile_media_id as string | null }) || !b.mobile;
-      // Con una sola imagen `mobile` repite a `desktop`; el punto focal solo llega cuando la base lo tiene (`FOCAL_EN_BASE`).
+      // Con una sola imagen `mobile` repite a `desktop`; `focal_x/focal_y` viajan tal cual y `puntoFocal` los valida.
       return { ...b, mobile: unica ? b.desktop : b.mobile, imagen_unica: unica, category_slug: texto((category as Fila | null)?.slug) };
     }) as unknown as Banner[];
   const colecciones: ContenidoHome['colecciones'] = await Promise.all(

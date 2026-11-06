@@ -302,7 +302,7 @@ function bannersEjemplo(pais: CodigoPais, destacado: ItemCatalogo | null): Banne
   const u2 = unica('banner-unica-2', 2400, 750);
   const aFicha = destacado ? `/${pais}/perfume/${destacado.slug}?variante=${destacado.product_id.slice(0, -2)}v1` : `/${pais}/catalogo`;
   return [
-    { id: 'b1', placement: 'hero', imagen_unica: true, desktop: u1, mobile: u1, alt: 'Frascos de perfume sobre fondo arena', title: 'Tu aroma, tu sello', subtitle: 'Nuevos ingresos', cta_label: 'Descubrir', link_url: `/${pais}/catalogo`, text_position: 'left', text_color: '#382E2B' },
+    { id: 'b1', placement: 'hero', imagen_unica: true, focal_x: 80, focal_y: 50, desktop: u1, mobile: u1, alt: 'Frascos de perfume sobre fondo arena', title: 'Tu aroma, tu sello', subtitle: 'Nuevos ingresos', cta_label: 'Descubrir', link_url: `/${pais}/catalogo`, text_position: 'left', text_color: '#382E2B' },
     { id: 'b2', placement: 'hero', desktop: medio(2, 'd', dd), mobile: medio(2, 'm', mm), alt: 'Perfume para regalar', title: 'Para regalar con cariño', subtitle: null, cta_label: 'Ver el aroma', link_url: aFicha, text_position: 'right', text_color: '#382E2B' },
     { id: 'b3', placement: 'hero', desktop: medio(3, 'd', dd), mobile: medio(3, 'm', mm), alt: 'Todo el catálogo de fragancias', title: null, subtitle: null, cta_label: null, link_url: `/${pais}/catalogo`, text_position: 'center', text_color: null },
     { id: 'b4', placement: 'mid', imagen_unica: true, desktop: u2, mobile: u2, alt: 'Descuento de temporada', title: 'Temporada de descuentos', subtitle: 'Por tiempo limitado', cta_label: 'Aprovechar', link_url: `/${pais}/catalogo?sort=discount`, text_position: 'left', text_color: '#382E2B' },

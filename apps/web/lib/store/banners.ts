@@ -50,17 +50,8 @@ export function bannerDeCategoria(banners: readonly Banner[], slug: string): Ban
 // Banner con UNA sola imagen responsive (D-047)
 // ---------------------------------------------------------------------------------------------------------------------
 
-/**
- * TODO(punto focal): las columnas `banners.focal_x` y `banners.focal_y` (0–100) todavía NO existen en la base (migración
- * propuesta en D-047, pendiente de aprobación del dueño). Pedirlas en el `select` antes de que existan haría fallar toda
- * la consulta. Cuando izao-db aplique la migración y regenere los tipos: poner `FOCAL_EN_BASE = true` y listo; el resto
- * del código (tipo `Banner`, `puntoFocal`, `object-position`) ya está preparado.
- */
-export const FOCAL_EN_BASE = false;
+/** Punto focal (`banners.focal_x/focal_y`, 0–100, defecto 50/50 en la base). Si llega vacío o inválido se usa el centro. */
 export const FOCAL_DEFECTO = 50;
-
-/** Columnas extra del `select` de banners; vacío mientras `FOCAL_EN_BASE` sea falso. */
-export const columnasFocal = (enBase: boolean = FOCAL_EN_BASE): string => (enBase ? ',focal_x,focal_y' : '');
 
 const enteroFocal = (v: unknown): number => {
   const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : Number.NaN;

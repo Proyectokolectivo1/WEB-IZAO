@@ -173,7 +173,7 @@ export interface Banner {
    * `object-fit: cover`. Falso/ausente = banner antiguo con imagen móvil propia (`<picture>`).
    */
   imagen_unica?: boolean;
-  /** Punto focal del recorte en pantallas angostas (0–100, centro 50/50). Ausente hasta que exista la migración (ver `FOCAL_EN_BASE`). */
+  /** Punto focal del recorte en pantallas angostas (0–100, centro 50/50). */
   focal_x?: number | null;
   focal_y?: number | null;
   alt: string;
