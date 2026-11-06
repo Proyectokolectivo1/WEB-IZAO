@@ -41,6 +41,9 @@ MEDIA CORREGIDO Y DESPLEGADO f573920 (376 s, sin snapshot; web/worker uid 100 es
 ## Endurecimiento de media (2026-11-05, solo repo, sin desplegar)
 Nginx `/media/`: solo webp|avif|jpe?g|png|mp4; warranty/, labels/ y agent-screenshots/ 404; resto 404; nosniff + CSP `default-src 'none'; sandbox` (map en izao-zones.conf). `infra/scripts/permisos-media.sh` (uid 100, grupo www-data, 2750/640; privados 700) y comandos del dueño en RUNBOOK. Compose: `IZAO_MEDIA_DIR` por defecto `/srv/izao/media` (local: `./data/media` en infra/.env). test-nginx ampliado, NO ejecutado (Docker Desktop no arranca en esta sesión): correr `bash infra/scripts/test-nginx.sh` antes de desplegar. Dueño: ejecutar RUNBOOK "Permisos de /srv/izao/media" tras pull.
 
+## Redespliegue 529c333 (2026-11-06) — OK
+pull + `deploy.sh --skip-tests --migraciones-verificadas` (402 s, sin snapshot). Migraciones 20261105060857 y 20261106050343 verificadas con list_migrations. web/worker healthy; web ahora en 127.0.0.1:3001 (autodetección). https /co /ec /api/health /admin/login 200; logs limpios. Compose monta /srv/izao/media en ambos (mismo dir que lee Nginx); uid 100 escribe en web y worker (touch borrado). Build avisa de `@valkey/valkey-glide` (bullmq, inocuo). PENDIENTE ROOT (no hecho a propósito): copiar nginx a /srv/izao/nginx, permisos-media.sh, limpieza del sitio viejo; mientras tanto Nginx sirve /media con la config anterior y media sigue en 777.
+
 ## Siguiente paso exacto
 Dueño ejecuta la limpieza Nginx; luego `uptime`, `crear-admin`, restore real contra `auth`, snapshot (API Contabo).
 Nota: el build de web puede fallar por WIP de la tienda; verificar en copia limpia de HEAD.
