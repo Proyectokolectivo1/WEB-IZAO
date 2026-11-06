@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { clasesBoton } from '@izao/ui';
-import { enlaceBanner } from '@/lib/store/banners';
+import { CAJA_ANTIGUA, CAJA_UNICA, enlaceBanner } from '@/lib/store/banners';
 import type { Banner, CodigoPais } from '@/lib/store/types';
 import { ImagenResponsiva } from '../ImagenResponsiva';
 
@@ -11,14 +11,6 @@ const POSICION = {
   center: 'items-center text-center',
   right: 'items-end text-right ml-auto',
 } as const;
-
-// Proporciones recomendadas por el panel: `mid` 1920×600 (16:5) y móvil 1080×1080; `category` 1920×500 y móvil 1080×900.
-const PROPORCION = {
-  mid: 'aspect-square sm:aspect-[16/7] lg:aspect-[16/5]',
-  category: 'aspect-[6/5] sm:aspect-[16/6] lg:aspect-[1920/500]',
-} as const;
-
-const SIZES = '(min-width: 1536px) 1472px, (min-width: 640px) calc(100vw - 4rem), calc(100vw - 2rem)';
 
 /**
  * Banner fijo (ubicaciones `mid` y `category`). Todo el recuadro es un enlace a `link_url` (tal cual lo guarda el panel);
@@ -31,8 +23,8 @@ export function BannerFijo({ banner: b, ubicacion, pais }: { banner: Banner; ubi
   const tieneTexto = Boolean(b.title || b.subtitle || b.cta_label);
 
   return (
-    <div className={`relative overflow-hidden rounded-panel bg-surface ${PROPORCION[ubicacion]}`} data-testid={`banner-${ubicacion}`}>
-      <ImagenResponsiva escritorio={b.desktop} movil={b.mobile} alt={b.alt} sizes={SIZES} />
+    <div className={`relative overflow-hidden rounded-panel bg-surface ${b.imagen_unica ? CAJA_UNICA[ubicacion].clase : CAJA_ANTIGUA[ubicacion]}`} data-testid={`banner-${ubicacion}`}>
+      <ImagenResponsiva banner={b} ubicacion={ubicacion} />
       {tieneTexto ? (
         <div className="absolute inset-0 flex flex-col justify-center px-6 sm:px-10 lg:px-16">
           <div className={`flex max-w-lg flex-col gap-3 ${POSICION[b.text_position]} ${b.text_position === 'center' ? 'mx-auto' : ''}`} style={{ color }}>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bannerDeCategoria, bannerVigente, enlaceBanner } from './banners';
+import { CAJA_UNICA, bannerDeCategoria, bannerVigente, columnasFocal, enlaceBanner, esImagenUnica, FOCAL_EN_BASE, puntoFocal, sizesImagenUnica } from './banners';
 import { varianteDeSku } from './ficha-util';
 import type { Banner, VarianteProducto } from './types';
 
@@ -92,5 +92,39 @@ describe('varianteDeSku', () => {
     expect(varianteDeSku(vs, 'nada')).toBeNull();
     expect(varianteDeSku(vs, '')).toBeNull();
     expect(varianteDeSku(vs, null)).toBeNull();
+  });
+});
+
+describe('banner de una sola imagen (D-047)', () => {
+  it('imagen única cuando móvil = escritorio o falta la móvil; antiguo cuando difieren', () => {
+    expect(esImagenUnica({ desktop_media_id: 'a', mobile_media_id: 'a' })).toBe(true);
+    expect(esImagenUnica({ desktop_media_id: 'a', mobile_media_id: null })).toBe(true);
+    expect(esImagenUnica({ desktop_media_id: 'a', mobile_media_id: 'b' })).toBe(false);
+  });
+  it('punto focal: 50/50 por defecto, redondea y limita a 0–100', () => {
+    expect(puntoFocal({})).toBe('50% 50%');
+    expect(puntoFocal({ focal_x: null, focal_y: undefined })).toBe('50% 50%');
+    expect(puntoFocal({ focal_x: 0, focal_y: 100 })).toBe('0% 100%');
+    expect(puntoFocal({ focal_x: -20, focal_y: 140.4 })).toBe('0% 100%');
+    expect(puntoFocal({ focal_x: Number.NaN, focal_y: 33.6 })).toBe('50% 34%');
+  });
+  it('las columnas focal_x/focal_y no se piden mientras no existan en la base', () => {
+    expect(FOCAL_EN_BASE).toBe(false);
+    expect(columnasFocal()).toBe('');
+    expect(columnasFocal(true)).toBe(',focal_x,focal_y');
+  });
+  it('sizes compensa el recorte: foto 12:5 en caja 1:1 se dibuja 2,4 veces más ancha', () => {
+    const s = sizesImagenUnica('hero', 12 / 5);
+    expect(s).toBe('(min-width: 1536px) 1472px, (min-width: 1024px) calc(100vw - 4rem), (min-width: 640px) calc((100vw - 4rem) * 1.6), calc((100vw - 2rem) * 2.4)');
+  });
+  it('sin dimensiones o con foto menos ancha que la caja el factor es 1', () => {
+    expect(sizesImagenUnica('mid', null)).not.toContain('*');
+    expect(sizesImagenUnica('hero', 1)).not.toContain('*');
+  });
+  it('cada ubicación tiene una clase por cada proporción de su tabla', () => {
+    for (const u of Object.values(CAJA_UNICA)) {
+      expect(u.clase.split(' ')).toHaveLength(u.cajas.length);
+      expect(u.cajas.map((c) => c.desde)).toEqual([0, 640, 1024]);
+    }
   });
 });

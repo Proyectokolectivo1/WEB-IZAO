@@ -291,12 +291,21 @@ function bannersEjemplo(pais: CodigoPais, destacado: ItemCatalogo | null): Banne
   });
   const dd = [800, 1600, 2400] as const;
   const mm = [400, 800, 1200] as const;
+  // Banner nuevo (D-047): una sola imagen ancha; `mobile` repite a `desktop`.
+  const unica = (archivo: string, ancho: number, alto: number): MediaRef => ({
+    variants: Object.fromEntries([480, 800, 1200, 1600, 2400].map((w) => [String(w), `ejemplo/${archivo}.svg`])),
+    lqip: null,
+    width: ancho,
+    height: alto,
+  });
+  const u1 = unica('banner-unica-1', 2400, 1000);
+  const u2 = unica('banner-unica-2', 2400, 750);
   const aFicha = destacado ? `/${pais}/perfume/${destacado.slug}?variante=${destacado.product_id.slice(0, -2)}v1` : `/${pais}/catalogo`;
   return [
-    { id: 'b1', placement: 'hero', desktop: medio(1, 'd', dd), mobile: medio(1, 'm', mm), alt: 'Frascos de perfume sobre fondo arena', title: 'Tu aroma, tu sello', subtitle: 'Nuevos ingresos', cta_label: 'Descubrir', link_url: `/${pais}/catalogo`, text_position: 'left', text_color: '#382E2B' },
+    { id: 'b1', placement: 'hero', imagen_unica: true, desktop: u1, mobile: u1, alt: 'Frascos de perfume sobre fondo arena', title: 'Tu aroma, tu sello', subtitle: 'Nuevos ingresos', cta_label: 'Descubrir', link_url: `/${pais}/catalogo`, text_position: 'left', text_color: '#382E2B' },
     { id: 'b2', placement: 'hero', desktop: medio(2, 'd', dd), mobile: medio(2, 'm', mm), alt: 'Perfume para regalar', title: 'Para regalar con cariño', subtitle: null, cta_label: 'Ver el aroma', link_url: aFicha, text_position: 'right', text_color: '#382E2B' },
     { id: 'b3', placement: 'hero', desktop: medio(3, 'd', dd), mobile: medio(3, 'm', mm), alt: 'Todo el catálogo de fragancias', title: null, subtitle: null, cta_label: null, link_url: `/${pais}/catalogo`, text_position: 'center', text_color: null },
-    { id: 'b4', placement: 'mid', desktop: medio(4, 'd', dd), mobile: medio(4, 'm', mm), alt: 'Descuento de temporada', title: 'Temporada de descuentos', subtitle: 'Por tiempo limitado', cta_label: 'Aprovechar', link_url: `/${pais}/catalogo?sort=discount`, text_position: 'left', text_color: '#382E2B' },
+    { id: 'b4', placement: 'mid', imagen_unica: true, desktop: u2, mobile: u2, alt: 'Descuento de temporada', title: 'Temporada de descuentos', subtitle: 'Por tiempo limitado', cta_label: 'Aprovechar', link_url: `/${pais}/catalogo?sort=discount`, text_position: 'left', text_color: '#382E2B' },
     { id: 'b5', placement: 'category', desktop: medio(2, 'd', dd), mobile: medio(2, 'm', mm), alt: 'Elige tu aroma por categoría', title: 'Encuentra tu aroma', subtitle: null, cta_label: null, link_url: `/${pais}/catalogo`, text_position: 'left', text_color: '#382E2B' },
   ];
 }

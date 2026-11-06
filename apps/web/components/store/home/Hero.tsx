@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icono, clasesBoton, useMenosMovimiento } from '@izao/ui';
-import { enlaceBanner } from '@/lib/store/banners';
+import { CAJA_ANTIGUA, CAJA_UNICA, enlaceBanner } from '@/lib/store/banners';
 import { T } from '@/lib/store/textos';
 import type { Banner, CodigoPais } from '@/lib/store/types';
 import { ImagenResponsiva } from '../ImagenResponsiva';
@@ -12,8 +12,6 @@ import { ImagenResponsiva } from '../ImagenResponsiva';
 const AUTOPLAY_MS = 6000;
 const UMBRAL_DESLIZAR_PX = 48;
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
-// El carrusel va dentro del contenedor de la página (máx. 96 rem menos el relleno).
-const SIZES = '(min-width: 1536px) 1472px, (min-width: 640px) calc(100vw - 4rem), calc(100vw - 2rem)';
 
 const POSICION = {
   left: 'items-start text-left',
@@ -138,13 +136,13 @@ export function Hero({ banners, pais }: { banners: Banner[]; pais: CodigoPais })
                 aria-hidden={!activo}
                 inert={!activo}
                 data-testid="hero-diapositiva"
-                className={`relative [grid-area:1/1] aspect-[4/5] overflow-hidden transition-opacity duration-700 ease-izao motion-reduce:transition-none md:aspect-[12/5] ${
+                className={`relative [grid-area:1/1] overflow-hidden transition-opacity duration-700 ease-izao motion-reduce:transition-none ${b.imagen_unica ? CAJA_UNICA.hero.clase : CAJA_ANTIGUA.hero} ${
                   activo ? 'opacity-100' : 'pointer-events-none opacity-0'
                 }`}
               >
                 <div className={`h-full w-full transition-transform duration-[7000ms] ease-linear motion-reduce:transition-none ${activo && !reducido ? 'md:scale-[1.04]' : 'scale-100'}`}>
                   {montadas.has(k) ? (
-                    <ImagenResponsiva escritorio={b.desktop} movil={b.mobile} alt={b.alt} prioritaria={k === 0} sizes={SIZES} />
+                    <ImagenResponsiva banner={b} ubicacion="hero" prioritaria={k === 0} />
                   ) : (
                     <div className="h-full w-full bg-surface" />
                   )}

@@ -45,3 +45,86 @@ export function bannerDeCategoria(banners: readonly Banner[], slug: string): Ban
   const propios = bannersDe(banners, 'category');
   return propios.find((b) => b.category_slug === slug) ?? propios.find((b) => !b.category_slug) ?? null;
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Banner con UNA sola imagen responsive (D-047)
+// ---------------------------------------------------------------------------------------------------------------------
+
+/**
+ * TODO(punto focal): las columnas `banners.focal_x` y `banners.focal_y` (0–100) todavía NO existen en la base (migración
+ * propuesta en D-047, pendiente de aprobación del dueño). Pedirlas en el `select` antes de que existan haría fallar toda
+ * la consulta. Cuando izao-db aplique la migración y regenere los tipos: poner `FOCAL_EN_BASE = true` y listo; el resto
+ * del código (tipo `Banner`, `puntoFocal`, `object-position`) ya está preparado.
+ */
+export const FOCAL_EN_BASE = false;
+export const FOCAL_DEFECTO = 50;
+
+/** Columnas extra del `select` de banners; vacío mientras `FOCAL_EN_BASE` sea falso. */
+export const columnasFocal = (enBase: boolean = FOCAL_EN_BASE): string => (enBase ? ',focal_x,focal_y' : '');
+
+const enteroFocal = (v: unknown): number => {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : Number.NaN;
+  return Number.isFinite(n) ? Math.min(100, Math.max(0, Math.round(n))) : FOCAL_DEFECTO;
+};
+
+/** `object-position` del recorte en pantallas angostas: `{focal_x}% {focal_y}%` (50 % 50 % si faltan o son inválidos). */
+export const puntoFocal = (b: { focal_x?: number | null; focal_y?: number | null }): string => `${enteroFocal(b.focal_x)}% ${enteroFocal(b.focal_y)}%`;
+
+/**
+ * Banner nuevo = una sola imagen (`mobile_media_id` = `desktop_media_id`) o sin imagen móvil.
+ * Banner antiguo = imagen móvil distinta: se sirve con `<picture>`.
+ */
+export function esImagenUnica(b: { desktop_media_id?: string | null; mobile_media_id?: string | null }): boolean {
+  return !b.mobile_media_id || b.mobile_media_id === b.desktop_media_id;
+}
+
+export type UbicacionBanner = 'hero' | 'mid' | 'category';
+
+interface CajaBanner {
+  /** Ancho mínimo de pantalla (px) desde el que vale esta proporción; coincide con el prefijo de Tailwind (`sm` 640, `lg` 1024). */
+  desde: number;
+  /** ancho / alto de la caja del banner. */
+  ratio: number;
+}
+
+/**
+ * Alto del recuadro por breakpoint cuando hay UNA sola imagen: la caja fija la altura y la imagen la cubre con
+ * `object-fit: cover`. La clase y la tabla de proporciones van juntas: si cambias una, cambia la otra (hay prueba).
+ * Los tamaños recomendados del panel son hero 2400×1000 (12:5), mid 2400×750 (16:5), categoría 2400×625 (≈19:5).
+ */
+export const CAJA_UNICA: Record<UbicacionBanner, { clase: string; cajas: readonly CajaBanner[] }> = {
+  hero: { clase: 'aspect-square sm:aspect-[3/2] lg:aspect-[12/5]', cajas: [{ desde: 0, ratio: 1 }, { desde: 640, ratio: 3 / 2 }, { desde: 1024, ratio: 12 / 5 }] },
+  mid: { clase: 'aspect-[5/4] sm:aspect-[16/7] lg:aspect-[16/5]', cajas: [{ desde: 0, ratio: 5 / 4 }, { desde: 640, ratio: 16 / 7 }, { desde: 1024, ratio: 16 / 5 }] },
+  category: { clase: 'aspect-[4/3] sm:aspect-[16/6] lg:aspect-[1920/500]', cajas: [{ desde: 0, ratio: 4 / 3 }, { desde: 640, ratio: 16 / 6 }, { desde: 1024, ratio: 1920 / 500 }] },
+};
+
+/** Proporciones de los banners antiguos (imagen móvil propia), también en `Hero` (4:5 → 12:5), `mid` y `category`. */
+export const CAJA_ANTIGUA = {
+  hero: 'aspect-[4/5] md:aspect-[12/5]',
+  mid: 'aspect-square sm:aspect-[16/7] lg:aspect-[16/5]',
+  category: 'aspect-[6/5] sm:aspect-[16/6] lg:aspect-[1920/500]',
+} as const;
+
+// El banner va dentro del contenedor de la página: máx. 96 rem (1536 px) con 1 rem de relleno por lado (2 rem desde 640 px).
+const CONTENEDOR_MAX_PX = 1472;
+
+/**
+ * `sizes` de la imagen única. Con `object-fit: cover` la imagen se dibuja MÁS ANCHA que su caja cuando es más panorámica
+ * que ella (en un móvil con caja 1:1 y foto 12:5, 2,4 veces el ancho de la caja): se compensa con ese factor para que el
+ * navegador pida la variante que de verdad necesita y no una borrosa. Sin dimensiones del original, factor 1.
+ */
+export function sizesImagenUnica(ubicacion: UbicacionBanner, ratioImagen: number | null): string {
+  const { cajas } = CAJA_UNICA[ubicacion];
+  const factor = (caja: CajaBanner) => (ratioImagen && ratioImagen > 0 ? Math.max(1, ratioImagen / caja.ratio) : 1);
+  const num = (n: number) => String(Math.round(n * 1000) / 1000);
+  const tramos: string[] = [];
+  const ultima = cajas[cajas.length - 1]!;
+  tramos.push(`(min-width: 1536px) ${num(CONTENEDOR_MAX_PX * factor(ultima))}px`);
+  for (const caja of [...cajas].reverse()) {
+    const relleno = caja.desde >= 640 ? '4rem' : '2rem';
+    const f = factor(caja);
+    const ancho = f === 1 ? `calc(100vw - ${relleno})` : `calc((100vw - ${relleno}) * ${num(f)})`;
+    tramos.push(caja.desde === 0 ? ancho : `(min-width: ${caja.desde}px) ${ancho}`);
+  }
+  return tramos.join(', ');
+}

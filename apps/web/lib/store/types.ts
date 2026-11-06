@@ -168,6 +168,14 @@ export interface Banner {
   category_slug?: string | null;
   desktop: MediaRef;
   mobile: MediaRef;
+  /**
+   * Banner nuevo (D-047): `mobile_media_id` = `desktop_media_id`. Se pinta con un solo `<img srcset>` recortado con
+   * `object-fit: cover`. Falso/ausente = banner antiguo con imagen móvil propia (`<picture>`).
+   */
+  imagen_unica?: boolean;
+  /** Punto focal del recorte en pantallas angostas (0–100, centro 50/50). Ausente hasta que exista la migración (ver `FOCAL_EN_BASE`). */
+  focal_x?: number | null;
+  focal_y?: number | null;
   alt: string;
   title: string | null;
   subtitle: string | null;
