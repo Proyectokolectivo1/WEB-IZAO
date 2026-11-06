@@ -8,7 +8,7 @@
 - `f8903ed` D-044: la transportadora no se elige por API. 3076033 cancelado por el dueño.
 - Prueba real 3084317 (`IZ-CO-PRUEBA-0002`, la ejecutó el líder): Coordinadora (favorita de la cuenta) respetada, guía 75070781750; MasterShop la **autoconfirmó a 3**; `PUT 9` → 409; cancelada a mano por el dueño (9). Scripts de `/tmp/izao` borrados por el líder.
 - Etiqueta 403: CDN sin `User-Agent` → arreglado en `almacen-etiquetas.ts` (D-044).
-- Vinculación por SKU (D-050): `products.ts` (emparejar, `sqlVinculacion`), cliente `listAllProducts`/`getProduct`, *mock* de productos, CLI de vista previa `jobs/sync/vinculacion-productos.cli.ts` (solo lectura). Real: 2 productos MS vs 1030 variantes del *seed* → 0 emparejan.
+- `ef2ae16` Vinculación por SKU (D-050): `products.ts` (emparejar, `sqlVinculacion`), cliente `listAllProducts`/`getProduct`, *mock* de productos, CLI de vista previa `jobs/sync/vinculacion-productos.cli.ts` (solo lectura). Real: 2 productos MS vs 1030 variantes del *seed* → 0 emparejan.
 
 ## Para izao-infra
 - Redesplegar el worker: el contenedor actual **no** tiene D-043 ni el arreglo del 403 (D-044); revisar también D-042.
