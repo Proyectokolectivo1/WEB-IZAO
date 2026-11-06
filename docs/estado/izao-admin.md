@@ -14,8 +14,10 @@
   - Tipografías: `lib/tipografia/catalogo.ts` (38 fuentes), `fuentes-previa.ts` (solo panel, next/font sin precarga), `SelectorFuente` (vista previa en vivo, filtros, móvil). `build` verificado (140 archivos de fuente, 3,4 MB, solo se piden al abrir la lista).
 
 - D-048 alineación: `pay_link_url` en `VARIABLES_PLANTILLA`/`VALORES_EJEMPLO`; `urlCobro` con país (CO/EC; el servidor lee `orders.country_code`), pruebas ajustadas (web: lint, tsc, 1 450 pruebas verdes).
+- **Carga del catálogo real (188 SKU del Excel de MasterShop, feat carga-catalogo-real, sin aplicar):** `lib/admin/catalogo/carga-real.ts` (+test) y CLI `scripts/carga-catalogo-real.ts`; salida en `apps/web/scripts/carga-catalogo-real/` (`vista-previa.md`, `01-carga.sql` idempotente por SKU, `02-archivar-seed.sql` / `02b-restaurar-seed.sql`, `03-publicar-co.sql`). Orden: 01 -> vinculación D-050 -> 03; el 02 archiva los 520 productos del seed (reversible). Solo CO, stock 0, ocultos hasta vincular.
 
 ## Pendiente
+- **Carga real:** aprobación del dueño y aplicar 01/02/03; stock [COMPLETAR]; fotos (el Excel no trae); decidir IZAO-MEN-101 (ejemplo duplicado, cargado como borrador); revisar ~97 productos de la vista previa (descripciones cortadas en el origen).
 - **Revisión 78e6c0f..920910b (corregida):** procesar.ts con límite 40 MP panel / 25 MP público, `sharp.cache(false)`, un pipeline por salida y semáforo (2 a la vez, espera 20 s, `ErrorImagen`); guardar.ts con `link` (no sobrescribe); banners: `esUbicacion` en redirecciones, `kind='banner'`, sin enlaces a otro país ni a categoría/producto no visibles.
 - **izao-db:** `media_file_deletions.reason` solo admite 'anonimizacion'; para limpiar huérfanas de banners (y subidas fallidas) hace falta un motivo nuevo ('banner_eliminado') y que `eliminarBannerBd` borre la fila de `media` e inserte en la cola; el worker `media.borrar_archivos` ya existe. Hoy no hay job de huérfanas.
 - **izao-db (migración, D-047):** `banners.focal_x/focal_y smallint not null default 50 check (0..100)`; hasta entonces el selector de punto focal no aparece. **izao-tienda:** `srcset` único + width/height + `object-position` (D-047).
