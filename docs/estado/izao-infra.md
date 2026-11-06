@@ -44,6 +44,10 @@ Nginx `/media/`: solo webp|avif|jpe?g|png|mp4; warranty/, labels/ y agent-screen
 ## Redespliegue 529c333 (2026-11-06) — OK
 pull + `deploy.sh --skip-tests --migraciones-verificadas` (402 s, sin snapshot). Migraciones 20261105060857 y 20261106050343 verificadas con list_migrations. web/worker healthy; web ahora en 127.0.0.1:3001 (autodetección). https /co /ec /api/health /admin/login 200; logs limpios. Compose monta /srv/izao/media en ambos (mismo dir que lee Nginx); uid 100 escribe en web y worker (touch borrado). Build avisa de `@valkey/valkey-glide` (bullmq, inocuo). PENDIENTE ROOT (no hecho a propósito): copiar nginx a /srv/izao/nginx, permisos-media.sh, limpieza del sitio viejo; mientras tanto Nginx sirve /media con la config anterior y media sigue en 777.
 
+## Verificación tras acciones de root (2026-11-06)
+OK: permisos-media.sh aplicado (media 100:33 2750; warranty/labels/agent-screenshots 700 uid 100; banners 2750 grupo 33); web y worker (uid 100) escriben en banners/; sites-enabled solo tiene izao.conf; `sudo nginx -t` sin avisos; /co /ec /api/health /admin/login 200; /media/labels y /media/warranty 404.
+FALLA: /srv/izao/nginx/izao-locations.conf e izao-zones.conf siguen en la versión VIEJA (diff contra infra/nginx): /media/banners/prueba.txt da 200 (sin filtro de extensiones) y /media/ no lleva CSP `sandbox` (usa la CSP general). Root debe copiar de nuevo y recargar (comando en el reporte). Pruebas borradas.
+
 ## Siguiente paso exacto
 Dueño ejecuta la limpieza Nginx; luego `uptime`, `crear-admin`, restore real contra `auth`, snapshot (API Contabo).
 Nota: el build de web puede fallar por WIP de la tienda; verificar en copia limpia de HEAD.
