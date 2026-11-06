@@ -28,9 +28,8 @@
 - Seguro: 1030 variantes sin `mastershop_product_id` → `buildCarrierOrder` lanza antes de la red; plantillas inactivas → sin WhatsApp.
 - Bloqueo: aprobar/rechazar en Wompi exige aceptar su reglamento y autorización de datos → necesita consentimiento del usuario (o que el dueño haga esos clics).
 
-## Plantillas Meta (6da29d2, D-048)
-- cobro_abono = `izao_pago_envio_inicial`, `es_CO`, vars nombre/pedido/abono/`pay_link_url`, sin botón. `validarEnvio` vs `validarPlantilla`. Link `/{pais}/pagar/{token}` (sin país = 404).
-- Pendiente: UPDATE de la fila de prod (denegado al agente), izao-admin sincroniza `VARIABLES_PLANTILLA`/`VALORES_EJEMPLO` con `pay_link_url` (1 prueba roja en web) y `urlCobro` con país; textos de recordatorios y cancelado_24h del dueño.
+## Plantillas Meta (6da29d2 D-048, a2e75fb D-049)
+- cobro_abono/30m/5h/cancelado_24h alineadas (es_CO, sin botón, link en {{4}}). Job `cod.aviso_cancelacion` desde abandono y barrido. Prod: cobro_abono activa (líder); las otras 3 + offsets {30,300} = SQL entregado al líder tras desplegar a2e75fb. izao-admin: sumar `pedido_cancelado_24h` al panel.
 
 ## Siguiente paso exacto
 Con el dueño: pagar IZ-CO-000041 (o uno nuevo) con Transferencia Bancolombia/QR sandbox eligiendo aprobado y rechazado; yo verifico `webhook_events`, `payments` y estado. Luego COD (link `/pagar/{token}`).
