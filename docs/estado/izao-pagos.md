@@ -25,13 +25,11 @@
 - Pedido de prueba IZ-CO-000041 (`249a4f9a…`), doble clic → 1 pedido, 1 pago `-P1`; Web Checkout abre en MODO DE PRUEBAS con monto y datos correctos.
 - Vencimiento: 07:15 UTC barrido → `expirado`, `stock_state=released`, reserva 0. El pago `-P1` queda `created` (Wompi ya no lo acepta por `expiration-time`).
 - Política: cliente bloquea sin aceptar; servidor 409 `DATA_POLICY_OUTDATED` (versión 1) y 400 sin `terms_and_data`; 0 pedidos extra.
-- MasterShop seguro: las 1030 variantes sin `mastershop_product_id` → `buildCarrierOrder` lanza antes de la red → `error_transportadora`.
-- WhatsApp seguro: 4 plantillas `draft`/inactivas → `plantilla_no_activa`, sin envío.
+- Seguro: 1030 variantes sin `mastershop_product_id` → `buildCarrierOrder` lanza antes de la red; plantillas inactivas → sin WhatsApp.
 - Bloqueo: aprobar/rechazar en Wompi exige aceptar su reglamento y autorización de datos → necesita consentimiento del usuario (o que el dueño haga esos clics).
 
 ## Plantillas Meta (6da29d2, D-048)
 - cobro_abono = `izao_pago_envio_inicial`, `es_CO`, vars nombre/pedido/abono/`pay_link_url`, sin botón. `validarEnvio` vs `validarPlantilla`. Link `/{pais}/pagar/{token}` (sin país = 404).
-- Abono ya es fijo por país (`cod_deposit_amount`); prod CO = 10.000.
 - Pendiente: UPDATE de la fila de prod (denegado al agente), izao-admin sincroniza `VARIABLES_PLANTILLA`/`VALORES_EJEMPLO` con `pay_link_url` (1 prueba roja en web) y `urlCobro` con país; textos de recordatorios y cancelado_24h del dueño.
 
 ## Siguiente paso exacto
