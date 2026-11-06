@@ -23,7 +23,7 @@
 - Vinculación en el panel: `MasterShopClient.listAllProductsWithVariants()` + `emparejarPorSku()` (vista previa) + `sqlVinculacion()` o UPDATE equivalente con confirmación y auditoría.
 
 ## Pendiente
-- Dueño: cargar el catálogo real en Izao y/o crear en MasterShop los productos con el mismo SKU; luego repetir la vista previa. IZ-CO-000042/43: `order_items` sin vínculo (cancelar o corregir a mano).
+- Vista previa 2 (catálogo real, 188 `IZAO-*`): MasterShop sigue con 2 productos → solo MEN-034/035 emparejan; SQL de 2 filas entregado al líder, sin aplicar. Dueño: subir los otros 186 a MasterShop (la API de esta llave lista 2). IZ-CO-000042/43: no se corrigen.
 - Canal de alertas al admin (saldo bajo, impresión fallida, agente sin heartbeat > 5 min). Lista de empaque.
 - Avisar a izao-agente-windows del contrato v1.
 - Política de producto: con autoconfirmación, la ventana para cancelar por API casi no existe; las cancelaciones posteriores se hacen en el panel de MasterShop.
