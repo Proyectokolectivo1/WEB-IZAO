@@ -10,14 +10,16 @@ import {
   COLA_COD,
   crearClienteWhatsApp,
   JOB_COD_ABANDONO,
+  JOB_COD_AVISO_CANCELACION,
   JOB_COD_INICIAR,
   JOB_COD_RECORDATORIO,
   JOB_COD_REENVIAR,
   jobIdCodAbandono,
+  jobIdCodAvisoCancelacion,
   jobIdCodRecordatorio,
 } from '@izao/whatsapp';
 import { crearLinkPago } from '@izao/wompi';
-import { abandonarCod, iniciarCod, recordatorioCod, reenviarCod, type DepsCod, type JobProgramado } from './flujo.js';
+import { abandonarCod, avisarCancelacionCod, iniciarCod, recordatorioCod, reenviarCod, type DepsCod, type JobProgramado } from './flujo.js';
 import { crearFuenteCodPostgrest } from './fuente-postgrest.js';
 import { conRecalculoMetricas, type RecalcularMetricasPedido } from '../metrics/tras-transicion.js';
 
@@ -49,7 +51,7 @@ export function dependenciasCodDesdeEnv(
     urlSitio,
   };
 }
-export { ErrorReintentableCod, abandonarCod, iniciarCod, recordatorioCod, reenviarCod } from './flujo.js';
+export { ErrorReintentableCod, abandonarCod, avisarCancelacionCod, iniciarCod, recordatorioCod, reenviarCod } from './flujo.js';
 
 /** Tope de recordatorios que se intentan cancelar por pedido (más que cualquier configuración razonable). */
 const MAX_RECORDATORIOS = 24;
@@ -66,6 +68,12 @@ export function programadorCod(cola: Queue, ahora: () => number = Date.now): Dep
     const delay = Math.max(0, j.en.getTime() - ahora());
     if (j.tipo === 'abandono') {
       await cola.add(JOB_COD_ABANDONO, { order_id: j.order_id }, { ...OPCIONES, jobId: jobIdCodAbandono(j.order_id), delay });
+    } else if (j.tipo === 'aviso_cancelacion') {
+      await cola.add(
+        JOB_COD_AVISO_CANCELACION,
+        { order_id: j.order_id },
+        { ...OPCIONES, attempts: 4, jobId: jobIdCodAvisoCancelacion(j.order_id), delay },
+      );
     } else {
       await cola.add(
         JOB_COD_RECORDATORIO,
@@ -113,6 +121,13 @@ export function crearProcesadorCod(deps: DepsCod): Processor {
         }
         break;
       }
+      case JOB_COD_AVISO_CANCELACION:
+        r = await avisarCancelacionCod(orderId, deps);
+        if (r.accion === 'reprogramado' && r.en && token) {
+          await job.moveToDelayed(r.en.getTime(), token);
+          throw new DelayedError();
+        }
+        break;
       case JOB_COD_REENVIAR: {
         const iso = (job.data as { solicitado_en?: unknown }).solicitado_en;
         const solicitado = typeof iso === 'string' && /^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(iso) ? new Date(iso) : null;

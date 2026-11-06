@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CLAVES_PLANTILLA_COD,
+  CLAVES_PLANTILLA_WA,
+  CLAVE_AVISO_CANCELACION,
   PLANTILLAS_META,
   PLANTILLAS_SEMILLA,
   mensajePlantilla,
@@ -95,9 +98,13 @@ describe('mensaje de plantilla (POST /{phone_number_id}/messages)', () => {
     });
   });
 
-  it('el mapa decide qué valor va en cada posición (recordatorio final renumerado)', () => {
-    const final = PLANTILLAS_SEMILLA.find((p) => p.key === 'recordatorio_abono_final')!;
-    const m = mensajePlantilla({ ...final, meta_template_name: 'recordatorio_abono_final_v1' }, { to: '573001234567', valores: VALORES, tokenBoton: 'Ab12Cd34Ef' });
+  it('el mapa decide qué valor va en cada posición (orden renumerado)', () => {
+    const renumerada: PlantillaWhatsApp = {
+      ...COBRO,
+      body_text: 'Hola {{1}}, tu pedido {{2}} se libera el {{3}} sin el abono de {{4}}. Gracias.',
+      variables_map: { '1': 'customer_first_name', '2': 'order_number', '3': 'pay_link_expires_at', '4': 'cod_deposit_amount' },
+    };
+    const m = mensajePlantilla(renumerada, { to: '573001234567', valores: VALORES, tokenBoton: 'Ab12Cd34Ef' });
     const cuerpo = m.template.components[0]!;
     expect(cuerpo.parameters.map((p) => p.text)).toEqual(['Laura', 'IZ-CO-000123', '21 de octubre, 3:04 p. m.', '$30.000']);
   });
@@ -184,5 +191,52 @@ describe('link de marca del abono (/{pais}/pagar/{token})', () => {
     expect(() => urlPagoAbono('https://izaoperfumeria.com/x', 'CO', 'Ab12Cd34Ef')).toThrow(RangeError);
     expect(() => urlPagoAbono('https://izaoperfumeria.com', 'PE', 'Ab12Cd34Ef')).toThrow(RangeError);
     expect(() => urlPagoAbono('https://izaoperfumeria.com', 'CO', 'a/b')).toThrow(RangeError);
+  });
+});
+
+describe('recordatorios y aviso de cancelación aprobados en Meta (es_CO, sin botón)', () => {
+  const semilla = (key: string) => {
+    const s = PLANTILLAS_SEMILLA.find((p) => p.key === key)!;
+    return { ...s, meta_template_name: PLANTILLAS_META[s.key]!.meta_template_name };
+  };
+  const enviar = (key: string) => mensajePlantilla(semilla(key), { to: '573001234567', valores: VALORES, tokenBoton: 'Ab12Cd34Ef' });
+  const LINK = 'https://izaoperfumeria.com/co/pagar/Ab12Cd34Ef';
+
+  it('nombres e idioma de Meta por clave', () => {
+    expect(PLANTILLAS_META).toEqual({
+      cobro_abono: { meta_template_name: 'izao_pago_envio_inicial', language: 'es_CO' },
+      recordatorio_abono_1: { meta_template_name: 'izao_pago_envio_recordatorio_30m', language: 'es_CO' },
+      recordatorio_abono_final: { meta_template_name: 'izao_pago_envio_recordatorio_5h', language: 'es_CO' },
+      pedido_cancelado_24h: { meta_template_name: 'izao_pedido_cancelado_24h', language: 'es_CO' },
+    });
+    expect(CLAVES_PLANTILLA_WA).toEqual([...CLAVES_PLANTILLA_COD, CLAVE_AVISO_CANCELACION]);
+    expect(CLAVE_AVISO_CANCELACION).toBe('pedido_cancelado_24h');
+  });
+
+  it('recordatorio 30 m y 5 h: nombre, pedido, abono y link en el cuerpo; sin botón', () => {
+    for (const [key, nombre] of [
+      ['recordatorio_abono_1', 'izao_pago_envio_recordatorio_30m'],
+      ['recordatorio_abono_final', 'izao_pago_envio_recordatorio_5h'],
+    ] as const) {
+      const m = enviar(key);
+      expect(m.template.name).toBe(nombre);
+      expect(m.template.language).toEqual({ code: 'es_CO' });
+      expect(m.template.components).toEqual([
+        { type: 'body', parameters: ['Laura', 'IZ-CO-000123', '$30.000', LINK].map((text) => ({ type: 'text', text })) },
+      ]);
+    }
+  });
+
+  it('aviso de cancelación: solo nombre y pedido', () => {
+    const m = enviar('pedido_cancelado_24h');
+    expect(m.template.name).toBe('izao_pedido_cancelado_24h');
+    expect(m.template.components).toEqual([{ type: 'body', parameters: ['Laura', 'IZ-CO-000123'].map((text) => ({ type: 'text', text })) }]);
+  });
+
+  it('las semillas alineadas pasan la validación completa (regla 7) y copian el texto de Meta', () => {
+    for (const k of ['recordatorio_abono_1', 'recordatorio_abono_final', 'pedido_cancelado_24h']) expect(validarPlantilla(semilla(k)), k).toEqual([]);
+    expect(semilla('pedido_cancelado_24h').body_text).toBe(
+      'Hola {{1}}, tu pedido #{{2}} fue cancelado porque no recibimos el pago del envío dentro de las 24 horas. Te esperamos en una proxima ocasión',
+    );
   });
 });

@@ -4,7 +4,7 @@ import { ErrorWhatsApp, PLANTILLAS_META, PLANTILLAS_SEMILLA, type CredencialesWh
 import { crearWhatsAppMock } from '@izao/whatsapp/mock';
 import { ErrorWompi, type EntradaLinkAbono, type WompiCredentials } from '@izao/wompi';
 import type { AbonoFila, FuenteCod, MensajeFila, PayLinkFila, PedidoCod } from './fuente.js';
-import { ErrorReintentableCod, abandonarCod, iniciarCod, recordatorioCod, reenviarCod, type JobProgramado } from './flujo.js';
+import { ErrorReintentableCod, abandonarCod, avisarCancelacionCod, iniciarCod, recordatorioCod, reenviarCod, type JobProgramado } from './flujo.js';
 
 const ORDER = '00000000-0000-4000-8000-0000000000aa';
 const CREADO = new Date('2026-10-20T15:00:00.000Z'); // 10:00 en Bogotá
@@ -25,7 +25,7 @@ const WA: CredencialesWhatsApp = {
   versionGraph: 'v26.0',
 };
 
-function escenario(o: { pedido?: Partial<PedidoCod>; sinPlantillas?: boolean; sinWa?: boolean; ahora?: Date; tope?: number | null } = {}) {
+function escenario(o: { pedido?: Partial<PedidoCod>; sinPlantillas?: boolean; sinWa?: boolean; ahora?: Date; tope?: number | null; offsets?: number[] } = {}) {
   const pedido: PedidoCod = {
     id: ORDER,
     number: 'IZ-CO-000123',
@@ -59,7 +59,7 @@ function escenario(o: { pedido?: Partial<PedidoCod>; sinPlantillas?: boolean; si
   const wa = crearWhatsAppMock();
   const fuente: FuenteCod = {
     pedido: async (id) => (id === ORDER ? { ...pedido } : null),
-    config: async () => ({ offsetsMinutos: [180, 720, 1260], silencio: { inicio: '21:00', fin: '07:00' }, zona: 'America/Bogota' }),
+    config: async () => ({ offsetsMinutos: o.offsets ?? [180, 720, 1260], silencio: { inicio: '21:00', fin: '07:00' }, zona: 'America/Bogota' }),
     credencialesWompi: async () => WOMPI,
     credencialesWhatsApp: async () => (o.sinWa ? null : WA),
     abonos: async () => abonos.map((a) => ({ ...a })),
@@ -257,20 +257,32 @@ describe('cod.recordatorio y cod.abandono (reloj inyectado)', () => {
     s.avanzar(new Date('2026-10-20T18:00:00.000Z'));
     expect((await recordatorioCod(ORDER, 1, s.deps)).accion).toBe('enviado');
     expect((await recordatorioCod(ORDER, 1, s.deps)).accion).toBe('ya_enviado');
-    expect(s.wa.enviados.map((m) => m.template.name)).toEqual(['izao_pago_envio_inicial', 'recordatorio_abono_1_v1']);
-    expect(s.wa.enviados[1]!.template.components[1]).toMatchObject({ parameters: [{ text: 'TokCorto123' }] });
+    expect(s.wa.enviados.map((m) => m.template.name)).toEqual(['izao_pago_envio_inicial', 'izao_pago_envio_recordatorio_30m']);
+    expect(s.wa.enviados[1]!.template.components).toHaveLength(1);
+    expect(s.wa.enviados[1]!.template.components[0]!.parameters.at(-1)).toEqual({ type: 'text', text: 'https://izaoperfumeria.com/co/pagar/TokCorto123' });
   });
 
-  it('recordatorio final usa su propio orden de variables', async () => {
-    const s = escenario();
+  it('con offsets 30 y 300 min: 30m a los 30 min y 5h (final) a las 5 h, ambos con el link en {{4}}', async () => {
+    const s = escenario({ offsets: [30, 300] });
     await iniciarCod(ORDER, s.deps);
-    s.avanzar(new Date('2026-10-21T12:00:00.000Z'));
-    await recordatorioCod(ORDER, 3, s.deps);
-    const final = s.wa.enviados.at(-1)!;
-    expect(final.template.name).toBe('recordatorio_abono_final_v1');
-    const p = final.template.components[0]!.parameters.map((x) => x.text);
-    expect(p[2]).toMatch(/21 de octubre/);
-    expect(p[3]).toMatch(/30\.000/);
+    expect(s.r.programados.filter((j) => j.tipo === 'recordatorio')).toEqual([
+      { tipo: 'recordatorio', order_id: ORDER, n: 1, en: new Date(CREADO.getTime() + 30 * 60_000) },
+      { tipo: 'recordatorio', order_id: ORDER, n: 2, en: new Date(CREADO.getTime() + 300 * 60_000) },
+    ]);
+    s.avanzar(new Date(CREADO.getTime() + 30 * 60_000));
+    await recordatorioCod(ORDER, 1, s.deps);
+    s.avanzar(new Date(CREADO.getTime() + 300 * 60_000));
+    await recordatorioCod(ORDER, 2, s.deps);
+    expect(s.wa.enviados.map((m) => m.template.name)).toEqual([
+      'izao_pago_envio_inicial',
+      'izao_pago_envio_recordatorio_30m',
+      'izao_pago_envio_recordatorio_5h',
+    ]);
+    const p = s.wa.enviados.at(-1)!.template.components[0]!.parameters.map((x) => x.text);
+    expect(p[0]).toBe('Laura');
+    expect(p[1]).toBe('IZ-CO-000123');
+    expect(p[2]).toMatch(/30\.000/);
+    expect(p[3]).toBe('https://izaoperfumeria.com/co/pagar/TokCorto123');
   });
 
   it('pagado antes del recordatorio o ya vencido: se omite', async () => {
@@ -308,6 +320,67 @@ describe('cod.recordatorio y cod.abandono (reloj inyectado)', () => {
     expect((await abandonarCod(ORDER, t.deps)).accion).toBe('abandonado');
     expect(t.r.eventos).toEqual([]);
     expect(t.r.liberados).toEqual({ stock: 1, canje: 1 });
+  });
+});
+
+describe('aviso de cancelación a las 24 h (izao_pedido_cancelado_24h)', () => {
+  it('el abandono programa el aviso (id fijo por pedido) y también lo hace el reintento tras una falla', async () => {
+    const s = escenario({ ahora: VENCE });
+    expect((await abandonarCod(ORDER, s.deps)).accion).toBe('abandonado');
+    expect(s.r.programados).toContainEqual({ tipo: 'aviso_cancelacion', order_id: ORDER, en: VENCE });
+
+    const t = escenario({ pedido: { status: 'abandonado', stock_state: 'reserved' }, ahora: VENCE });
+    await abandonarCod(ORDER, t.deps);
+    expect(t.r.programados).toContainEqual({ tipo: 'aviso_cancelacion', order_id: ORDER, en: VENCE });
+  });
+
+  it('abandono omitido (pagado antes o temprano) no programa aviso', async () => {
+    const s = escenario({ pedido: { status: 'abono_pagado' }, ahora: VENCE });
+    await abandonarCod(ORDER, s.deps);
+    const t = escenario({ ahora: new Date(VENCE.getTime() - 60_000) });
+    await abandonarCod(ORDER, t.deps);
+    expect([...s.r.programados, ...t.r.programados].some((j) => j.tipo === 'aviso_cancelacion')).toBe(false);
+  });
+
+  it('envía nombre y pedido una sola vez, aunque el link ya no exista', async () => {
+    const s = escenario({ pedido: { status: 'abandonado', stock_state: 'released' }, ahora: VENCE });
+    expect((await avisarCancelacionCod(ORDER, s.deps)).accion).toBe('enviado');
+    expect((await avisarCancelacionCod(ORDER, s.deps)).accion).toBe('ya_enviado');
+    expect(s.wa.enviados).toHaveLength(1);
+    const m = s.wa.enviados[0]!;
+    expect(m.to).toBe('573001234567');
+    expect(m.template.name).toBe('izao_pedido_cancelado_24h');
+    expect(m.template.language).toEqual({ code: 'es_CO' });
+    expect(m.template.components).toEqual([{ type: 'body', parameters: [{ type: 'text', text: 'Laura' }, { type: 'text', text: 'IZ-CO-000123' }] }]);
+    // scheduled_for = vencimiento de la reserva: identifica el aviso aunque el job se repita o se mueva.
+    expect(s.mensajes[0]).toMatchObject({ template_key: 'pedido_cancelado_24h', scheduled_for: VENCE, status: 'sent' });
+  });
+
+  it('solo si el pedido sigue abandonado y es contra entrega (pago tardío reactivado, otro método: no)', async () => {
+    for (const pedido of [{ status: 'abono_pagado' as const }, { status: 'esperando_abono' as const }, { status: 'abandonado' as const, payment_method: 'wompi' as const }]) {
+      const s = escenario({ pedido, ahora: VENCE });
+      expect((await avisarCancelacionCod(ORDER, s.deps)).accion).toBe('omitido');
+      expect(s.wa.enviados).toEqual([]);
+    }
+  });
+
+  it('horario silencioso: se reprograma al fin del silencio (07:00 local) sin enviar', async () => {
+    const noche = new Date('2026-10-21T03:30:00.000Z'); // 22:30 en Bogotá
+    const s = escenario({ pedido: { status: 'abandonado', stock_reserved_until: noche }, ahora: noche });
+    const r = await avisarCancelacionCod(ORDER, s.deps);
+    expect(r).toEqual({ accion: 'reprogramado', en: new Date('2026-10-21T12:00:00.000Z') });
+    expect(s.wa.enviados).toEqual([]);
+  });
+
+  it('sin plantilla activa o sin credenciales: alerta y no envía; fallo definitivo: alerta sin reintento', async () => {
+    const s = escenario({ pedido: { status: 'abandonado' }, ahora: VENCE, sinPlantillas: true });
+    expect((await avisarCancelacionCod(ORDER, s.deps)).accion).toBe('no_enviado');
+    expect(s.r.alertas).toContain('plantilla_no_activa');
+    const t = escenario({ pedido: { status: 'abandonado' }, ahora: VENCE });
+    t.wa.fallarCon = new ErrorWhatsApp('DESTINO', false, 400, '131026');
+    expect((await avisarCancelacionCod(ORDER, t.deps)).accion).toBe('no_enviado');
+    expect(t.r.alertas).toContain('whatsapp_fallido');
+    expect(t.r.correos).toEqual([]);
   });
 });
 

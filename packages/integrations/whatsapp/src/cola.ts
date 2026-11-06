@@ -8,6 +8,8 @@ export const JOB_COD_RECORDATORIO = 'cod.recordatorio';
 export const JOB_COD_ABANDONO = 'cod.abandono';
 /** "Reenviar cobro" del panel (admin y operador). */
 export const JOB_COD_REENVIAR = 'cod.reenviar';
+/** Aviso al cliente de que el pedido se canceló por no recibir el abono (plantilla `pedido_cancelado_24h`). */
+export const JOB_COD_AVISO_CANCELACION = 'cod.aviso_cancelacion';
 
 export const COLA_WHATSAPP = 'whatsapp';
 export const JOB_WA_EVENTO = 'whatsapp.evento';
@@ -43,5 +45,6 @@ function idPedido(orderId: string): string {
 export const jobIdCodIniciar = (orderId: string): string => `cod.iniciar.${idPedido(orderId)}`;
 export const jobIdCodRecordatorio = (orderId: string, n: number): string => `cod.recordatorio.${idPedido(orderId)}.${n}`;
 export const jobIdCodAbandono = (orderId: string): string => `cod.abandono.${idPedido(orderId)}`;
+export const jobIdCodAvisoCancelacion = (orderId: string): string => `cod.aviso_cancelacion.${idPedido(orderId)}`;
 export const jobIdCodReenviar = (orderId: string, solicitadoEn: Date): string => `cod.reenviar.${idPedido(orderId)}.${solicitadoEn.getTime()}`;
 export const jobIdWaEvento = (eventId: string): string => `wa.${eventId.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 200)}`;

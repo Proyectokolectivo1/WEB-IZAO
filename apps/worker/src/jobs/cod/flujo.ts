@@ -13,7 +13,8 @@ import { transicionar } from '@izao/core/order-state';
 import {
   ErrorWhatsApp,
   mensajePlantilla,
-  type ClavePlantillaCod,
+  CLAVE_AVISO_CANCELACION,
+  type ClavePlantillaWa,
   type ClienteWhatsApp,
   type CredencialesWhatsApp,
   type ValoresCobro,
@@ -32,7 +33,8 @@ export class ErrorReintentableCod extends Error {
 
 export type JobProgramado =
   | { tipo: 'recordatorio'; order_id: string; n: number; en: Date }
-  | { tipo: 'abandono'; order_id: string; en: Date };
+  | { tipo: 'abandono'; order_id: string; en: Date }
+  | { tipo: 'aviso_cancelacion'; order_id: string; en: Date };
 
 export interface DepsCod {
   fuente: FuenteCod;
@@ -89,14 +91,14 @@ function fechaLocal(d: Date, zona: string): string {
   }).format(d);
 }
 
-function valores(p: PedidoCod, vence: Date, zona: string, urlPago: string): ValoresCobro {
+function valores(p: PedidoCod, vence: Date, zona: string, urlPago: string | null): ValoresCobro {
   return {
     customer_first_name: p.contact_first_name.trim().split(/\s+/)[0] ?? p.contact_first_name,
     order_number: p.number,
     cod_deposit_amount: formatMoney(money(p.cod_deposit_amount, p.currency_code)),
     cod_collect_amount: formatMoney(money(p.cod_collect_amount, p.currency_code)),
     pay_link_expires_at: fechaLocal(vence, zona),
-    pay_link_url: urlPago,
+    ...(urlPago ? { pay_link_url: urlPago } : {}),
   };
 }
 
@@ -168,9 +170,10 @@ async function asegurarPayLink(deps: DepsCod, p: PedidoCod, abono: AbonoFila, ve
 async function enviar(
   deps: DepsCod,
   p: PedidoCod,
-  key: ClavePlantillaCod,
+  key: ClavePlantillaWa,
   programadoPara: Date,
-  pay: PayLinkFila,
+  /** `null` solo en el aviso de cancelación: su plantilla no lleva link. */
+  pay: PayLinkFila | null,
   zona: string,
 ): Promise<'enviado' | 'ya_enviado' | 'no_enviado'> {
   const { fuente } = deps;
@@ -188,7 +191,10 @@ async function enviar(
     await fuente.registrarAlerta(p.id, 'plantilla_no_activa', { plantilla: key });
     return 'no_enviado';
   }
-  const msg = mensajePlantilla(plantilla, { to: p.contact_phone_e164, valores: valores(p, pay.expires_at, zona, urlPagoAbono(origen(deps), p.country_code, pay.token)), tokenBoton: pay.token });
+  const vars = pay
+    ? valores(p, pay.expires_at, zona, urlPagoAbono(origen(deps), p.country_code, pay.token))
+    : valores(p, p.stock_reserved_until ?? p.created_at, zona, null);
+  const msg = mensajePlantilla(plantilla, { to: p.contact_phone_e164, valores: vars, tokenBoton: pay?.token ?? '' });
   const id = await fuente.prepararMensaje({ order_id: p.id, template_id: plantilla.id, to_e164: p.contact_phone_e164, scheduled_for: programadoPara });
   try {
     const r = await deps.whatsapp(creds).enviarPlantilla(msg);
@@ -271,11 +277,32 @@ export async function abandonarCod(orderId: string, deps: DepsCod): Promise<Resu
   } else if (!(p.status === 'abandonado' && p.stock_state === 'reserved')) {
     return { accion: 'omitido' };
   }
+  // Antes de liberar: si algo falla después, el reintento vuelve a programarlo (id fijo, no duplica).
+  await deps.programar({ tipo: 'aviso_cancelacion', order_id: p.id, en: ahora });
   // Reintento tras una falla entre la transición y la liberación: liberar es idempotente en la base.
   const stock = await fuente.liberarStock(p.id);
   if (!stock.ok) throw new ErrorReintentableCod('liberar_stock');
   await fuente.liberarCanje(p.id);
   return { accion: 'abandonado' };
+}
+
+/**
+ * `cod.aviso_cancelacion`: avisa por WhatsApp que el pedido se canceló por no recibir el abono (plantilla
+ * `pedido_cancelado_24h`). Solo si sigue `abandonado` y es contra entrega (un pago tardío que lo reactivó no recibe
+ * el aviso). El cliente autorizó WhatsApp al elegir contra entrega (checkout). Horario silencioso: se reprograma al
+ * fin. Idempotente: `scheduled_for` = vencimiento de la reserva, así repetir o mover el job no envía dos veces.
+ */
+export async function avisarCancelacionCod(orderId: string, deps: DepsCod): Promise<ResultadoCod> {
+  const { fuente } = deps;
+  const ahora = (deps.ahora ?? (() => new Date()))();
+  const p = await fuente.pedido(orderId);
+  if (!p) return { accion: 'pedido_no_encontrado' };
+  if (p.payment_method !== 'cod' || p.status !== 'abandonado') return { accion: 'omitido' };
+  const cfg = await fuente.config(p.country_code);
+  if (!cfg) throw new ErrorReintentableCod('sin_config');
+  if (enSilencio(ahora, cfg.silencio, cfg.zona)) return { accion: 'reprogramado', en: finDelSilencio(ahora, cfg.silencio, cfg.zona) };
+  const programado = p.stock_reserved_until ?? p.created_at;
+  return { accion: await enviar(deps, p, CLAVE_AVISO_CANCELACION, programado, null, cfg.zona) };
 }
 
 /**

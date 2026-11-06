@@ -24,6 +24,11 @@ export type ValoresCobro = Readonly<Record<Exclude<VariableCobro, 'pay_link_url'
 
 export const CLAVES_PLANTILLA_COD = ['cobro_abono', 'recordatorio_abono_1', 'recordatorio_abono_2', 'recordatorio_abono_final'] as const;
 export type ClavePlantillaCod = (typeof CLAVES_PLANTILLA_COD)[number];
+/** Aviso al cliente cuando el pedido contra entrega se cancela por no recibir el abono (job `cod.aviso_cancelacion`). */
+export const CLAVE_AVISO_CANCELACION = 'pedido_cancelado_24h';
+/** Todas las plantillas que envía el sistema: cobro y recordatorios + aviso de cancelación. */
+export const CLAVES_PLANTILLA_WA = [...CLAVES_PLANTILLA_COD, CLAVE_AVISO_CANCELACION] as const;
+export type ClavePlantillaWa = (typeof CLAVES_PLANTILLA_WA)[number];
 
 export interface PlantillaWhatsApp {
   key: string;
@@ -234,12 +239,17 @@ export function solicitudCreacion(p: PlantillaWhatsApp, ejemplo: ValoresCobro, t
 }
 
 /**
- * Plantillas ya creadas y aprobadas en Meta (D-048). El envío exige nombre, idioma y orden de variables idénticos;
- * las demás claves aún no tienen nombre ni texto confirmados por el dueño y siguen inactivas.
+ * Plantillas ya creadas y aprobadas en Meta (D-048, D-049). El envío exige nombre, idioma y orden de variables
+ * idénticos. `recordatorio_abono_2` no existe en Meta: con dos offsets (30 y 300 min) no se usa.
  */
-export const PLANTILLAS_META: Readonly<Partial<Record<ClavePlantillaCod, { meta_template_name: string; language: string }>>> = {
+export const PLANTILLAS_META: Readonly<Partial<Record<ClavePlantillaWa, { meta_template_name: string; language: string }>>> = {
   cobro_abono: { meta_template_name: 'izao_pago_envio_inicial', language: 'es_CO' },
+  recordatorio_abono_1: { meta_template_name: 'izao_pago_envio_recordatorio_30m', language: 'es_CO' },
+  recordatorio_abono_final: { meta_template_name: 'izao_pago_envio_recordatorio_5h', language: 'es_CO' },
+  pedido_cancelado_24h: { meta_template_name: 'izao_pedido_cancelado_24h', language: 'es_CO' },
 };
+
+const MAPA_LINK = { '1': 'customer_first_name', '2': 'order_number', '3': 'cod_deposit_amount', '4': 'pay_link_url' } as const;
 
 const MAPA_ESTANDAR = {
   '1': 'customer_first_name',
@@ -251,10 +261,10 @@ const MAPA_ESTANDAR = {
 } as const;
 
 /**
- * Textos por defecto del *seed* (Anexo B ajustado a las reglas de Meta, D-025): `recordatorio_abono_2` y
- * `recordatorio_abono_final` empezaban con variable y el final saltaba `{{4}}`. El panel los reemplaza.
+ * Textos por defecto del *seed*. Los de `PLANTILLAS_META` son copia literal del texto aprobado en Meta (sin pie ni
+ * botón; `cobro_abono` lleva además un encabezado fijo); `recordatorio_abono_2` conserva el borrador del Anexo B (D-025).
  */
-export const PLANTILLAS_SEMILLA: ReadonlyArray<Omit<PlantillaWhatsApp, 'meta_template_name'> & { key: ClavePlantillaCod }> = [
+export const PLANTILLAS_SEMILLA: ReadonlyArray<Omit<PlantillaWhatsApp, 'meta_template_name'> & { key: ClavePlantillaWa }> = [
   {
     // Copia literal del texto aprobado en Meta (izao_pago_envio_inicial, encabezado fijo "Cobro de envio", sin botón).
     key: 'cobro_abono',
@@ -264,17 +274,17 @@ export const PLANTILLAS_SEMILLA: ReadonlyArray<Omit<PlantillaWhatsApp, 'meta_tem
     footer_text: null,
     button_text: null,
     button_url: null,
-    variables_map: { '1': 'customer_first_name', '2': 'order_number', '3': 'cod_deposit_amount', '4': 'pay_link_url' },
+    variables_map: MAPA_LINK,
   },
   {
+    // izao_pago_envio_recordatorio_30m
     key: 'recordatorio_abono_1',
-    language: 'es',
-    body_text:
-      'Hola, {{1}}. Tu pedido {{2}} sigue reservado para ti.\nSolo falta el abono de {{3}} para despacharlo; al recibir pagas {{4}}. Disponible hasta el {{5}}.',
-    footer_text: 'Izao Perfumería',
-    button_text: 'Pagar abono',
-    button_url: 'https://izaoperfumeria.com/co/pagar/{{1}}',
-    variables_map: MAPA_ESTANDAR,
+    language: 'es_CO',
+    body_text: 'Hola {{1}}, tu pedido #{{2}} sigue pendiente. Para enviarlo, falta pagar el envío de {{3}}: {{4}}. Si ya pagaste, ignora este mensaje.',
+    footer_text: null,
+    button_text: null,
+    button_url: null,
+    variables_map: MAPA_LINK,
   },
   {
     key: 'recordatorio_abono_2',
@@ -287,19 +297,25 @@ export const PLANTILLAS_SEMILLA: ReadonlyArray<Omit<PlantillaWhatsApp, 'meta_tem
     variables_map: MAPA_ESTANDAR,
   },
   {
+    // izao_pago_envio_recordatorio_5h
     key: 'recordatorio_abono_final',
-    language: 'es',
+    language: 'es_CO',
     body_text:
-      'Hola, {{1}}. Tu pedido {{2}} se libera el {{3}} si no recibimos el abono de {{4}}.\nSi aún lo quieres, hazlo desde el botón y lo despachamos de inmediato.',
-    footer_text: 'Izao Perfumería',
-    button_text: 'Pagar abono',
-    button_url: 'https://izaoperfumeria.com/co/pagar/{{1}}',
-    variables_map: {
-      '1': 'customer_first_name',
-      '2': 'order_number',
-      '3': 'pay_link_expires_at',
-      '4': 'cod_deposit_amount',
-      [CLAVE_BOTON]: 'pay_link_token',
-    },
+      'Hola {{1}}, recordatorio: tu pedido #{{2}} aún espera el pago del envío de {{3}}. Págalo aquí para no perder tu pedido: {{4}}. Vence en pocas horas.',
+    footer_text: null,
+    button_text: null,
+    button_url: null,
+    variables_map: MAPA_LINK,
+  },
+  {
+    // izao_pedido_cancelado_24h
+    key: CLAVE_AVISO_CANCELACION,
+    language: 'es_CO',
+    body_text:
+      'Hola {{1}}, tu pedido #{{2}} fue cancelado porque no recibimos el pago del envío dentro de las 24 horas. Te esperamos en una proxima ocasión',
+    footer_text: null,
+    button_text: null,
+    button_url: null,
+    variables_map: { '1': 'customer_first_name', '2': 'order_number' },
   },
 ];

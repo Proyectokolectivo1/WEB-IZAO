@@ -42,6 +42,7 @@ function escenario(o: {
   stockFalla?: string;
   pagos?: PagoFinanciacion[];
   invalidarFalla?: string;
+  falloAviso?: boolean;
 }) {
   const pedidos = new Map(o.pedidos.map((p) => [p.id, p]));
   const transiciones: { id: string; ev: OrderStatusEvent; fechas?: { abandoned_at?: Date } }[] = [];
@@ -52,6 +53,7 @@ function escenario(o: {
   const consultas: { sinLink?: [Date, Date, number]; solicitudes?: number } = {};
   const pagos = o.pagos ?? [];
   const invalidadas: string[] = [];
+  const avisos: { id: string; en: Date }[] = [];
   const deps: DepsBarrido = {
     fuente: {
       async pedidosPorVencer() {
@@ -106,9 +108,13 @@ function escenario(o: {
       return 'encolado';
     },
     cancelarJobsCod: async (x) => void cancelados.push(x),
+    programarAvisoCancelacion: async (x, en) => {
+      if (o.falloAviso) throw new Error('redis caído');
+      avisos.push({ id: x, en });
+    },
     ahora: () => AHORA,
   };
-  return { deps, pedidos, pagos, invalidadas, transiciones, liberados, canjes, encolados, cancelados, consultas };
+  return { deps, pedidos, pagos, invalidadas, transiciones, liberados, canjes, encolados, cancelados, consultas, avisos };
 }
 
 describe('barrido de pedidos (cron)', () => {
@@ -129,6 +135,18 @@ describe('barrido de pedidos (cron)', () => {
     expect(s.transiciones[0]).toMatchObject({ ev: { to_status: 'abandonado' }, fechas: { abandoned_at: AHORA } });
     expect(s.liberados).toEqual([id(2)]);
     expect(s.cancelados).toEqual([id(2)]);
+  });
+
+  it('abandono por barrido programa el aviso de cancelación; expirado no; si falla programarlo igual libera', async () => {
+    const s = escenario({ pedidos: [pedido(2, 'esperando_abono')], vencer: [{ order_id: id(2), estado_actual: 'esperando_abono', nuevo_estado: 'abandonado' }] });
+    await barrerPedidos(s.deps);
+    expect(s.avisos).toEqual([{ id: id(2), en: AHORA }]);
+    const t = escenario({ pedidos: [pedido(1, 'pendiente_pago')], vencer: [{ order_id: id(1), estado_actual: 'pendiente_pago', nuevo_estado: 'expirado' }] });
+    await barrerPedidos(t.deps);
+    expect(t.avisos).toEqual([]);
+    const u = escenario({ falloAviso: true, pedidos: [pedido(2, 'esperando_abono')], vencer: [{ order_id: id(2), estado_actual: 'esperando_abono', nuevo_estado: 'abandonado' }] });
+    expect((await barrerPedidos(u.deps)).vencidos).toBe(1);
+    expect(u.liberados).toEqual([id(2)]);
   });
 
   it('pedido que ya cambió (pagado entre la consulta y el barrido) no se toca', async () => {

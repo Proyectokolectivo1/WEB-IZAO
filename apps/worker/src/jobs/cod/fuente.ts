@@ -5,7 +5,7 @@
 import type { CountryCode, CurrencyCode } from '@izao/core/money';
 import type { OrderStatus, OrderStatusEvent } from '@izao/core/order-state';
 import type { PaymentStatus, StockFunctionResult, StockState } from '@izao/core/contracts';
-import type { ClavePlantillaCod, CredencialesWhatsApp, PlantillaWhatsApp } from '@izao/whatsapp';
+import type { ClavePlantillaWa, CredencialesWhatsApp, PlantillaWhatsApp } from '@izao/whatsapp';
 import type { WompiCredentials } from '@izao/wompi';
 import type { HorarioSilencio } from './plan.js';
 
@@ -78,7 +78,7 @@ export interface FuenteCod {
   payLink(orderId: string): Promise<PayLinkFila | null>;
   crearPayLink(p: PayLinkFila & { order_id: string }): Promise<{ ok: true } | { ok: false; motivo: 'duplicado' }>;
   /** Versión activa (`is_active`, aprobada por Meta) de la plantilla para el país. */
-  plantillaActiva(pais: CountryCode, key: ClavePlantillaCod): Promise<(PlantillaWhatsApp & { id: string }) | null>;
+  plantillaActiva(pais: CountryCode, key: ClavePlantillaWa): Promise<(PlantillaWhatsApp & { id: string }) | null>;
   mensajes(orderId: string): Promise<MensajeFila[]>;
   /** Crea (o reutiliza si ya existe para esa plantilla y hora) la fila `queued` de `whatsapp_messages`. */
   prepararMensaje(m: { order_id: string; template_id: string; to_e164: string; scheduled_for: Date }): Promise<string>;

@@ -20,6 +20,7 @@ import { JOB_COD_INICIAR, jobIdCodIniciar, type DatosJobCodIniciar } from '@izao
 import { crearFuenteCodPostgrest } from './fuente-postgrest.js';
 import { conRecalculoMetricas, type RecalcularMetricasPedido } from '../metrics/tras-transicion.js';
 import type { FuenteBarrido, FuenteCod, PedidoPorVencer } from './fuente.js';
+import { programadorCod } from './index.js';
 
 export const JOB_BARRIDO_PEDIDOS = 'pedidos.barrido';
 /** Patrón cron sugerido (zona del negocio America/Bogota). */
@@ -37,6 +38,8 @@ export interface DepsBarrido {
   encolarInicioCod: (orderId: string) => Promise<ResultadoEncolado>;
   /** Optimización: el abandono programado igual se omite al releer el estado. */
   cancelarJobsCod?: (orderId: string) => Promise<void>;
+  /** Programa `cod.aviso_cancelacion` (id fijo por pedido) cuando el barrido abandona un pedido contra entrega. */
+  programarAvisoCancelacion?: (orderId: string, en: Date) => Promise<void>;
   ahora?: () => Date;
 }
 
@@ -71,6 +74,10 @@ async function vencer(deps: DepsBarrido, f: PedidoPorVencer, ahora: Date): Promi
   const fechas = f.nuevo_estado === 'abandonado' ? { abandoned_at: ahora } : undefined;
   if (!(await deps.fuente.aplicarTransicion(p.id, t.event, fechas))) return false;
   if (desde === 'esperando_abono' && deps.cancelarJobsCod) await deps.cancelarJobsCod(p.id).catch(() => undefined);
+  if (f.nuevo_estado === 'abandonado' && deps.programarAvisoCancelacion) {
+    // Best effort: nunca bloquea liberar el stock.
+    await deps.programarAvisoCancelacion(p.id, ahora).catch(() => console.error(`[worker] barrido: aviso de cancelación sin programar (pedido ${p.id})`));
+  }
   await liberar(deps, p.id);
   return true;
 }
@@ -159,5 +166,6 @@ export function dependenciasBarridoDesdeEnv(
     fuente: conRecalculoMetricas(crearFuenteCodPostgrest({ supabaseUrl, secretKey, claveCifrado }), recalcularMetricas),
     encolarInicioCod: encoladorInicioCod(colaCod),
     ...(cancelarJobsCod ? { cancelarJobsCod } : {}),
+    programarAvisoCancelacion: (orderId, en) => programadorCod(colaCod)({ tipo: 'aviso_cancelacion', order_id: orderId, en }),
   };
 }
