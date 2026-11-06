@@ -20,10 +20,48 @@ export const ETIQUETA_UBICACION: Record<Ubicacion, string> = {
 };
 
 export const AYUDA_UBICACION: Record<Ubicacion, string> = {
-  hero: 'Se muestra arriba del home, en carrusel. Recomendado: escritorio 1920×800 y móvil 1080×1350.',
-  mid: 'Banner de descuento entre las secciones del home. Recomendado: escritorio 1920×600 y móvil 1080×1080.',
-  category: 'Cabecera de la página de una categoría. Recomendado: escritorio 1920×500 y móvil 1080×900.',
+  hero: 'Se muestra arriba del home, en carrusel.',
+  mid: 'Banner de descuento entre las secciones del home.',
+  category: 'Cabecera de la página de una categoría.',
 };
+
+/** Tamaño recomendado de la ÚNICA imagen del banner por ubicación (horizontal ancha; lo importante hacia el centro). */
+export const TAMANO_RECOMENDADO: Record<Ubicacion, string> = {
+  hero: '2400×1000 px',
+  mid: '2400×750 px',
+  category: '2400×625 px',
+};
+
+/** Ayuda del bloque «Imagen del banner»: la tienda la adapta sola a escritorio y móvil. */
+export function ayudaImagenBanner(ubicacion: Ubicacion): string {
+  return `Sube una sola imagen horizontal y ancha, de ${TAMANO_RECOMENDADO[ubicacion]}. La tienda la adapta sola a cada pantalla; en el celular se recorta a los lados, así que deja lo importante hacia el centro (o marca abajo la zona que debe verse).`;
+}
+
+// ── Punto focal ──────────────────────────────────────────────────────────────────────────────────
+
+/** Porcentajes 0–100 del punto de la imagen que debe quedar a la vista al recortar (`object-position`). */
+export const FOCAL_CENTRO = 50;
+export const POSICIONES_FOCALES = [
+  { x: 0, y: 0, etiqueta: 'Arriba a la izquierda' },
+  { x: 50, y: 0, etiqueta: 'Arriba al centro' },
+  { x: 100, y: 0, etiqueta: 'Arriba a la derecha' },
+  { x: 0, y: 50, etiqueta: 'Izquierda' },
+  { x: 50, y: 50, etiqueta: 'Centro' },
+  { x: 100, y: 50, etiqueta: 'Derecha' },
+  { x: 0, y: 100, etiqueta: 'Abajo a la izquierda' },
+  { x: 50, y: 100, etiqueta: 'Abajo al centro' },
+  { x: 100, y: 100, etiqueta: 'Abajo a la derecha' },
+] as const;
+
+/** Valor CSS de `object-position` para un punto focal. */
+export function objectPositionDe(x: number, y: number): string {
+  return `${x}% ${y}%`;
+}
+
+/** Una sola imagen (nuevo) o, en banners antiguos, una imagen móvil propia distinta de la de escritorio. */
+export function tieneMovilPropia(desktopMediaId: string, mobileMediaId: string | null | undefined): boolean {
+  return !!mobileMediaId && mobileMediaId !== desktopMediaId;
+}
 
 export const POSICIONES_TEXTO = ['left', 'center', 'right'] as const;
 export const ETIQUETA_POSICION: Record<(typeof POSICIONES_TEXTO)[number], string> = {
@@ -170,6 +208,10 @@ const uuidOpcional = z
   .default('')
   .refine((v) => v === '' || UUID.test(v), 'Identificador no válido.')
   .transform((v) => (v === '' ? null : v));
+const focal = z.preprocess(
+  (v) => (v === undefined || v === null || v === '' ? undefined : Number(v)),
+  z.number({ message: 'Punto focal no válido.' }).int().min(0, 'Punto focal no válido.').max(100, 'Punto focal no válido.').optional(),
+);
 const casilla = z.preprocess((v) => v === 'on' || v === 'true' || v === true, z.boolean());
 
 export const esquemaBanner = z
@@ -178,8 +220,12 @@ export const esquemaBanner = z
     country_code: z.enum(['CO', 'EC'], { message: 'Elige el país.' }),
     placement: z.enum(UBICACIONES, { message: 'Elige dónde se muestra.' }),
     category_id: uuidOpcional,
-    desktop_media_id: z.string().trim().regex(UUID, 'Sube la imagen de escritorio.'),
-    mobile_media_id: z.string().trim().regex(UUID, 'Sube la imagen móvil.'),
+    desktop_media_id: z.string().trim().regex(UUID, 'Sube la imagen del banner.'),
+    /** Solo banners antiguos con imagen móvil propia; vacío = la misma imagen (lo normal desde D-047). */
+    mobile_media_id: uuidOpcional,
+    /** Punto focal 0–100; ausente si la base aún no tiene las columnas (el formulario no los envía). */
+    focal_x: focal,
+    focal_y: focal,
     alt: z.string().trim().min(3, 'Describe el banner en al menos 3 caracteres.').max(200, 'Máximo 200 caracteres.'),
     title: texto(120, 'Máximo 120 caracteres.'),
     subtitle: texto(200, 'Máximo 200 caracteres.'),
@@ -248,7 +294,8 @@ export function columnasBanner(d: DatosBanner, linkUrl: string | null): Record<s
     placement: d.placement,
     category_id: d.placement === 'category' ? d.category_id : null,
     desktop_media_id: d.desktop_media_id,
-    mobile_media_id: d.mobile_media_id,
+    // `mobile_media_id` es NOT NULL: una sola imagen se guarda repetida (la tienda lo reconoce por ser igual).
+    mobile_media_id: d.mobile_media_id ?? d.desktop_media_id,
     alt: d.alt,
     title: d.title,
     subtitle: d.subtitle,
@@ -259,5 +306,6 @@ export function columnasBanner(d: DatosBanner, linkUrl: string | null): Record<s
     starts_at: fechaLocalAIso(d.starts_at),
     ends_at: fechaLocalAIso(d.ends_at),
     is_active: d.is_active,
+    ...(d.focal_x !== undefined && d.focal_y !== undefined ? { focal_x: d.focal_x, focal_y: d.focal_y } : {}),
   };
 }

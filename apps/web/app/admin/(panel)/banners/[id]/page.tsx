@@ -8,6 +8,7 @@ import { isoAFechaLocal, leerUbicacion, ETIQUETA_UBICACION } from '@/lib/admin/b
 import {
   categoriasVisibles,
   destinoEditable,
+  leerFocal,
   obtenerBanner,
   variantesDeProducto,
   type MediaMini,
@@ -41,9 +42,10 @@ export default async function EditarBanner({
   const ubicacion = banner?.placement ?? leerUbicacion(sp.ubicacion);
   const volverHref = `/admin/banners?pais=${pais}&ubicacion=${ubicacion}`;
 
-  const [categorias, destino] = await Promise.all([
+  const [categorias, destino, focal] = await Promise.all([
     categoriasVisibles(cliente, pais),
     destinoEditable(cliente, pais, banner?.link_url ?? null),
+    leerFocal(cliente, banner?.id ?? null),
   ]);
   const variantes = destino.producto ? await variantesDeProducto(cliente, destino.producto.id, pais) : [];
 
@@ -67,7 +69,7 @@ export default async function EditarBanner({
     destino_categoria_id: destino.categoriaId ?? '',
     destino_url: destino.url,
   };
-  const imagen = (m: MediaMini | null) => (m ? { id: m.id, ruta: m.ruta, alt: m.alt } : null);
+  const imagen = (m: MediaMini | null, grande = true) => (m ? { id: m.id, ruta: grande ? m.rutaPrevia : m.ruta, alt: m.alt } : null);
   const error = typeof sp.error === 'string' ? sp.error : null;
 
   return (
@@ -82,7 +84,8 @@ export default async function EditarBanner({
         inicial={inicial}
         categorias={categorias.map((c) => ({ valor: c.id, etiqueta: c.name }))}
         escritorio={imagen(banner?.desktop ?? null)}
-        movil={imagen(banner?.mobile ?? null)}
+        movil={banner?.movil_propia ? imagen(banner.mobile, false) : null}
+        focal={focal}
         variantesIniciales={variantes}
         buscarProductos={buscarProductosBanner}
         cargarVariantes={variantesBanner}

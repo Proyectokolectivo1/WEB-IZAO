@@ -89,9 +89,9 @@ export default async function ListaBanners({
               <li key={f.id} className="ban-tarjeta" data-estado={estado}>
                 <div className="ban-miniaturas">
                   {f.desktop ? (
-                    <img className="ban-min-escritorio" src={`/media/${f.desktop.ruta}`} alt={`Escritorio: ${f.alt}`} loading="lazy" />
+                    <img className="ban-min-escritorio" src={`/media/${f.desktop.ruta}`} alt={f.movil_propia ? `Escritorio: ${f.alt}` : f.alt} loading="lazy" />
                   ) : null}
-                  {f.mobile ? (
+                  {f.mobile && f.movil_propia ? (
                     <img className="ban-min-movil" src={`/media/${f.mobile.ruta}`} alt={`Móvil: ${f.alt}`} loading="lazy" />
                   ) : null}
                 </div>

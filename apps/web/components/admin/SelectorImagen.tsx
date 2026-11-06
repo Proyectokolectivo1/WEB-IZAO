@@ -18,6 +18,8 @@ export function SelectorImagen({
   ayuda,
   recorte45 = false,
   variante,
+  altControlado,
+  anchoVista = 0,
   alCambiar,
   error,
 }: {
@@ -27,15 +29,23 @@ export function SelectorImagen({
   inicial?: ImagenInicial | undefined;
   ayuda?: string | undefined;
   recorte45?: boolean;
-  /** Solo banners: el servidor procesa escritorio y móvil con anchos distintos. */
-  variante?: 'desktop' | 'movil';
+  /** Solo banners: sin valor = una imagen responsive (480…2400); `desktop`/`movil` son los conjuntos antiguos. */
+  variante?: 'unica' | 'desktop' | 'movil';
+  /**
+   * Texto alternativo que ya se pide en otro campo del formulario: si se indica, este selector no lo repite y usa
+   * ese valor al subir.
+   */
+  altControlado?: string;
+  /** Ancho mínimo de la variante que se muestra como miniatura (0 = la más chica). */
+  anchoVista?: number;
   /** Avisa a la vista previa del formulario cuando cambia la imagen elegida. */
   alCambiar?: (imagen: ImagenInicial) => void;
   error?: string | undefined;
 }) {
   const id = useId();
   const [actual, setActual] = useState<ImagenInicial>(inicial ?? null);
-  const [alt, setAlt] = useState(inicial?.alt ?? '');
+  const [altPropio, setAlt] = useState(inicial?.alt ?? '');
+  const alt = altControlado ?? altPropio;
   const [subiendo, setSubiendo] = useState(false);
   const [falla, setFalla] = useState<string | null>(null);
 
@@ -43,7 +53,11 @@ export function SelectorImagen({
     if (!archivo) return;
     setFalla(null);
     if (alt.trim().length < 3) {
-      setFalla('Primero describe la imagen (texto alternativo de al menos 3 caracteres).');
+      setFalla(
+        altControlado !== undefined
+          ? 'Primero escribe el texto alternativo del banner (al menos 3 caracteres).'
+          : 'Primero describe la imagen (texto alternativo de al menos 3 caracteres).',
+      );
       return;
     }
     setSubiendo(true);
@@ -60,8 +74,9 @@ export function SelectorImagen({
         setFalla(cuerpo.error ?? 'No se pudo subir la imagen.');
         return;
       }
-      // Miniatura: la variante más chica que exista (los banners no tienen 400 en escritorio).
-      const ancho = Object.keys(cuerpo.variants ?? {}).map(Number).sort((a, b) => a - b)[0];
+      // Miniatura: la variante más chica con el ancho pedido (o la mayor si ninguna llega).
+      const anchos = Object.keys(cuerpo.variants ?? {}).map(Number).sort((a, b) => a - b);
+      const ancho = anchos.find((a) => a >= anchoVista) ?? anchos.at(-1);
       const nueva = { id: cuerpo.id, ruta: ancho ? (cuerpo.variants?.[String(ancho)] ?? '') : '', alt: cuerpo.alt ?? alt };
       setActual(nueva);
       alCambiar?.(nueva);
@@ -82,19 +97,21 @@ export function SelectorImagen({
       ) : (
         <p className="adm-suave adm-chico">Sin imagen.</p>
       )}
-      <div className="adm-campo">
-        <label htmlFor={`${id}-alt`} className="adm-etiqueta">
-          Texto alternativo
-        </label>
-        <input
-          id={`${id}-alt`}
-          className="adm-input"
-          value={alt}
-          maxLength={200}
-          onChange={(e) => setAlt(e.target.value)}
-          placeholder="Describe lo que se ve en la imagen"
-        />
-      </div>
+      {altControlado === undefined ? (
+        <div className="adm-campo">
+          <label htmlFor={`${id}-alt`} className="adm-etiqueta">
+            Texto alternativo
+          </label>
+          <input
+            id={`${id}-alt`}
+            className="adm-input"
+            value={altPropio}
+            maxLength={200}
+            onChange={(e) => setAlt(e.target.value)}
+            placeholder="Describe lo que se ve en la imagen"
+          />
+        </div>
+      ) : null}
       <div className="adm-campo">
         <label htmlFor={`${id}-archivo`} className="adm-etiqueta">
           {actual ? 'Reemplazar imagen' : 'Subir imagen'}

@@ -8,6 +8,9 @@ import {
   fechaLocalAIso,
   isoAFechaLocal,
   leerUbicacion,
+  objectPositionDe,
+  POSICIONES_FOCALES,
+  tieneMovilPropia,
   urlDeDestino,
 } from './banners';
 
@@ -77,10 +80,33 @@ describe('esquemaBanner', () => {
     expect(columnasBanner(d, null)).toMatchObject({ country_code: 'CO', placement: 'hero', link_url: null, category_id: null, starts_at: null });
   });
 
-  it('exige las dos imágenes y el texto alternativo', () => {
+  it('exige la imagen y el texto alternativo; la móvil es opcional (solo banners antiguos)', () => {
     expect(esquemaBanner.safeParse({ ...BASE, desktop_media_id: '' }).success).toBe(false);
     expect(esquemaBanner.safeParse({ ...BASE, mobile_media_id: 'x' }).success).toBe(false);
     expect(esquemaBanner.safeParse({ ...BASE, alt: 'ab' }).success).toBe(false);
+    expect(esquemaBanner.safeParse({ ...BASE, mobile_media_id: '' }).success).toBe(true);
+  });
+
+  it('una sola imagen se guarda repetida en la columna móvil (NOT NULL); la antigua se conserva', () => {
+    const sola = esquemaBanner.parse({ ...BASE, mobile_media_id: '' });
+    expect(sola.mobile_media_id).toBeNull();
+    expect(columnasBanner(sola, null)).toMatchObject({ desktop_media_id: D, mobile_media_id: D });
+    expect(columnasBanner(esquemaBanner.parse(BASE), null)).toMatchObject({ desktop_media_id: D, mobile_media_id: M });
+    expect(tieneMovilPropia(D, D)).toBe(false);
+    expect(tieneMovilPropia(D, M)).toBe(true);
+    expect(tieneMovilPropia(D, null)).toBe(false);
+  });
+
+  it('punto focal: opcional, 0–100 y entero; sin él no toca las columnas', () => {
+    expect(columnasBanner(esquemaBanner.parse(BASE), null)).not.toHaveProperty('focal_x');
+    const con = esquemaBanner.parse({ ...BASE, focal_x: '100', focal_y: '0' });
+    expect(columnasBanner(con, null)).toMatchObject({ focal_x: 100, focal_y: 0 });
+    expect(esquemaBanner.safeParse({ ...BASE, focal_x: '101', focal_y: '50' }).success).toBe(false);
+    expect(esquemaBanner.safeParse({ ...BASE, focal_x: '-1', focal_y: '50' }).success).toBe(false);
+    expect(esquemaBanner.safeParse({ ...BASE, focal_x: 'a', focal_y: '50' }).success).toBe(false);
+    expect(esquemaBanner.safeParse({ ...BASE, focal_x: '50.5', focal_y: '50' }).success).toBe(false);
+    expect(POSICIONES_FOCALES).toHaveLength(9);
+    expect(objectPositionDe(0, 50)).toBe('0% 50%');
   });
 
   it('el destino pide su dato y el botón pide un destino', () => {

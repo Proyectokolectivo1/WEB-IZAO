@@ -54,8 +54,8 @@ export async function subirImagen(args: {
       recorte45: args.datos.recorte45 && args.datos.kind === 'product',
       calidad: ajustes.calidad,
       origen: 'panel',
-      // Banners: anchos propios de escritorio y móvil (el móvil es el de menor tamaño si no se indica la variante).
-      ...(args.datos.kind === 'banner' ? { anchos: ANCHOS_BANNER[args.datos.variante ?? 'desktop'] } : {}),
+      // Banners: una imagen responsive (480…2400) salvo que se pida el conjunto antiguo de escritorio o móvil.
+      ...(args.datos.kind === 'banner' ? { anchos: ANCHOS_BANNER[args.datos.variante ?? 'unica'] } : {}),
     });
   } catch (e) {
     return { ok: false, error: mensajeErrorImagen(e) };

@@ -3,12 +3,16 @@
 import Link from 'next/link';
 import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
 import {
+  ayudaImagenBanner,
   AYUDA_UBICACION,
   ETIQUETA_DESTINO,
   ETIQUETA_POSICION,
   ETIQUETA_UBICACION,
   NOMBRE_PAIS_BANNER,
+  objectPositionDe,
+  POSICIONES_FOCALES,
   POSICIONES_TEXTO,
+  TAMANO_RECOMENDADO,
   TIPOS_DESTINO,
   UBICACIONES,
   type PaisBanner,
@@ -47,15 +51,17 @@ export type ValoresBanner = {
 const RETARDO_BUSQUEDA_MS = 300;
 
 /**
- * Editor de un banner: imágenes de escritorio y móvil (se convierten a WebP en el servidor), textos, destino con
- * buscador de productos visibles en el país, vigencia y vista previa en escritorio y móvil. El servidor vuelve a
- * validar todo y comprueba que el producto o la categoría sigan visibles.
+ * Editor de un banner: UNA imagen (se convierte a WebP en varios anchos en el servidor y la tienda la adapta a cada
+ * pantalla), punto focal opcional, textos, destino con buscador de productos visibles en el país, vigencia y vista
+ * previa en escritorio y móvil. Los banners antiguos con imagen móvil propia la conservan hasta que se quite. El
+ * servidor vuelve a validar todo y comprueba que el producto o la categoría sigan visibles.
  */
 export function FormularioBanner({
   inicial,
   categorias,
   escritorio,
   movil,
+  focal,
   variantesIniciales,
   buscarProductos,
   cargarVariantes,
@@ -65,7 +71,10 @@ export function FormularioBanner({
   inicial: ValoresBanner;
   categorias: readonly OpcionSelect[];
   escritorio: ImagenInicial;
+  /** Solo banners antiguos: la imagen móvil propia que se subió antes (los nuevos no la tienen). */
   movil: ImagenInicial;
+  /** Punto focal guardado; `disponible: false` si la base aún no tiene las columnas (no se ofrece el selector). */
+  focal: { disponible: boolean; x: number; y: number };
   variantesIniciales: readonly VarianteElegible[];
   buscarProductos: (pais: string, q: string) => Promise<ProductoElegido[]>;
   cargarVariantes: (pais: string, productId: string) => Promise<VarianteElegible[]>;
@@ -78,7 +87,9 @@ export function FormularioBanner({
 
   const [ubicacion, setUbicacion] = useState<Ubicacion>(inicial.placement);
   const [imgDesktop, setImgDesktop] = useState<ImagenInicial>(escritorio);
-  const [imgMovil, setImgMovil] = useState<ImagenInicial>(movil);
+  const [movilAntigua, setMovilAntigua] = useState<ImagenInicial>(movil);
+  const [focalX, setFocalX] = useState(focal.x);
+  const [focalY, setFocalY] = useState(focal.y);
   const [alt, setAlt] = useState(inicial.alt);
   const [titulo, setTitulo] = useState(inicial.title);
   const [subtitulo, setSubtitulo] = useState(inicial.subtitle);
@@ -129,10 +140,14 @@ export function FormularioBanner({
   const alineacion = posicion === 'center' ? 'center' : posicion === 'right' ? 'flex-end' : 'flex-start';
   const textoAlineado = posicion;
 
-  const previa = (img: ImagenInicial, clase: string, etiqueta: string) => (
+  const previa = (img: ImagenInicial, clase: string, etiqueta: string, posicion_: string) => (
     <figure style={{ margin: 0 }}>
       <div className={`ban-previa ${clase}`}>
-        {img?.ruta ? <img src={`/media/${img.ruta}`} alt="" /> : <div className="ban-previa-vacia">Sin imagen</div>}
+        {img?.ruta ? (
+          <img src={`/media/${img.ruta}`} alt="" style={{ objectPosition: posicion_ }} />
+        ) : (
+          <div className="ban-previa-vacia">Sin imagen</div>
+        )}
         {titulo || subtitulo || boton ? (
           <div className="ban-previa-texto" style={{ color: colorTexto, alignItems: alineacion, textAlign: textoAlineado }}>
             {subtitulo ? <small>{subtitulo}</small> : null}
@@ -187,41 +202,80 @@ export function FormularioBanner({
         </label>
       </fieldset>
 
-      <div className="ban-dos">
-        <SelectorImagen
-          nombre="desktop_media_id"
-          etiqueta="Imagen de escritorio"
-          kind="banner"
-          variante="desktop"
-          inicial={escritorio}
-          alCambiar={setImgDesktop}
-          ayuda="Horizontal, recomendado 1920×800."
-          error={errores.desktop_media_id}
-        />
-        <SelectorImagen
-          nombre="mobile_media_id"
-          etiqueta="Imagen móvil"
-          kind="banner"
-          variante="movil"
-          inicial={movil}
-          alCambiar={setImgMovil}
-          ayuda="Vertical, recomendado 1080×1350."
-          error={errores.mobile_media_id}
-        />
-      </div>
-
       <fieldset className="adm-fieldset">
-        <legend>Texto sobre la imagen (opcional)</legend>
+        <legend>Imagen del banner</legend>
+        <p className="adm-suave adm-chico">{ayudaImagenBanner(ubicacion)}</p>
         <CampoTexto
           id="alt"
           name="alt"
-          etiqueta="Texto alternativo del banner"
+          etiqueta="Texto alternativo"
           value={alt}
           onChange={(e) => setAlt(e.target.value)}
           maxLength={200}
-          ayuda="Describe lo que se ve; lo leen los lectores de pantalla."
+          ayuda="Describe lo que se ve en el banner; lo leen los lectores de pantalla."
           error={errores.alt}
         />
+        <SelectorImagen
+          nombre="desktop_media_id"
+          etiqueta="Archivo de imagen"
+          kind="banner"
+          inicial={escritorio}
+          altControlado={alt}
+          anchoVista={800}
+          alCambiar={setImgDesktop}
+          ayuda={`Recomendado ${TAMANO_RECOMENDADO[ubicacion]}.`}
+          error={errores.desktop_media_id}
+        />
+        {movilAntigua ? (
+          <div className="ban-movil-antigua">
+            <input type="hidden" name="mobile_media_id" value={movilAntigua.id} />
+            {movilAntigua.ruta ? <img src={`/media/${movilAntigua.ruta}`} alt="" width={48} height={60} /> : null}
+            <p className="adm-chico">
+              Este banner conserva una imagen móvil aparte, subida antes. Ya no hace falta: la tienda adapta la imagen principal al celular.
+            </p>
+            <button type="button" className="adm-boton adm-boton-secundario" onClick={() => setMovilAntigua(null)}>
+              Quitar imagen móvil
+            </button>
+          </div>
+        ) : null}
+        {errores.mobile_media_id ? <p className="adm-error-campo">{errores.mobile_media_id}</p> : null}
+      </fieldset>
+
+      {focal.disponible ? (
+        <fieldset className="adm-fieldset ban-focal">
+          <legend>Zona importante de la imagen (opcional)</legend>
+          <p className="adm-suave adm-chico">
+            En pantallas angostas la imagen se recorta a los lados. Marca la zona que siempre debe verse; si no eliges, se usa el centro.
+          </p>
+          <input type="hidden" name="focal_x" value={focalX} />
+          <input type="hidden" name="focal_y" value={focalY} />
+          <div className="ban-focal-rejilla" role="radiogroup" aria-label="Zona importante de la imagen">
+            {POSICIONES_FOCALES.map((p) => {
+              const activa = p.x === focalX && p.y === focalY;
+              return (
+                <button
+                  key={`${p.x}-${p.y}`}
+                  type="button"
+                  role="radio"
+                  aria-checked={activa}
+                  aria-label={p.etiqueta}
+                  title={p.etiqueta}
+                  className="ban-focal-celda"
+                  data-activa={activa ? 'true' : undefined}
+                  onClick={() => {
+                    setFocalX(p.x);
+                    setFocalY(p.y);
+                  }}
+                />
+              );
+            })}
+          </div>
+          {errores.focal_x || errores.focal_y ? <p className="adm-error-campo">{errores.focal_x ?? errores.focal_y}</p> : null}
+        </fieldset>
+      ) : null}
+
+      <fieldset className="adm-fieldset">
+        <legend>Texto sobre la imagen (opcional)</legend>
         <div className="ban-dos">
           <CampoTexto id="title" name="title" etiqueta="Título" value={titulo} onChange={(e) => setTitulo(e.target.value)} maxLength={120} error={errores.title} />
           <CampoTexto id="subtitle" name="subtitle" etiqueta="Subtítulo" value={subtitulo} onChange={(e) => setSubtitulo(e.target.value)} maxLength={200} error={errores.subtitle} />
@@ -373,8 +427,10 @@ export function FormularioBanner({
       <section aria-labelledby="h-previa-banner">
         <h3 id="h-previa-banner">Vista previa</h3>
         <div className="ban-previas">
-          {previa(imgDesktop, 'ban-previa-escritorio', 'Escritorio')}
-          {previa(imgMovil, 'ban-previa-movil', 'Móvil')}
+          {previa(imgDesktop, 'ban-previa-escritorio', 'Escritorio', objectPositionDe(focalX, focalY))}
+          {movilAntigua
+            ? previa(movilAntigua, 'ban-previa-movil', 'Móvil (imagen aparte)', '50% 50%')
+            : previa(imgDesktop, 'ban-previa-movil', 'Móvil (recorte a los lados)', objectPositionDe(focalX, focalY))}
         </div>
       </section>
 

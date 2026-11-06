@@ -10,6 +10,8 @@ import {
   columnasBanner,
   destinoDeUrl,
   esUrlDestinoValida,
+  FOCAL_CENTRO,
+  tieneMovilPropia,
   urlDeDestino,
   type DatosBanner,
   type Destino,
@@ -19,7 +21,19 @@ import {
 export type Cliente = ReturnType<typeof crearClienteServicio>;
 type Ctx = { cliente: Cliente; actor: string; ip: string | null };
 
-export type MediaMini = { id: string; ruta: string; alt: string; lqip: string | null };
+/**
+ * `ruta` = la variante más chica (miniatura de la lista); `rutaPrevia` = la primera de 800 px o más, o la mayor
+ * (vista previa del formulario); `ancho`/`alto` = dimensiones de la original.
+ */
+export type MediaMini = {
+  id: string;
+  ruta: string;
+  rutaPrevia: string;
+  alt: string;
+  lqip: string | null;
+  ancho: number | null;
+  alto: number | null;
+};
 
 export type FilaBanner = {
   id: string;
@@ -39,6 +53,8 @@ export type FilaBanner = {
   is_active: boolean;
   desktop: MediaMini | null;
   mobile: MediaMini | null;
+  /** `true` solo en banners antiguos con una imagen móvil distinta; los nuevos usan una sola imagen. */
+  movil_propia: boolean;
 };
 
 const PASO = 10;
@@ -46,28 +62,52 @@ const COLUMNAS =
   'id, country_code, placement, category_id, alt, title, subtitle, cta_label, link_url, text_position, text_color, starts_at, ends_at, sort_order, is_active, desktop_media_id, mobile_media_id';
 
 type FilaCruda = Omit<FilaBanner, 'desktop' | 'mobile'> & { desktop_media_id: string; mobile_media_id: string };
-type MediaCruda = { id: string; variants: Record<string, string> | null; alt: string | null; lqip: string | null };
+type MediaCruda = {
+  id: string;
+  variants: Record<string, string> | null;
+  alt: string | null;
+  lqip: string | null;
+  width: number | null;
+  height: number | null;
+};
 
-/** La variante más chica sirve de miniatura (los banners de escritorio empiezan en 800). */
 function aMini(m: MediaCruda | undefined): MediaMini | null {
   if (!m) return null;
-  const ancho = Object.keys(m.variants ?? {}).map(Number).filter(Number.isFinite).sort((a, b) => a - b)[0];
-  const ruta = ancho !== undefined ? (m.variants?.[String(ancho)] ?? '') : '';
-  return ruta ? { id: m.id, ruta, alt: m.alt ?? '', lqip: m.lqip } : null;
+  const anchos = Object.keys(m.variants ?? {}).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  const ruta = anchos[0] !== undefined ? (m.variants?.[String(anchos[0])] ?? '') : '';
+  const previa = anchos.find((a) => a >= 800) ?? anchos.at(-1);
+  const rutaPrevia = previa !== undefined ? (m.variants?.[String(previa)] ?? ruta) : ruta;
+  return ruta ? { id: m.id, ruta, rutaPrevia, alt: m.alt ?? '', lqip: m.lqip, ancho: m.width, alto: m.height } : null;
 }
 
 async function conImagenes(cliente: Cliente, filas: FilaCruda[]): Promise<FilaBanner[]> {
   const ids = [...new Set(filas.flatMap((f) => [f.desktop_media_id, f.mobile_media_id]))];
   const mapa = new Map<string, MediaCruda>();
   if (ids.length > 0) {
-    const { data } = await cliente.from('media').select('id, variants, alt, lqip').in('id', ids);
+    const { data } = await cliente.from('media').select('id, variants, alt, lqip, width, height').in('id', ids);
     for (const m of (data ?? []) as MediaCruda[]) mapa.set(m.id, m);
   }
   return filas.map(({ desktop_media_id, mobile_media_id, ...resto }) => ({
     ...resto,
     desktop: aMini(mapa.get(desktop_media_id)),
     mobile: aMini(mapa.get(mobile_media_id)),
+    movil_propia: tieneMovilPropia(desktop_media_id, mobile_media_id),
   }));
+}
+
+export type PuntoFocal = { disponible: boolean; x: number; y: number };
+
+/**
+ * Punto focal (D-047). Las columnas `banners.focal_x/focal_y` pueden no existir todavía (migración de izao-db):
+ * sin ellas `disponible` es `false` y el formulario no ofrece el selector (la tienda usa el centro).
+ * Sin `id` solo comprueba que las columnas existan.
+ */
+export async function leerFocal(cliente: Cliente, id: string | null): Promise<PuntoFocal> {
+  const consulta = cliente.from('banners').select('focal_x, focal_y');
+  const { data, error } = id ? await consulta.eq('id', id).maybeSingle() : await consulta.limit(1);
+  if (error) return { disponible: false, x: FOCAL_CENTRO, y: FOCAL_CENTRO };
+  const fila = (Array.isArray(data) ? data[0] : data) as { focal_x?: number | null; focal_y?: number | null } | null | undefined;
+  return { disponible: true, x: fila?.focal_x ?? FOCAL_CENTRO, y: fila?.focal_y ?? FOCAL_CENTRO };
 }
 
 export async function listarBanners(cliente: Cliente, pais: Pais, ubicacion: Ubicacion): Promise<FilaBanner[]> {
@@ -277,8 +317,8 @@ async function mediaExiste(cliente: Cliente, ids: string[]): Promise<boolean> {
 
 export async function guardarBannerBd(args: Ctx & { datos: DatosBanner }): Promise<ResultadoAccion> {
   const { cliente, datos, actor, ip } = args;
-  if (!(await mediaExiste(cliente, [datos.desktop_media_id, datos.mobile_media_id]))) {
-    return { ok: false, mensaje: 'Revisa los campos marcados.', errores: { desktop_media_id: 'Una de las imágenes ya no existe. Vuelve a subirla.' } };
+  if (!(await mediaExiste(cliente, [datos.desktop_media_id, datos.mobile_media_id ?? datos.desktop_media_id]))) {
+    return { ok: false, mensaje: 'Revisa los campos marcados.', errores: { desktop_media_id: 'La imagen ya no existe. Vuelve a subirla.' } };
   }
   const destino = await resolverDestinoBd(cliente, datos);
   if (!destino.ok) return { ok: false, mensaje: 'Revisa los campos marcados.', errores: destino.errores };

@@ -12,6 +12,7 @@ import {
   destinoEditable,
   eliminarBannerBd,
   guardarBannerBd,
+  leerFocal,
   moverBannerBd,
   normalizarBusqueda,
   resolverDestinoBd,
@@ -47,6 +48,32 @@ describe('guardar banner', () => {
     expect(revalidar).toHaveBeenCalledWith('content:EC');
     expect(revalidar).not.toHaveBeenCalledWith('content:CO');
     expect(auditar).toHaveBeenCalledWith(expect.objectContaining({ accion: 'banners.creado', entidad: 'banners', entidadId: 'b1' }));
+  });
+
+  it('una sola imagen se guarda en las dos columnas y el punto focal viaja con la fila', async () => {
+    const { cliente, llamadas } = clienteFalso({
+      'media.select': { data: [{ id: D, kind: 'banner' }] },
+      'banners.select': { data: [] },
+      'banners.insert': { data: { id: 'b9' } },
+    });
+    const datos = esquemaBanner.parse({ ...BASE, mobile_media_id: '', focal_x: '0', focal_y: '50' });
+    expect((await guardarBannerBd({ cliente, datos, ...comun })).ok).toBe(true);
+    const fila = llamadas.find((l) => l.clave === 'banners.insert')?.args[0] as Record<string, unknown>;
+    expect(fila).toMatchObject({ desktop_media_id: D, mobile_media_id: D, focal_x: 0, focal_y: 50 });
+    expect(auditar).toHaveBeenCalledWith(expect.objectContaining({ accion: 'banners.creado' }));
+  });
+
+  it('un banner antiguo conserva su imagen móvil propia al editarlo', async () => {
+    const { cliente, llamadas } = clienteFalso({
+      ...medios,
+      'banners.select': { data: { country_code: 'CO', placement: 'hero', mobile_media_id: M } },
+      'banners.update': { data: null },
+    });
+    const datos = esquemaBanner.parse({ ...BASE, id: B });
+    expect((await guardarBannerBd({ cliente, datos, ...comun })).ok).toBe(true);
+    const cambios = llamadas.find((l) => l.clave === 'banners.update')?.args[0] as Record<string, unknown>;
+    expect(cambios).toMatchObject({ desktop_media_id: D, mobile_media_id: M });
+    expect(cambios).not.toHaveProperty('focal_x');
   });
 
   it('con producto y variante guarda la ruta de compra del país', async () => {
@@ -220,5 +247,22 @@ describe('selector de productos y reconstrucción del destino', () => {
     expect(await resolverDestinoBd(cliente, { ...base, destino_tipo: 'ninguno' })).toEqual({ ok: true, url: null });
     expect(await resolverDestinoBd(cliente, { ...base, destino_tipo: 'url', destino_url: '/co/catalogo' })).toEqual({ ok: true, url: '/co/catalogo' });
     expect(llamadas).toEqual([]);
+  });
+});
+
+describe('punto focal (columnas opcionales de la base)', () => {
+  it('si las columnas no existen, no se ofrece el selector y se usa el centro', async () => {
+    const { cliente } = clienteFalso({ 'banners.select': { error: { code: '42703', message: 'column banners.focal_x does not exist' } } });
+    expect(await leerFocal(cliente, null)).toEqual({ disponible: false, x: 50, y: 50 });
+    expect(await leerFocal(cliente, B)).toEqual({ disponible: false, x: 50, y: 50 });
+  });
+
+  it('si existen, devuelve el guardado o el centro', async () => {
+    expect(await leerFocal(clienteFalso({ 'banners.select': { data: { focal_x: 100, focal_y: 0 } } }).cliente, B)).toEqual({
+      disponible: true,
+      x: 100,
+      y: 0,
+    });
+    expect(await leerFocal(clienteFalso({ 'banners.select': { data: [] } }).cliente, null)).toEqual({ disponible: true, x: 50, y: 50 });
   });
 });

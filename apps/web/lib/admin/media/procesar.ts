@@ -16,8 +16,16 @@ sharp.cache(false);
 sharp.concurrency(2);
 
 export const ANCHOS = [400, 800, 1600] as const;
-/** Banners (skill izao-imagenes): escritorio 800/1600/2400 y móvil 400/800/1200, procesados por separado. */
-export const ANCHOS_BANNER = { desktop: [800, 1600, 2400], movil: [400, 800, 1200] } as const;
+/**
+ * Banners (skill izao-imagenes, D-047): UNA sola imagen por banner con el conjunto responsive `unica`
+ * (480/800/1200/1600/2400, sin recorte y sin agrandar; la tienda elige con `srcset`). `desktop` y `movil` son los
+ * conjuntos de los banners antiguos de dos imágenes y se conservan por compatibilidad.
+ */
+export const ANCHOS_BANNER = {
+  unica: [480, 800, 1200, 1600, 2400],
+  desktop: [800, 1600, 2400],
+  movil: [400, 800, 1200],
+} as const;
 export const CALIDAD_WEBP_POR_DEFECTO = 80;
 
 /** Megapíxeles máximos de entrada: panel (equipo de confianza, fotos de cámara) y público (reseñas y garantías). */
