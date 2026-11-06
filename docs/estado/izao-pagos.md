@@ -29,6 +29,11 @@
 - WhatsApp seguro: 4 plantillas `draft`/inactivas → `plantilla_no_activa`, sin envío.
 - Bloqueo: aprobar/rechazar en Wompi exige aceptar su reglamento y autorización de datos → necesita consentimiento del usuario (o que el dueño haga esos clics).
 
+## Plantillas Meta (6da29d2, D-048)
+- cobro_abono = `izao_pago_envio_inicial`, `es_CO`, vars nombre/pedido/abono/`pay_link_url`, sin botón. `validarEnvio` vs `validarPlantilla`. Link `/{pais}/pagar/{token}` (sin país = 404).
+- Abono ya es fijo por país (`cod_deposit_amount`); prod CO = 10.000.
+- Pendiente: UPDATE de la fila de prod (denegado al agente), izao-admin sincroniza `VARIABLES_PLANTILLA`/`VALORES_EJEMPLO` con `pay_link_url` (1 prueba roja en web) y `urlCobro` con país; textos de recordatorios y cancelado_24h del dueño.
+
 ## Siguiente paso exacto
 Con el dueño: pagar IZ-CO-000041 (o uno nuevo) con Transferencia Bancolombia/QR sandbox eligiendo aprobado y rechazado; yo verifico `webhook_events`, `payments` y estado. Luego COD (link `/pagar/{token}`).
 
