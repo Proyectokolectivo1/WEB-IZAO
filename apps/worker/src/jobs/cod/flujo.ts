@@ -17,6 +17,7 @@ import {
   type ClienteWhatsApp,
   type CredencialesWhatsApp,
   type ValoresCobro,
+  urlPagoAbono,
 } from '@izao/whatsapp';
 import { ErrorWompi, type EntradaLinkAbono, type LinkPagoCreado, type WompiCredentials } from '@izao/wompi';
 import type { AbonoFila, FuenteCod, PayLinkFila, PedidoCod } from './fuente.js';
@@ -88,13 +89,14 @@ function fechaLocal(d: Date, zona: string): string {
   }).format(d);
 }
 
-function valores(p: PedidoCod, vence: Date, zona: string): ValoresCobro {
+function valores(p: PedidoCod, vence: Date, zona: string, urlPago: string): ValoresCobro {
   return {
     customer_first_name: p.contact_first_name.trim().split(/\s+/)[0] ?? p.contact_first_name,
     order_number: p.number,
     cod_deposit_amount: formatMoney(money(p.cod_deposit_amount, p.currency_code)),
     cod_collect_amount: formatMoney(money(p.cod_collect_amount, p.currency_code)),
     pay_link_expires_at: fechaLocal(vence, zona),
+    pay_link_url: urlPago,
   };
 }
 
@@ -186,7 +188,7 @@ async function enviar(
     await fuente.registrarAlerta(p.id, 'plantilla_no_activa', { plantilla: key });
     return 'no_enviado';
   }
-  const msg = mensajePlantilla(plantilla, { to: p.contact_phone_e164, valores: valores(p, pay.expires_at, zona), tokenBoton: pay.token });
+  const msg = mensajePlantilla(plantilla, { to: p.contact_phone_e164, valores: valores(p, pay.expires_at, zona, urlPagoAbono(origen(deps), p.country_code, pay.token)), tokenBoton: pay.token });
   const id = await fuente.prepararMensaje({ order_id: p.id, template_id: plantilla.id, to_e164: p.contact_phone_e164, scheduled_for: programadoPara });
   try {
     const r = await deps.whatsapp(creds).enviarPlantilla(msg);
@@ -221,7 +223,7 @@ export async function iniciarCod(orderId: string, deps: DepsCod): Promise<Result
 
   const r = await enviar(deps, p, 'cobro_abono', p.created_at, pay, cfg.zona);
   if (r === 'no_enviado' && p.contact_email && deps.correoRespaldo) {
-    await deps.correoRespaldo({ order_id: p.id, email: p.contact_email, url: `${origen(deps)}/pagar/${pay.token}` });
+    await deps.correoRespaldo({ order_id: p.id, email: p.contact_email, url: urlPagoAbono(origen(deps), p.country_code, pay.token) });
   }
 
   for (const rec of planRecordatorios({ creado: p.created_at, venceEn: vence, offsetsMinutos: cfg.offsetsMinutos, silencio: cfg.silencio, zona: cfg.zona })) {
@@ -315,7 +317,7 @@ export async function reenviarCod(orderId: string, solicitadoEn: Date, deps: Dep
 
   const r = await enviar(deps, p, 'cobro_abono', solicitadoEn, pay, cfg.zona);
   if (r === 'no_enviado' && p.contact_email && deps.correoRespaldo) {
-    await deps.correoRespaldo({ order_id: p.id, email: p.contact_email, url: `${origen(deps)}/pagar/${pay.token}` });
+    await deps.correoRespaldo({ order_id: p.id, email: p.contact_email, url: urlPagoAbono(origen(deps), p.country_code, pay.token) });
   }
   return { accion: r };
 }

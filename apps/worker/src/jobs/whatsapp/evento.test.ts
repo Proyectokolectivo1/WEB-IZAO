@@ -164,7 +164,7 @@ describe('whatsapp.evento: estados de mensajes (§13.2)', () => {
     const r = await procesarEventoWhatsApp(s.guardar(estado('failed', { error: { code: '131026', text: 'Message undeliverable' } })), s.deps);
     expect(r).toEqual({ accion: 'fallido', correo: 'enviado' });
     expect(s.mensajes[0]).toMatchObject({ status: 'failed', error_code: '131026', error_text: 'Message undeliverable' });
-    expect(s.correos).toEqual([{ order_id: ORDER, email: 'ana@example.com', url: 'https://izaoperfumeria.com/pagar/tkPagar1' }]);
+    expect(s.correos).toEqual([{ order_id: ORDER, email: 'ana@example.com', url: 'https://izaoperfumeria.com/co/pagar/tkPagar1' }]);
     expect(s.alertas).toEqual([{ motivo: 'whatsapp_fallido', payload: { plantilla: 'cobro_abono', codigo: '131026', correo: 'enviado' } }]);
   });
 

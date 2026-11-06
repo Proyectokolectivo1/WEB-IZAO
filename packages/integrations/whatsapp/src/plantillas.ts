@@ -14,10 +14,13 @@ export const VARIABLES_COBRO = [
   'cod_deposit_amount',
   'cod_collect_amount',
   'pay_link_expires_at',
+  /** Link de marca del abono, `https://…/{pais}/pagar/{token}` (`urlPagoAbono`), para plantillas que lo llevan en el cuerpo. */
+  'pay_link_url',
 ] as const;
 export type VariableCobro = (typeof VARIABLES_COBRO)[number];
 /** Valores ya formateados para el cliente (dinero con `formatMoney`, fecha en la zona del país). */
-export type ValoresCobro = Readonly<Record<VariableCobro, string>>;
+/** `pay_link_url` es opcional en el tipo: solo lo exigen (en tiempo de ejecución) las plantillas que lo usan. */
+export type ValoresCobro = Readonly<Record<Exclude<VariableCobro, 'pay_link_url'>, string> & { pay_link_url?: string }>;
 
 export const CLAVES_PLANTILLA_COD = ['cobro_abono', 'recordatorio_abono_1', 'recordatorio_abono_2', 'recordatorio_abono_final'] as const;
 export type ClavePlantillaCod = (typeof CLAVES_PLANTILLA_COD)[number];
@@ -57,18 +60,24 @@ export interface ProblemaPlantilla {
 const VARIABLE = /\{\{(\d+)\}\}/g;
 const CLAVE_BOTON = 'button_url_1';
 const IDIOMAS = /^es(_(AR|CL|CO|CR|DO|EC|ES|HN|MX|PA|PE|UY))?$/;
-/** Regla 7 del proyecto y categoría UTILITY: ni originalidad ni lenguaje promocional. */
-const PROHIBIDO = /\b(original(es)?|aut[eé]ntic[oa]s?|certificad[oa]s?|r[ée]plica|promoci[oó]n|descuento|oferta|gratis)\b|100\s*%/i;
+/**
+ * Regla 7 del proyecto y categoría UTILITY: ni originalidad ni lenguaje promocional. "100 %" a secas no se rechaza:
+ * la plantilla de cobro aprobada en Meta dice "100% seguro de tu compra" (D-048); "100 % original" cae por "original".
+ */
+const PROHIBIDO = /\b(original(es)?|aut[eé]ntic[oa]s?|certificad[oa]s?|r[ée]plica|promoci[oó]n|descuento|oferta|gratis)\b/i;
 
 function posiciones(texto: string): number[] {
   return [...texto.matchAll(VARIABLE)].map((m) => Number(m[1]));
 }
 
-export function validarPlantilla(p: PlantillaWhatsApp): ProblemaPlantilla[] {
+/**
+ * Estructura que el envío necesita para que Meta acepte el mensaje: variables en orden y con dato, botón coherente,
+ * nombre e idioma válidos. No revisa el texto: el que recibe el cliente es el aprobado en Meta, no esta copia (D-048).
+ */
+export function validarEnvio(p: PlantillaWhatsApp): ProblemaPlantilla[] {
   const out: ProblemaPlantilla[] = [];
   const cuerpo = p.body_text;
   if (!cuerpo.trim()) out.push({ codigo: 'CUERPO_VACIO' });
-  if (cuerpo.length > 1024) out.push({ codigo: 'CUERPO_LARGO' });
   if (cuerpo.replace(VARIABLE, '').includes('{') || cuerpo.replace(VARIABLE, '').includes('}')) {
     out.push({ codigo: 'LLAVES_INVALIDAS' });
   }
@@ -88,9 +97,7 @@ export function validarPlantilla(p: PlantillaWhatsApp): ProblemaPlantilla[] {
       out.push({ codigo: 'VARIABLE_DESCONOCIDA', detalle: k });
     }
   }
-  if (p.footer_text && p.footer_text.length > 60) out.push({ codigo: 'PIE_LARGO' });
   if (!!p.button_text !== !!p.button_url) out.push({ codigo: 'BOTON_INCOMPLETO' });
-  if (p.button_text && p.button_text.length > 25) out.push({ codigo: 'BOTON_LARGO' });
   if (p.button_url) {
     const base = p.button_url.slice(0, -'{{1}}'.length);
     if (
@@ -103,13 +110,23 @@ export function validarPlantilla(p: PlantillaWhatsApp): ProblemaPlantilla[] {
   }
   if (!/^[a-z0-9_]{1,512}$/.test(p.meta_template_name)) out.push({ codigo: 'NOMBRE_INVALIDO' });
   if (!IDIOMAS.test(p.language)) out.push({ codigo: 'IDIOMA_INVALIDO' });
+  return out;
+}
+
+/** Validación completa para guardar o crear una versión en Meta: estructura, límites y reglas de texto. */
+export function validarPlantilla(p: PlantillaWhatsApp): ProblemaPlantilla[] {
+  const out = validarEnvio(p);
+  if (p.body_text.length > 1024) out.push({ codigo: 'CUERPO_LARGO' });
+  if (p.footer_text && p.footer_text.length > 60) out.push({ codigo: 'PIE_LARGO' });
+  if (p.button_text && p.button_text.length > 25) out.push({ codigo: 'BOTON_LARGO' });
+  const cuerpo = p.body_text;
   const textos = [cuerpo, p.footer_text ?? '', p.button_text ?? ''].join(' ');
   if (PROHIBIDO.test(textos)) out.push({ codigo: 'TEXTO_NO_PERMITIDO' });
   return out;
 }
 
-function asegurarValida(p: PlantillaWhatsApp): void {
-  const problemas = validarPlantilla(p);
+function asegurarValida(p: PlantillaWhatsApp, validar: (p: PlantillaWhatsApp) => ProblemaPlantilla[] = validarPlantilla): void {
+  const problemas = validar(p);
   if (problemas.length) throw new RangeError(`Plantilla inválida: ${problemas.map((x) => x.codigo).join(', ')}`);
 }
 
@@ -154,7 +171,7 @@ export function numeroE164(to: string): string {
 }
 
 export function mensajePlantilla(p: PlantillaWhatsApp, e: ParametrosEnvio): MensajePlantillaMeta {
-  asegurarValida(p);
+  asegurarValida(p, validarEnvio);
   const to = numeroE164(e.to);
   const parametros = parametrosEnOrden(p, e.valores);
   const components: MensajePlantillaMeta['template']['components'] = [
@@ -171,6 +188,17 @@ export function mensajePlantilla(p: PlantillaWhatsApp, e: ParametrosEnvio): Mens
     type: 'template',
     template: { name: p.meta_template_name, language: { code: p.language }, components },
   };
+}
+
+const PAISES_PAGO = new Set(['CO', 'EC']);
+
+/** Link de marca del abono. La ruta pública es `/{pais}/pagar/{token}`: sin el país responde 404. */
+export function urlPagoAbono(origen: string, pais: string, token: string): string {
+  const o = origen.replace(/\/+$/, '');
+  if (!/^https:\/\/[^\s/]+$/.test(o)) throw new RangeError('El origen del sitio debe ser https sin ruta.');
+  if (!PAISES_PAGO.has(pais)) throw new RangeError('País sin tienda.');
+  if (!TOKEN.test(token)) throw new RangeError('Token de pago inválido.');
+  return `${o}/${pais.toLowerCase()}/pagar/${token}`;
 }
 
 export function nombreVersion(key: string, version: number): string {
@@ -205,6 +233,14 @@ export function solicitudCreacion(p: PlantillaWhatsApp, ejemplo: ValoresCobro, t
   return { name: p.meta_template_name, language: p.language, category: 'UTILITY', components };
 }
 
+/**
+ * Plantillas ya creadas y aprobadas en Meta (D-048). El envío exige nombre, idioma y orden de variables idénticos;
+ * las demás claves aún no tienen nombre ni texto confirmados por el dueño y siguen inactivas.
+ */
+export const PLANTILLAS_META: Readonly<Partial<Record<ClavePlantillaCod, { meta_template_name: string; language: string }>>> = {
+  cobro_abono: { meta_template_name: 'izao_pago_envio_inicial', language: 'es_CO' },
+};
+
 const MAPA_ESTANDAR = {
   '1': 'customer_first_name',
   '2': 'order_number',
@@ -220,14 +256,15 @@ const MAPA_ESTANDAR = {
  */
 export const PLANTILLAS_SEMILLA: ReadonlyArray<Omit<PlantillaWhatsApp, 'meta_template_name'> & { key: ClavePlantillaCod }> = [
   {
+    // Copia literal del texto aprobado en Meta (izao_pago_envio_inicial, encabezado fijo "Cobro de envio", sin botón).
     key: 'cobro_abono',
-    language: 'es',
+    language: 'es_CO',
     body_text:
-      'Hola, {{1}}. Recibimos tu pedido {{2}} en Izao Perfumería.\nPara confirmarlo y despacharlo con pago contra entrega, realiza el abono de {{3}} en el botón de abajo. Al recibir tu pedido pagas {{4}}.\nEl link de pago está disponible hasta el {{5}}.',
-    footer_text: 'Izao Perfumería',
-    button_text: 'Pagar abono',
-    button_url: 'https://izaoperfumeria.com/pagar/{{1}}',
-    variables_map: MAPA_ESTANDAR,
+      'Hola {{1}}, recibimos tu pedido #{{2}} en IZAO Perfumería. Para despachar tu pedido bajo la modalidad pago contra entrega, solo te pedimos un abono de {{3}} Como muestra de tu compromiso con recibir el paquete, queremos que estes 100% seguro de tu compra en el siguiente link: {{4}}. Si tienes alguna duda puedes verificar al numero 3161791082. tienes 24 horas para realizar el pago.',
+    footer_text: null,
+    button_text: null,
+    button_url: null,
+    variables_map: { '1': 'customer_first_name', '2': 'order_number', '3': 'cod_deposit_amount', '4': 'pay_link_url' },
   },
   {
     key: 'recordatorio_abono_1',
@@ -236,7 +273,7 @@ export const PLANTILLAS_SEMILLA: ReadonlyArray<Omit<PlantillaWhatsApp, 'meta_tem
       'Hola, {{1}}. Tu pedido {{2}} sigue reservado para ti.\nSolo falta el abono de {{3}} para despacharlo; al recibir pagas {{4}}. Disponible hasta el {{5}}.',
     footer_text: 'Izao Perfumería',
     button_text: 'Pagar abono',
-    button_url: 'https://izaoperfumeria.com/pagar/{{1}}',
+    button_url: 'https://izaoperfumeria.com/co/pagar/{{1}}',
     variables_map: MAPA_ESTANDAR,
   },
   {
@@ -246,7 +283,7 @@ export const PLANTILLAS_SEMILLA: ReadonlyArray<Omit<PlantillaWhatsApp, 'meta_tem
       'Hola, {{1}}. Te recordamos que tu pedido {{2}} está pendiente del abono de {{3}}.\nEn cuanto lo recibamos, lo despachamos. Al recibir pagas {{4}}. Link disponible hasta el {{5}}.',
     footer_text: 'Izao Perfumería',
     button_text: 'Pagar abono',
-    button_url: 'https://izaoperfumeria.com/pagar/{{1}}',
+    button_url: 'https://izaoperfumeria.com/co/pagar/{{1}}',
     variables_map: MAPA_ESTANDAR,
   },
   {
@@ -256,7 +293,7 @@ export const PLANTILLAS_SEMILLA: ReadonlyArray<Omit<PlantillaWhatsApp, 'meta_tem
       'Hola, {{1}}. Tu pedido {{2}} se libera el {{3}} si no recibimos el abono de {{4}}.\nSi aún lo quieres, hazlo desde el botón y lo despachamos de inmediato.',
     footer_text: 'Izao Perfumería',
     button_text: 'Pagar abono',
-    button_url: 'https://izaoperfumeria.com/pagar/{{1}}',
+    button_url: 'https://izaoperfumeria.com/co/pagar/{{1}}',
     variables_map: {
       '1': 'customer_first_name',
       '2': 'order_number',

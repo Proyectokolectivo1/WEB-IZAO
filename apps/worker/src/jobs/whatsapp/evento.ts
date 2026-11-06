@@ -11,7 +11,7 @@
  *   `REJECTED` guarda `meta_rejection_reason`; `PAUSED`/`DISABLED` → `paused`; `PENDING` → `pending`.
  */
 import type { Processor } from 'bullmq';
-import { JOB_WA_EVENTO, type EventoWhatsApp } from '@izao/whatsapp';
+import { JOB_WA_EVENTO, urlPagoAbono, type EventoWhatsApp } from '@izao/whatsapp';
 import type { CorreoRespaldo } from '../cod/index.js';
 import { crearFuenteWaPostgrest } from './fuente-postgrest.js';
 import type { EstadoMensajeFila, FuenteEventosWa } from './fuente.js';
@@ -99,7 +99,7 @@ async function respaldo(deps: DepsEventoWa, orderId: string, ahora: Date): Promi
   if (!pay || pay.expires_at.getTime() <= ahora.getTime()) return 'no_aplica';
   if (!p.contact_email) return 'sin_correo';
   if (!deps.correoRespaldo) return 'sin_proveedor';
-  await deps.correoRespaldo({ order_id: p.id, email: p.contact_email, url: `${deps.urlSitio.replace(/\/+$/, '')}/pagar/${pay.token}` });
+  await deps.correoRespaldo({ order_id: p.id, email: p.contact_email, url: urlPagoAbono(deps.urlSitio, p.country_code, pay.token) });
   return 'enviado';
 }
 

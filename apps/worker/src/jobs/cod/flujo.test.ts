@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { OrderStatusEvent } from '@izao/core/order-state';
-import { ErrorWhatsApp, PLANTILLAS_SEMILLA, type CredencialesWhatsApp } from '@izao/whatsapp';
+import { ErrorWhatsApp, PLANTILLAS_META, PLANTILLAS_SEMILLA, type CredencialesWhatsApp } from '@izao/whatsapp';
 import { crearWhatsAppMock } from '@izao/whatsapp/mock';
 import { ErrorWompi, type EntradaLinkAbono, type WompiCredentials } from '@izao/wompi';
 import type { AbonoFila, FuenteCod, MensajeFila, PayLinkFila, PedidoCod } from './fuente.js';
@@ -81,7 +81,7 @@ function escenario(o: { pedido?: Partial<PedidoCod>; sinPlantillas?: boolean; si
     plantillaActiva: async (_p, key) => {
       if (o.sinPlantillas) return null;
       const s = PLANTILLAS_SEMILLA.find((x) => x.key === key)!;
-      return { ...s, id: `tpl-${key}`, meta_template_name: `${key}_v1` };
+      return { ...s, id: `tpl-${key}`, meta_template_name: PLANTILLAS_META[key]?.meta_template_name ?? `${key}_v1` };
     },
     mensajes: async () => mensajes.map((m) => ({ ...m })),
     prepararMensaje: async (m) => {
@@ -172,14 +172,16 @@ describe('cod.iniciar: link, /pagar/{token}, cobro inmediato y programación (§
     expect(s.wa.enviados).toHaveLength(1);
     const m = s.wa.enviados[0]!;
     expect(m.to).toBe('573001234567');
-    expect(m.template.name).toBe('cobro_abono_v1');
+    // Plantilla aprobada en Meta: izao_pago_envio_inicial (es_CO) con nombre, pedido, abono y link de marca; sin botón.
+    expect(m.template.name).toBe('izao_pago_envio_inicial');
+    expect(m.template.language).toEqual({ code: 'es_CO' });
     const textos = m.template.components[0]!.parameters.map((p) => p.text);
+    expect(textos).toHaveLength(4);
     expect(textos[0]).toBe('Laura');
     expect(textos[1]).toBe('IZ-CO-000123');
     expect(textos[2]).toMatch(/30\.000/);
-    expect(textos[3]).toMatch(/219\.900/);
-    expect(textos[4]).toMatch(/21 de octubre/);
-    expect(m.template.components[1]).toEqual({ type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: 'TokCorto123' }] });
+    expect(textos[3]).toBe('https://izaoperfumeria.com/co/pagar/TokCorto123');
+    expect(m.template.components).toHaveLength(1);
     expect(s.mensajes[0]).toMatchObject({ status: 'sent', wa_message_id: 'wamid.mock.1' });
     expect(s.r.programados).toEqual([
       { tipo: 'abandono', order_id: ORDER, en: VENCE },
@@ -214,7 +216,7 @@ describe('cod.iniciar: link, /pagar/{token}, cobro inmediato y programación (§
     expect(res.accion).toBe('iniciado');
     expect(s.mensajes[0]).toMatchObject({ status: 'failed', error: '131026' });
     expect(s.r.alertas).toContain('whatsapp_fallido');
-    expect(s.r.correos).toEqual(['laura@example.com https://izaoperfumeria.com/pagar/TokCorto123']);
+    expect(s.r.correos).toEqual(['laura@example.com https://izaoperfumeria.com/co/pagar/TokCorto123']);
   });
 
   it('WhatsApp con límite de tasa: lanza reintentable sin marcar fallido', async () => {
@@ -255,7 +257,7 @@ describe('cod.recordatorio y cod.abandono (reloj inyectado)', () => {
     s.avanzar(new Date('2026-10-20T18:00:00.000Z'));
     expect((await recordatorioCod(ORDER, 1, s.deps)).accion).toBe('enviado');
     expect((await recordatorioCod(ORDER, 1, s.deps)).accion).toBe('ya_enviado');
-    expect(s.wa.enviados.map((m) => m.template.name)).toEqual(['cobro_abono_v1', 'recordatorio_abono_1_v1']);
+    expect(s.wa.enviados.map((m) => m.template.name)).toEqual(['izao_pago_envio_inicial', 'recordatorio_abono_1_v1']);
     expect(s.wa.enviados[1]!.template.components[1]).toMatchObject({ parameters: [{ text: 'TokCorto123' }] });
   });
 
@@ -322,7 +324,7 @@ describe('cod.reenviar: "Reenviar cobro" del panel (§13.4)', () => {
     const s = await iniciado();
     expect(await reenviarCod(ORDER, SOLICITUD, s.deps)).toEqual({ accion: 'enviado' });
     expect(s.wa.enviados).toHaveLength(2);
-    expect(s.wa.enviados[1]!.template.name).toBe('cobro_abono_v1');
+    expect(s.wa.enviados[1]!.template.name).toBe('izao_pago_envio_inicial');
     const cobros = s.mensajes.filter((m) => m.template_key === 'cobro_abono');
     expect(cobros.map((m) => m.scheduled_for!.toISOString())).toEqual([CREADO.toISOString(), SOLICITUD.toISOString()]);
   });
@@ -378,6 +380,6 @@ describe('cod.reenviar: "Reenviar cobro" del panel (§13.4)', () => {
     s.wa.fallarCon = new ErrorWhatsApp('DESTINO', false, 400, '131026');
     expect(await reenviarCod(ORDER, SOLICITUD, s.deps)).toEqual({ accion: 'no_enviado' });
     expect(s.r.alertas).toContain('whatsapp_fallido');
-    expect(s.r.correos.at(-1)).toBe('laura@example.com https://izaoperfumeria.com/pagar/TokCorto123');
+    expect(s.r.correos.at(-1)).toBe('laura@example.com https://izaoperfumeria.com/co/pagar/TokCorto123');
   });
 });

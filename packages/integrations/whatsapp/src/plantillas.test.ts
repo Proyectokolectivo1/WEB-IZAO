@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  PLANTILLAS_META,
   PLANTILLAS_SEMILLA,
   mensajePlantilla,
   nombreVersion,
@@ -7,6 +8,8 @@ import {
   validarPlantilla,
   type PlantillaWhatsApp,
   type ValoresCobro,
+  urlPagoAbono,
+  validarEnvio,
 } from './plantillas';
 
 const COBRO: PlantillaWhatsApp = {
@@ -27,6 +30,7 @@ const VALORES: ValoresCobro = {
   cod_deposit_amount: '$30.000',
   cod_collect_amount: '$219.900',
   pay_link_expires_at: '21 de octubre, 3:04 p. m.',
+  pay_link_url: 'https://izaoperfumeria.com/co/pagar/Ab12Cd34Ef',
 };
 
 describe('validación de plantillas (reglas de revisión de Meta, D-025)', () => {
@@ -127,5 +131,58 @@ describe('creación de versión en Meta (POST /{waba_id}/message_templates)', ()
 
   it('no crea una plantilla inválida', () => {
     expect(() => solicitudCreacion({ ...COBRO, body_text: '{{1}} hola' }, VALORES, 'Ab12Cd34Ef')).toThrow(/VARIABLE_EN_EXTREMO/);
+  });
+});
+
+describe('plantillas ya aprobadas en Meta (nombre, idioma y orden de variables idénticos)', () => {
+  const inicial = PLANTILLAS_SEMILLA.find((p) => p.key === 'cobro_abono')!;
+  const conNombre = { ...inicial, meta_template_name: PLANTILLAS_META.cobro_abono!.meta_template_name };
+
+  it('cobro_abono = izao_pago_envio_inicial, es_CO, 4 variables (nombre, pedido, abono, link) y sin botón', () => {
+    expect(PLANTILLAS_META.cobro_abono).toEqual({ meta_template_name: 'izao_pago_envio_inicial', language: 'es_CO' });
+    expect(inicial.language).toBe('es_CO');
+    expect(inicial.button_url).toBeNull();
+    expect(inicial.variables_map).toEqual({ '1': 'customer_first_name', '2': 'order_number', '3': 'cod_deposit_amount', '4': 'pay_link_url' });
+    expect(inicial.body_text).toContain('verificar al numero 3161791082');
+  });
+
+  it('el mensaje lleva nombre e idioma de Meta y los 4 parámetros en orden, sin componente de botón', () => {
+    const m = mensajePlantilla(conNombre, { to: '573001234567', valores: VALORES, tokenBoton: 'Ab12Cd34Ef' });
+    expect(m.template.name).toBe('izao_pago_envio_inicial');
+    expect(m.template.language).toEqual({ code: 'es_CO' });
+    expect(m.template.components).toEqual([
+      {
+        type: 'body',
+        parameters: ['Laura', 'IZ-CO-000123', '$30.000', 'https://izaoperfumeria.com/co/pagar/Ab12Cd34Ef'].map((text) => ({ type: 'text', text })),
+      },
+    ]);
+  });
+
+  it('el texto aprobado por Meta no bloquea el envío; las reglas de texto siguen al crear versiones', () => {
+    expect(validarEnvio(conNombre)).toEqual([]);
+    const conOriginal = { ...conNombre, body_text: `${conNombre.body_text} Producto original.` };
+    expect(validarEnvio(conOriginal)).toEqual([]);
+    expect(validarPlantilla(conOriginal).map((i) => i.codigo)).toContain('TEXTO_NO_PERMITIDO');
+    expect(() => solicitudCreacion(conOriginal, VALORES, 'Ab12Cd34Ef')).toThrow(/TEXTO_NO_PERMITIDO/);
+  });
+
+  it('el envío sigue exigiendo estructura: variables en orden y mapeadas, nombre e idioma válidos', () => {
+    expect(validarEnvio({ ...conNombre, variables_map: { '1': 'customer_first_name' } }).map((i) => i.codigo)).toContain('VARIABLE_SIN_MAPA');
+    expect(validarEnvio({ ...conNombre, language: 'es-CO' }).map((i) => i.codigo)).toContain('IDIOMA_INVALIDO');
+    expect(() => mensajePlantilla({ ...conNombre, body_text: 'Hola {{2}} y {{1}} listo.' }, { to: '573001234567', valores: VALORES, tokenBoton: 'Ab12Cd34Ef' })).toThrow(RangeError);
+  });
+});
+
+describe('link de marca del abono (/{pais}/pagar/{token})', () => {
+  it('incluye el país en minúscula y no deja barras dobles', () => {
+    expect(urlPagoAbono('https://izaoperfumeria.com/', 'CO', 'Ab12Cd34Ef')).toBe('https://izaoperfumeria.com/co/pagar/Ab12Cd34Ef');
+    expect(urlPagoAbono('https://izaoperfumeria.com', 'EC', 'Ab12Cd34Ef')).toBe('https://izaoperfumeria.com/ec/pagar/Ab12Cd34Ef');
+  });
+
+  it('rechaza origen no https, país desconocido y token inválido', () => {
+    expect(() => urlPagoAbono('http://izaoperfumeria.com', 'CO', 'Ab12Cd34Ef')).toThrow(RangeError);
+    expect(() => urlPagoAbono('https://izaoperfumeria.com/x', 'CO', 'Ab12Cd34Ef')).toThrow(RangeError);
+    expect(() => urlPagoAbono('https://izaoperfumeria.com', 'PE', 'Ab12Cd34Ef')).toThrow(RangeError);
+    expect(() => urlPagoAbono('https://izaoperfumeria.com', 'CO', 'a/b')).toThrow(RangeError);
   });
 });
