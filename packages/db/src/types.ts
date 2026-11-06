@@ -197,6 +197,8 @@ export type Database = {
           cta_label: string | null
           desktop_media_id: string
           ends_at: string | null
+          focal_x: number
+          focal_y: number
           id: string
           is_active: boolean
           link_url: string | null
@@ -218,6 +220,8 @@ export type Database = {
           cta_label?: string | null
           desktop_media_id: string
           ends_at?: string | null
+          focal_x?: number
+          focal_y?: number
           id?: string
           is_active?: boolean
           link_url?: string | null
@@ -239,6 +243,8 @@ export type Database = {
           cta_label?: string | null
           desktop_media_id?: string
           ends_at?: string | null
+          focal_x?: number
+          focal_y?: number
           id?: string
           is_active?: boolean
           link_url?: string | null
