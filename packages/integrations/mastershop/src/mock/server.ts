@@ -11,6 +11,8 @@
  * - `PUT` solo 1→2, 1→9, 2→9; `409` por edición concurrente; `502` que puede haberse
  *   aplicado o no; `422` de rechazo.
  * - `RateLimit-*` en cada respuesta y `429` al agotar la ventana.
+ * - `GET /api/products` lista sin variantes (`variation: []`); el SKU solo viene en
+ *   `GET /api/products/{id}?includeAllVariations=true` (observado en producción).
  *
  * Se usa como `fetch` inyectable (`mock.fetch`), sin red.
  */
@@ -55,7 +57,24 @@ export interface InjectedResponse {
   headers?: Record<string, string>;
 }
 
-type Route = 'create' | 'get' | 'list' | 'update' | 'products' | 'wallet' | 'webhook_create' | 'webhook_update';
+type Route =
+  | 'create'
+  | 'get'
+  | 'list'
+  | 'update'
+  | 'products'
+  | 'product_detail'
+  | 'wallet'
+  | 'webhook_create'
+  | 'webhook_update';
+
+/** Producto simulado con sus variantes (forma del detalle real). */
+export interface MockProduct {
+  idProduct: number;
+  name: string;
+  basePrice: number;
+  variants: Array<{ idVariant: number; sku: string | null; isEnable?: 0 | 1; price?: number; stock?: number }>;
+}
 
 /** Movimiento de billetera simulado (forma de la colección). */
 export interface MockMovement {
@@ -184,6 +203,7 @@ function missingKeys(obj: unknown, keys: readonly string[], path: (string | numb
 
 export class MasterShopMock {
   readonly orders = new Map<number, MockOrder>();
+  readonly products = new Map<number, MockProduct>();
   readonly requests: MockRequestLog[] = [];
   private readonly options: MasterShopMockOptions;
   private nextId: number;
@@ -322,6 +342,7 @@ export class MasterShopMock {
     else if (path === '/api/orders/list' && request.method === 'POST') route = 'list';
     else if (/^\/api\/orders\/[^/]+$/.test(path) && request.method === 'PUT') route = 'update';
     else if (path === '/api/products' && request.method === 'GET') route = 'products';
+    else if (/^\/api\/products\/[^/]+$/.test(path) && request.method === 'GET') route = 'product_detail';
     else if (path === '/api/wallets/movements/list' && request.method === 'POST') route = 'wallet';
     else if (path === '/api/webhooks' && request.method === 'POST') route = 'webhook_create';
     else if (path === '/api/webhooks' && request.method === 'PUT') route = 'webhook_update';
@@ -360,7 +381,10 @@ export class MasterShopMock {
         response = this.update(path.split('/').pop() ?? '', parsed, rl.headers);
         break;
       case 'products':
-        response = this.json(200, { results: [], resultsCount: 0 }, rl.headers);
+        response = this.productList(url.searchParams, rl.headers);
+        break;
+      case 'product_detail':
+        response = this.productDetail(path.split('/').pop() ?? '', url.searchParams, rl.headers);
         break;
       case 'wallet':
         response = this.wallet(url.searchParams, parsed, now, rl.headers);
@@ -402,6 +426,71 @@ export class MasterShopMock {
       status,
       headers: { 'content-type': 'application/json', ...headers },
     });
+  }
+
+  /** Registra un producto del negocio (para probar la vinculación). */
+  seedProduct(p: MockProduct): MockProduct {
+    this.products.set(p.idProduct, p);
+    return p;
+  }
+
+  private productJson(p: MockProduct, withVariants: boolean): Record<string, unknown> {
+    return {
+      idProduct: p.idProduct,
+      name: p.name,
+      description: 'Descripcion',
+      baseCurrencyPrice: 'COP',
+      basePrice: p.basePrice,
+      suggestedPrice: 0,
+      nameType: 'Fisico',
+      nameState: 'Activo',
+      prodFormatName: 'Salud, belleza y cuidado personal',
+      tags: [],
+      productProperties: [],
+      stockTotal: p.variants.reduce((s, v) => s + (v.stock ?? 0), 0),
+      productOwner: { idBusiness: 3001, publicName: 'Tienda de ejemplo' },
+      variation: withVariants
+        ? p.variants.map((v) => ({
+            sku: v.sku,
+            name: 'Default Variant',
+            price: v.price ?? p.basePrice,
+            stock: v.stock ?? 0,
+            weight: 1,
+            options: null,
+            isEnable: v.isEnable ?? 1,
+            idProduct: p.idProduct,
+            idVariant: v.idVariant,
+            weightUnit: 'kg',
+          }))
+        : [],
+    };
+  }
+
+  /** Listado: `limit` > 50 recortado a 50, `search` parcial por nombre, siempre sin variantes. */
+  private productList(params: URLSearchParams, headers: Record<string, string>): Response {
+    const page = Number(params.get('page') ?? '1');
+    const limit = Math.min(Number(params.get('limit') ?? '20'), 50);
+    if (!Number.isInteger(page) || page < 1 || !Number.isInteger(limit) || limit < 1) {
+      return this.badRequest(MS_ERRORS.invalidParams, [{ path: 'query', message: 'page/limit inválidos' }], headers);
+    }
+    const search = params.get('search')?.toLowerCase() ?? null;
+    const rows = [...this.products.values()]
+      .filter((p) => search === null || p.name.toLowerCase().includes(search))
+      .sort((a, b) => b.idProduct - a.idProduct);
+    const slice = rows.slice((page - 1) * limit, page * limit);
+    return this.json(
+      200,
+      { results: slice.map((p) => this.productJson(p, false)), resultsCount: { totalProducts: rows.length } },
+      headers,
+    );
+  }
+
+  /** Detalle: 404 si no es del negocio; variantes solo con `includeAllVariations=true` (supuesto). */
+  private productDetail(id: string, params: URLSearchParams, headers: Record<string, string>): Response {
+    const p = /^\d+$/.test(id) ? this.products.get(Number(id)) : undefined;
+    if (p === undefined) return this.json(404, { data: null, error: 'Producto no encontrado', success: false }, headers);
+    const all = params.get('includeAllVariations') === 'true';
+    return this.json(200, { results: [this.productJson(p, all)], resultsCount: { totalProducts: 1 } }, headers);
   }
 
   private badRequest(

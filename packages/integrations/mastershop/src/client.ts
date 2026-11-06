@@ -27,6 +27,8 @@ import type { MasterShopErrorKind } from './errors';
 import { serializeMasterShopJson } from './json';
 import { MasterShopOrderBodySchema, ORDER_NUMBER_PATTERN } from './order';
 import type { MasterShopOrderBody } from './order';
+import { MasterShopProductListSchema, toProduct, toProductSummary } from './products';
+import type { MasterShopProduct, MasterShopProductSummary } from './products';
 import { parseRateLimit, RateLimitGate, resetDelayMs } from './rate-limit';
 import { noveltyBadge, resolveMasterShopStatus } from './status';
 import type { MasterShopAlert } from './status';
@@ -852,6 +854,73 @@ export class MasterShopClient {
       body: JSON.stringify({ idProductWebhook, idProduct: null, isEnable: enabled ? 1 : 0 }),
     });
     if (res.status !== 200) throw this.fail(res, 'PUT');
+  }
+
+  // -------------------------------------------------------------------------
+  // Productos (solo lectura, para vincular variantes)
+  // -------------------------------------------------------------------------
+
+  /** Una página de `GET /api/products` (desde 1; `limit` ≤ 50). El listado no trae variantes ni SKU. */
+  async listProducts(filter: {
+    page: number;
+    limit?: number;
+    search?: string;
+    category?: string;
+  }): Promise<MasterShopProductSummary[]> {
+    if (!Number.isInteger(filter.page) || filter.page < 1) {
+      throw new MasterShopError({ kind: 'validacion', message: 'page debe ser un entero ≥ 1.' });
+    }
+    const limit = Math.min(filter.limit ?? MASTERSHOP_MAX_PAGE_SIZE, MASTERSHOP_MAX_PAGE_SIZE);
+    const query: Record<string, string> = { page: String(filter.page), limit: String(limit) };
+    if (filter.search !== undefined && filter.search.trim() !== '') query.search = filter.search.trim();
+    if (filter.category !== undefined && filter.category.trim() !== '') query.category = filter.category.trim();
+    const res = await this.send('GET', '/api/products', { query, timeoutMs: this.listTimeoutMs });
+    if (res.status !== 200) throw this.fail(res, 'GET');
+    return this.parse(MasterShopProductListSchema, res.data, 'listar productos').results.map(toProductSummary);
+  }
+
+  /** Todas las páginas hasta una vacía (el `limit` se recorta en silencio a 50). */
+  async listAllProducts(filter: { search?: string; category?: string } = {}): Promise<MasterShopProductSummary[]> {
+    const all: MasterShopProductSummary[] = [];
+    const seen = new Set<number>();
+    for (let page = 1; page <= this.maxPages; page++) {
+      const rows = await this.listProducts({ ...filter, page });
+      if (rows.length === 0) return all;
+      for (const r of rows) {
+        if (seen.has(r.idProduct)) continue;
+        seen.add(r.idProduct);
+        all.push(r);
+      }
+    }
+    throw new MasterShopError({
+      kind: 'respuesta_invalida',
+      message: `El listado de productos de MasterShop superó ${this.maxPages} páginas.`,
+    });
+  }
+
+  /** `GET /api/products/{id}?includeAllVariations=true`; `null` si no es del negocio (404). */
+  async getProduct(idProduct: number): Promise<MasterShopProduct | null> {
+    if (!Number.isSafeInteger(idProduct) || idProduct <= 0) {
+      throw new MasterShopError({ kind: 'validacion', message: 'idProduct debe ser un entero positivo.' });
+    }
+    const res = await this.send('GET', `/api/products/${idProduct}`, {
+      query: { includeAllVariations: 'true' },
+    });
+    if (res.status === 404) return null;
+    if (res.status !== 200) throw this.fail(res, 'GET');
+    const list = this.parse(MasterShopProductListSchema, res.data, 'detalle de producto').results;
+    const p = list.find((x) => x.idProduct === idProduct);
+    return p === undefined ? null : toProduct(p);
+  }
+
+  /** Catálogo completo con variantes y SKU: listado + un detalle por producto. */
+  async listAllProductsWithVariants(): Promise<MasterShopProduct[]> {
+    const out: MasterShopProduct[] = [];
+    for (const s of await this.listAllProducts()) {
+      const p = await this.getProduct(s.idProduct);
+      if (p !== null) out.push(p);
+    }
+    return out;
   }
 
   /** Prueba la llave con una lectura inocua (`GET /api/products`). */

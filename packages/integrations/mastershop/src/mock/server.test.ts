@@ -99,7 +99,7 @@ describe('MasterShopMock reproduce las trampas documentadas', () => {
     const list = await call('POST', '/api/orders/list?page=1', { idOrder: 1001 });
     expect(Array.isArray(list.json)).toBe(true);
     const products = await call('GET', '/api/products?page=1');
-    expect(products.json).toEqual({ results: [], resultsCount: 0 });
+    expect(products.json).toEqual({ results: [], resultsCount: { totalProducts: 0 } });
     const missing = await call('GET', '/api/orders?idOrder=999');
     expect(missing.json).toEqual({ data: null, error: 'Orden no existe!', success: false });
   });
