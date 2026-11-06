@@ -11,6 +11,7 @@ const AHORA = new Date('2026-10-20T15:00:00Z');
 const comun = { actor: 'u1', ip: null, ahora: () => AHORA };
 const pedido = (extra: Record<string, unknown> = {}) => ({
   number: 'IZ-1001',
+  country_code: 'CO',
   payment_method: 'cod',
   status: 'esperando_abono',
   stock_reserved_until: '2026-10-21T15:00:00Z',
@@ -24,7 +25,7 @@ describe('linkCobroBd', () => {
   it('entrega la URL del link vigente y audita quién la pidió (sin guardar el token)', async () => {
     const { cliente } = clienteFalso({ 'orders.select': { data: pedido() }, 'pay_links.select': { data: [link()] } });
     const r = await linkCobroBd({ cliente, orderId: ID, origen: 'https://izaoperfumeria.com', ...comun });
-    expect(r).toEqual({ ok: true, url: 'https://izaoperfumeria.com/pagar/tokenSecreto123' });
+    expect(r).toEqual({ ok: true, url: 'https://izaoperfumeria.com/co/pagar/tokenSecreto123' });
     expect(auditar.mock.calls[0]![0]).toMatchObject({ accion: 'pedido.link_cobro_copiado', entidadId: ID, actor: 'u1' });
     expect(JSON.stringify(auditar.mock.calls)).not.toContain('tokenSecreto123');
   });

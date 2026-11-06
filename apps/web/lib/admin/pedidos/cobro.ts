@@ -44,10 +44,12 @@ export function evaluarCobro(p: PedidoCobro, link: Pick<LinkCobro, 'expires_at'>
   };
 }
 
-/** URL pública del cobro. El token solo se arma aquí, nunca en el navegador. */
-export function urlCobro(origen: string, token: string): string {
+/** URL pública del cobro: `/{pais}/pagar/{token}` (todo lo comercial es por país). El token solo se arma aquí. */
+export function urlCobro(origen: string, pais: string, token: string): string {
+  const segmento = pais.trim().toLowerCase();
+  if (segmento !== 'co' && segmento !== 'ec') throw new RangeError('País de cobro inválido.');
   if (!/^[A-Za-z0-9_-]{6,64}$/.test(token)) throw new RangeError('Token de cobro inválido.');
-  return `${origen.replace(/\/+$/, '')}/pagar/${token}`;
+  return `${origen.replace(/\/+$/, '')}/${segmento}/pagar/${token}`;
 }
 
 export type ResultadoEncolado = 'encolado';

@@ -13,6 +13,8 @@
   - Imágenes: toda subida sale en WebP (sharp, EXIF fuera), AVIF/JPG/PNG/WebP por magic bytes, atómica (tmp+rename), banners antiguos 800/1600/2400 y móvil 400/800/1200, calidad y peso máximo configurables (`lib/admin/media/ajustes*.ts`; panel en Apariencia > Imágenes). Uploads públicos (reseñas/garantías) usan el mismo pipeline.
   - Tipografías: `lib/tipografia/catalogo.ts` (38 fuentes), `fuentes-previa.ts` (solo panel, next/font sin precarga), `SelectorFuente` (vista previa en vivo, filtros, móvil). `build` verificado (140 archivos de fuente, 3,4 MB, solo se piden al abrir la lista).
 
+- D-048 alineación: `pay_link_url` en `VARIABLES_PLANTILLA`/`VALORES_EJEMPLO`; `urlCobro` con país (CO/EC; el servidor lee `orders.country_code`), pruebas ajustadas (web: lint, tsc, 1 450 pruebas verdes).
+
 ## Pendiente
 - **Revisión 78e6c0f..920910b (corregida):** procesar.ts con límite 40 MP panel / 25 MP público, `sharp.cache(false)`, un pipeline por salida y semáforo (2 a la vez, espera 20 s, `ErrorImagen`); guardar.ts con `link` (no sobrescribe); banners: `esUbicacion` en redirecciones, `kind='banner'`, sin enlaces a otro país ni a categoría/producto no visibles.
 - **izao-db:** `media_file_deletions.reason` solo admite 'anonimizacion'; para limpiar huérfanas de banners (y subidas fallidas) hace falta un motivo nuevo ('banner_eliminado') y que `eliminarBannerBd` borre la fila de `media` e inserte en la cola; el worker `media.borrar_archivos` ya existe. Hoy no hay job de huérfanas.
@@ -20,6 +22,7 @@
 - **izao-db (migración):** `site_settings.media_settings jsonb not null default '{}'` (calidad/peso; sin ella el panel usa 80 y 15 MB y avisa); opcional en `banners`: `link_type text check (in ('none','product','category','url'))`, `link_product_id`, `link_variant_id`, `link_category_id` (FK `on delete set null`). Al existir, cambian solo `columnasBanner` y `destinoEditable`.
 - **izao-tienda:** usar `resolverFuentes()` de `lib/tipografia/catalogo.ts` y cargar solo esas 2 fuentes (hoy `lib/store/fuentes.ts` solo conoce las 6 parejas); presel. de `?variante=SKU` en la ficha; seguir `link_url` del banner tal cual.
 - Gastos: "Sincronizar ahora" de Meta Ads. Garantías: formulario público (tienda/pagos). Pedidos: filtros ciudad/código/influencer/documento. Integraciones: esquemas Addi y Sistecrédito; [VERIFICAR] IDs de píxeles. Rating de `catalog_listing` al moderar reseñas (izao-db).
+- **D-048 (hecho, ver Hecho):** `urlCobro(origen, pais, token)` arma `/{pais}/pagar/{token}`; `pay_link_url` en variables de plantilla. Aviso para izao-db: lint rojo en `packages/db/tests/concurrencia/checkout-remoto.mjs:30` (no es de admin).
 
 ## Decisiones / avisos
 - `useActionState` + zod del servidor. Al habilitar un módulo: `disponible: true` y actualizar `permissions.test.ts`. Heredocs de bash rompen archivos con `\` o comillas: usar Write. Archivos con CRLF: normalizar antes de reemplazar por script.

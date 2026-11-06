@@ -32,6 +32,7 @@ export const VARIABLES_PLANTILLA = {
   cod_deposit_amount: 'Valor del abono',
   cod_collect_amount: 'Valor a pagar al recibir',
   pay_link_expires_at: 'Fecha y hora de vencimiento del link',
+  pay_link_url: 'Link de pago del abono',
 } as const;
 export type VariablePlantilla = keyof typeof VARIABLES_PLANTILLA;
 
@@ -50,7 +51,7 @@ const ETIQUETA_PROBLEMA: Record<string, string> = {
   BOTON_LARGO: 'El texto del botón supera los 25 caracteres.',
   BOTON_INCOMPLETO: 'El botón necesita texto y enlace, o ninguno de los dos.',
   URL_BOTON_INVALIDA:
-    'El enlace del botón debe ser https, terminar en una barra seguida de {{1}} (por ejemplo https://sitio.com/pagar/{{1}}).',
+    'El enlace del botón debe ser https, terminar en una barra seguida de {{1}} (por ejemplo https://sitio.com/co/pagar/{{1}}).',
   NOMBRE_INVALIDO: 'El nombre en Meta solo admite minúsculas, números y guion bajo.',
   IDIOMA_INVALIDO: 'El idioma debe ser "es" o una variante como es_CO.',
   TEXTO_NO_PERMITIDO:
@@ -98,6 +99,7 @@ export const VALORES_EJEMPLO: Readonly<Record<VariablePlantilla, string>> = {
   cod_deposit_amount: '$ 20.000',
   cod_collect_amount: '$ 130.000',
   pay_link_expires_at: '15 de marzo, 6:00 p. m.',
+  pay_link_url: 'https://izaoperfumeria.com/co/pagar/Ab12Cd34Ef',
 };
 export const TOKEN_EJEMPLO = 'ejemplo123';
 

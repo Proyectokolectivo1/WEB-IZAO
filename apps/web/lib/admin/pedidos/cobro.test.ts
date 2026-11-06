@@ -34,10 +34,13 @@ describe('evaluarCobro', () => {
 });
 
 describe('urlCobro', () => {
-  it('arma /pagar/{token} sin barras dobles y rechaza tokens raros', () => {
-    expect(urlCobro('https://izaoperfumeria.com/', 'abcDEF123_-')).toBe('https://izaoperfumeria.com/pagar/abcDEF123_-');
-    expect(() => urlCobro('https://x.co', '../../etc')).toThrow(RangeError);
-    expect(() => urlCobro('https://x.co', 'corto')).toThrow(RangeError);
+  it('arma /{pais}/pagar/{token} sin barras dobles y rechaza países o tokens raros', () => {
+    expect(urlCobro('https://izaoperfumeria.com/', 'CO', 'abcDEF123_-')).toBe('https://izaoperfumeria.com/co/pagar/abcDEF123_-');
+    expect(urlCobro('https://izaoperfumeria.com', 'ec', 'abcDEF123_-')).toBe('https://izaoperfumeria.com/ec/pagar/abcDEF123_-');
+    expect(() => urlCobro('https://x.co', 'CO', '../../etc')).toThrow(RangeError);
+    expect(() => urlCobro('https://x.co', 'CO', 'corto')).toThrow(RangeError);
+    expect(() => urlCobro('https://x.co', 'PE', 'abcDEF123_-')).toThrow(RangeError);
+    expect(() => urlCobro('https://x.co', '../co', 'abcDEF123_-')).toThrow(RangeError);
   });
 });
 

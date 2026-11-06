@@ -150,7 +150,7 @@ export type ModuloId = keyof typeof MODULOS;
 export const ACCIONES = {
   'pedidos.ver': TODOS,
   'pedidos.reenviar_cobro': TODOS,
-  /** Copiar el link de cobro del abono (`/pagar/{token}`) desde el detalle del pedido (§13.3, §24.1). */
+  /** Copiar el link de cobro del abono (`/{pais}/pagar/{token}`) desde el detalle del pedido (§13.3, §24.1). */
   'pedidos.copiar_link_cobro': TODOS,
   'pedidos.reintentar_envio': TODOS,
   'pedidos.reimprimir': TODOS,

@@ -25,15 +25,15 @@ export type ResultadoCobro<T = Record<string, never>> =
   | ({ ok: true; mensaje?: string } & T)
   | { ok: false; mensaje: string };
 
-async function cargar(cliente: Cliente, orderId: string): Promise<{ pedido: PedidoCobro & { number: string }; link: LinkCobro | null } | null> {
+async function cargar(cliente: Cliente, orderId: string): Promise<{ pedido: PedidoCobro & { number: string }; pais: string; link: LinkCobro | null } | null> {
   const { data: o, error } = await cliente
     .from('orders')
-    .select('number, payment_method, status, stock_reserved_until')
+    .select('number, country_code, payment_method, status, stock_reserved_until')
     .eq('id', orderId)
     .maybeSingle();
   if (error) throw new Error('No se pudo leer el pedido.');
   if (!o) return null;
-  const fila = o as { number: string; payment_method: string; status: string; stock_reserved_until: string | null };
+  const fila = o as { number: string; country_code: string; payment_method: string; status: string; stock_reserved_until: string | null };
   const { data: l, error: e2 } = await cliente
     .from('pay_links')
     .select('token, expires_at')
@@ -43,6 +43,7 @@ async function cargar(cliente: Cliente, orderId: string): Promise<{ pedido: Pedi
   if (e2) throw new Error('No se pudo leer el link de cobro.');
   const ultimo = (Array.isArray(l) ? l[0] : null) as { token: string; expires_at: string } | null | undefined;
   return {
+    pais: fila.country_code,
     pedido: {
       number: fila.number,
       payment_method: fila.payment_method,
@@ -80,7 +81,7 @@ export async function linkCobroBd(args: Ctx & { orderId: string; origen: string 
     diff: { numero: c.pedido.number },
     ip,
   });
-  return { ok: true, url: urlCobro(args.origen, c.link.token) };
+  return { ok: true, url: urlCobro(args.origen, c.pais, c.link.token) };
 }
 
 /**
