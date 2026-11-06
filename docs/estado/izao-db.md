@@ -7,8 +7,8 @@
 - 20261102050729 `chat_registrar_turno` (pgTAP 34 14/14, `registrarTurnoChatDb`). pgTAP 01–12 remoto 150/150.
   Catálogo (520 prod., 800 filas): p95 de 50 corridas ≤ 5,2 ms por RPC, sin seq scan; sin índices nuevos. Advisors: solo INFO.
 - pgTAP remoto 13–33 en verde (477/477; D-041). Concurrencia del checkout remota (ab23cd3, `tests/concurrencia/checkout-remoto.mjs`): N=20 × 3 rondas en verde; sin migración.
-- 20261105060857 `site_settings.media_settings` (aditiva, autorizada por el dueño; pgTAP 35 7/7 + 11 9/9; advisors sin cambios).
-- 20261106050343 `banners.focal_x/focal_y` (D-047; aditiva autorizada; pgTAP 36 12/12 + 35 7/7 remoto; advisors sin cambios).
+- Aditivas autorizadas: 20261105060857 `site_settings.media_settings` (pgTAP 35 7/7, 11 9/9); 20261106050343
+  `banners.focal_x/focal_y` D-047 (c134c53; pgTAP 36 12/12). Advisors sin cambios.
 ## Contratos vigentes (detalle en el commit de cada migración)
 - `crear_pedido_checkout(p jsonb)` → `{ok, estado:'creado'|'existente'|'rechazado', order|motivo}` (motivos en 20261020213954).
 - `pages.kind` (general, quienes_somos, envios, tratamiento_datos, terminos, devoluciones); única publicada por (país, kind) → 23505.
@@ -33,10 +33,8 @@
 - `site_settings.media_settings` jsonb not null default '{}' (check objeto); rangos los valida el panel. Sin link_type/link_product_id en banners (decidido).
 - `banners.focal_x`, `focal_y` smallint not null default 50, check 0–100 (`banners_focal_{x,y}_rango` → 23514). Flag de tienda: el líder.
 ## Pendiente
-1. izao-tienda: usar `registrarTurnoChatDb`. 2. Dueño: publicar la política de datos de CO/EC (sin ella el checkout rechaza).
-4. Worker (izao-infra/izao-pagos): job que vacíe `media_file_deletions`. Admin: etiquetas de `stock_devuelto`/`stock_retenido`.
-## Siguiente paso exacto: ninguno propio; esperar tarea del líder (Pendiente 4 es de otros agentes).
+1. izao-tienda: `registrarTurnoChatDb`. 2. Dueño: política de datos CO/EC. 4. Worker: vaciar `media_file_deletions`; admin: etiquetas `stock_devuelto`/`stock_retenido`.
+## Siguiente paso exacto: ninguno propio; esperar tarea del líder (Pendiente 1, 2 y 4 son de otros).
 ## Notas
-- pgTAP por el MCP: savepoint por archivo, conteos en secuencias temp, `raise exception 'RESUMEN %'` deshace todo.
-  La base remota tiene catálogo real (520 prod.): las pruebas filtran por sus propias marcas/slugs.
+- pgTAP por el MCP: `python -I tests/remoto/tap2mcp.py <archivos>` → execute_sql; `RESUMEN %` deshace todo. Base con catálogo real.
 - Versión: la de `list_migrations`. Tipos: JSON de `generate_typescript_types` (tool-results) → `types` a `src/types.ts` con python.
