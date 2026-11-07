@@ -1,0 +1,198 @@
+{
+ "home-co@375": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 375,
+   "ventana": 375
+  },
+  "errores": []
+ },
+ "home-co@768": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 768,
+   "ventana": 768
+  },
+  "errores": []
+ },
+ "catalogo-co@375": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 375,
+   "ventana": 375
+  },
+  "errores": []
+ },
+ "catalogo-co@768": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 768,
+   "ventana": 768
+  },
+  "errores": []
+ },
+ "ficha-co@375": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 375,
+   "ventana": 375
+  },
+  "errores": []
+ },
+ "ficha-co@768": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 768,
+   "ventana": 768
+  },
+  "errores": []
+ },
+ "carrito-co@375": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 375,
+   "ventana": 375
+  },
+  "errores": []
+ },
+ "carrito-co@768": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 768,
+   "ventana": 768
+  },
+  "errores": []
+ },
+ "checkout-co@375": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 375,
+   "ventana": 375
+  },
+  "errores": []
+ },
+ "checkout-co@768": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 768,
+   "ventana": 768
+  },
+  "errores": []
+ },
+ "pagar-token-invalido@375": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 375,
+   "ventana": 375
+  },
+  "errores": [
+   "http 404: /co/pagar/token-invalido-de-prueba",
+   "console: Failed to load resource: the server responded with a status of 404 ()"
+  ]
+ },
+ "pagar-token-invalido@768": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 768,
+   "ventana": 768
+  },
+  "errores": [
+   "http 404: /co/pagar/token-invalido-de-prueba",
+   "console: Failed to load resource: the server responded with a status of 404 ()"
+  ]
+ },
+ "admin-login@375": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 375,
+   "ventana": 375
+  },
+  "errores": [
+   "http 401: /cdn-cgi/challenge-platform/h/b/pat/a56854c90a5a27c8/1794012494424/2602662f9146471704f8eea04a508768553c9ebdc95bd3cf4ee66b7343b9e297/Cg2edFFLQ2NxZGGuDlZzOhEe1ClJSbQeAa5uOPWpXVb1M61gx_MoNp1hb8BDPP-FulSdaH71LDB4U1AD_Z-SDbZOuaXFn5xxdMa0YYgKSSIipDQ5BLiMdxlns8uLW42DBNNvdsPDaikgL9zBVqCo0ts708YYLDhHA3baWyfYniJlhcRry-7oFK4mSkS_EWYmDbKhlXsY4AwAyvmmC8f545H9SsQVhb-jvjha8gpZqi9IZqTu_5nHmGqcMbFiEnw16KE27ey8fn2G6S9SZq3Rb3XfABNMZRFxOZDFsmK7c0mQIeFdlq0hRyNti_uWboMEJcXlECKerMv0PRSKsqwr7CiHUEub0zg7JVsFHk8Hse0aguiwKtqOohauUVDrZr-vuww4hcKwZ9c_kVfVpE-d1c0cZLpHkvE4cNZZg9T0mkwLPvOsayXQ5ZY8F3SB4xitVsYe29Iw47ZIKsV1Jyg43rulwuFAwhmqTCO9c8D2v8AaXVtlQyh1zE29iNlKVG5sjTjDjpJehfbqtcqUcliud-oiQTfQVnrEFXE1dlwXrkxGqnarpW3jmSEt5tfeWL_x42G_Qd9QUluazSBeyB1HyoKVYGEsszcfiMSrPd_OS0LcoRQZom5MXYuR3FnYmmeZp5eQYj6ESegk356d6g",
+   "console: %c%d font-size:0;color:transparent NaN",
+   "console: %c%d font-size:0;color:transparent NaN",
+   "console: %c%o font-size:0;color:transparent {}",
+   "console: %c%o font-size:0;color:transparent {}",
+   "console: Connecting to 'data:,' violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.com https://*.alg13.",
+   "console: Connecting to 'data:,' violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.com https://*.alg13.",
+   "console: Connecting to 'data:,' violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.com https://*.alg13.",
+   "console: Fetch API cannot load data:,. Refused to connect because it violates the document's Content Security Policy."
+  ]
+ },
+ "admin-login@768": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 768,
+   "ventana": 768
+  },
+  "errores": [
+   "http 401: /cdn-cgi/challenge-platform/h/b/pat/a56854f52931ccde/1794012501497/d2f15ed51a068c9acf19b50510329615b8bffed6235af88d6df61ec1e7b251db/CizQ-0UKhjghDDuMeQ2LbB93YngAJ9MshPjDlSuzKhRSpbJDhZ0wVZ7FcaaPIQh_zyOEQhWFslpx2Vy_5pxsD2FUyMTSslx0IZcLkGDf2VBk5V85uN2CIxgtIJIb_fGwTwmG_iuuuuuIBE5bmdI20NQsievTNwIJ_LzLuEV75y7xH1Q_2TsN1eFE1bMIGMoGqG64xPsLqGZrRR9ihRMvs1yCNECGe6MZPJxHNl_gLQ8983dD9YpuyoLXy7o3csUQcLt1vzfcDWsbV19JnMKkfkTKNMoGv51awARgVVZc_m7zyFsQSs1CiaaVoC6oEiPfysYa9-bZqY_pgOkf5HL5Vl0NBqfcbyHAHSIa-2NarRu7P8wxXkfmUxbUFFecoOVXhhJcNeuMtEC7wAESwXOFLF_BbeC1xEJfZNE3aTVsXj7RcnSboCCuN3lHLHFDkvurczu4P_k9h21bE6krfVnYnCjTk66mAXB86lYhFMwc1A6nGB4yqJoFE0d7xddsyxnW3f513u8znkpXiPftHe_6-6CRT86QLIHIVqCjXo2uKVhl5Ipm40aX1FGXHfhSXVkGn82vsDYNmvu_ZPB-7s5KXLaFvgUhWlv8L047qAfkxp3lRhdldPoSRRTpKE6tj1EgvEWOV2YXcqThpkF-LppUtYAg",
+   "console: Connecting to 'data:,' violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.com https://*.alg13.",
+   "console: Connecting to 'data:,' violates the following Content Security Policy directive: \"connect-src 'self' https://hagen.challenges.cloudflare.com https://brunhild.challenges.cloudflare.com https://*.alg13.",
+   "console: Fetch API cannot load data:,. Refused to connect because it violates the document's Content Security Policy.",
+   "console: %c%d font-size:0;color:transparent NaN",
+   "console: %c%d font-size:0;color:transparent NaN",
+   "console: %c%o font-size:0;color:transparent {}",
+   "console: %c%o font-size:0;color:transparent {}"
+  ]
+ },
+ "home-ec@375": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 375,
+   "ventana": 375
+  },
+  "errores": []
+ },
+ "home-ec@768": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 768,
+   "ventana": 768
+  },
+  "errores": []
+ },
+ "catalogo-ec@375": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 375,
+   "ventana": 375
+  },
+  "errores": []
+ },
+ "catalogo-ec@768": {
+  "violaciones": [],
+  "desborde": {
+   "scroll": 768,
+   "ventana": 768
+  },
+  "errores": []
+ },
+ "cabeceras": {
+  "faltan": [
+   "HSTS includeSubDomains",
+   "Server sin versión"
+  ],
+  "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' blob: https:; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com https://checkout.wompi.co; form-action 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'",
+  "hsts": "max-age=31536000",
+  "server": "nginx/1.24.0 (Ubuntu)"
+ },
+ "meta-description-faltante": [
+  "/co: sin meta description",
+  "/ec: sin meta description",
+  "/co/catalogo: sin meta description",
+  "/ec/catalogo: sin meta description"
+ ],
+ "regla7": {
+  "paginasRevisadas": 44,
+  "hallazgos": [],
+  "imagenes": []
+ },
+ "placeholders": [
+  "/co/pagina/tratamiento-de-datos: [IZAOPERFUMERIAS.A.S] [901855564] [Centro de Medellin, Medellin] [izaoperfumeria21@gmail.com] [+57314665558] [1-11-2026]",
+  "/ec/pagina/tratamiento-de-datos: [IZAOPERFUMERIAS.A.S] [901855564] [Centro de Medellin, Medellin] [izaoperfumeria21@gmail.com] [+57314665558] [1-11-2026]",
+  "/co/garantias: [5] [30]",
+  "/ec/garantias: [5] [30]"
+ ],
+ "humo-posts": []
+}

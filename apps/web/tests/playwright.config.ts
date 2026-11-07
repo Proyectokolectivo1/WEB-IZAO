@@ -28,6 +28,7 @@ const navegadorMovil = process.env.E2E_WEBKIT === '1' ? 'webkit' : 'chromium';
 export default defineConfig({
   testDir: __dirname,
   testMatch: ['**/*.spec.ts'],
+  testIgnore: ['produccion/**'], // F9 contra producción: config aparte (playwright.produccion.config.ts)
   globalSetup: require.resolve('./support/preparar-datos-ejemplo'),
   outputDir: path.join(DIR_RESULTADOS, 'artefactos'),
   fullyParallel: true,
