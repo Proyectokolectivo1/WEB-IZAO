@@ -49,11 +49,15 @@ describe('fuente PostgREST del polling', () => {
       cuerpo: [
         { order_id: 'o1', external_order_id: 'IZ-CO-000001', provider_order_id: 1001, provider_status_id: 2, has_novelty: false, tracking_code: null, last_synced_at: '2026-10-19T15:00:00Z', orders: { status: 'enviado_transportadora' } },
         { order_id: 'o2', external_order_id: 'IZ-CO-000002', provider_order_id: null },
+        { order_id: 'o3', external_order_id: 'IZ-CO-000003', provider_order_id: 1003, provider_status_id: 3, has_novelty: false, tracking_code: '75070783091', last_synced_at: null, label_url: 'https://cdn.bemaster.com/x.pdf', label_local_path: null },
+        { order_id: 'o4', external_order_id: 'IZ-CO-000004', provider_order_id: 1004, provider_status_id: 3, has_novelty: false, tracking_code: '1', last_synced_at: null, label_url: 'https://cdn.bemaster.com/y.pdf', label_local_path: 'labels/IZ-CO-000004.pdf' },
       ],
     }));
     const r = await crearFuentePollingPostgrest({ ...OPC, fetchImpl: f }).enviosAbiertos();
     expect(r).toEqual([
       { order_id: 'o1', external_order_id: 'IZ-CO-000001', provider_order_id: 1001, provider_status_id: 2, has_novelty: false, tracking_code: null, last_synced_at: new Date('2026-10-19T15:00:00Z') },
+      { order_id: 'o3', external_order_id: 'IZ-CO-000003', provider_order_id: 1003, provider_status_id: 3, has_novelty: false, tracking_code: '75070783091', last_synced_at: null, etiqueta_pendiente: true },
+      { order_id: 'o4', external_order_id: 'IZ-CO-000004', provider_order_id: 1004, provider_status_id: 3, has_novelty: false, tracking_code: '1', last_synced_at: null },
     ]);
     const url = llamadas[0]!.url;
     expect(url).toContain('provider_order_id=not.is.null');

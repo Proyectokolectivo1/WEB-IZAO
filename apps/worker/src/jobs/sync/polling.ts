@@ -26,6 +26,8 @@ export interface EnvioAbierto {
   has_novelty: boolean;
   tracking_code: string | null;
   last_synced_at: Date | null;
+  /** Hay `label_url` pero no copia local (p. ej. el CDN bloquea al VPS, D-051): se sincroniza aunque nada cambie. */
+  etiqueta_pendiente?: boolean;
 }
 
 export interface FuentePolling {
@@ -113,7 +115,9 @@ export async function pollingMasterShop(deps: DepsPolling): Promise<ResultadoPol
       r.estado_desconocido++;
       continue;
     }
-    if (difiere(e, remoto)) await encolar(e);
+    // D-051: la etiqueta pendiente se reintenta en cada vuelta (crea el `print_job` para el agente y, cuando el CDN
+    // libere la IP, guarda la copia local). `jobIdPolling` evita duplicados.
+    if (difiere(e, remoto) || e.etiqueta_pendiente === true) await encolar(e);
   }
   return r;
 }

@@ -68,6 +68,13 @@ describe('polling de respaldo de MasterShop (jobs/sync)', () => {
     });
   });
 
+  it('D-051: una etiqueta sin copia local se sincroniza aunque el estado no cambie', async () => {
+    const { deps, encolados, locales } = escenario({ pedidos: 10 });
+    locales[2]!.etiqueta_pendiente = true;
+    expect((await pollingMasterShop(deps)).encolados).toBe(1);
+    expect([...encolados.keys()]).toEqual([jobIdPolling(locales[2]!.provider_order_id)]);
+  });
+
   it('idempotente: dos corridas con el mismo cambio dejan un solo job pendiente', async () => {
     const { mock, deps, encolados, locales } = escenario({ pedidos: 10 });
     mock.setStatus(locales[3]!.provider_order_id, 2);

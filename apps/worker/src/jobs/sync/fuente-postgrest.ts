@@ -22,6 +22,9 @@ export function aEnvioAbierto(r: Fila): EnvioAbierto | null {
     has_novelty: r.has_novelty === true,
     tracking_code: typeof r.tracking_code === 'string' ? r.tracking_code : null,
     last_synced_at: typeof r.last_synced_at === 'string' ? new Date(r.last_synced_at) : null,
+    ...(typeof r.label_url === 'string' && r.label_url !== '' && !(typeof r.label_local_path === 'string' && r.label_local_path !== '')
+      ? { etiqueta_pendiente: true }
+      : {}),
   };
 }
 
@@ -136,7 +139,7 @@ export function crearFuentePollingPostgrest(o: OpcionesPostgrest): FuentePolling
       const rows = await c.filas(
         'shipments',
         'shipments?provider=eq.mastershop&provider_order_id=not.is.null' +
-          '&select=order_id,external_order_id,provider_order_id,provider_status_id,has_novelty,tracking_code,last_synced_at,orders!inner(status)' +
+          '&select=order_id,external_order_id,provider_order_id,provider_status_id,has_novelty,tracking_code,last_synced_at,label_url,label_local_path,orders!inner(status)' +
           `&orders.status=not.in.(${terminales})&limit=5000`,
       );
       return rows.flatMap((r) => {
