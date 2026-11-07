@@ -1,14 +1,11 @@
 # Bitácora izao-db
 ## Hecho
 - Oleadas 0-1 (f63d558). T2.7 8da6bc2, 343bfbe. T2.8 8f33a8c. Colección 08d0a46. Admin catálogo 373d18d. T2.9 490cf03.
-- Checkout 34cfe1f, 0d237eb, cd24577; espacios 20261020220958; pgTAP 23–29 (COD, plantillas, resend, etiqueta, D-027,
-  credencial única, daily_sales_stats). 30 tops (47/47). 31 RPC atómicas del panel (52/52). 32 cancelar/anonimizar (34/34).
-  33 `chat_registrar_uso` (9/9). Advisors siempre solo INFO.
-- 20261102050729 `chat_registrar_turno` (pgTAP 34 14/14, `registrarTurnoChatDb`). pgTAP 01–12 remoto 150/150.
-  Catálogo (520 prod., 800 filas): p95 de 50 corridas ≤ 5,2 ms por RPC, sin seq scan; sin índices nuevos. Advisors: solo INFO.
-- pgTAP remoto 13–33 en verde (477/477; D-041). Concurrencia del checkout remota (ab23cd3, `tests/concurrencia/checkout-remoto.mjs`): N=20 × 3 rondas en verde; sin migración.
-- Aditivas autorizadas: 20261105060857 `site_settings.media_settings` (pgTAP 35 7/7, 11 9/9); 20261106050343
-  `banners.focal_x/focal_y` D-047 (c134c53; pgTAP 36 12/12). Advisors sin cambios.
+- Checkout 34cfe1f, 0d237eb, cd24577; pgTAP 01–36 remoto en verde (D-041); concurrencia remota ab23cd3. Advisors solo INFO.
+- Aditivas: 20261102050729 chat_registrar_turno; 20261105060857 media_settings; 20261106050343 banners focal (c134c53).
+- Índices calientes: 20261107150000 (SIN aplicar; pgTAP 37 pendiente): orders (created_at desc), (status, created_at
+  desc), (status) where reserved, (contact_email) parcial; catalog_listing (country_code, slug) where is_visible. Lint checkout-remoto.mjs:30.
+
 ## Contratos vigentes (detalle en el commit de cada migración)
 - `crear_pedido_checkout(p jsonb)` → `{ok, estado:'creado'|'existente'|'rechazado', order|motivo}` (motivos en 20261020213954).
 - `pages.kind` (general, quienes_somos, envios, tratamiento_datos, terminos, devoluciones); única publicada por (país, kind) → 23505.
@@ -33,8 +30,10 @@
 - `site_settings.media_settings` jsonb not null default '{}' (check objeto); rangos los valida el panel. Sin link_type/link_product_id en banners (decidido).
 - `banners.focal_x`, `focal_y` smallint not null default 50, check 0–100 (`banners_focal_{x,y}_rango` → 23514). Flag de tienda: el líder.
 ## Pendiente
+0. Líder (con autorización): aplicar 20261107150000 + pgTAP 37 + advisors. Hinchazón: índices de orders/order_items/shipments
+   ~95 MB con 4 filas (cargas de 100k revertidas) → `reindex table concurrently` de las tres (fuera de transacción).
 1. izao-tienda: `registrarTurnoChatDb`. 2. Dueño: política de datos CO/EC. 4. Worker: vaciar `media_file_deletions`; admin: etiquetas `stock_devuelto`/`stock_retenido`.
-## Siguiente paso exacto: ninguno propio; esperar tarea del líder (Pendiente 1, 2 y 4 son de otros).
+## Siguiente paso exacto: tras aplicar 20261107150000, correr pgTAP 37 remoto y advisors (Pendiente 0).
 ## Notas
 - pgTAP por el MCP: `python -I tests/remoto/tap2mcp.py <archivos>` → execute_sql; `RESUMEN %` deshace todo. Base con catálogo real.
 - Versión: la de `list_migrations`. Tipos: JSON de `generate_typescript_types` (tool-results) → `types` a `src/types.ts` con python.

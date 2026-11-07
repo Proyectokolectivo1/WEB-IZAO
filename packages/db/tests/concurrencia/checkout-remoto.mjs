@@ -27,7 +27,7 @@ function entorno() {
   for (const nombre of ['.env.local', '.env']) {
     const archivo = resolve(AQUI, '../../../../apps/web', nombre);
     if ((env.SUPABASE_URL && env.SUPABASE_SECRET_KEY) || !existsSync(archivo)) continue;
-    for (const linea of readFileSync(archivo, 'utf8').replace(/^﻿/, '').split(/\r?\n/)) {
+    for (const linea of readFileSync(archivo, 'utf8').replace(/^\uFEFF/, '').split(/\r?\n/)) {
       const m = linea.match(/^\s*(?:export\s+)?(SUPABASE_URL|SUPABASE_SECRET_KEY)\s*=\s*(.*?)\s*$/);
       const valor = m?.[2].replace(/^(['"])(.*)\1$/, '$2');
       if (m && valor && !env[m[1]]) env[m[1]] = valor;
