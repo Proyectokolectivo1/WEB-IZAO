@@ -10,7 +10,7 @@
 - Etiqueta 403: CDN sin `User-Agent` → arreglado en `almacen-etiquetas.ts` (D-044).
 - `ef2ae16` Vinculación por SKU (D-050): `products.ts` (emparejar, `sqlVinculacion`), cliente `listAllProducts`/`getProduct`, *mock* de productos, CLI de vista previa `jobs/sync/vinculacion-productos.cli.ts` (solo lectura). Real: 2 productos MS vs 1030 variantes del *seed* → 0 emparejan.
 
-- D-051: respaldo de etiqueta por el agente cuando el CDN bloquea la IP del VPS (403): `print_job` igual, `label_url` en `claim` (contrato 1.1), `urlEtiquetaSegura` anti-SSRF.
+- `46e1fd9`+`a4968ab` D-051: respaldo de etiqueta por el agente cuando el CDN bloquea la IP del VPS (403): `print_job` igual, `label_url` en `claim` (contrato 1.1), `urlEtiquetaSegura` anti-SSRF; polling encola sync si hay `label_url` sin copia local.
 
 ## Para izao-infra
 - Redesplegar el worker: el contenedor actual **no** tiene D-043 ni el arreglo del 403 (D-044); revisar también D-042.
