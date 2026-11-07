@@ -9,6 +9,7 @@ import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
 import { depurarHtml } from '../html-seguro';
 import { usarSupabase } from '../checkout-datos';
 import type { CodigoPais } from '../types';
+import { resolverMarcadoresGarantia } from './marcadores';
 import { TG } from './textos';
 
 export interface AjustesGarantiaPublicos {
@@ -45,12 +46,14 @@ const leer = (pais: CodigoPais) =>
       if (error) throw new Error(`warranty_settings: ${error.message}`);
       if (!data) return { ...EJEMPLO, motivos: [TG.motivoGenerico], instruccionesHtml: '', condicionesHtml: '' };
       const f = data as { period_days: number; response_days: number; reasons: string[] | null; instructions_html: string; conditions_html: string };
+      // Los textos del seed traen `[30]`/`[5]` como marcadores: se reemplazan por lo configurado y no llegan corchetes.
+      const marcadores = { diasPlazo: f.period_days, diasRespuesta: f.response_days, rutaFormulario: `/${pais}/garantias` };
       return {
         diasPlazo: f.period_days,
         diasRespuesta: f.response_days,
         motivos: motivosOGenerico(f.reasons),
-        instruccionesHtml: depurarHtml(f.instructions_html ?? ''),
-        condicionesHtml: depurarHtml(f.conditions_html ?? ''),
+        instruccionesHtml: resolverMarcadoresGarantia(depurarHtml(f.instructions_html ?? ''), marcadores),
+        condicionesHtml: resolverMarcadoresGarantia(depurarHtml(f.conditions_html ?? ''), marcadores),
       };
     },
     ['garantias-ajustes', pais],

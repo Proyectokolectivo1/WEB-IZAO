@@ -134,6 +134,8 @@ export interface AjustesTienda {
   nombreTienda: string;
   logo: MediaRef | null;
   ogImagen: MediaRef | null;
+  /** `site_settings.favicon_media_id`; sin él la tienda usa el icono neutro por defecto. */
+  favicon: MediaRef | null;
   redes: Record<string, string>;
   /** `country_settings` público del país. */
   rotacionAnunciosSegundos: number;

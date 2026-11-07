@@ -13,48 +13,49 @@
  * Implementado por izao-pagos (commit 3a7e66b). Si el servidor no responde, el bolso muestra el subtotal local (`calcularPrecios`).
  *   - Aditivo: `payment_method?` en la entrada y `totals` en la salida (checkout); `code.status = 'withdrawn'` con Addi/Sistecrédito.
  */
-import { z } from 'zod';
+// Validador propio y mínimo (no `zod`): estos esquemas viajan en el JS del bolso y del checkout (ver `lib/store/esquema-ligero.ts`).
+import { anulable, booleano, enteroNoNegativo, enumerado, lista, objeto, opcional, texto, type Inferir } from '../esquema-ligero';
 
-const monto = z.string().regex(/^\d{1,15}$/);
+const monto = texto(/^\d{1,15}$/);
 
-export const RespuestaVistaPrevia = z.object({
-  lines: z.array(
-    z.object({
-      variant_id: z.string(),
-      quantity: z.number().int().min(0),
+export const RespuestaVistaPrevia = objeto({
+  lines: lista(
+    objeto({
+      variant_id: texto(),
+      quantity: enteroNoNegativo(),
       unit_price: monto,
-      compare_at: monto.nullable(),
-      max_quantity: z.number().int().min(0),
+      compare_at: anulable(monto),
+      max_quantity: enteroNoNegativo(),
       line_discount: monto,
     }),
   ),
   subtotal: monto,
   discount: monto,
-  code: z
-    .object({
+  code: anulable(
+    objeto({
       // `withdrawn`: solo si se pide con Addi o Sistecrédito (el código no aplica con financiación).
-      status: z.enum(['applied', 'rejected', 'withdrawn']),
-      code: z.string(),
-      reason: z.string().nullable(),
-      missing_amount: monto.nullable(),
-    })
-    .nullable(),
+      status: enumerado(['applied', 'rejected', 'withdrawn']),
+      code: texto(),
+      reason: anulable(texto()),
+      missing_amount: anulable(monto),
+    }),
+  ),
   // Aditivo (izao-pagos): con `payment_method` en la entrada, recargo, abono y recaudo del método.
-  totals: z
-    .object({
-      payment_method: z.string().nullable(),
-      payment_method_available: z.boolean(),
+  totals: opcional(
+    objeto({
+      payment_method: anulable(texto()),
+      payment_method_available: booleano(),
       surcharge: monto,
       total_customer: monto,
       cod_deposit: monto,
       cod_collect: monto,
-      available_methods: z.array(z.object({ method: z.string(), available: z.boolean(), reason: z.string().nullable() })),
-      manual_allowed: z.boolean(),
-    })
-    .optional(),
+      available_methods: lista(objeto({ method: texto(), available: booleano(), reason: anulable(texto()) })),
+      manual_allowed: booleano(),
+    }),
+  ),
 });
 export const RUTA_VISTA_PREVIA = '/api/checkout/preview';
-export type RespuestaVistaPrevia = z.infer<typeof RespuestaVistaPrevia>;
+export type RespuestaVistaPrevia = Inferir<typeof RespuestaVistaPrevia>;
 
 /** Mensajes del código de descuento, con la voz de §8.6. Los códigos vienen de `DiscountRejectionCode`. */
 export function mensajeCodigo(reason: string | null): string {

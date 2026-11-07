@@ -66,16 +66,25 @@ function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; conten
       if (contenido.categorias.length === 0) return null;
       return (
         <section className={`${CONTENEDOR} pt-20`}>
-          <Encabezado n={n} titulo={titulo} />
+          <Encabezado n={n} titulo={titulo ?? T.home.categorias} />
           <ul className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
             {contenido.categorias.map((c, k) => (
               <li key={c.id}>
                 <Revelar indice={k}>
                   <Link href={`/${pais}/categoria/${c.slug}`} className="group block">
-                    <div className="overflow-hidden rounded-card">
-                      <IzaoImage media={c.image} alt="" sizes="(min-width:1536px) 15vw, (min-width:1024px) 22vw, 45vw" redondeo="none" className="transition-transform duration-500 ease-izao group-hover:scale-[1.03]" />
-                    </div>
-                    <span className="mt-3 block font-display text-2xl underline-offset-8 group-hover:underline">{c.name}</span>
+                    {c.image ? (
+                      <>
+                        <div className="overflow-hidden rounded-card">
+                          <IzaoImage media={c.image} alt="" sizes="(min-width:1536px) 15vw, (min-width:1024px) 22vw, 45vw" redondeo="none" className="transition-transform duration-500 ease-izao group-hover:scale-[1.03]" />
+                        </div>
+                        <span className="mt-3 block font-display text-2xl underline-offset-8 group-hover:underline">{c.name}</span>
+                      </>
+                    ) : (
+                      // Sin foto de categoría no se pinta una caja vacía: el nombre es la tarjeta.
+                      <span className="flex aspect-[4/3] items-end rounded-card bg-surface p-5 font-display text-2xl underline-offset-8 transition-colors group-hover:bg-accent/40 group-hover:underline">
+                        {c.name}
+                      </span>
+                    )}
                   </Link>
                 </Revelar>
               </li>

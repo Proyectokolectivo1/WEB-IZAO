@@ -220,6 +220,7 @@ export const T = {
     seccion: (n: number) => String(n).padStart(2, '0'),
     verTodos: 'Ver todos',
     queAromaQuieresHoy: '¿Qué aroma quieres hoy?',
+    categorias: 'Elige tu categoría',
     resenas: 'Lo que dicen quienes ya los usan',
     colecciones: 'Colecciones',
     anterior: 'Anterior',

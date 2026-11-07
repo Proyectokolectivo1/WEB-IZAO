@@ -81,7 +81,7 @@ const leerAjustes = conCache('ajustes', 300, contenido, async (p): Promise<Ajust
   const [s, c] = await Promise.all([
     db()
       .from('site_settings')
-      .select(`store_name,social_links,legal_info,logo:media!logo_media_id(${MEDIA}),og:media!og_image_media_id(${MEDIA})`)
+      .select(`store_name,social_links,legal_info,logo:media!logo_media_id(${MEDIA}),og:media!og_image_media_id(${MEDIA}),favicon:media!favicon_media_id(${MEDIA})`)
       .maybeSingle(),
     db()
       .from('countries')
@@ -96,6 +96,7 @@ const leerAjustes = conCache('ajustes', 300, contenido, async (p): Promise<Ajust
     nombreTienda: texto(site?.store_name) ?? '',
     logo: media(site?.logo),
     ogImagen: media(site?.og),
+    favicon: media(site?.favicon),
     redes: (site?.social_links as Record<string, string>) ?? {},
     rotacionAnunciosSegundos: Number(cs?.announcement_rotation_seconds ?? 4),
     whatsappAsesor: texto(cs?.advisor_whatsapp),

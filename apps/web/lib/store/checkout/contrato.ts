@@ -14,30 +14,31 @@
  * El servidor todavía no devuelve un enlace de pasarela (el cobro es la siguiente tarea de izao-pagos): tras crear el
  * pedido se va siempre a `/{pais}/pedido/{public_token}`, que muestra el pago pendiente cuando exista su enlace.
  */
-import { z } from 'zod';
+// Validador propio y mínimo (no `zod`): estos esquemas viajan en el JS del checkout (ver `lib/store/esquema-ligero.ts`).
+import { enteroNoNegativo, enumerado, lista, nuloOIndefinido, objeto, opcional, booleano, texto, type Inferir } from '../esquema-ligero';
 
 export const RUTA_CHECKOUT = '/api/checkout';
 
 export const SIGUIENTES_PASOS = ['pay_wompi', 'pay_addi', 'pay_sistecredito', 'pay_cod_deposit', 'manual_whatsapp'] as const;
 
-export const RespuestaPedidoCreado = z.object({
-  order: z.object({ number: z.string().regex(/^[A-Za-z0-9-]+$/) }),
-  public_token: z.string().regex(/^[A-Za-z0-9]{8,64}$/),
-  next_step: z.enum(SIGUIENTES_PASOS),
-  repeated: z.boolean().optional(),
+export const RespuestaPedidoCreado = objeto({
+  order: objeto({ number: texto(/^[A-Za-z0-9-]+$/) }),
+  public_token: texto(/^[A-Za-z0-9]{8,64}$/),
+  next_step: enumerado(SIGUIENTES_PASOS),
+  repeated: opcional(booleano()),
 });
-export type RespuestaPedidoCreado = z.infer<typeof RespuestaPedidoCreado>;
+export type RespuestaPedidoCreado = Inferir<typeof RespuestaPedidoCreado>;
 
-export const ErrorCheckout = z.object({
-  error: z.string(),
-  issues: z.array(z.object({ path: z.string(), message: z.string() })).optional(),
-  lines: z.array(z.object({ variant_id: z.string(), max_quantity: z.number().int().min(0) })).optional(),
-  reason: z.string().nullish(),
-  missing_amount: z.string().nullish(),
+export const ErrorCheckout = objeto({
+  error: texto(),
+  issues: opcional(lista(objeto({ path: texto(), message: texto() }))),
+  lines: opcional(lista(objeto({ variant_id: texto(), max_quantity: enteroNoNegativo() }))),
+  reason: nuloOIndefinido(texto()),
+  missing_amount: nuloOIndefinido(texto()),
   /** `DATA_POLICY_OUTDATED`: versión vigente de la política de datos (`pages.version` en texto). */
-  current_version: z.string().nullish(),
+  current_version: nuloOIndefinido(texto()),
 });
-export type ErrorCheckout = z.infer<typeof ErrorCheckout>;
+export type ErrorCheckout = Inferir<typeof ErrorCheckout>;
 
 /** Cuerpo que se envía; la forma real la valida el servidor con `checkoutInputSchemaFor`. */
 export interface CuerpoCheckout {

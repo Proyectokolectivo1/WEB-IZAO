@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { LineaCarrito } from '../carrito/logica';
-import { armarCuerpo, combinarPolitica, erroresDelServidor, formatearPct, resumenCheckout, resumenConServidor, validarFormulario } from './logica';
+import { combinarPolitica, erroresDelServidor, formatearPct, resumenCheckout, resumenConServidor } from './logica';
+import { armarCuerpo, validarFormulario } from './validacion';
 import { FORMULARIO_VACIO } from './logica';
 import { ErrorCheckout } from './contrato';
 import type { ConfigCheckout, ValoresFormulario } from './tipos';

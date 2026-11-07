@@ -17,26 +17,32 @@ export function PaginaCarrito() {
   const vista = useVistaPrevia();
   const precio = (v: bigint | string) => formatearPrecio(v, pais);
 
+  const vacio = (
+    <>
+      <Icono nombre="bolso" tamano={32} />
+      <p className="max-w-xl font-display text-3xl leading-snug md:text-4xl">{T.carrito.vacio}</p>
+      <Link href={`/${pais}/catalogo`} className={clasesBoton({ variante: 'secundario' })}>
+        {T.carrito.verAromas}
+      </Link>
+    </>
+  );
+
   if (!listo) {
+    // Antes de hidratar no se sabe qué hay en el bolso. Un script en línea (`ScriptBolsoVacio`) marca el documento si el
+    // `localStorage` está vacío y entonces se ve el mismo estado vacío que pintará React: así el elemento más grande de la
+    // página (LCP) sale con el primer pintado y no al terminar de hidratar.
     return (
-      <div className="min-h-[60vh]" aria-busy="true">
-        <p className="solo-lectores" role="status">
+      <div className="min-h-[50vh]" aria-busy="true">
+        <p className="solo-lectores bolso-cargando" role="status">
           {TC.carrito.cargando}
         </p>
+        <div className="bolso-previo flex-col items-start gap-6 py-10">{vacio}</div>
       </div>
     );
   }
 
   if (lineas.length === 0) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-start gap-6 py-10">
-        <Icono nombre="bolso" tamano={32} />
-        <p className="max-w-xl font-display text-3xl leading-snug md:text-4xl">{T.carrito.vacio}</p>
-        <Link href={`/${pais}/catalogo`} className={clasesBoton({ variante: 'secundario' })}>
-          {T.carrito.verAromas}
-        </Link>
-      </div>
-    );
+    return <div className="flex min-h-[50vh] flex-col items-start gap-6 py-10">{vacio}</div>;
   }
 
   const total = vista.subtotal - vista.descuento;

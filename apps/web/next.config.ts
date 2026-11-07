@@ -9,6 +9,10 @@ const config: NextConfig = {
   // Raíz del monorepo para que el trazado de archivos incluya los paquetes del workspace.
   outputFileTracingRoot: path.join(__dirname, '../../'),
   poweredByHeader: false,
+  // Metadatos (title, meta description, favicon) siempre dentro de <head> y no en streaming dentro de <body>: Lighthouse y
+  // los lectores de vista previa que no ejecutan JS solo miran <head> (F9 D-4: «sin meta description»). Costo: ninguno,
+  // las páginas son ISR y sus metadatos salen de caché.
+  htmlLimitedBots: /.*/,
   // Paquetes del workspace que se publican como TypeScript.
   transpilePackages: ['@izao/ui', '@izao/core', '@izao/wompi', '@izao/whatsapp', '@izao/addi'],
   // El lint corre aparte con `pnpm lint`.

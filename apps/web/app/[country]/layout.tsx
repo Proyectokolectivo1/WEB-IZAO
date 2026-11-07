@@ -10,6 +10,7 @@ import { chatHabilitado } from '@/lib/store/chat/fuente-supabase';
 import { tienda } from '@/lib/store/datos';
 import { esPais } from '@/lib/store/pais';
 import { alternos } from '@/lib/store/seo';
+import { textosSeo } from '@/lib/store/seo-textos';
 import { textosEnvio } from '@/lib/store/envio';
 import { temaDePais } from '@/lib/store/tema';
 
@@ -19,9 +20,12 @@ export const revalidate = 300;
 export async function generateMetadata({ params }: { params: Promise<{ country: string }> }): Promise<Metadata> {
   const { country } = await params;
   if (!esPais(country)) return {};
-  const ajustes = await tienda().ajustes(country);
+  const repo = tienda();
+  const [ajustes, espacios] = await Promise.all([repo.ajustes(country), repo.espacios(country).catch(() => [])]);
   return {
     title: { default: ajustes.nombreTienda, template: `%s · ${ajustes.nombreTienda}` },
+    // Respaldo para toda página del país que no traiga su propia descripción (bolso, buscador, categorías…).
+    description: textosSeo(country, espacios).inicioDescripcion,
     alternates: alternos(country, '/'),
     openGraph: { siteName: ajustes.nombreTienda, locale: country === 'co' ? 'es_CO' : 'es_EC', type: 'website' },
   };

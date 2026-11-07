@@ -13,13 +13,11 @@ import type { ErrorCheckout } from '@/lib/store/checkout/contrato';
 import {
   FORMULARIO_VACIO,
   ORDEN_CAMPOS,
-  armarCuerpo,
   combinarPolitica,
   erroresDelServidor,
   metodoPorDefecto,
   resumenCheckout,
   resumenConServidor,
-  validarFormulario,
 } from '@/lib/store/checkout/logica';
 import type {
   CampoFormulario,
@@ -35,6 +33,12 @@ import { useVistaPrevia } from '../carrito/useVistaPrevia';
 import { Campo, CLASE_CONTROL, NumeroPaso, propsControl } from './Campo';
 import { MetodosPago } from './MetodosPago';
 import { ResumenPedido } from './ResumenPedido';
+
+/**
+ * La validación usa las reglas de `@izao/core/schemas` (zod): se baja en cuanto la persona toca el formulario
+ * (o al enviar, si aún no estaba), no con el JS inicial de la página.
+ */
+const cargarValidacion = () => import('@/lib/store/checkout/validacion');
 
 const CAMPOS_BORRADOR: readonly CampoFormulario[] = [
   'nombre',
@@ -253,6 +257,7 @@ export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
     if (enviando || terminado) return;
     setIntentado(true);
     setErrorGeneral(null);
+    const { validarFormulario, armarCuerpo } = await cargarValidacion();
     const errs = validarFormulario(valores, config);
     if (Object.keys(errs).length > 0) {
       setErrores(errs);
@@ -310,12 +315,25 @@ export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
 
   // ---- Estados vacíos -------------------------------------------------------------------------------------------
 
+  const vacio = (
+    <>
+      <Icono nombre="bolso" tamano={32} />
+      <p className="font-display text-3xl">{TC.checkout.vacioTitulo}</p>
+      <p className="max-w-md text-ink/80">{TC.checkout.vacioTexto}</p>
+      <Link href={`/${pais}/catalogo`} className={clasesBoton({ variante: 'secundario' })}>
+        {T.carrito.verAromas}
+      </Link>
+    </>
+  );
+
   if (!listo) {
+    // Ver `PaginaCarrito`: con el bolso vacío el estado vacío sale en el primer pintado (script en línea + CSS), sin esperar a hidratar.
     return (
-      <div className="min-h-[60vh]" aria-busy="true">
-        <p className="solo-lectores" role="status">
+      <div className="min-h-[40vh]" aria-busy="true">
+        <p className="solo-lectores bolso-cargando" role="status">
           {TC.carrito.cargando}
         </p>
+        <div className="bolso-previo flex-col items-start gap-5 py-6">{vacio}</div>
       </div>
     );
   }
@@ -329,16 +347,7 @@ export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
   }
 
   if (lineas.length === 0) {
-    return (
-      <div className="flex min-h-[40vh] flex-col items-start gap-5 py-6">
-        <Icono nombre="bolso" tamano={32} />
-        <p className="font-display text-3xl">{TC.checkout.vacioTitulo}</p>
-        <p className="max-w-md text-ink/80">{TC.checkout.vacioTexto}</p>
-        <Link href={`/${pais}/catalogo`} className={clasesBoton({ variante: 'secundario' })}>
-          {T.carrito.verAromas}
-        </Link>
-      </div>
-    );
+    return <div className="flex min-h-[40vh] flex-col items-start gap-5 py-6">{vacio}</div>;
   }
 
   // ---- Formulario -----------------------------------------------------------------------------------------------
@@ -368,7 +377,7 @@ export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
   const sinMetodoDisponible = !resumen.metodoDisponible;
 
   return (
-    <form onSubmit={enviar} noValidate className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_25rem] lg:gap-16 xl:grid-cols-[minmax(0,1fr)_28rem]">
+    <form onSubmit={enviar} onFocusCapture={() => void cargarValidacion()} noValidate className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_25rem] lg:gap-16 xl:grid-cols-[minmax(0,1fr)_28rem]">
       {/* Resumen: desplegable en móvil, fijo en escritorio. Va primero en el DOM para verlo antes de pagar. */}
       <aside aria-labelledby="titulo-resumen" className="lg:order-2 lg:h-fit lg:sticky lg:top-28">
         <h2 id="titulo-resumen" className="solo-lectores">

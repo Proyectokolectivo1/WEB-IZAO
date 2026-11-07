@@ -6,6 +6,17 @@
 
 /* Rango de precio de doble manija (§7.2): dos <input type=range> superpuestos; solo las manijas reciben el puntero. */
 @layer components {
+  /* Bolso y checkout: con el bolso vacío el estado vacío sale en el primer pintado (ver ScriptBolsoVacio). */
+  .bolso-previo {
+    display: none;
+  }
+  html[data-bolso='vacio'] .bolso-previo {
+    display: flex;
+  }
+  html[data-bolso='vacio'] .bolso-cargando {
+    display: none;
+  }
+
   .rango-doble {
     position: relative;
     height: 2.75rem;

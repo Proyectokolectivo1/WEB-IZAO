@@ -319,6 +319,7 @@ export const repoEjemplo: TiendaRepo = {
       nombreTienda: 'Izao Perfumería',
       logo: null,
       ogImagen: null,
+      favicon: null,
       redes: {},
       rotacionAnunciosSegundos: 4,
       whatsappAsesor: null,

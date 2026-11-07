@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { ScriptBolsoVacio } from '@/components/store/checkout/ScriptBolsoVacio';
 import { PaginaCarrito } from '@/components/store/checkout/PaginaCarrito';
 import { esPais } from '@/lib/store/pais';
 import { TC } from '@/lib/store/textos-checkout';
@@ -21,6 +22,7 @@ export default async function PaginaBolso({ params }: Props) {
       <header className="pb-8">
         <h1 className="text-4xl md:text-5xl">{TC.carrito.titulo}</h1>
       </header>
+      <ScriptBolsoVacio />
       <PaginaCarrito />
     </div>
   );

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { ScriptBolsoVacio } from '@/components/store/checkout/ScriptBolsoVacio';
 import { FormularioCheckout } from '@/components/store/checkout/FormularioCheckout';
 import { configCheckout } from '@/lib/store/checkout-datos';
 import { esPais } from '@/lib/store/pais';
@@ -22,6 +23,7 @@ export default async function PaginaCheckout({ params }: Props) {
       <header className="pb-8">
         <h1 className="text-4xl md:text-5xl">{TC.checkout.titulo}</h1>
       </header>
+      <ScriptBolsoVacio />
       <FormularioCheckout config={config} />
     </div>
   );
