@@ -1,11 +1,12 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import { CarritoProvider } from '@/components/store/carrito/CarritoProvider';
 import { Footer } from '@/components/store/footer/Footer';
 import { LimiteError } from '@/components/store/LimiteError';
 import { Header } from '@/components/store/header/Header';
 import { LanzadorIza } from '@/components/store/iza/LanzadorIza';
+import { NavegacionPendiente } from '@/components/store/skeletons/NavegacionPendiente';
 import { chatHabilitado } from '@/lib/store/chat/fuente-supabase';
 import { tienda } from '@/lib/store/datos';
 import { esPais } from '@/lib/store/pais';
@@ -59,6 +60,10 @@ export default async function LayoutPais({ children, params }: { children: React
         <main id="contenido" tabIndex={-1} className="outline-none">
           <LimiteError pais={pais}>{children}</LimiteError>
         </main>
+        {/* Esqueleto de destino en la navegación suave (cliente); `useSearchParams` exige el límite de Suspense. */}
+        <Suspense fallback={null}>
+          <NavegacionPendiente pais={pais} />
+        </Suspense>
         <Footer pais={pais} ajustes={ajustes} paginas={paginas} espacios={espacios} />
         {iza ? <LanzadorIza pais={pais} /> : null}
       </CarritoProvider>

@@ -12,6 +12,8 @@ export const T = {
   /** Avisos para lectores de pantalla mientras carga una pantalla (los esqueletos son decorativos). */
   cargaPantalla: {
     vistaRapida: 'Abriendo el aroma…',
+    ficha: 'Preparando tu aroma…',
+    listado: 'Buscando los aromas para ti…',
   },
   header: {
     menu: 'Menú',

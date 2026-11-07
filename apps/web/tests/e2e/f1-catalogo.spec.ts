@@ -83,6 +83,15 @@ test.describe('F1 listado infinito (§7.1)', () => {
       await page.mouse.wheel(0, 4_000);
       expect(await page.locator(SEL.tarjeta).count()).toBeGreaterThanOrEqual(LOTE * 3);
     }).toPass({ timeout: 20_000 });
+    // El gesto puede encadenar un lote más: se espera a que la lista se estabilice (sin `aria-busy` y con el mismo
+    // número de tarjetas en dos lecturas seguidas) antes de tomar `antes`; si no, la prueba compite con la carga.
+    await expect(async () => {
+      await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+      const n = await page.locator(SEL.tarjeta).count();
+      await page.waitForTimeout(400);
+      expect(await page.locator('[aria-busy="true"]').count()).toBe(0);
+      expect(await page.locator(SEL.tarjeta).count()).toBe(n);
+    }).toPass({ timeout: 20_000 });
     const antes = await slugsEnPantalla(page);
     // 2. Abrir una tarjeta del tercer lote.
     const objetivo = page.locator(SEL.tarjeta).nth(LOTE * 2 + 3);

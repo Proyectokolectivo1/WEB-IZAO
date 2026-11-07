@@ -38,6 +38,10 @@ interface Props {
 }
 
 const ORDENES_ELEGIBLES: OrdenCatalogo[] = ['featured', 'sales', 'newest', 'price_asc', 'price_desc', 'discount'];
+/** Tiempo que la recarga puede tardar antes de cambiar las tarjetas por esqueletos (si responde antes, no parpadea). */
+const RETRASO_ESQUELETO_MS = 150;
+/** Esqueletos que sustituyen al listado al recargar: caben en la primera pantalla y no más que lo que había. */
+const MAX_ESQUELETOS_RECARGA = 10;
 const claveConsulta = (c: ConsultaListado) => aParametros({ q: c.q, filtros: c.filtros, orden: c.orden }).toString();
 
 function nombreDe(lista: { slug: string; name: string }[], slug: string): string {
@@ -125,7 +129,7 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
     const ro = new ResizeObserver(medir);
     ro.observe(primera);
     return () => ro.disconnect();
-  }, [primerId]);
+  }, [primerId, lote.items]);
 
   useEffect(() => {
     vivo.current = true;
@@ -231,6 +235,17 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
 
   const cargando = estado === 'cargandoMas';
   const recargando = estado === 'recargando';
+  // Cambio de filtros u orden: pasado un instante, las tarjetas viejas dan paso a esqueletos de la misma caja.
+  const [conEsqueleto, setConEsqueleto] = useState(false);
+  useEffect(() => {
+    if (!recargando) {
+      setConEsqueleto(false);
+      return;
+    }
+    const t = window.setTimeout(() => setConEsqueleto(true), RETRASO_ESQUELETO_MS);
+    return () => window.clearTimeout(t);
+  }, [recargando]);
+  const sustituir = recargando && conEsqueleto;
   const sinResultados = lote.items.length === 0 && estado === 'listo';
   const hayAnterior = paginaActual > 1;
   const hrefSiguiente = !cambiado && inicial.nextCursor ? hrefListado(base, consulta, fijos, pagina + 1) : null;
@@ -320,18 +335,22 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
           <div
             ref={rejilla}
             aria-busy={recargando || cargando}
-            className={`grid gap-x-3 gap-y-10 transition-opacity duration-200 sm:gap-x-5 ${columnas} ${recargando ? 'opacity-50' : ''}`}
+            className={`grid gap-x-3 gap-y-10 transition-opacity duration-200 sm:gap-x-5 ${columnas} ${recargando && !sustituir ? 'opacity-50' : ''}`}
           >
-            {lote.items.map((item, i) => (
-              <TarjetaProducto
-                key={item.product_id}
-                item={item}
-                pais={pais}
-                prioritaria={i < 4}
-                nivelTitulo="h2"
-                concentracion={item.concentration_slug ? nombreDe(opciones.concentraciones, item.concentration_slug) : null}
-              />
-            ))}
+            {sustituir ? (
+              <GrillaEsqueleto cantidad={Math.min(Math.max(lote.items.length, 4), MAX_ESQUELETOS_RECARGA)} />
+            ) : (
+              lote.items.map((item, i) => (
+                <TarjetaProducto
+                  key={item.product_id}
+                  item={item}
+                  pais={pais}
+                  prioritaria={i < 4}
+                  nivelTitulo="h2"
+                  concentracion={item.concentration_slug ? nombreDe(opciones.concentraciones, item.concentration_slug) : null}
+                />
+              ))
+            )}
             {cargando ? <GrillaEsqueleto cantidad={4} /> : null}
           </div>
 

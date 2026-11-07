@@ -30,6 +30,13 @@ export function llegoPorAtras(): boolean {
   return r;
 }
 
+/** Evento con el que el código que navega con `router.push` avisa a `NavegacionPendiente` (los enlaces se detectan solos). */
+export const EVENTO_NAVEGANDO = 'izao:navegando';
+
+export function avisarNavegacion(href: string): void {
+  window.dispatchEvent(new CustomEvent(EVENTO_NAVEGANDO, { detail: { href } }));
+}
+
 export function abrirIza(contexto?: { producto?: string; busqueda?: string }): void {
   window.dispatchEvent(new CustomEvent('izao:abrir-iza', { detail: contexto ?? {} }));
 }

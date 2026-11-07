@@ -25,6 +25,12 @@ type Props = { params: Promise<{ country: string; slug: string }> };
 // La ficha se genera al pedirla y se renueva cada 5 min (o al guardar en el panel: `catalog:{país}`).
 export const revalidate = 300;
 
+// Sin esto Next trata la ruta como dinámica (`private, no-store`, sin caché de página). Devolver [] la deja como ISR bajo
+// demanda: no prerenderiza nada en la compilación (no depende de la base) y la primera visita de cada ficha se cachea.
+export function generateStaticParams() {
+  return [];
+}
+
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 async function cargar(pais: string, slug: string): Promise<{ pais: CodigoPais; ficha: FichaProducto } | null> {

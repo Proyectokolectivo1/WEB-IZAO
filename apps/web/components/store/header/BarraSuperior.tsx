@@ -34,6 +34,7 @@ export function BarraSuperior({ children }: { children: ReactNode }) {
   return (
     <div
       ref={ref}
+      data-barra-superior=""
       className={`sticky top-0 z-40 bg-bg transition-transform duration-[280ms] ease-izao lg:!translate-y-0 ${
         oculto ? '-translate-y-full' : 'translate-y-0'
       }`}

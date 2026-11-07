@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Icono, IzaoImage } from '@izao/ui';
 import { VIGENCIA, pedirJson } from '@/lib/store/fetcher';
+import { avisarNavegacion } from '@/lib/store/navegacion';
 import { formatearPrecio } from '@/lib/store/pais';
 import { T } from '@/lib/store/textos';
 import type { CodigoPais, Sugerencias } from '@/lib/store/types';
@@ -84,6 +85,7 @@ export function Buscador({ pais, populares }: { pais: CodigoPais; populares: str
     if (!destino) return;
     cerrarTodo();
     entrada.current?.blur();
+    avisarNavegacion(destino);
     router.push(destino);
   }
 

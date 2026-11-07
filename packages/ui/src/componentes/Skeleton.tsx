@@ -11,9 +11,10 @@ export function Skeleton({ className = '' }: { className?: string }) {
 /** Alturas del bloque de texto de la tarjeta; las comparte `TarjetaProducto` en la tienda. */
 export const ALTURA_TEXTO_TARJETA = 'h-[7.25rem]';
 
-export function TarjetaEsqueleto() {
+/** `testId: null` quita el identificador (esqueletos de pantalla completa que no son los del lote). */
+export function TarjetaEsqueleto({ testId = 'esqueleto-tarjeta' }: { testId?: string | null }) {
   return (
-    <div aria-hidden="true" data-testid="esqueleto-tarjeta" className="flex flex-col">
+    <div aria-hidden="true" data-testid={testId ?? undefined} className="flex flex-col">
       <Skeleton className="aspect-[4/5] w-full rounded-card" />
       <div className={`flex flex-col gap-2 pt-3 ${ALTURA_TEXTO_TARJETA}`}>
         <Skeleton className="h-3 w-1/3" />
