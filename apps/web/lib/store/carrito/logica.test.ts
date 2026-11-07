@@ -6,9 +6,9 @@ import {
   leer,
   quitarLinea,
   serializar,
-  vistaPrevia,
   type LineaCarrito,
 } from './logica';
+import { vistaPrevia } from './vista';
 
 const linea = (o: Partial<LineaCarrito> = {}): LineaCarrito => ({
   variantId: 'v1',

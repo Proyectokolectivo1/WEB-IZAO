@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { GrillaEsqueleto } from '@izao/ui';
+import { VIGENCIA, pedirJson } from '@/lib/store/fetcher';
 import { T } from '@/lib/store/textos';
 import type { CodigoPais, ItemCatalogo } from '@/lib/store/types';
 import { TarjetaProducto } from '../catalogo/TarjetaProducto';
@@ -36,12 +37,11 @@ export function Relacionados({ pais, productoId, limite = 4, numero }: Props) {
       if (!activo || lanzado) return;
       lanzado = true;
       setEstado('cargando');
-      fetch(`/api/catalog/related?country=${pais}&id=${productoId}&limit=${limite}`, { signal: control.signal })
-        .then((r) => (r.ok ? (r.json() as Promise<{ items: ItemCatalogo[] }>) : null))
+      pedirJson<{ items: ItemCatalogo[] }>(`/api/catalog/related?country=${pais}&id=${productoId}&limit=${limite}`, { signal: control.signal, ...VIGENCIA.relacionados })
         .then((d) => {
           if (!activo) return;
-          setItems(d?.items ?? []);
-          setEstado(d && d.items.length > 0 ? 'listo' : 'vacio');
+          setItems(d.items);
+          setEstado(d.items.length > 0 ? 'listo' : 'vacio');
         })
         .catch(() => {
           if (activo) setEstado('vacio');

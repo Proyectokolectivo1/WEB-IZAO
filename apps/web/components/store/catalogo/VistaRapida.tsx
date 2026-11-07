@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { IzaoImage, Sheet, Skeleton } from '@izao/ui';
+import { IzaoImage, Sheet } from '@izao/ui';
 import { T } from '@/lib/store/textos';
 import type { CodigoPais } from '@/lib/store/types';
+import { EsqueletoVistaRapida } from '../skeletons/Esqueletos';
 import { PanelCompra } from './PanelCompra';
 import { useFicha } from './useFicha';
 
@@ -23,16 +24,9 @@ export function VistaRapida({ pais, slug, abierto, onCerrar }: Props) {
 
   return (
     <Sheet abierto={abierto} onCerrar={onCerrar} titulo={ficha?.name ?? T.tarjeta.vistaRapida} lado="responsivo" testId="vista-rapida">
-      <div className="grid gap-6 p-5 md:grid-cols-2 md:gap-10 md:p-8">
+      <div aria-busy={estado === 'cargando' || estado === 'inactivo'} className="grid gap-6 p-5 md:grid-cols-2 md:gap-10 md:p-8">
         {estado === 'cargando' || estado === 'inactivo' ? (
-          <>
-            <Skeleton className="aspect-[4/5] w-full" />
-            <div className="flex flex-col gap-3">
-              <Skeleton className="h-8 w-3/4" />
-              <Skeleton className="h-5 w-1/3" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          </>
+          <EsqueletoVistaRapida />
         ) : estado === 'error' || !ficha ? (
           <p className="md:col-span-2">{T.errores.generico}</p>
         ) : (

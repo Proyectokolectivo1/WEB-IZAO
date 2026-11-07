@@ -6,8 +6,9 @@ import type { TarjetaChat } from '@/lib/store/chat/conversar';
 import { leerSSE } from '@/lib/store/chat/sse';
 import { TI } from '@/lib/store/chat/textos';
 import { enlaceWhatsapp } from '@/lib/store/contacto';
+import { VIGENCIA, pedirJson } from '@/lib/store/fetcher';
 import type { CodigoPais } from '@/lib/store/types';
-import { useCarrito } from '../carrito/CarritoProvider';
+import { useCarritoLineas } from '../carrito/CarritoProvider';
 import { CLASE_CONTROL } from '../checkout/Campo';
 import { useTurnstile } from '../useTurnstile';
 import { AvatarIza } from './AvatarIza';
@@ -66,7 +67,7 @@ interface Props {
 
 /** Panel del chat de Iza (§20.1): streaming, tarjetas de producto, sugerencias y «Hablar con un asesor» siempre a la mano. */
 export default function PanelIza({ pais, abierto, onCerrar, producto }: Props) {
-  const { lineas } = useCarrito();
+  const { lineas } = useCarritoLineas();
   const [estado, setEstado] = useState<Estado | null>(null);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [texto, setTexto] = useState('');
@@ -83,8 +84,7 @@ export default function PanelIza({ pais, abierto, onCerrar, producto }: Props) {
   useEffect(() => {
     sesion.current = leerAlmacen('session', claveSesion(pais));
     const ctl = new AbortController();
-    fetch(`/api/chat/estado?country=${pais}`, { signal: ctl.signal })
-      .then((r) => r.json() as Promise<Partial<Estado>>)
+    pedirJson<Partial<Estado>>(`/api/chat/estado?country=${pais}`, { signal: ctl.signal, ...VIGENCIA.estadoChat })
       .then((d) => {
         const e: Estado = {
           estado: d.estado === 'agotado' || d.estado === 'activo' ? d.estado : 'desactivado',

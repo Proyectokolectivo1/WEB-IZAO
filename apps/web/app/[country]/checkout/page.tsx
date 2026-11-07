@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { ScriptBolsoVacio } from '@/components/store/checkout/ScriptBolsoVacio';
 import { FormularioCheckout } from '@/components/store/checkout/FormularioCheckout';
+import { EsqueletoCheckoutLleno } from '@/components/store/skeletons/Esqueletos';
 import { configCheckout } from '@/lib/store/checkout-datos';
 import { esPais } from '@/lib/store/pais';
 import { TC } from '@/lib/store/textos-checkout';
@@ -24,7 +25,7 @@ export default async function PaginaCheckout({ params }: Props) {
         <h1 className="text-4xl md:text-5xl">{TC.checkout.titulo}</h1>
       </header>
       <ScriptBolsoVacio />
-      <FormularioCheckout config={config} />
+      <FormularioCheckout config={config} esqueleto={<EsqueletoCheckoutLleno className="bolso-esqueleto" />} />
     </div>
   );
 }

@@ -13,11 +13,10 @@ import {
   MIN_DESCRIPCION,
   TIPOS_FOTO,
   TIPOS_VIDEO,
-  esquemaGarantia,
   problemaAdjuntos,
   type CampoGarantia,
   type RespuestaGarantia,
-} from '@/lib/store/garantias/logica';
+} from '@/lib/store/garantias/adjuntos';
 import { TG } from '@/lib/store/garantias/textos';
 import type { CodigoPais } from '@/lib/store/types';
 import { useTurnstile } from '../useTurnstile';
@@ -36,6 +35,7 @@ interface Props {
 }
 
 const MB = 1024 * 1024;
+const cargarEsquema = () => import('@/lib/store/garantias/logica');
 const ORDEN: CampoGarantia[] = ['pedido', 'celular', 'motivo', 'descripcion', 'adjuntos'];
 const MIME_FOTO = new Set<string>(TIPOS_FOTO);
 const MIME_VIDEO = new Set<string>(TIPOS_VIDEO);
@@ -80,7 +80,6 @@ export function FormularioGarantia({ pais, motivos, diasPlazo, diasRespuesta, tu
   const banner = useRef<HTMLDivElement>(null);
   const confirmacion = useRef<HTMLHeadingElement>(null);
   const { contenedor: contenedorTs, token, reiniciar } = useTurnstile(turnstileKey);
-  const esquema = useMemo(() => esquemaGarantia(aCodigoCore(pais), motivos), [pais, motivos]);
 
   useEffect(() => {
     if (listo) confirmacion.current?.focus();
@@ -126,7 +125,9 @@ export function FormularioGarantia({ pais, motivos, diasPlazo, diasRespuesta, tu
     setIntentado(true);
     setFalla(null);
     const nuevos: Partial<Record<CampoGarantia, string>> = {};
-    const analisis = esquema.safeParse(valores);
+    // El esquema (zod) se baja al enviar o al primer foco del formulario: la página no paga esos ~26 KB al cargar.
+    const { esquemaGarantia } = await cargarEsquema();
+    const analisis = esquemaGarantia(aCodigoCore(pais), motivos).safeParse(valores);
     if (!analisis.success) {
       for (const i of analisis.error.issues) {
         const c = String(i.path[0]) as CampoGarantia;
@@ -206,7 +207,7 @@ export function FormularioGarantia({ pais, motivos, diasPlazo, diasRespuesta, tu
   const etiquetas: Record<CampoGarantia, string> = TG.campos;
 
   return (
-    <form onSubmit={enviar} noValidate className="flex flex-col gap-12" data-testid="formulario-garantia">
+    <form onSubmit={enviar} onFocusCapture={() => void cargarEsquema()} noValidate className="flex flex-col gap-12" data-testid="formulario-garantia">
       {intentado && lista.length > 0 ? (
         <div ref={resumen} tabIndex={-1} role="alert" className="rounded-card border border-danger p-4 outline-none">
           <p className="font-semibold">{TG.resumenErrores(lista.length)}</p>

@@ -6,11 +6,11 @@ import { IzaoImage, clasesBoton } from '@izao/ui';
 import type { TarjetaChat } from '@/lib/store/chat/conversar';
 import { TI } from '@/lib/store/chat/textos';
 import type { CodigoPais } from '@/lib/store/types';
-import { useCarrito } from '../carrito/CarritoProvider';
+import { useCarritoAcciones } from '../carrito/CarritoProvider';
 
 /** Tarjeta de producto dentro del chat (§20.1): imagen, nombre, presentación, precio, «Comprar» y «Ver detalle». */
 export function TarjetaIza({ tarjeta, pais, onNavegar }: { tarjeta: TarjetaChat; pais: CodigoPais; onNavegar: () => void }) {
-  const { agregar } = useCarrito();
+  const { agregar } = useCarritoAcciones();
   const [agregado, setAgregado] = useState(false);
 
   return (

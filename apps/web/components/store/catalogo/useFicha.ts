@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { VIGENCIA, pedirJson } from '@/lib/store/fetcher';
 import type { CodigoPais, FichaProducto } from '@/lib/store/types';
 
 const memoria = new Map<string, Promise<FichaProducto | null>>();
@@ -10,9 +11,7 @@ export function pedirFicha(pais: CodigoPais, slug: string): Promise<FichaProduct
   const clave = `${pais}/${slug}`;
   let p = memoria.get(clave);
   if (!p) {
-    p = fetch(`/api/catalog/product?country=${pais}&slug=${encodeURIComponent(slug)}`)
-      .then((r) => (r.ok ? (r.json() as Promise<FichaProducto>) : null))
-      .catch(() => null);
+    p = pedirJson<FichaProducto>(`/api/catalog/product?country=${pais}&slug=${encodeURIComponent(slug)}`, VIGENCIA.producto).catch(() => null);
     memoria.set(clave, p);
     void p.then((f) => {
       if (!f) memoria.delete(clave); // no recordar fallos

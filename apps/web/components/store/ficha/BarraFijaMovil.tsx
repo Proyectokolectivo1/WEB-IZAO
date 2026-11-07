@@ -6,7 +6,7 @@ import { lineaDe, presentacionDe } from '@/lib/store/ficha-util';
 import { formatearPrecio } from '@/lib/store/pais';
 import { T } from '@/lib/store/textos';
 import type { CodigoPais, FichaProducto } from '@/lib/store/types';
-import { useCarrito } from '../carrito/CarritoProvider';
+import { useCarritoAcciones } from '../carrito/CarritoProvider';
 
 export const ID_BOTON_AGREGAR = 'agregar-ficha';
 
@@ -21,7 +21,7 @@ interface Props {
  * botón principal sale de la pantalla y se oculta (y deja de recibir foco) cuando vuelve a verse.
  */
 export function BarraFijaMovil({ ficha, pais, varianteId }: Props) {
-  const { agregar } = useCarrito();
+  const { agregar } = useCarritoAcciones();
   const [visible, setVisible] = useState(false);
   const v = ficha.variants.find((x) => x.id === varianteId) ?? null;
 

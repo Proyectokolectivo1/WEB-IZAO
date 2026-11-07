@@ -9,6 +9,10 @@ import type { CodigoPais } from './types';
  */
 export const T = {
   marca: { irInicio: 'Ir al inicio' },
+  /** Avisos para lectores de pantalla mientras carga una pantalla (los esqueletos son decorativos). */
+  cargaPantalla: {
+    vistaRapida: 'Abriendo el aroma…',
+  },
   header: {
     menu: 'Menú',
     cerrarMenu: 'Cerrar menú',

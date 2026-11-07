@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { VIGENCIA, pedirJson } from '@/lib/store/fetcher';
 import { fusionar, parametrosApi, type ConsultaListado, type LoteListado } from '@/lib/store/lote';
 import type { CodigoPais, FiltrosCatalogo, ItemCatalogo } from '@/lib/store/types';
 
@@ -13,9 +14,8 @@ interface RespuestaApi {
 }
 
 async function pedir(pais: CodigoPais, c: ConsultaListado, fijos: FiltrosCatalogo, cursor: string | null, signal: AbortSignal): Promise<RespuestaApi> {
-  const res = await fetch(`/api/catalog?${parametrosApi(pais, c, fijos, cursor)}`, { signal });
-  if (!res.ok) throw new Error(String(res.status));
-  return (await res.json()) as RespuestaApi;
+  // Misma consulta en vuelo = una sola petición; volver a un filtro visto hace segundos no vuelve a la red.
+  return pedirJson<RespuestaApi>(`/api/catalog?${parametrosApi(pais, c, fijos, cursor)}`, { signal, ...VIGENCIA.listado });
 }
 
 /**
@@ -109,9 +109,7 @@ export function useConteoEnVivo(pais: CodigoPais, borrador: ConsultaListado | nu
     setEstado((e) => ({ ...e, contando: true }));
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/catalog?${clave}&solo_total=1`, { signal: control.signal });
-        if (!res.ok) throw new Error();
-        const json = (await res.json()) as { total: number | null };
+        const json = await pedirJson<{ total: number | null }>(`/api/catalog?${clave}&solo_total=1`, { signal: control.signal, ...VIGENCIA.conteo });
         setEstado({ total: json.total, contando: false });
       } catch {
         if (!control.signal.aborted) setEstado((e) => ({ ...e, contando: false }));

@@ -7,20 +7,9 @@
 import { z } from 'zod';
 import { normalizePhone } from '@izao/core/schemas';
 import type { CountryCode } from '@izao/core/money';
+import { MAX_DESCRIPCION, MIN_DESCRIPCION } from './adjuntos';
+export * from './adjuntos';
 
-export const MAX_FOTOS = 5;
-export const MAX_BYTES_FOTO = 15 * 1024 * 1024;
-export const MAX_BYTES_VIDEO = 30 * 1024 * 1024;
-/** Cuerpo completo de la solicitud (fotos o video + campos); por debajo del `client_max_body_size 35m` de Nginx. */
-export const MAX_BYTES_SOLICITUD = 34 * 1024 * 1024;
-export const MIN_DESCRIPCION = 10;
-export const MAX_DESCRIPCION = 1000;
-
-export const TIPOS_FOTO = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'] as const;
-export const TIPOS_VIDEO = ['video/mp4', 'video/quicktime', 'video/webm'] as const;
-export const ACEPTA_ADJUNTOS = [...TIPOS_FOTO, ...TIPOS_VIDEO].join(',');
-
-export type CampoGarantia = 'pedido' | 'celular' | 'motivo' | 'descripcion' | 'adjuntos';
 
 /** `IZ-CO-000123`: se escribe a mano, así que se tolera minúscula, espacios y guiones sueltos. */
 export function normalizarNumeroPedido(crudo: string): string {
@@ -58,20 +47,6 @@ export function detectarVideo(b: Uint8Array): 'mp4' | 'mov' | 'webm' | null {
   return null;
 }
 
-export interface DatosAdjuntos {
-  fotos: { tamano: number }[];
-  videos: { tamano: number }[];
-}
-
-/** Mensaje claro (o `null`) para la combinación de adjuntos elegida. */
-export function problemaAdjuntos(a: DatosAdjuntos): 'mezcla' | 'muchas_fotos' | 'muchos_videos' | 'foto_pesada' | 'video_pesado' | null {
-  if (a.fotos.length > 0 && a.videos.length > 0) return 'mezcla';
-  if (a.fotos.length > MAX_FOTOS) return 'muchas_fotos';
-  if (a.videos.length > 1) return 'muchos_videos';
-  if (a.fotos.some((f) => f.tamano > MAX_BYTES_FOTO)) return 'foto_pesada';
-  if (a.videos.some((v) => v.tamano > MAX_BYTES_VIDEO)) return 'video_pesado';
-  return null;
-}
 
 export function esquemaGarantia(pais: CountryCode, motivos: readonly string[]) {
   return z.object({
@@ -99,9 +74,3 @@ export function esquemaGarantia(pais: CountryCode, motivos: readonly string[]) {
   });
 }
 export type DatosGarantia = z.output<ReturnType<typeof esquemaGarantia>>;
-
-/** Respuesta de `POST /{pais}/garantias/enviar`. Nunca trae datos del pedido más allá del número del caso. */
-export type RespuestaGarantia =
-  | { ok: true; numero: string; diasRespuesta: number; repetido: boolean }
-  | { ok: false; motivo: 'campos'; campos: Partial<Record<CampoGarantia, string>> }
-  | { ok: false; motivo: 'pedido_no_encontrado' | 'sin_entrega' | 'vencido' | 'demasiados' | 'bot' | 'error' };

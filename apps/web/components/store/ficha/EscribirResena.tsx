@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import { Button } from '@izao/ui';
+import { VIGENCIA, pedirJson } from '@/lib/store/fetcher';
 import { TR } from '@/lib/store/resenas/textos';
 import type { CodigoPais } from '@/lib/store/types';
 
@@ -17,8 +18,7 @@ export function EscribirResena({ pais, productoId }: { pais: CodigoPais; product
   async function abrir() {
     setAbierto(true);
     try {
-      const r = await fetch('/api/reviews/config');
-      const d = (await r.json()) as { turnstileKey?: string | null };
+      const d = await pedirJson<{ turnstileKey?: string | null }>('/api/reviews/config', VIGENCIA.configResenas);
       setClave(d.turnstileKey ?? null);
     } catch {
       setClave(null);

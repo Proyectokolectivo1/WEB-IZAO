@@ -4,11 +4,13 @@ import { useEffect, useRef } from 'react';
 import { Icono, prefiereMenosMovimiento } from '@izao/ui';
 import { animate } from 'motion/mini';
 import { T } from '@/lib/store/textos';
-import { useCarrito } from '../carrito/CarritoProvider';
+import { useCarritoAcciones, useCarritoLineas, usePulsoBolso } from '../carrito/CarritoProvider';
 
 /** Botón del bolso con contador. Rebota al agregar algo (solo `transform`). */
 export function BotonBolso() {
-  const { unidades, abrir, pulso, listo } = useCarrito();
+  const { abrir } = useCarritoAcciones();
+  const { unidades, listo } = useCarritoLineas();
+  const pulso = usePulsoBolso();
   const ref = useRef<HTMLSpanElement>(null);
   const primera = useRef(true);
 

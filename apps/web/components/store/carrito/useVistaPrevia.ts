@@ -4,10 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { descartarReferido, referidoParaAplicar } from '@/lib/store/atribucion/referido';
 import { SERVIDOR_DISPONIBLE, pedirVistaPrevia } from '@/lib/store/carrito/adaptador';
 import { mensajeCodigo, type RespuestaVistaPrevia } from '@/lib/store/carrito/contrato';
-import { vistaPrevia } from '@/lib/store/carrito/logica';
+import { vistaPrevia } from '@/lib/store/carrito/vista';
 import { T } from '@/lib/store/textos';
 import { TC } from '@/lib/store/textos-checkout';
-import { useCarrito } from './CarritoProvider';
+import { useCarritoAcciones, useCarritoLineas } from './CarritoProvider';
 
 export interface EstadoCodigo {
   texto: string;
@@ -41,7 +41,8 @@ function guardarCodigo(pais: string, valor: string | null): void {
  * descuento. El código aplicado se recuerda en `sessionStorage` para llegar igual al checkout.
  */
 export function useVistaPrevia(metodo: string | null = null) {
-  const { pais, lineas, listo, reemplazar } = useCarrito();
+  const { pais, reemplazar } = useCarritoAcciones();
+  const { lineas, listo } = useCarritoLineas();
   const [codigo, setCodigo] = useState<EstadoCodigo | null>(null);
   const [revisando, setRevisando] = useState(false);
   const [descuentoServidor, setDescuentoServidor] = useState<bigint | null>(null);

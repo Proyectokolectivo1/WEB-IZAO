@@ -7,7 +7,7 @@ import { formatearPrecio } from '@/lib/store/pais';
 import { T } from '@/lib/store/textos';
 import type { CodigoPais, FichaProducto } from '@/lib/store/types';
 import { Cantidad } from '../Cantidad';
-import { useCarrito } from '../carrito/CarritoProvider';
+import { useCarritoAcciones } from '../carrito/CarritoProvider';
 
 interface Props {
   ficha: FichaProducto;
@@ -24,7 +24,7 @@ interface Props {
 
 /** Variantes en chips con precio, cantidad y botón de agregar. Lo comparten la vista rápida y la ficha. */
 export function PanelCompra({ ficha, pais, alAgregar, idBotonAgregar, alElegir, varianteIdPedida }: Props) {
-  const { agregar } = useCarrito();
+  const { agregar } = useCarritoAcciones();
   const [elegida, setElegida] = useState(() => varianteInicial(ficha.variants)?.id ?? null);
   const [cantidad, setCantidad] = useState(1);
   useEffect(() => {

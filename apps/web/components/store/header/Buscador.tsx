@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Icono, IzaoImage } from '@izao/ui';
+import { VIGENCIA, pedirJson } from '@/lib/store/fetcher';
 import { formatearPrecio } from '@/lib/store/pais';
 import { T } from '@/lib/store/textos';
 import type { CodigoPais, Sugerencias } from '@/lib/store/types';
@@ -38,9 +39,8 @@ export function Buscador({ pais, populares }: { pais: CodigoPais; populares: str
     }
     const ctl = new AbortController();
     const t = setTimeout(() => {
-      fetch(`/api/catalog/suggest?country=${pais}&q=${encodeURIComponent(texto)}`, { signal: ctl.signal })
-        .then((r) => (r.ok ? (r.json() as Promise<Sugerencias>) : null))
-        .then((d) => d && setDatos(d))
+      pedirJson<Sugerencias>(`/api/catalog/suggest?country=${pais}&q=${encodeURIComponent(texto.toLowerCase())}`, { signal: ctl.signal, ...VIGENCIA.sugerencias })
+        .then((d) => setDatos(d))
         .catch(() => undefined);
     }, ESPERA_MS);
     return () => {

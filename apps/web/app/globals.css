@@ -16,6 +16,10 @@
   html[data-bolso='vacio'] .bolso-cargando {
     display: none;
   }
+  /* `!important`: el esqueleto trae `grid` (capa utilities), que le gana a esta capa y dejaba el esqueleto a la vista con el bolso vacío (CLS 0,12). */
+  html[data-bolso='vacio'] .bolso-esqueleto {
+    display: none !important;
+  }
 
   .rango-doble {
     position: relative;

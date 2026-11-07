@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Button, Icono, clasesBoton } from '@izao/ui';
+import { VIGENCIA, pedirJson } from '@/lib/store/fetcher';
 import { formatearPrecio } from '@/lib/store/pais';
 import { T } from '@/lib/store/textos';
 import { TC, textoBotonPago } from '@/lib/store/textos-checkout';
@@ -28,7 +29,7 @@ import type {
   PoliticaLegal,
   ValoresFormulario,
 } from '@/lib/store/checkout/tipos';
-import { useCarrito } from '../carrito/CarritoProvider';
+import { useCarritoAcciones, useCarritoLineas } from '../carrito/CarritoProvider';
 import { useVistaPrevia } from '../carrito/useVistaPrevia';
 import { Campo, CLASE_CONTROL, NumeroPaso, propsControl } from './Campo';
 import { MetodosPago } from './MetodosPago';
@@ -124,10 +125,12 @@ function mensajeError(e: ErrorCheckout | 'red' | 'invalida'): string {
   }
 }
 
-export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
+/** `esqueleto`: caja de carga armada por el servidor (ver `PaginaCarrito`); no suma JavaScript. */
+export function FormularioCheckout({ config, esqueleto }: { config: ConfigCheckout; esqueleto?: ReactNode }) {
   const pais = config.pais;
   const router = useRouter();
-  const { lineas, listo, reemplazar } = useCarrito();
+  const { lineas, listo } = useCarritoLineas();
+  const { reemplazar } = useCarritoAcciones();
   const [valores, setValores] = useState<ValoresFormulario>({ ...FORMULARIO_VACIO, metodo: metodoPorDefecto(config) });
   const vista = useVistaPrevia(valores.metodo || null);
   const [errores, setErrores] = useState<ErroresFormulario>({});
@@ -142,7 +145,8 @@ export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
   // Páginas legales y versión de la política que se muestran; cambian si el servidor avisa que la política se actualizó.
   const [legal, setLegal] = useState<PoliticaLegal>({ terminos: config.terminos, datos: config.datos, version: config.versionPoliticaDatos });
   const [politicaNueva, setPoliticaNueva] = useState(false);
-  const cacheCiudades = useRef(new Map<string, OpcionGeo[]>());
+  /** Última región pedida: si llega la respuesta de otra anterior, se descarta. */
+  const regionPedida = useRef('');
   const resumenErrores = useRef<HTMLDivElement>(null);
   const bannerError = useRef<HTMLDivElement>(null);
   const claveIdem = useRef<string | null>(null);
@@ -163,27 +167,21 @@ export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
 
   const cargarCiudades = useCallback(
     async (regionId: string) => {
+      regionPedida.current = regionId;
       if (!regionId) {
         setCiudades([]);
         setEstadoCiudades('inactivo');
         return;
       }
-      const guardadas = cacheCiudades.current.get(regionId);
-      if (guardadas) {
-        setCiudades(guardadas);
-        setEstadoCiudades('listo');
-        return;
-      }
       setEstadoCiudades('cargando');
       try {
-        const res = await fetch(`/${pais}/checkout/ciudades?region=${encodeURIComponent(regionId)}`);
-        if (!res.ok) throw new Error('ciudades');
-        const datos = (await res.json()) as { ciudades?: OpcionGeo[] };
-        const lista = Array.isArray(datos.ciudades) ? datos.ciudades : [];
-        cacheCiudades.current.set(regionId, lista);
-        setCiudades(lista);
+        // Cacheado en el fetcher (1 h por región) y compartido si dos pedidos coinciden.
+        const datos = await pedirJson<{ ciudades?: OpcionGeo[] }>(`/${pais}/checkout/ciudades?region=${encodeURIComponent(regionId)}`, VIGENCIA.ciudades);
+        if (regionPedida.current !== regionId) return;
+        setCiudades(Array.isArray(datos.ciudades) ? datos.ciudades : []);
         setEstadoCiudades('listo');
       } catch {
+        if (regionPedida.current !== regionId) return;
         setCiudades([]);
         setEstadoCiudades('error');
       }
@@ -243,9 +241,7 @@ export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
     setPoliticaNueva(true);
     setLegal((l) => combinarPolitica(l, versionServidor, null));
     try {
-      const res = await fetch(`/${pais}/checkout/politica`, { cache: 'no-store' });
-      if (!res.ok) return;
-      const nueva = (await res.json()) as Partial<PoliticaLegal>;
+      const nueva = await pedirJson<Partial<PoliticaLegal>>(`/${pais}/checkout/politica`, { init: { cache: 'no-store' } });
       setLegal((l) => combinarPolitica(l, versionServidor, nueva));
     } catch {
       /* sin red: se conserva lo que ya había; el próximo envío vuelve a validar en el servidor */
@@ -334,6 +330,7 @@ export function FormularioCheckout({ config }: { config: ConfigCheckout }) {
           {TC.carrito.cargando}
         </p>
         <div className="bolso-previo flex-col items-start gap-5 py-6">{vacio}</div>
+        {esqueleto}
       </div>
     );
   }

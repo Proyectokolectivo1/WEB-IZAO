@@ -6,12 +6,13 @@ import { Button, Icono, IzaoImage, Sheet, clasesBoton } from '@izao/ui';
 import { descartarReferido, referidoParaAplicar } from '@/lib/store/atribucion/referido';
 import { pedirVistaPrevia } from '@/lib/store/carrito/adaptador';
 import { mensajeCodigo } from '@/lib/store/carrito/contrato';
-import { vistaPrevia } from '@/lib/store/carrito/logica';
+import { vistaPrevia } from '@/lib/store/carrito/vista';
+import { VIGENCIA, pedirJson } from '@/lib/store/fetcher';
 import { formatearPrecio } from '@/lib/store/pais';
 import { T } from '@/lib/store/textos';
 import type { ItemCatalogo } from '@/lib/store/types';
 import { Cantidad } from '../Cantidad';
-import { useCarrito } from './CarritoProvider';
+import { useBolsoAbierto, useCarritoAcciones, useCarritoLineas } from './CarritoProvider';
 
 interface Codigo {
   texto: string;
@@ -20,7 +21,9 @@ interface Codigo {
 }
 
 export function CarritoDrawer() {
-  const { pais, notaEnvio, valorEnvio, lineas, abierto, cerrar, cambiar, quitar, reemplazar } = useCarrito();
+  const { pais, notaEnvio, valorEnvio, cerrar, cambiar, quitar, reemplazar } = useCarritoAcciones();
+  const { lineas } = useCarritoLineas();
+  const abierto = useBolsoAbierto();
   const [codigoEscrito, setCodigoEscrito] = useState('');
   const [codigo, setCodigo] = useState<Codigo | null>(null);
   const [revisando, setRevisando] = useState(false);
@@ -104,9 +107,8 @@ export function CarritoDrawer() {
       return;
     }
     const ctl = new AbortController();
-    fetch(`/api/catalog/related?country=${pais}&id=${encodeURIComponent(primero)}&limit=3`, { signal: ctl.signal })
-      .then((r) => (r.ok ? r.json() : { items: [] }))
-      .then((d: { items?: ItemCatalogo[] }) => setComplementos((d.items ?? []).slice(0, 3)))
+    pedirJson<{ items?: ItemCatalogo[] }>(`/api/catalog/related?country=${pais}&id=${encodeURIComponent(primero)}&limit=3`, { signal: ctl.signal, ...VIGENCIA.relacionados })
+      .then((d) => setComplementos((d.items ?? []).slice(0, 3)))
       .catch(() => undefined);
     return () => ctl.abort();
   }, [abierto, primero, pais]);

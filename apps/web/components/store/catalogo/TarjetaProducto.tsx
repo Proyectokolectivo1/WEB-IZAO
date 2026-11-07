@@ -2,13 +2,13 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { Button, Etiqueta, Icono, IzaoImage } from '@izao/ui';
 import { lineaDe } from '@/lib/store/ficha-util';
 import { formatearPrecio } from '@/lib/store/pais';
 import { T } from '@/lib/store/textos';
 import type { CodigoPais, ItemCatalogo } from '@/lib/store/types';
-import { useCarrito } from '../carrito/CarritoProvider';
+import { useCarritoAcciones, useDeseo } from '../carrito/CarritoProvider';
 import { pedirFicha } from './useFicha';
 
 const VistaRapida = dynamic(() => import('./VistaRapida').then((m) => m.VistaRapida), { ssr: false });
@@ -27,9 +27,14 @@ interface Props {
 const norm = (b: string) => b.toLowerCase().replace(/[\s-]+/g, '_');
 const TAMANOS = '(min-width:1536px) 18vw, (min-width:1024px) 23vw, (min-width:768px) 31vw, 47vw';
 
-export function TarjetaProducto({ item, pais, concentracion, prioritaria = false, nivelTitulo = 'h3' }: Props) {
+/**
+ * `memo`: la grilla puede tener cientos de tarjetas y no deben repintarse cuando cambia el bolso, otro deseo o el estado del
+ * listado (cargando, scroll). Solo se actualiza la tarjeta cuyo producto cambió.
+ */
+export const TarjetaProducto = memo(function TarjetaProducto({ item, pais, concentracion, prioritaria = false, nivelTitulo = 'h3' }: Props) {
   const Titulo = nivelTitulo;
-  const { agregar, deseos, alternarDeseo } = useCarrito();
+  const { agregar, alternarDeseo } = useCarritoAcciones();
+  const guardado = useDeseo(item.product_id);
   const [hoverListo, setHoverListo] = useState(false);
   const [pagina, setPagina] = useState(0);
   const [vista, setVista] = useState(false);
@@ -37,7 +42,6 @@ export function TarjetaProducto({ item, pais, concentracion, prioritaria = false
   const [estado, setEstado] = useState<'reposo' | 'cargando' | 'agregado' | 'error'>('reposo');
   const carrusel = useRef<HTMLDivElement>(null);
   const hayHover = !!item.img_hover;
-  const guardado = deseos.has(item.product_id);
   const badges = new Set(item.badges.map(norm));
   const href = `/${pais}/perfume/${item.slug}`;
 
@@ -200,4 +204,4 @@ export function TarjetaProducto({ item, pais, concentracion, prioritaria = false
       {vistaMontada ? <VistaRapida pais={pais} slug={item.slug} abierto={vista} onCerrar={() => setVista(false)} /> : null}
     </article>
   );
-}
+});

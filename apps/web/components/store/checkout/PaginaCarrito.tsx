@@ -1,19 +1,25 @@
 'use client';
 
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { Icono, IzaoImage, Revelar, clasesBoton } from '@izao/ui';
 import { formatearPrecio } from '@/lib/store/pais';
 import { T } from '@/lib/store/textos';
 import { TC } from '@/lib/store/textos-checkout';
 import { Cantidad } from '../Cantidad';
-import { useCarrito } from '../carrito/CarritoProvider';
+import { useCarritoAcciones, useCarritoLineas } from '../carrito/CarritoProvider';
 import { useVistaPrevia } from '../carrito/useVistaPrevia';
 import { CodigoDescuento } from './CodigoDescuento';
 import { Totales, type FilaTotal } from './Totales';
 
 /** Página completa del bolso (`/{pais}/carrito`): lo mismo que el drawer, con aire y un resumen a la vista. */
-export function PaginaCarrito() {
-  const { pais, notaEnvio, valorEnvio, lineas, listo, cambiar, quitar, unidades } = useCarrito();
+/**
+ * `esqueleto`: caja de carga que arma el servidor (con la clase `bolso-esqueleto`, que se oculta si el bolso está vacío);
+ * llega como elemento ya renderizado, así que no suma JavaScript a esta página.
+ */
+export function PaginaCarrito({ esqueleto }: { esqueleto?: ReactNode }) {
+  const { pais, notaEnvio, valorEnvio, cambiar, quitar } = useCarritoAcciones();
+  const { lineas, listo, unidades } = useCarritoLineas();
   const vista = useVistaPrevia();
   const precio = (v: bigint | string) => formatearPrecio(v, pais);
 
@@ -37,6 +43,8 @@ export function PaginaCarrito() {
           {TC.carrito.cargando}
         </p>
         <div className="bolso-previo flex-col items-start gap-6 py-10">{vacio}</div>
+        {/* Con productos guardados no hay estado vacío que adelantar: se ve la caja del bolso (se oculta si el bolso está vacío). */}
+        {esqueleto}
       </div>
     );
   }
