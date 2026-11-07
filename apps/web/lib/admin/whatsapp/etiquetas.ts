@@ -4,7 +4,7 @@
  * coinciden con el paquete.
  */
 
-export const CLAVES_PLANTILLA = ['cobro_abono', 'recordatorio_abono_1', 'recordatorio_abono_2', 'recordatorio_abono_final'] as const;
+export const CLAVES_PLANTILLA = ['cobro_abono', 'recordatorio_abono_1', 'recordatorio_abono_2', 'recordatorio_abono_final', 'pedido_cancelado_24h'] as const;
 export type ClavePlantilla = (typeof CLAVES_PLANTILLA)[number];
 
 export const ETIQUETA_CLAVE: Record<ClavePlantilla, string> = {
@@ -12,6 +12,7 @@ export const ETIQUETA_CLAVE: Record<ClavePlantilla, string> = {
   recordatorio_abono_1: 'Recordatorio del abono 1',
   recordatorio_abono_2: 'Recordatorio del abono 2',
   recordatorio_abono_final: 'Recordatorio final del abono',
+  pedido_cancelado_24h: 'Aviso de pedido cancelado (24 h)',
 };
 
 export const ESTADOS_META = ['draft', 'pending', 'approved', 'rejected', 'paused'] as const;

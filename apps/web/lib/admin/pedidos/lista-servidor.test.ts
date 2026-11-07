@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { clienteFalso } from '../crud/cliente-falso';
-import { listarPedidos } from './detalle-servidor';
+import { listarPedidos, obtenerDetallePedido } from './detalle-servidor';
 import { leerFiltrosPedido } from './filtros';
 
 describe('listarPedidos', () => {
@@ -52,5 +52,40 @@ describe('listarPedidos', () => {
   it('propaga el error de la base', async () => {
     const { cliente } = clienteFalso({ 'orders.select': { error: { message: 'boom' } } });
     await expect(listarPedidos(cliente, leerFiltrosPedido({}))).rejects.toThrow(/boom/);
+  });
+});
+
+describe('obtenerDetallePedido: enlace de la etiqueta (D-051)', () => {
+  const URL_CDN = 'https://cdn.bemaster.com/labels/75070783091.pdf';
+  const detalle = async (envio: Record<string, unknown>) => {
+    const { cliente, llamadas } = clienteFalso({
+      'orders.select': { data: { id: 'p1', number: 'IZ-CO-000044', status: 'en_preparacion' } },
+      'shipments.select': { data: [{ id: 's1', ...envio }] },
+    });
+    const d = await obtenerDetallePedido(cliente, 'p1');
+    return { d, llamadas };
+  };
+
+  it('lee label_url y expone el enlace solo si no hay copia local', async () => {
+    const { d, llamadas } = await detalle({ label_local_path: null, label_url: URL_CDN });
+    expect(d?.envio).toMatchObject({ etiqueta_lista: false, etiqueta_url: URL_CDN });
+    expect(String(llamadas.find((l) => l.clave === 'shipments.select')?.args[0])).toContain('label_url');
+
+    const local = await detalle({ label_local_path: 'labels/x.pdf', label_url: URL_CDN });
+    expect(local.d?.envio).toMatchObject({ etiqueta_lista: true, etiqueta_url: null });
+  });
+
+  it('descarta URLs fuera de la lista (http, otro host, puerto, credenciales)', async () => {
+    for (const url of [
+      'http://cdn.bemaster.com/a.pdf',
+      'https://evil.example.com/a.pdf',
+      'https://cdn.bemaster.com:8443/a.pdf',
+      'https://user:pw@cdn.bemaster.com/a.pdf',
+      'https://cdn.bemaster.com.evil.example/a.pdf',
+      null,
+    ]) {
+      const { d } = await detalle({ label_local_path: null, label_url: url });
+      expect(d?.envio?.etiqueta_url, String(url)).toBeNull();
+    }
   });
 });

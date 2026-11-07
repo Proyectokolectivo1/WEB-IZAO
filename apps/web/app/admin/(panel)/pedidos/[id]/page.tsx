@@ -56,7 +56,8 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
   const puedeReintentar = puede(admin.rol, 'pedidos.reintentar_envio');
   const reintentoValido = ESTADOS_REINTENTO_ENVIO.has(p.status);
   const puedeReimprimir = puede(admin.rol, 'pedidos.reimprimir');
-  const hayEtiqueta = d.envio?.etiqueta_lista === true;
+  const urlEtiqueta = d.envio?.etiqueta_url ?? null;
+  const hayEtiqueta = d.envio?.etiqueta_lista === true || urlEtiqueta !== null;
   const whatsappFallo = d.mensajes.some((m) => m.status === 'failed');
   const notas = d.eventos.filter((e) => e.type === 'nota_interna' && e.nota);
 
@@ -129,7 +130,16 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
             {d.envio.provider_status_name ? ` · ${d.envio.provider_status_name}` : ''}
             {d.envio.tracking_code ? ` · guía ${d.envio.tracking_code}` : ''}
           </p>
-          <p className="adm-suave adm-chico">Etiqueta {hayEtiqueta ? 'descargada' : 'aún no disponible'}.</p>
+          <p className="adm-suave adm-chico">
+            Etiqueta {d.envio.etiqueta_lista ? 'descargada' : urlEtiqueta ? 'disponible en MasterShop (el agente la descarga al imprimir)' : 'aún no disponible'}.
+          </p>
+          {urlEtiqueta ? (
+            <p>
+              <a href={urlEtiqueta} target="_blank" rel="noopener noreferrer">
+                Abrir etiqueta en MasterShop
+              </a>
+            </p>
+          ) : null}
           {d.impresiones.length > 0 ? (
             <ul>
               {d.impresiones.map((i) => (

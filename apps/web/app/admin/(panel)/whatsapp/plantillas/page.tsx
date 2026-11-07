@@ -37,7 +37,7 @@ export default async function ListaPlantillas({
         <h1>Plantillas de WhatsApp</h1>
       </div>
       <p className="adm-suave">
-        Son los mensajes de cobro y recordatorio del abono de contra entrega. Meta debe aprobar cada versión antes de usarla:
+        Son los mensajes de cobro, recordatorio y aviso de cancelación de la contra entrega. Meta debe aprobar cada versión antes de usarla:
         se edita un borrador, se envía a revisión y, al aprobarse, el sistema la activa sola.
       </p>
       <PestanasPais base="/admin/whatsapp/plantillas" actual={pais} />

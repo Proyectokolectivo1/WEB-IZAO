@@ -14,6 +14,7 @@
   - Tipografías: `lib/tipografia/catalogo.ts` (38 fuentes), `fuentes-previa.ts` (solo panel, next/font sin precarga), `SelectorFuente` (vista previa en vivo, filtros, móvil). `build` verificado (140 archivos de fuente, 3,4 MB, solo se piden al abrir la lista).
 
 - D-048 alineación: `pay_link_url` en `VARIABLES_PLANTILLA`/`VALORES_EJEMPLO`; `urlCobro` con país (CO/EC; el servidor lee `orders.country_code`), pruebas ajustadas (web: lint, tsc, 1 450 pruebas verdes).
+- D-051/D-049 en el panel: pedido muestra «Abrir etiqueta en MasterShop» (`etiqueta_url` = `urlEtiquetaSegura(label_url)` sin copia local) y `reimprimirEtiquetaBd` acepta copia local O URL segura; plantilla `pedido_cancelado_24h` en `CLAVES_PLANTILLA`/`ETIQUETA_CLAVE` (web: lint, tsc, 1 478 pruebas). Borradores por defecto salen con idioma/variables de Meta; nombre `<clave>_v1` (no el de Meta).
 - **Carga del catálogo real (188 SKU del Excel de MasterShop, feat carga-catalogo-real, sin aplicar):** `lib/admin/catalogo/carga-real.ts` (+test) y CLI `scripts/carga-catalogo-real.ts`; salida en `apps/web/scripts/carga-catalogo-real/` (`vista-previa.md`, `01-carga.sql` idempotente por SKU, `02-archivar-seed.sql` / `02b-restaurar-seed.sql`, `03-publicar-co.sql`). Orden: 01 -> vinculación D-050 -> 03; el 02 archiva los 520 productos del seed (reversible). Solo CO, stock 0, ocultos hasta vincular.
 
 ## Pendiente

@@ -18,7 +18,7 @@ const AHORA = new Date('2026-10-21T15:00:00Z');
 const comun = { actor: 'u1', ip: null, ahora: () => AHORA };
 
 const pedido = (status: string, extra: Record<string, unknown> = {}) => ({ number: 'IZ-CO-000123', status, payment_method: 'cod', ...extra });
-const envio = (extra: Record<string, unknown> = {}) => ({ id: 's1', provider_order_id: 777, provider_status_id: 1, label_local_path: null, ...extra });
+const envio = (extra: Record<string, unknown> = {}) => ({ id: 's1', provider_order_id: 777, provider_status_id: 1, label_local_path: null, label_url: null, ...extra });
 
 const okTransicion = () =>
   vi.fn(async (orderId: string, e: OrderStatusEvent) => ({
@@ -363,6 +363,30 @@ describe('reimprimirEtiquetaBd', () => {
     expect(fila).toMatchObject({ order_id: ID, shipment_id: 's1', type: 'label', status: 'queued', requested_by: 'admin:u1' });
     expect(fila.requested_by).not.toBe('auto');
     expect(auditar.mock.calls[0]![0]).toMatchObject({ accion: 'pedido.etiqueta_reimpresa' });
+  });
+
+  it('sin copia local reimprime con la URL de MasterShop (D-051) y audita igual', async () => {
+    const { cliente, llamadas } = clienteFalso({
+      'orders.select': { data: pedido('en_preparacion') },
+      'shipments.select': { data: envio({ label_local_path: null, label_url: 'https://cdn.bemaster.com/labels/75070783091.pdf' }) },
+      'print_jobs.select': { data: [] },
+      'print_jobs.insert': { data: null },
+    });
+    const r = await reimprimirEtiquetaBd({ cliente, ...comun, orderId: ID });
+    expect(r.ok).toBe(true);
+    expect(llamadas.find((l) => l.clave === 'print_jobs.insert')!.args[0]).toMatchObject({ type: 'label', requested_by: 'admin:u1' });
+    expect(auditar.mock.calls[0]![0]).toMatchObject({ accion: 'pedido.etiqueta_reimpresa' });
+  });
+
+  it('una label_url fuera de la lista no permite reimprimir sin copia local', async () => {
+    for (const url of ['https://evil.example.com/a.pdf', 'http://cdn.bemaster.com/a.pdf', '']) {
+      const { cliente, llamadas } = clienteFalso({
+        'orders.select': { data: pedido('en_preparacion') },
+        'shipments.select': { data: envio({ label_local_path: null, label_url: url }) },
+      });
+      expect((await reimprimirEtiquetaBd({ cliente, ...comun, orderId: ID })).ok, url).toBe(false);
+      expect(llamadas.some((l) => l.clave === 'print_jobs.insert')).toBe(false);
+    }
   });
 
   it('sin etiqueta descargada o con otra impresión en cola no crea nada', async () => {

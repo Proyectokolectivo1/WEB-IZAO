@@ -4,6 +4,7 @@ import 'server-only';
  * línea de tiempo). Solo lectura; cliente inyectado para poder probarlo.
  */
 import { formatMoney, money, type CurrencyCode } from '@izao/core/money';
+import { urlEtiquetaSegura } from '@izao/mastershop';
 import type { Cliente } from '../catalogo/taxonomias-servidor';
 import { escaparBusqueda, rangoPagina } from '../crud/comun';
 import { interpretarBusqueda, rangoFechasUtc, type FiltrosPedido } from './filtros';
@@ -103,6 +104,8 @@ export type DetallePedido = {
     provider_status_name: string | null;
     has_novelty: boolean;
     etiqueta_lista: boolean;
+    /** Enlace a la etiqueta en MasterShop (D-051): solo si aún no hay copia local y la URL pasa `urlEtiquetaSegura`. */
+    etiqueta_url: string | null;
   } | null;
   impresiones: { id: string; type: string; status: string; requested_by: string; attempts: number; error: string | null; created_at: string; printed_at: string | null }[];
 };
@@ -120,6 +123,7 @@ function textoDeNota(payload: unknown): string | null {
 function envioPublico(f: Record<string, unknown> | undefined): DetallePedido['envio'] {
   if (!f) return null;
   const texto = (v: unknown) => (typeof v === 'string' ? v : null);
+  const etiqueta_lista = typeof f.label_local_path === 'string' && f.label_local_path !== '';
   return {
     id: String(f.id),
     carrier_name: texto(f.carrier_name),
@@ -127,7 +131,8 @@ function envioPublico(f: Record<string, unknown> | undefined): DetallePedido['en
     tracking_url: texto(f.tracking_url),
     provider_status_name: texto(f.provider_status_name),
     has_novelty: f.has_novelty === true,
-    etiqueta_lista: typeof f.label_local_path === 'string' && f.label_local_path !== '',
+    etiqueta_lista,
+    etiqueta_url: etiqueta_lista ? null : urlEtiquetaSegura(f.label_url),
   };
 }
 
@@ -162,7 +167,7 @@ export async function obtenerDetallePedido(cliente: Cliente, id: string): Promis
       .order('created_at', { ascending: true }),
     cliente
       .from('shipments')
-      .select('id, carrier_name, tracking_code, tracking_url, provider_status_name, has_novelty, label_local_path')
+      .select('id, carrier_name, tracking_code, tracking_url, provider_status_name, has_novelty, label_local_path, label_url')
       .eq('order_id', id)
       .limit(1),
     cliente

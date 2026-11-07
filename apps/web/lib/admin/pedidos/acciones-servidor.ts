@@ -9,7 +9,7 @@ import 'server-only';
  * inyectan para poder probarlas.
  */
 import { transicionar, type OrderStatus } from '@izao/core/order-state';
-import type { ResultadoReintentoEnvio } from '@izao/mastershop';
+import { urlEtiquetaSegura, type ResultadoReintentoEnvio } from '@izao/mastershop';
 import { z } from 'zod';
 import { encolarRecalculoMetricas } from '@/app/api/checkout/cola-metricas';
 import { auditarCambio } from '@/lib/admin/auditoria';
@@ -60,12 +60,18 @@ async function leerPedido(cliente: Cliente, orderId: string): Promise<PedidoBasi
   return (data as PedidoBasico | null) ?? null;
 }
 
-type EnvioBasico = { id: string; provider_order_id: number | null; provider_status_id: number | null; label_local_path: string | null };
+type EnvioBasico = {
+  id: string;
+  provider_order_id: number | null;
+  provider_status_id: number | null;
+  label_local_path: string | null;
+  label_url: string | null;
+};
 
 async function leerEnvio(cliente: Cliente, orderId: string): Promise<EnvioBasico | null> {
   const { data, error } = await cliente
     .from('shipments')
-    .select('id, provider_order_id, provider_status_id, label_local_path')
+    .select('id, provider_order_id, provider_status_id, label_local_path, label_url')
     .eq('order_id', orderId)
     .maybeSingle();
   if (error) throw new Error('No se pudo leer el envío.');
@@ -337,7 +343,10 @@ export async function reimprimirEtiquetaBd(args: Ctx & { orderId: string }): Pro
   if (!pedido) return { ok: false, mensaje: 'Ese pedido ya no existe.' };
   const envio = await leerEnvio(cliente, orderId);
   if (!envio) return { ok: false, mensaje: 'Este pedido aún no tiene envío en MasterShop.' };
-  if (!envio.label_local_path) return { ok: false, mensaje: 'La etiqueta todavía no está disponible. Espera a que MasterShop la genere.' };
+  // D-051: sin copia local sirve la URL de MasterShop (el agente la descarga desde su PC); debe pasar la lista de hosts.
+  if (!envio.label_local_path && !urlEtiquetaSegura(envio.label_url)) {
+    return { ok: false, mensaje: 'La etiqueta todavía no está disponible. Espera a que MasterShop la genere.' };
+  }
 
   const { data: enCola, error: e1 } = await cliente
     .from('print_jobs')

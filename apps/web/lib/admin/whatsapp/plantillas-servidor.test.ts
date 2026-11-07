@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { auditar } = vi.hoisted(() => ({ auditar: vi.fn(async (_e: unknown) => true) }));
 vi.mock('@/lib/admin/auditoria', () => ({ auditarCambio: auditar }));
 
-import { ErrorWhatsApp, type CredencialesWhatsApp } from '@izao/whatsapp';
+import { ErrorWhatsApp, PLANTILLAS_META, type CredencialesWhatsApp } from '@izao/whatsapp';
 import { clienteFalso } from '../crud/cliente-falso';
 import { esquemaPlantilla, type FilaPlantilla } from './plantillas';
 import {
@@ -159,6 +159,29 @@ describe('crearDesdeTextoPorDefectoBd', () => {
     const ins = llamadas.find((l) => l.clave === 'whatsapp_templates.insert')?.args[0] as Record<string, unknown>;
     expect(ins).toMatchObject({ country_code: 'EC', key: 'recordatorio_abono_final', meta_template_name: 'recordatorio_abono_final_v1', version: 1, meta_status: 'draft' });
   });
+
+  it.each(Object.entries(PLANTILLAS_META))(
+    '%s se crea con el idioma y las variables de Meta (D-048/D-049), sin botón',
+    async (clave, meta) => {
+      const { cliente, llamadas } = clienteFalso({
+        'whatsapp_templates.select': { data: [] },
+        'whatsapp_templates.insert': { data: { id: ID } },
+      });
+      const r = await crearDesdeTextoPorDefectoBd({ cliente, pais: 'CO', clave, ...comun });
+      expect(r.ok).toBe(true);
+      const ins = llamadas.find((l) => l.clave === 'whatsapp_templates.insert')?.args[0] as Record<string, unknown>;
+      expect(ins.language).toBe(meta?.language);
+      expect(ins.language).toBe('es_CO');
+      expect(ins.button_text).toBeNull();
+      expect(ins.button_url).toBeNull();
+      expect(ins.footer_text).toBeNull();
+      const esperado =
+        clave === 'pedido_cancelado_24h'
+          ? { '1': 'customer_first_name', '2': 'order_number' }
+          : { '1': 'customer_first_name', '2': 'order_number', '3': 'cod_deposit_amount', '4': 'pay_link_url' };
+      expect(ins.variables_map).toEqual(esperado);
+    },
+  );
 
   it('rechaza claves desconocidas y claves que ya existen', async () => {
     const a = clienteFalso({});

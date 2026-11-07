@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLAVES_PLANTILLA_COD, PLANTILLAS_SEMILLA, VARIABLES_COBRO, nombreVersion } from '@izao/whatsapp';
+import { CLAVES_PLANTILLA_WA, PLANTILLAS_SEMILLA, VARIABLES_COBRO, nombreVersion } from '@izao/whatsapp';
 import {
   CLAVES_PLANTILLA,
   CLAVE_VARIABLE_BOTON,
@@ -36,7 +36,7 @@ const base = (extra: Partial<CamposEditables> = {}): CamposEditables => ({
 
 describe('constantes del panel frente a @izao/whatsapp', () => {
   it('las claves y las variables coinciden con el paquete', () => {
-    expect([...CLAVES_PLANTILLA]).toEqual([...CLAVES_PLANTILLA_COD]);
+    expect([...CLAVES_PLANTILLA]).toEqual([...CLAVES_PLANTILLA_WA]);
     expect(Object.keys(VARIABLES_PLANTILLA).sort()).toEqual([...VARIABLES_COBRO].sort());
     expect(Object.keys(VALORES_EJEMPLO).sort()).toEqual([...VARIABLES_COBRO].sort());
   });
