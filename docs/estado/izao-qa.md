@@ -8,11 +8,14 @@
 - 2026-11-06 F9 contra PRODUCCIÓN (solo lectura): informe `docs/fases/F9-lanzamiento.md`; evidencia `docs/fases/F9-evidencia/`.
   Nuevos: `tests/produccion/f9-produccion.spec.ts` (35 pruebas, 31 pasan, 4 fallan = defectos), `tests/playwright.produccion.config.ts`,
   `tests/lighthouse/produccion.cjs`; `playwright.config.ts` ignora `produccion/**`. Lighthouse: rend./acces. >= 97/100; LCP carrito/checkout 2,57-2,59 s.
+- 2026-11-07 Lighthouse móvil en producción tras a65978e (3 corridas, mediana; `docs/fases/F9-evidencia/lighthouse-post-rendimiento.json`): LCP 1,42-1,82 s en home, catálogo,
+  ficha, bolso y checkout (antes hasta 2,59 s); rend. 98-100, CLS <= 0,003, TBT <= 10 ms, JS 144-166 KB; SEO 100 (carrito/checkout 66 por noindex intencional).
+  Todo LCP es texto: producción sin fotos. Una corrida de checkout dio 3,56 s por TTFB. Scripts: `produccion.cjs` (env `MODOS`), `mediana.cjs`. En Git Bash usar `MSYS_NO_PATHCONV=1`.
 
 ## Pendiente
 - Defectos abiertos (detalle y dueños en F9-lanzamiento.md): EC sin productos y CO con 2; políticas sin publicar y placeholders `[...]`; píxeles/feeds inexistentes
-  y CSP; meta description en home/catálogo/EC; restauración real de backup; JS 185-195 KB en carrito/checkout; HSTS includeSubDomains y versión de nginx.
-- Abiertos en izao-tienda (de antes): #418 de hidratación, scroll al volver de la ficha, LCP con fotos reales sin medir.
+  y CSP; meta description en home/catálogo/EC; restauración real de backup; HSTS includeSubDomains y versión de nginx.
+- Abiertos en izao-tienda (de antes): #418 de hidratación, scroll al volver de la ficha, LCP con fotos reales sin medir (hoy ninguna ficha tiene fotos).
 - Con staging/llaves: k6 (catálogo 100 req/s, checkout 10 req/s con mocks; `k6/checkout.js` por escribir), Lighthouse con fotos, pgTAP RLS,
   Iza contra OpenRouter, e2e de abandono con reloj simulado (F4), pruebas manuales en iPhone/Android y teclado.
 

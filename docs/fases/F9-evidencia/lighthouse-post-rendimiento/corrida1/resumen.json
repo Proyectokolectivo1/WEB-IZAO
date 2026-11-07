@@ -1,0 +1,136 @@
+[
+ {
+  "ruta": "/co",
+  "modo": "mobile",
+  "rendimiento": 100,
+  "accesibilidad": 100,
+  "buenasPracticas": 100,
+  "seo": 100,
+  "lcp_s": 1.35,
+  "cls": 0,
+  "tbt_ms": 9,
+  "fcp_s": 1.05,
+  "ttfb_ms": 221,
+  "js_kb_transferido": 144,
+  "lcpElemento": "<h2 class=\"text-3xl md:text-5xl\">",
+  "lcpFases": {
+   "undefined": null
+  },
+  "fallan": [
+   "render-blocking-resources(0.5)",
+   "legacy-javascript(0.5)",
+   "bf-cache(0)",
+   "legacy-javascript-insight(0.5)",
+   "network-dependency-tree-insight(0)",
+   "render-blocking-insight(0)"
+  ]
+ },
+ {
+  "ruta": "/co/catalogo",
+  "modo": "mobile",
+  "rendimiento": 99,
+  "accesibilidad": 100,
+  "buenasPracticas": 100,
+  "seo": 100,
+  "lcp_s": 1.49,
+  "cls": 0.003,
+  "tbt_ms": 11,
+  "fcp_s": 1.19,
+  "ttfb_ms": 225,
+  "js_kb_transferido": 154,
+  "lcpElemento": "<p class=\"font-[family-name:var(--font-display)] text-3xl\">",
+  "lcpFases": {
+   "undefined": null
+  },
+  "fallan": [
+   "render-blocking-resources(0.5)",
+   "legacy-javascript(0.5)",
+   "bf-cache(0)",
+   "legacy-javascript-insight(0.5)",
+   "network-dependency-tree-insight(0)",
+   "render-blocking-insight(0)"
+  ]
+ },
+ {
+  "ruta": "/co/perfume/9pm-afnan-para-hombres",
+  "modo": "mobile",
+  "rendimiento": 98,
+  "accesibilidad": 100,
+  "buenasPracticas": 100,
+  "seo": 100,
+  "lcp_s": 2.24,
+  "cls": 0,
+  "tbt_ms": 44,
+  "fcp_s": 1.19,
+  "ttfb_ms": 210,
+  "js_kb_transferido": 151,
+  "lcpElemento": "<h1 class=\"text-4xl md:text-5xl\">",
+  "lcpFases": {
+   "undefined": null
+  },
+  "fallan": [
+   "render-blocking-resources(0.5)",
+   "legacy-javascript(0)",
+   "bf-cache(0)",
+   "legacy-javascript-insight(0)",
+   "network-dependency-tree-insight(0)",
+   "render-blocking-insight(0)"
+  ]
+ },
+ {
+  "ruta": "/co/carrito",
+  "modo": "mobile",
+  "rendimiento": 100,
+  "accesibilidad": 100,
+  "buenasPracticas": 100,
+  "seo": 66,
+  "lcp_s": 1.67,
+  "cls": 0,
+  "tbt_ms": 8,
+  "fcp_s": 1.07,
+  "ttfb_ms": 206,
+  "js_kb_transferido": 159,
+  "lcpElemento": "<p class=\"max-w-xl font-display text-3xl leading-snug md:text-4xl\">",
+  "lcpFases": {
+   "undefined": null
+  },
+  "fallan": [
+   "render-blocking-resources(0.5)",
+   "legacy-javascript(0.5)",
+   "is-crawlable(0)",
+   "bf-cache(0)",
+   "legacy-javascript-insight(0.5)",
+   "network-dependency-tree-insight(0)",
+   "render-blocking-insight(0)"
+  ]
+ },
+ {
+  "ruta": "/co/checkout",
+  "modo": "mobile",
+  "rendimiento": 87,
+  "accesibilidad": 100,
+  "buenasPracticas": 100,
+  "seo": 66,
+  "lcp_s": 3.56,
+  "cls": 0,
+  "tbt_ms": 5,
+  "fcp_s": 2.36,
+  "ttfb_ms": 727,
+  "js_kb_transferido": 166,
+  "lcpElemento": "<p class=\"max-w-md text-ink/80\">",
+  "lcpFases": {
+   "undefined": null
+  },
+  "fallan": [
+   "first-contentful-paint(0.72)",
+   "largest-contentful-paint(0.62)",
+   "server-response-time(0)",
+   "largest-contentful-paint-element(0)",
+   "legacy-javascript(0.5)",
+   "is-crawlable(0)",
+   "bf-cache(0)",
+   "document-latency-insight(0)",
+   "legacy-javascript-insight(0.5)"
+  ]
+ }
+]

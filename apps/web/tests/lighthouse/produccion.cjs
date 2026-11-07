@@ -15,7 +15,7 @@ const rutas = (process.env.RUTAS || '/co,/co/perfume/9pm-afnan-para-hombres,/ec,
 const bin = path.resolve(__dirname, '../../../../node_modules/.bin/lighthouse' + (process.platform === 'win32' ? '.CMD' : ''));
 const resumen = [];
 for (const ruta of rutas) {
-  for (const modo of ['mobile', 'desktop']) {
+  for (const modo of (process.env.MODOS || 'mobile,desktop').split(',')) {
     const base = `${modo}-${ruta.replace(/\W+/g, '_').replace(/^_/, '')}`;
     const args = [`${BASE}${ruta}`, '--output=json', '--output=html', `--output-path=${path.join(salida, base)}`,
       '--only-categories=performance,accessibility,best-practices,seo', '--quiet',

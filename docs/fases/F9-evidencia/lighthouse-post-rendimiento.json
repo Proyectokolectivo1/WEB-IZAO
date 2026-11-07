@@ -1,0 +1,259 @@
+{
+ "commit": "a65978e",
+ "modo": "mobile",
+ "corridasPorPagina": 3,
+ "paginas": [
+  {
+   "ruta": "/co",
+   "corridas": 3,
+   "mediana": {
+    "rendimiento": 100,
+    "accesibilidad": 100,
+    "buenasPracticas": 100,
+    "seo": 100,
+    "lcp_s": 1.66,
+    "cls": 0,
+    "tbt_ms": 9,
+    "fcp_s": 1.06,
+    "ttfb_ms": 221,
+    "js_kb_transferido": 144
+   },
+   "lcp_s_corridas": [
+    1.35,
+    1.77,
+    1.66
+   ],
+   "lcpElemento": [
+    "<h2 class=\"text-3xl md:text-5xl\">",
+    "<h2 class=\"text-3xl md:text-5xl\">",
+    "<h2 class=\"text-3xl md:text-5xl\">"
+   ],
+   "base_f9": {
+    "rendimiento": 100,
+    "accesibilidad": 100,
+    "buenasPracticas": 96,
+    "seo": 91,
+    "lcp_s": 1.7,
+    "cls": 0,
+    "tbt_ms": 15,
+    "fcp_s": 1.15,
+    "ttfb_ms": 243,
+    "js_kb_transferido": 147
+   },
+   "baja_de_2_5_s": true,
+   "fallan": [
+    "render-blocking-resources(0.5)",
+    "legacy-javascript(0.5)",
+    "bf-cache(0)",
+    "legacy-javascript-insight(0.5)",
+    "network-dependency-tree-insight(0)",
+    "render-blocking-insight(0)"
+   ]
+  },
+  {
+   "ruta": "/co/catalogo",
+   "corridas": 3,
+   "mediana": {
+    "rendimiento": 100,
+    "accesibilidad": 100,
+    "buenasPracticas": 100,
+    "seo": 100,
+    "lcp_s": 1.42,
+    "cls": 0.003,
+    "tbt_ms": 8,
+    "fcp_s": 1.19,
+    "ttfb_ms": 225,
+    "js_kb_transferido": 154
+   },
+   "lcp_s_corridas": [
+    1.49,
+    1.42,
+    1.4
+   ],
+   "lcpElemento": [
+    "<p class=\"font-[family-name:var(--font-display)] text-3xl\">",
+    "<p class=\"font-[family-name:var(--font-display)] text-3xl\">",
+    "<p class=\"font-[family-name:var(--font-display)] text-3xl\">"
+   ],
+   "base_f9": {
+    "rendimiento": 100,
+    "accesibilidad": 100,
+    "buenasPracticas": 96,
+    "seo": 91,
+    "lcp_s": 1.54,
+    "cls": 0.003,
+    "tbt_ms": 7,
+    "fcp_s": 1.24,
+    "ttfb_ms": 197,
+    "js_kb_transferido": 157
+   },
+   "baja_de_2_5_s": true,
+   "fallan": [
+    "render-blocking-resources(0.5)",
+    "legacy-javascript(0.5)",
+    "bf-cache(0)",
+    "legacy-javascript-insight(0.5)",
+    "network-dependency-tree-insight(0)",
+    "render-blocking-insight(0)"
+   ]
+  },
+  {
+   "ruta": "/co/perfume/9pm-afnan-para-hombres",
+   "corridas": 3,
+   "mediana": {
+    "rendimiento": 98,
+    "accesibilidad": 100,
+    "buenasPracticas": 100,
+    "seo": 100,
+    "lcp_s": 1.82,
+    "cls": 0,
+    "tbt_ms": 10,
+    "fcp_s": 1.19,
+    "ttfb_ms": 210,
+    "js_kb_transferido": 151
+   },
+   "lcp_s_corridas": [
+    2.24,
+    1.78,
+    1.82
+   ],
+   "lcpElemento": [
+    "<h1 class=\"text-4xl md:text-5xl\">",
+    "<h1 class=\"text-4xl md:text-5xl\">",
+    "<h1 class=\"text-4xl md:text-5xl\">"
+   ],
+   "base_f9": {
+    "rendimiento": 98,
+    "accesibilidad": 100,
+    "buenasPracticas": 96,
+    "seo": 91,
+    "lcp_s": 2.37,
+    "cls": 0,
+    "tbt_ms": 19,
+    "fcp_s": 1.37,
+    "ttfb_ms": 211,
+    "js_kb_transferido": 154
+   },
+   "baja_de_2_5_s": true,
+   "fallan": [
+    "render-blocking-resources(0.5)",
+    "legacy-javascript(0)",
+    "bf-cache(0)",
+    "legacy-javascript-insight(0)",
+    "network-dependency-tree-insight(0)",
+    "render-blocking-insight(0)",
+    "legacy-javascript(0.5)",
+    "legacy-javascript-insight(0.5)"
+   ]
+  },
+  {
+   "ruta": "/co/carrito",
+   "corridas": 3,
+   "mediana": {
+    "rendimiento": 100,
+    "accesibilidad": 100,
+    "buenasPracticas": 100,
+    "seo": 66,
+    "lcp_s": 1.67,
+    "cls": 0,
+    "tbt_ms": 8,
+    "fcp_s": 1.08,
+    "ttfb_ms": 214,
+    "js_kb_transferido": 159
+   },
+   "lcp_s_corridas": [
+    1.67,
+    1.64,
+    1.68
+   ],
+   "lcpElemento": [
+    "<p class=\"max-w-xl font-display text-3xl leading-snug md:text-4xl\">",
+    "",
+    "<p class=\"max-w-xl font-display text-3xl leading-snug md:text-4xl\">"
+   ],
+   "base_f9": {
+    "rendimiento": 97,
+    "accesibilidad": 100,
+    "buenasPracticas": 93,
+    "seo": 58,
+    "lcp_s": 2.57,
+    "cls": 0.001,
+    "tbt_ms": 9,
+    "fcp_s": 1.22,
+    "ttfb_ms": 381,
+    "js_kb_transferido": 185
+   },
+   "baja_de_2_5_s": true,
+   "fallan": [
+    "render-blocking-resources(0.5)",
+    "legacy-javascript(0.5)",
+    "is-crawlable(0)",
+    "bf-cache(0)",
+    "legacy-javascript-insight(0.5)",
+    "network-dependency-tree-insight(0)",
+    "render-blocking-insight(0)"
+   ]
+  },
+  {
+   "ruta": "/co/checkout",
+   "corridas": 3,
+   "mediana": {
+    "rendimiento": 100,
+    "accesibilidad": 100,
+    "buenasPracticas": 100,
+    "seo": 66,
+    "lcp_s": 1.59,
+    "cls": 0,
+    "tbt_ms": 8,
+    "fcp_s": 1.23,
+    "ttfb_ms": 208,
+    "js_kb_transferido": 166
+   },
+   "lcp_s_corridas": [
+    3.56,
+    1.59,
+    1.53
+   ],
+   "lcpElemento": [
+    "<p class=\"max-w-md text-ink/80\">",
+    "<p class=\"max-w-md text-ink/80\">",
+    "<p class=\"max-w-md text-ink/80\">"
+   ],
+   "base_f9": {
+    "rendimiento": 97,
+    "accesibilidad": 100,
+    "buenasPracticas": 93,
+    "seo": 54,
+    "lcp_s": 2.59,
+    "cls": 0,
+    "tbt_ms": 15,
+    "fcp_s": 1.24,
+    "ttfb_ms": 205,
+    "js_kb_transferido": 195
+   },
+   "baja_de_2_5_s": true,
+   "fallan": [
+    "first-contentful-paint(0.72)",
+    "largest-contentful-paint(0.62)",
+    "server-response-time(0)",
+    "largest-contentful-paint-element(0)",
+    "legacy-javascript(0.5)",
+    "is-crawlable(0)",
+    "bf-cache(0)",
+    "document-latency-insight(0)",
+    "legacy-javascript-insight(0.5)",
+    "render-blocking-resources(0.5)",
+    "network-dependency-tree-insight(0)",
+    "render-blocking-insight(0)"
+   ]
+  }
+ ],
+ "fecha": "2026-11-07",
+ "entorno": "https://izaoperfumeria.com (solo lectura), Lighthouse 12.6.1 móvil, Chrome local",
+ "notas": [
+  "LCP mediano < 2,5 s en las 5 páginas; todos los LCP son texto (h1/h2/p), producción aún no tiene fotos de producto (imagenes: [] en la ficha).",
+  "Una corrida de /co/checkout dio LCP 3,56 s con server-response-time en rojo (pico de TTFB, no de render); las otras dos 1,53-1,59 s. Se reporta mediana.",
+  "SEO 66 en carrito y checkout por is-crawlable (noindex intencional); en el resto SEO pasó de 91 a 100.",
+  "La ficha 9pm-afnan no tiene fotos: no hay ficha con fotos en producción para medir LCP de imagen."
+ ]
+}
