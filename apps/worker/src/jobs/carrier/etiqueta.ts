@@ -19,6 +19,7 @@ import {
 export type AccionEtiqueta =
   | 'guardada'
   | 'ya_guardada'
+  | 'remota'
   | 'sin_etiqueta'
   | 'consulta_programada'
   | 'agotado'

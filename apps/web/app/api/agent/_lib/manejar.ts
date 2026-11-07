@@ -1,5 +1,5 @@
 /**
- * Manejadores de la API del agente de impresión (contrato v1, `docs/integraciones/agente-api.md`). Lógica pura
+ * Manejadores de la API del agente de impresión (contrato v1.1, `docs/integraciones/agente-api.md`). Lógica pura
  * sobre `FuenteAgente`; las rutas solo conectan la base y el disco. Respuestas sin detalles internos; los logs
  * nunca llevan el token, el contenido del PDF ni la captura.
  */
@@ -11,6 +11,7 @@ import {
   MAX_CAPTURA_BYTES,
   MAX_RECLAMO,
   RECLAMO_VENCIDO_MS,
+  REVISION_CONTRATO,
   ReclamoSchema,
   ResultadoSchema,
   VERSION_CONTRATO,
@@ -278,6 +279,7 @@ export function manejarConfig(req: Request, deps: DepsAgente): Promise<Response>
     const objeto = (v: unknown) => (typeof v === 'object' && v !== null && !Array.isArray(v) ? v : null);
     return json({
       contract_version: VERSION_CONTRATO,
+      contract_revision: REVISION_CONTRATO,
       config_version: versionConfig(agente.mode, remota),
       agent: { id: agente.id, name: agente.name, mode: agente.mode },
       intervals: {

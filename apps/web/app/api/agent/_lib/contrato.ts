@@ -1,11 +1,14 @@
 /**
- * Contrato v1 de la API del agente de impresión (`docs/integraciones/agente-api.md`, §15.3). Esquemas de entrada,
+ * Contrato v1 (revisión 1.1, compatible) de la API del agente de impresión (`docs/integraciones/agente-api.md`, §15.3). Esquemas de entrada,
  * hash del token y formas de respuesta. Sin dependencias de Next ni de la base.
  */
 import { createHash } from 'node:crypto';
+import { urlEtiquetaSegura } from '@izao/mastershop';
 import { z } from 'zod';
 
 export const VERSION_CONTRATO = 1;
+/** Revisión compatible: 1.1 agrega `label_url` en los trabajos (D-051). Un agente 1.0 la ignora. */
+export const REVISION_CONTRATO = '1.1';
 export const MAX_RECLAMO = 5;
 /** Un trabajo reclamado por otro agente sin resultado en este tiempo se puede volver a reclamar. */
 export const RECLAMO_VENCIDO_MS = 15 * 60_000;
@@ -77,6 +80,10 @@ export interface TrabajoFila {
   attempts: number;
   requested_by: string;
   created_at: string;
+  /** `shipments.label_url` (URL pública de MasterShop), sin validar. */
+  label_url?: string | null;
+  /** El servidor tiene la copia en `MEDIA_ROOT/labels/` (`shipments.label_local_path`). */
+  label_local?: boolean;
 }
 
 export interface TrabajoRespuesta {
@@ -87,6 +94,17 @@ export interface TrabajoRespuesta {
   created_at: string;
   claimed_at: string | null;
   label_path: string;
+  /**
+   * v1.1: solo en `label` sin copia en el servidor (el CDN bloquea su IP, D-051). El agente descarga el PDF de aquí
+   * sin `Authorization`. Siempre `https://cdn.bemaster.com/…` (validada); `null` en los demás casos.
+   */
+  label_url: string | null;
+}
+
+/** URL pública que se entrega al agente, o `null` si el servidor tiene copia o la URL no es del CDN esperado. */
+export function urlEtiquetaParaAgente(t: TrabajoFila): string | null {
+  if (t.type !== 'label' || t.label_local === true) return null;
+  return urlEtiquetaSegura(t.label_url ?? null);
 }
 
 export function aRespuesta(t: TrabajoFila): TrabajoRespuesta {
@@ -98,6 +116,7 @@ export function aRespuesta(t: TrabajoFila): TrabajoRespuesta {
     created_at: t.created_at,
     claimed_at: t.claimed_at,
     label_path: `/api/agent/jobs/${t.id}/label`,
+    label_url: urlEtiquetaParaAgente(t),
   };
 }
 

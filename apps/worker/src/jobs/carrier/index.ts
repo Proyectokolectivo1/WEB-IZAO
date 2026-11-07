@@ -30,7 +30,7 @@ import {
   type ColaMinima,
   type FetchLike,
 } from '@izao/mastershop';
-import { MasterShopMock } from '@izao/mastershop/mock';
+import { MasterShopMock, MOCK_LABEL_HOST } from '@izao/mastershop/mock';
 import { conRecalculoMetricas, type RecalcularMetricasPedido } from '../metrics/tras-transicion.js';
 import { crearAlmacenEtiquetas } from './almacen-etiquetas.js';
 import type { DepsCarrier } from './comun.js';
@@ -110,7 +110,7 @@ export function dependenciasCarrierDesdeEnv(
       fuente: { ...fuente, credenciales: async () => ({ apiKey: LLAVE_SIMULADA }) },
       programar,
       ...(recalcularMetricas ? { recalcularMetricas } : {}),
-      etiquetas: crearAlmacenEtiquetas({ mediaRoot, fetchImpl: fetchSimulado as typeof fetch }),
+      etiquetas: crearAlmacenEtiquetas({ mediaRoot, fetchImpl: fetchSimulado as typeof fetch, hostsPermitidos: [MOCK_LABEL_HOST] }),
       transportadora: (_c, opciones) => carrierCon(new MasterShopClient({ apiKey: LLAVE_SIMULADA, fetch: fetchSimulado }), opciones),
     };
   }

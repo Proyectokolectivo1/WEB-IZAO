@@ -14,3 +14,4 @@ export * from './webhook';
 export * from './wallet';
 export * from './webhook-registro';
 export * from './products';
+export * from './labels';

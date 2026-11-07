@@ -10,6 +10,7 @@ import {
   type CarrierOrderOptions,
   type MasterShopCredentials,
 } from '@izao/mastershop';
+import { esBloqueoEtiqueta } from './almacen-etiquetas.js';
 import type { RecalcularMetricasPedido } from '../metrics/tras-transicion.js';
 import type { AlmacenEtiquetas, EnvioFila, FuenteCarrier, ProgramadorCarrier } from './fuente.js';
 
@@ -125,6 +126,10 @@ export async function guardarRemoto(
 /**
  * Descarga la etiqueta a `MEDIA_ROOT/labels/`, guarda la ruta y crea el `print_job` (§14.5 paso 3).
  * Idempotente: si ya hay ruta local solo asegura el trabajo de impresión.
+ *
+ * Respaldo D-051: si el CDN bloquea la IP del servidor (403), no es un error terminal. Se crea igual el `print_job`
+ * y el agente descarga el PDF desde `shipments.label_url` (API del agente v1.1). La copia local se vuelve a intentar
+ * en cada sincronización; el trabajo automático sigue siendo uno por envío.
  */
 export async function guardarEtiqueta(
   deps: DepsCarrier,
@@ -132,13 +137,29 @@ export async function guardarEtiqueta(
   numero: string,
   envio: EnvioFila,
   actor: string,
-): Promise<'guardada' | 'ya_guardada' | 'sin_etiqueta'> {
+): Promise<'guardada' | 'ya_guardada' | 'sin_etiqueta' | 'remota'> {
   if (envio.label_local_path) {
     await deps.fuente.crearImpresionEtiqueta(orderId, envio.id);
     return 'ya_guardada';
   }
   if (!envio.label_url) return 'sin_etiqueta';
-  const ruta = await deps.etiquetas.guardar(envio.label_url, numero);
+  let ruta: string;
+  try {
+    ruta = await deps.etiquetas.guardar(envio.label_url, numero);
+  } catch (e) {
+    if (!esBloqueoEtiqueta(e)) throw e;
+    const creado = await deps.fuente.crearImpresionEtiqueta(orderId, envio.id);
+    if (creado) {
+      await deps.fuente.registrarEvento(orderId, 'transportadora', actor, {
+        accion: 'etiqueta_por_agente',
+        guia: envio.tracking_code,
+        motivo: 'cdn_bloquea_servidor',
+        error: errorParaEvento(e),
+        impresion_creada: true,
+      });
+    }
+    return 'remota';
+  }
   const actualizado = await deps.fuente.guardarEnvio(orderId, { external_order_id: numero, label_local_path: ruta });
   const creado = await deps.fuente.crearImpresionEtiqueta(orderId, actualizado.id);
   await deps.fuente.registrarEvento(orderId, 'transportadora', actor, {

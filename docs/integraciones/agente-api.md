@@ -1,6 +1,6 @@
 # API del agente de impresión (`/api/agent/*`)
 
-Contrato entre el servidor (dueño: izao-logistica) y el agente de Windows (dueño: izao-agente-windows). Fuente: §15.3 y §15.5 de la especificación. Versión del contrato: **1**.
+Contrato entre el servidor (dueño: izao-logistica) y el agente de Windows (dueño: izao-agente-windows). Fuente: §15.3 y §15.5 de la especificación. Versión del contrato: **1**, revisión **1.1** (compatible: solo agrega campos; un agente 1.0 los ignora).
 
 ## Reglas comunes
 
@@ -49,13 +49,19 @@ Cada 10 s. Cuerpo opcional `{ "max": 5 }` (1–5, defecto 5).
       "reprint": false,
       "created_at": "2026-10-20T15:00:00.000Z",
       "claimed_at": "2026-10-20T15:00:05.000Z",
-      "label_path": "/api/agent/jobs/6c0e…/label"
+      "label_path": "/api/agent/jobs/6c0e…/label",
+      "label_url": null
     }
   ]
 }
 ```
 
 - `type`: `label` | `packing_list` | `test_page`. `reprint = true` cuando lo pidió un admin (`requested_by = admin:<id>`): es un trabajo nuevo con otro `id`; el agente lo imprime aunque ya haya impreso la etiqueta de ese pedido.
+- `label_url` (1.1): `null` salvo en `label` cuando el servidor **no** tiene copia del PDF (el CDN de MasterShop bloquea la IP del VPS, D-051). Entonces el agente:
+  1. Descarga el PDF desde `label_url` con su propia conexión (IP de Colombia), **sin** `Authorization` ni el token del agente, sin seguir redirecciones a otro host, tiempo límite 20 s, tope 10 MB, y exige cabecera `%PDF-`.
+  2. Valida antes de pedirla: `https`, puerto 443, host exactamente `cdn.bemaster.com` (el servidor ya la filtra; el agente lo repite).
+  3. Si falla (403/404/red), reintenta con espera como cualquier impresión y, al agotar, reporta `failed` con el error (el panel puede reimprimir).
+  Si `label_url` es `null`, usa `label_path` como en 1.0. `GET /label` sigue respondiendo `404` cuando no hay copia en el servidor.
 - Regla: un pedido no se imprime dos veces automáticamente. El servidor solo crea un trabajo automático por envío; el agente no reimprime un `id` que su SQLite marca como impreso.
 
 ## `GET /api/agent/jobs/{id}/label`
@@ -83,6 +89,7 @@ Respuesta `200`: `{ "ok": true, "duplicado": false }`.
 ```json
 {
   "contract_version": 1,
+  "contract_revision": "1.1",
   "config_version": "…",
   "agent": { "id": "…", "name": "PC despacho", "mode": "api" },
   "intervals": { "heartbeat_seconds": 30, "claim_seconds": 10, "panel_retry_seconds": 300 },

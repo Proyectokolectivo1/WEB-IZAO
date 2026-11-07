@@ -11,12 +11,13 @@ import { clienteDb } from '@/lib/db/cliente';
 import type { TrabajoFila } from './contrato';
 import type { AgenteFila, DepsAgente, FuenteAgente } from './manejar';
 
-const COLUMNAS = 'id,type,status,order_id,shipment_id,claimed_by_agent,claimed_at,attempts,requested_by,created_at,orders(number)';
+const COLUMNAS = 'id,type,status,order_id,shipment_id,claimed_by_agent,claimed_at,attempts,requested_by,created_at,orders(number),shipments(label_url,label_local_path)';
 
 type Fila = Record<string, unknown>;
 
 function aTrabajo(r: Fila): TrabajoFila {
   const orden = r.orders as { number?: unknown } | null;
+  const envio = r.shipments as { label_url?: unknown; label_local_path?: unknown } | null;
   return {
     id: String(r.id),
     type: r.type as TrabajoFila['type'],
@@ -29,6 +30,8 @@ function aTrabajo(r: Fila): TrabajoFila {
     attempts: typeof r.attempts === 'number' ? r.attempts : 0,
     requested_by: String(r.requested_by),
     created_at: String(r.created_at),
+    label_url: typeof envio?.label_url === 'string' ? envio.label_url : null,
+    label_local: typeof envio?.label_local_path === 'string' && envio.label_local_path !== '',
   };
 }
 

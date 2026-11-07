@@ -9,7 +9,7 @@ import {
   MasterShopCarrier,
   MasterShopClient,
 } from '@izao/mastershop';
-import { FakeClock, MasterShopMock, MS_ERRORS } from '@izao/mastershop/mock';
+import { FakeClock, MasterShopMock, MOCK_LABEL_HOST, MS_ERRORS } from '@izao/mastershop/mock';
 import { makeItem, makeOrder } from '@izao/mastershop/test-utils';
 import { crearAlmacenEtiquetas } from './almacen-etiquetas.js';
 import type { DepsCarrier } from './comun.js';
@@ -51,7 +51,7 @@ function setup(opts: { autoLabel?: boolean } = {}) {
   const deps: DepsCarrier = {
     fuente,
     programar,
-    etiquetas: crearAlmacenEtiquetas({ mediaRoot: dir, fetchImpl: mock.fetch }),
+    etiquetas: crearAlmacenEtiquetas({ mediaRoot: dir, fetchImpl: mock.fetch, hostsPermitidos: [MOCK_LABEL_HOST] }),
     transportadora: (creds, opciones) =>
       new MasterShopCarrier({
         client: new MasterShopClient({ apiKey: creds.apiKey, fetch: mock.fetch, clock }),
@@ -269,6 +269,50 @@ describe('carrier.poll_label', () => {
     mock.attachLabel(1001, 'G1');
     mock.orders.get(1001)!.shippingLabel = 'http://labels.example.com/G1.pdf';
     expect((await procesarEtiqueta({ order_id: ID, intento: 0 }, deps)).accion).toBe('consulta_programada');
+    expect(fuente.impresiones).toEqual([]);
+  });
+
+  it('D-051: si el CDN bloquea al servidor (403) crea igual el print_job para que el agente la descargue', async () => {
+    const { mock, fuente, programar, deps } = setup();
+    // El mock responde 403 sin User-Agent: así se reproduce el bloqueo por IP del VPS.
+    const bloqueado: DepsCarrier = {
+      ...deps,
+      etiquetas: crearAlmacenEtiquetas({ mediaRoot: dir, fetchImpl: mock.fetch, userAgent: '', hostsPermitidos: [MOCK_LABEL_HOST] }),
+    };
+    fuente.agregar(makeOrder());
+    await procesarCrear({ order_id: ID, intento: 0 }, bloqueado);
+    programar.sacar('etiqueta');
+    mock.attachLabel(1001, '75070783091');
+    mock.setStatus(1001, 3);
+
+    expect((await procesarEtiqueta({ order_id: ID, intento: 0 }, bloqueado)).accion).toBe('remota');
+    expect((await fuente.envio(ID))!).toMatchObject({ label_local_path: null, label_url: expect.stringContaining(MOCK_LABEL_HOST) });
+    expect(fuente.impresiones).toHaveLength(1);
+    expect(programar.jobs).toEqual([]);
+    const porAgente = () => fuente.eventos.filter((e) => (e.payload as { accion?: string }).accion === 'etiqueta_por_agente');
+    expect(porAgente()).toHaveLength(1);
+    expect(fuente.eventos.some((e) => e.type === 'alerta')).toBe(false);
+
+    // La sincronización vuelve a intentar la copia local sin duplicar trabajo ni evento ni alertar.
+    await procesarSync({ event_id: 'e-403', provider_order_id: 1001, external_order_id: null, origen: 'webhook' }, bloqueado);
+    expect(fuente.impresiones).toHaveLength(1);
+    expect(porAgente()).toHaveLength(1);
+    expect(fuente.eventos.some((e) => e.type === 'alerta')).toBe(false);
+
+    // Cuando el CDN libera la IP, la siguiente sincronización guarda la copia local (sin otro print_job).
+    await procesarSync({ event_id: 'e-200', provider_order_id: 1001, external_order_id: null, origen: 'polling' }, deps);
+    expect((await fuente.envio(ID))!.label_local_path).toBe('labels/IZ-CO-000123.pdf');
+    expect(fuente.impresiones).toHaveLength(1);
+  });
+
+  it('otros fallos de descarga (no 403) siguen reintentándose y no crean print_job', async () => {
+    const { mock, fuente, programar, deps } = setup();
+    const caido: DepsCarrier = { ...deps, etiquetas: { guardar: async () => Promise.reject(new Error('red caída')) } };
+    fuente.agregar(makeOrder());
+    await procesarCrear({ order_id: ID, intento: 0 }, caido);
+    programar.sacar('etiqueta');
+    mock.attachLabel(1001, 'G2');
+    expect((await procesarEtiqueta({ order_id: ID, intento: 0 }, caido)).accion).toBe('consulta_programada');
     expect(fuente.impresiones).toEqual([]);
   });
 });

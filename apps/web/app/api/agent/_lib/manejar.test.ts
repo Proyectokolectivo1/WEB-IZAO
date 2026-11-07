@@ -144,7 +144,7 @@ describe('heartbeat y config', () => {
     expect(b.ok).toBe(true);
     expect(fuente.latidos[0]).toMatchObject({ agenteId: 'ag-a', datos: { version: '1.0.0', printer_name: 'Zebra', status_payload: { panel_state: 'needs_login', queue_size: 0 } } });
     const c = (await (await manejarConfig(req('/api/agent/config', TOKEN_A), deps)).json()) as Record<string, unknown>;
-    expect(c).toMatchObject({ contract_version: 1, config_version: b.config_version, agent: { id: 'ag-a', mode: 'api' }, intervals: { heartbeat_seconds: 30, claim_seconds: 10 }, max_claim: 5, panel: null });
+    expect(c).toMatchObject({ contract_version: 1, contract_revision: '1.1', config_version: b.config_version, agent: { id: 'ag-a', mode: 'api' }, intervals: { heartbeat_seconds: 30, claim_seconds: 10 }, max_claim: 5, panel: null });
   });
 
   it('heartbeat con claves extra o tipos malos → 400', async () => {
@@ -173,6 +173,21 @@ describe('jobs/claim', () => {
     expect(r.jobs[1]!.reprint).toBe(true);
     expect(r.jobs[0]).toMatchObject({ reprint: false, label_path: `/api/agent/jobs/${uuid(1)}/label`, order_number: 'IZ-CO-000001' });
     expect(fuente.trabajos.get(uuid(1))).toMatchObject({ status: 'claimed', claimed_by_agent: 'ag-a' });
+  });
+
+  it('v1.1 (D-051): label_url solo en etiquetas sin copia en el servidor y del CDN de MasterShop', async () => {
+    const { deps, fuente } = escenario();
+    const cdn = 'https://cdn.bemaster.com/mastershop/files/carriers/coordinadora/guide-pdf/75070783091-standard.pdf';
+    fuente.agregar(1, { label_url: cdn, label_local: false });
+    fuente.agregar(2, { label_url: cdn, label_local: true });
+    fuente.agregar(3, { label_url: 'https://169.254.169.254/latest/meta-data', label_local: false });
+    fuente.agregar(4, { label_url: 'http://cdn.bemaster.com/x.pdf', label_local: false });
+    fuente.agregar(5, { type: 'test_page', order_id: null, shipment_id: null, order_number: null, label_url: cdn });
+    const r = (await (await manejarReclamo(req('/api/agent/jobs/claim', TOKEN_A, {}), deps)).json()) as { jobs: { label_url: string | null }[] };
+    expect(r.jobs.map((j) => j.label_url)).toEqual([cdn, null, null, null, null]);
+    // El PDF del servidor sigue respondiendo 404 sin copia local: el agente 1.0 no cambia de comportamiento.
+    const pdf = await manejarEtiqueta(req(`/api/agent/jobs/${uuid(1)}/label`, TOKEN_A), uuid(1), deps);
+    expect(pdf.status).toBe(404);
   });
 
   it('idempotente tras un reinicio: devuelve primero los que ya tenía, sin duplicar', async () => {
