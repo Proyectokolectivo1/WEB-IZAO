@@ -159,6 +159,7 @@ class PanelConfig(BaseModel):
 class RemoteConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
     contract_version: int = 1
+    contract_revision: str | None = None  # "1.1"; ausente en servidores 1.0
     config_version: str = ""
     mode: Literal["api", "panel"] = "api"
     intervals: Intervals | None = None
@@ -172,6 +173,7 @@ def parse_remote(data: dict[str, Any]) -> RemoteConfig:
     agent = data.get("agent") if isinstance(data.get("agent"), dict) else {}
     flat = {
         "contract_version": data.get("contract_version", 1),
+        "contract_revision": str(data["contract_revision"]) if data.get("contract_revision") is not None else None,
         "config_version": str(data.get("config_version", "")),
         "mode": agent.get("mode", "api"),
         "intervals": data.get("intervals"),

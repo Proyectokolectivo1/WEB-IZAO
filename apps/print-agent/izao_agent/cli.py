@@ -173,6 +173,7 @@ def cmd_doctor(args) -> int:
             ok_all = False
         print(f"{mark} {text}")
 
+    line(True, f"Versión del agente: {__version__}")
     try:
         cfg = _load(args)
         line(True, f"Configuración leída. Servidor: {cfg.server_url}")

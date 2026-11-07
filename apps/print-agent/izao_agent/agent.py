@@ -31,6 +31,13 @@ from .store import INTERRUPTED_MESSAGE, Store
 
 log = logging.getLogger("izao.agent")
 
+_CDN_REASONS = {
+    "cdn_rechazo": "el sitio de la guía la rechazó",
+    "redireccion_no_permitida": "el sitio de la guía redirigió a otra dirección",
+    "no_es_pdf": "lo descargado no es un PDF",
+    "muy_grande": "el archivo es demasiado grande",
+}
+
 _ERROR_PRIORITY = ("printer", "print", "panel", "net")
 
 
@@ -168,7 +175,7 @@ class Agent:
         if self._claim_allowed():
             max_jobs = min(self.cfg.max_claim, (self.remote.max_claim if self.remote and self.remote.max_claim else 5))
             for job in self.api.claim(max_jobs):
-                self.store.register(job.id, job.type, job.order_number, job.reprint, job.claimed_at)
+                self.store.register(job.id, job.type, job.order_number, job.reprint, job.claimed_at, job.label_url)
                 processed += self._safe_process(job.id)
         self.flush_reports()
         self.touch_alive()
@@ -278,7 +285,9 @@ class Agent:
             return Path(existing)
         target = self.labels_dir / f"{job_id}.pdf"
         try:
-            if self._panel_active() and row["type"] == "label" and self.remote.panel.step("obtener_guia"):
+            if row["type"] == "label" and row["label_url"]:
+                self._fetch_from_cdn(row, target)  # contrato 1.1: el servidor no tiene copia
+            elif self._panel_active() and row["type"] == "label" and self.remote.panel.step("obtener_guia"):
                 self._fetch_from_panel(row, target)
             else:
                 self._fetch_from_api(job_id, target)
@@ -300,6 +309,35 @@ class Agent:
         tmp = target.with_suffix(".part")
         tmp.write_bytes(data)
         os.replace(tmp, target)
+
+    def _fetch_from_cdn(self, row, target: Path) -> None:
+        """Descarga directa del CDN (sin token). Reintenta en los próximos ciclos y, al agotar, cierra en `failed`."""
+        job_id = row["id"]
+        try:
+            data = self.api.download_label_url(row["label_url"])
+        except PermanentError as exc:
+            if exc.code == "url_no_permitida":  # no se reintenta: el enlace nunca será válido
+                self._fail_fetch(job_id, "La dirección de la guía no es de un sitio permitido (se rechazó por seguridad)")
+            n = self._fetch_failures.get(job_id, 0) + 1
+            self._fetch_failures[job_id] = n
+            reason = _CDN_REASONS.get(exc.code, "la descarga falló")
+            log.warning("Guía del CDN: intento %s/%s falló (%s %s)", n, self.cfg.max_print_attempts, exc.status, exc.code)
+            if n >= self.cfg.max_print_attempts:
+                self._fail_fetch(job_id, f"No se pudo descargar la guía de MasterShop: {reason} ({exc.status}), tras {n} intentos")
+            raise Deferred(f"guía del CDN: {reason}") from exc
+        except TransientError as exc:
+            if self._age(row["created_at"]) > timedelta(minutes=self.cfg.printer_wait_minutes):
+                self._fail_fetch(job_id, f"No se pudo descargar la guía de MasterShop en {self.cfg.printer_wait_minutes} minutos (sin conexión)")
+            raise Deferred(f"sin conexión para descargar la guía del CDN ({type(exc).__name__})") from exc
+        tmp = target.with_suffix(".part")
+        tmp.write_bytes(data)
+        os.replace(tmp, target)
+        self._fetch_failures.pop(job_id, None)
+
+    def _fail_fetch(self, job_id: str, msg: str) -> None:
+        self.store.finish(job_id, "failed", msg)
+        self.set_error("print", msg)
+        raise Deferred(msg)
 
     def _fetch_from_panel(self, row, target: Path) -> None:
         assert self.panel is not None and self.remote is not None and self.remote.panel is not None

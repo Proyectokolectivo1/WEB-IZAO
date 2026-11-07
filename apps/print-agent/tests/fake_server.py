@@ -28,10 +28,11 @@ class State:
         self.result_mode = "normal"  # normal | lose_request (503 sin aplicar) | lose_response (aplica y responde 503)
         self.agent_id = "agent-1"
 
-    def add_job(self, job_id: str, order: str = "IZ-CO-000001", type_: str = "label", reprint: bool = False, pdf: bytes | None = None):
+    def add_job(self, job_id: str, order: str = "IZ-CO-000001", type_: str = "label", reprint: bool = False, pdf: bytes | None = None, label_url: str | None = None):
         self.jobs[job_id] = {
             "id": job_id, "type": type_, "order_number": order, "reprint": reprint, "status": "queued",
             "agent": None, "claimed_at": None, "pdf": pdf if pdf is not None else build_test_pdf(order), "result": None,
+            "label_url": label_url,
         }
 
 
@@ -128,6 +129,8 @@ def _handler(state: State):
                     job = state.jobs.get(parts[4])
                     if not job or job["agent"] != state.agent_id:
                         return self._json(404, {"error": "no_encontrado"})
+                    if job.get("label_url"):  # 1.1: el servidor no tiene copia
+                        return self._json(404, {"error": "no_encontrado"})
                     if job["type"] == "packing_list":
                         return self._json(501, {"error": "no_disponible"})
                     pdf = job["pdf"]
@@ -162,6 +165,7 @@ def _handler(state: State):
                             "id": j["id"], "type": j["type"], "order_number": j["order_number"], "reprint": j["reprint"],
                             "created_at": "2026-10-20T15:00:00.000Z", "claimed_at": j["claimed_at"],
                             "label_path": f"/api/agent/jobs/{j['id']}/label",
+                            "label_url": j.get("label_url"),
                         })
                 return self._json(200, {"jobs": out})
             parts = self.path.split("/")

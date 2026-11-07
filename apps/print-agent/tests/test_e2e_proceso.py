@@ -55,4 +55,4 @@ def test_agente_como_proceso(server, tmp_path, sumatra_log):
             proc.kill()
     assert proc.returncode == 0
     log = (home / "logs" / "agent.log").read_text(encoding="utf-8")
-    assert "Agente 1.0.0 en marcha" in log and TOKEN not in log
+    assert "Agente 1.1.0 en marcha" in log and TOKEN not in log

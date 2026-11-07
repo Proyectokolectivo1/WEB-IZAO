@@ -13,6 +13,7 @@ import random
 import re
 import time
 from typing import Any, Callable
+from urllib.parse import urlsplit
 
 import httpx
 from pydantic import BaseModel, ConfigDict, ValidationError
@@ -24,6 +25,10 @@ log = logging.getLogger("izao.api")
 
 MAX_PDF_BYTES = 20 * 1024 * 1024
 MAX_SCREENSHOT_BYTES = 2 * 1024 * 1024
+# Contrato 1.1 (D-051): etiquetas sin copia en el servidor se bajan directo del CDN de MasterShop.
+LABEL_CDN_HOST = "cdn.bemaster.com"
+MAX_CDN_PDF_BYTES = 10 * 1024 * 1024
+CDN_TIMEOUT_SECONDS = 20.0
 _JOB_ID_RE = re.compile(r"^[A-Za-z0-9-]{1,64}$")
 
 
@@ -46,6 +51,24 @@ class PermanentError(ApiError):
         self.code = code
 
 
+def validate_label_url(url: str) -> str:
+    """Devuelve la URL si es https, puerto 443 y host exacto `cdn.bemaster.com`; si no, lanza PermanentError.
+
+    El mensaje de error nunca incluye la URL (puede traer parámetros firmados).
+    """
+    bad = PermanentError(400, "url_no_permitida")
+    try:
+        parts = urlsplit(url.strip())
+        port = parts.port  # ValueError si el puerto no es válido
+    except ValueError:
+        raise bad from None
+    if parts.scheme != "https" or parts.hostname != LABEL_CDN_HOST or port not in (None, 443):
+        raise bad
+    if parts.username is not None or parts.password is not None or not parts.path or parts.fragment:
+        raise bad
+    return url.strip()
+
+
 class ClaimedJob(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
@@ -54,6 +77,7 @@ class ClaimedJob(BaseModel):
     reprint: bool = False
     created_at: str | None = None
     claimed_at: str | None = None
+    label_url: str | None = None  # 1.1: solo si el servidor no tiene copia del PDF; ausente en servidores 1.0
 
 
 class AgentApi:
@@ -69,6 +93,8 @@ class AgentApi:
         wait_max: float = 60.0,
         long_attempts: int = 6,
         short_attempts: int = 2,
+        cdn_client: httpx.Client | None = None,
+        cdn_attempts: int = 3,
     ):
         self._base = base_url.rstrip("/")
         self._token = token_getter
@@ -78,9 +104,13 @@ class AgentApi:
         self._wait_max = wait_max
         self._long = long_attempts
         self._short = short_attempts
+        # Conexión aparte para el CDN: sin Authorization y sin seguir redirecciones.
+        self._cdn_client = cdn_client or httpx.Client(timeout=CDN_TIMEOUT_SECONDS, follow_redirects=False)
+        self._cdn_attempts = cdn_attempts
 
     def close(self) -> None:
         self._client.close()
+        self._cdn_client.close()
 
     # ---- núcleo
     def _headers(self) -> dict[str, str]:
@@ -177,6 +207,39 @@ class AgentApi:
         except httpx.HTTPError as exc:
             raise TransientError(f"Sin conexión al descargar el PDF ({type(exc).__name__})") from exc
         return b"".join(chunks)
+
+    def download_label_url(self, url: str) -> bytes:
+        """Contrato 1.1: baja el PDF directo del CDN, SIN token. Reintenta solo fallos transitorios."""
+        validate_label_url(url)
+        return self._retrying(self._cdn_attempts)(self._once_cdn, url)
+
+    def _once_cdn(self, url: str) -> bytes:
+        headers = {"User-Agent": f"IzaoAgent/{__version__}", "Accept": "application/pdf"}  # nunca Authorization
+        try:
+            with self._cdn_client.stream("GET", url, headers=headers, timeout=CDN_TIMEOUT_SECONDS) as r:
+                status = r.status_code
+                if status in (408, 429, 500, 502, 503, 504):
+                    raise TransientError(f"El CDN de la guía respondió {status}")
+                if 300 <= status < 400:
+                    raise PermanentError(status, "redireccion_no_permitida")
+                if status != 200:
+                    raise PermanentError(status, "cdn_rechazo")
+                declared = r.headers.get("content-length", "")
+                if declared.isdigit() and int(declared) > MAX_CDN_PDF_BYTES:
+                    raise PermanentError(413, "muy_grande")
+                chunks: list[bytes] = []
+                total = 0
+                for chunk in r.iter_bytes():
+                    total += len(chunk)
+                    if total > MAX_CDN_PDF_BYTES:
+                        raise PermanentError(413, "muy_grande")
+                    chunks.append(chunk)
+        except httpx.HTTPError as exc:
+            raise TransientError(f"Sin conexión con el CDN de la guía ({type(exc).__name__})") from exc
+        data = b"".join(chunks)
+        if not data.startswith(b"%PDF-"):
+            raise PermanentError(200, "no_es_pdf")
+        return data
 
     def post_result(
         self,

@@ -13,7 +13,7 @@ No necesita que usted haga nada durante el día: solo que el PC esté encendido,
 2. **Google Chrome** instalado (solo se usa en el modo de respaldo, pero conviene tenerlo).
 3. La **impresora de etiquetas ya instalada** en Windows (que imprima una página de prueba normal).
 4. El **token del agente**: una clave larga que se crea en el panel de la tienda, en *Agente > Crear agente*. Se muestra **una sola vez**; cópiela y téngala a mano.
-5. La carpeta del instalador (el ZIP `IzaoAgent-1.0.0.zip`) que le entregó quien administra la tienda.
+5. La carpeta del instalador (el ZIP `IzaoAgent-1.1.0.zip`) que le entregó quien administra la tienda.
 
 ### Instalar (10 minutos)
 
@@ -68,6 +68,7 @@ El agente necesita que Windows no lo interrumpa:
 | Una guía salió **dos veces** o **no salió** | El agente nunca reimprime solo. Si no salió, en el panel de la tienda use **Reimprimir** en ese pedido. |
 | El panel dice "**el agente se reinició mientras imprimía**" | Es una protección: no sabe si la guía alcanzó a salir, así que no la repite. Mire si salió; si no, use **Reimprimir**. |
 | La impresora se quedó **sin papel o apagada** | Windows acepta el trabajo igual y SumatraPDF no avisa de esto. Cuando la impresora vuelva, el trabajo sale solo desde la cola de Windows; si no, use **Reimprimir**. |
+| El panel dice "**No se pudo descargar la guía de MasterShop**" | El sitio de MasterShop no entregó el PDF (o el PC no tiene internet). Revise el internet del PC; en el panel use **Reimprimir** en ese pedido. |
 | Aparece **"necesita que inicies sesión en MasterShop"** | Solo modo panel. Doble clic en `Iniciar-Sesion-Panel.bat`, inicie sesión (resuelva la verificación si aparece) y **cierre** esa ventana de Chrome. El agente lo reintenta solo cada 5 minutos. |
 
 ### Modo panel (respaldo)
@@ -80,7 +81,7 @@ Normalmente el servidor consigue la guía por su cuenta (modo API) y el agente s
 
 ### Actualizar o desinstalar
 
-- **Actualizar**: extraiga el ZIP nuevo y ejecute `Instalar.bat` de nuevo. Conserva `config.yaml` y el token.
+- **Actualizar** (por ejemplo, de la 1.0 a la 1.1): extraiga el ZIP nuevo en una carpeta nueva y ejecute `Instalar.bat` de nuevo. Conserva `config.yaml`, el token y el historial. Cuando pregunte por el token, responda **N** (No) para conservarlo. Al terminar, `Diagnostico.bat` debe mostrar la versión 1.1.0.
 - **Desinstalar**: `Desinstalar.bat` (en `C:\IzaoAgent`). Le preguntará si borra también los registros y las guías guardadas.
 
 ---
@@ -103,7 +104,7 @@ Contrato con el servidor: `docs/integraciones/agente-api.md` (v1). Decisiones: `
 ### Cómo funciona (resumen)
 
 - Dos hilos: **latido** cada 30 s y **trabajo** cada 10 s (los intervalos los manda el servidor en `/api/agent/config`). Si el servidor falla, se espera 2x, 4x... hasta 5 min.
-- Por trabajo: `claim` -> descarga `GET jobs/{id}/label` -> `agent.db` (SQLite) anota el intento **antes** de lanzar SumatraPDF -> `result`.
+- Por trabajo: `claim` -> descarga `GET jobs/{id}/label` (contrato 1.1: si el `claim` trae `label_url`, el PDF se baja directo de `https://cdn.bemaster.com` **sin token**, sin seguir redirecciones, máx. 20 s y 10 MB, y debe empezar por `%PDF-`; un fallo se reintenta en los siguientes ciclos y al agotar 3 intentos se reporta `failed`; el enlace se guarda en `agent.db` para sobrevivir a un reinicio) -> `agent.db` (SQLite) anota el intento **antes** de lanzar SumatraPDF -> `result`.
 - **Nunca dos veces**: un trabajo `printing` tras un reinicio se cierra como `failed` ("no se reimprimió por seguridad"); un tiempo agotado de SumatraPDF tampoco se reintenta; si el servidor no recibió el resultado se reintenta el aviso, no la impresión; un trabajo automático para una guía ya impresa no se imprime. Las reimpresiones del panel (`reprint: true`) sí.
 - **Vigilante** (`izao-agent supervisor`): reinicia el agente si muere o si no da señales de vida en 10 min. Tarea Programada "Izao Agente de Impresion" al iniciar sesión (con respaldo en la carpeta Inicio).
 - **Token**: Administrador de credenciales de Windows (`keyring`, servicio `IzaoAgent`); solo conexiones salientes por HTTPS (http solo hacia 127.0.0.1 para pruebas); los logs (`%LOCALAPPDATA%\IzaoAgent\logs`, rotativos 2 MB x 5) pasan por un filtro que tapa el token y cualquier `Bearer ...`.

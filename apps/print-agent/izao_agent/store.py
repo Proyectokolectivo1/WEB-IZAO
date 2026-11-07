@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS jobs (
   report_tries INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
-  printed_at TEXT
+  printed_at TEXT,
+  label_url TEXT
 );
 CREATE INDEX IF NOT EXISTS jobs_order_idx ON jobs(order_number, type);
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -59,6 +60,9 @@ class Store:
         self._db.execute("PRAGMA journal_mode=WAL")
         self._db.execute("PRAGMA synchronous=FULL")  # el estado `printing` debe estar en disco antes de imprimir
         self._db.executescript(SCHEMA)
+        cols = {r["name"] for r in self._db.execute("PRAGMA table_info(jobs)")}
+        if "label_url" not in cols:  # base creada por la versión 1.0
+            self._db.execute("ALTER TABLE jobs ADD COLUMN label_url TEXT")
 
     def close(self) -> None:
         with self._lock:
@@ -69,7 +73,9 @@ class Store:
         with self._lock:
             return self._db.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
 
-    def register(self, job_id: str, type_: str, order_number: str | None, reprint: bool, claimed_at: str | None) -> sqlite3.Row:
+    def register(
+        self, job_id: str, type_: str, order_number: str | None, reprint: bool, claimed_at: str | None, label_url: str | None = None
+    ) -> sqlite3.Row:
         now = _now()
         with self._lock:
             self._db.execute(
@@ -77,6 +83,9 @@ class Store:
                 (job_id, type_, order_number, int(reprint), claimed_at, now, now),
             )
             row = self.get(job_id)
+            if row is not None and label_url and not row["label_url"] and row["phase"] in ("new", "downloaded"):
+                self._update(job_id, label_url=label_url)
+                row = self.get(job_id)
         assert row is not None
         return row
 
