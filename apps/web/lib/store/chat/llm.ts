@@ -57,8 +57,36 @@ export class ErrorProveedor extends Error {
   constructor(
     mensaje: string,
     readonly estado: number | null = null,
+    /** Código corto del error del proveedor (p. ej. `429`, `rate_limit`); nunca el cuerpo completo. */
+    readonly codigo: string | null = null,
+    /** Mensaje corto del proveedor, ya recortado y sin secretos, solo para el registro del servidor. */
+    readonly detalle: string | null = null,
   ) {
     super(mensaje);
     this.name = 'ErrorProveedor';
   }
+}
+
+export interface FalloProveedor {
+  estado: number | null;
+  codigo: string | null;
+  detalle: string | null;
+}
+
+/** Recorta y limpia un texto del proveedor para el registro: una línea, sin llaves ni tokens, máximo 200 caracteres. */
+export function limpiarDetalle(crudo: unknown): string | null {
+  if (typeof crudo !== 'string') return null;
+  const t = crudo
+    .replace(/\s+/g, ' ')
+    .replace(/\b(?:sk|pk|rk)-[A-Za-z0-9_-]{8,}/g, '[oculto]')
+    .replace(/\bBearer\s+\S+/gi, 'Bearer [oculto]')
+    .trim();
+  return t ? t.slice(0, 200) : null;
+}
+
+/** Datos seguros de cualquier error para registrar (estado HTTP, código y mensaje corto; nada más). */
+export function describirFallo(err: unknown): FalloProveedor {
+  if (err instanceof ErrorProveedor) return { estado: err.estado, codigo: err.codigo, detalle: err.detalle ?? limpiarDetalle(err.message) };
+  if (err instanceof Error) return { estado: null, codigo: err.name === 'AbortError' ? 'abortado' : null, detalle: limpiarDetalle(err.name === 'AbortError' ? 'solicitud abortada' : err.message) };
+  return { estado: null, codigo: null, detalle: null };
 }

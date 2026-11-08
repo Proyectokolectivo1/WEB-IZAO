@@ -185,7 +185,9 @@ test.describe('F8 widget de Iza (§20.1)', () => {
     await page.goto(RUTAS.home('co'));
     await abrir(page);
     await escribir(page, 'Hola');
-    await expect(page.getByText('Algo no salió bien. Inténtalo de nuevo o habla con un asesor.')).toBeVisible();
+    // Fallo del modelo: Iza «descansa» y el asesor de WhatsApp queda como salida principal (sin error crudo).
+    await expect(page.getByText('Iza está descansando un momentico.')).toBeVisible();
+    await expect(page.getByTestId('asesor-iza')).toBeVisible();
     await expect(page.getByText('Iza está escribiendo…')).toHaveCount(0);
     await escribir(page, 'Hola otra vez');
     await expect(page.getByRole('log')).toContainText('Aquí estoy.');

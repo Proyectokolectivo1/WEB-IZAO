@@ -6,7 +6,7 @@
  * herramientas llegan en `delta.tool_calls` y se acumulan por `index` (o por `id`); `finish_reason = "tool_calls"`.
  * Los comentarios SSE (`: OPENROUTER PROCESSING`) se ignoran y un chunk con `error` corta la respuesta.
  */
-import { ErrorProveedor, type EventoLLM, type LLMProvider, type LlamadaHerramienta, type MensajeLLM, type SolicitudLLM } from './llm';
+import { ErrorProveedor, limpiarDetalle, type EventoLLM, type LLMProvider, type LlamadaHerramienta, type MensajeLLM, type SolicitudLLM } from './llm';
 
 export const URL_OPENROUTER = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -39,7 +39,7 @@ interface FragmentoLlamada {
   function?: { name?: string; arguments?: string };
 }
 interface Chunk {
-  error?: { message?: string };
+  error?: { message?: string; code?: string | number };
   choices?: { delta?: { content?: string | null; tool_calls?: FragmentoLlamada[] }; finish_reason?: string | null }[];
   usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
 }
@@ -82,7 +82,10 @@ export async function* eventosDeStream(cuerpo: ReadableStream<Uint8Array>): Asyn
         } catch {
           continue;
         }
-        if (chunk.error) throw new ErrorProveedor('El proveedor cortó la respuesta.');
+        if (chunk.error) {
+          const c = chunk.error.code;
+          throw new ErrorProveedor('El proveedor cortó la respuesta.', typeof c === 'number' ? c : null, c === undefined ? null : String(c).slice(0, 60), limpiarDetalle(chunk.error.message));
+        }
         const delta = chunk.choices?.[0]?.delta;
         if (delta?.content) yield { tipo: 'texto', delta: delta.content };
         for (const f of delta?.tool_calls ?? []) acumular(f);
@@ -103,12 +106,35 @@ export async function* eventosDeStream(cuerpo: ReadableStream<Uint8Array>): Asyn
   yield { tipo: 'fin', uso: { tokensIn, tokensOut, costoMicros: costo } };
 }
 
+/**
+ * Lee el error de OpenRouter (`{ error: { code, message } }`) para el registro: solo código y mensaje corto, nunca el cuerpo
+ * entero (podría repetir partes de la solicitud). Si el cuerpo no es JSON o no llega, queda solo el estado HTTP.
+ */
+export async function leerErrorHttp(r: Pick<Response, 'status' | 'text'>): Promise<ErrorProveedor> {
+  let codigo: string | null = null;
+  let detalle: string | null = null;
+  try {
+    const cuerpo = JSON.parse((await r.text()).slice(0, 4000)) as { error?: { code?: string | number; message?: string } };
+    if (cuerpo.error?.code !== undefined) codigo = String(cuerpo.error.code).slice(0, 60);
+    detalle = limpiarDetalle(cuerpo.error?.message);
+  } catch {
+    // Cuerpo ilegible: basta el estado HTTP.
+  }
+  return new ErrorProveedor(`OpenRouter respondió ${r.status}.`, r.status, codigo, detalle);
+}
+
 export interface OpcionesOpenRouter {
   apiKey: string;
   fetchFn?: typeof fetch;
   /** URL del sitio (cabecera `HTTP-Referer`, opcional). */
   sitio?: string;
   titulo?: string;
+  /**
+   * Política de datos que se pide a OpenRouter. `deny` (por defecto) excluye a los proveedores que guardan o entrenan con
+   * las conversaciones; los modelos `:free` suelen tener solo proveedores que sí lo hacen y entonces fallan con 404
+   * «No endpoints found matching your data policy». `allow` es decisión del dueño (variable `OPENROUTER_DATA_COLLECTION`).
+   */
+  recoleccionDatos?: 'deny' | 'allow';
 }
 
 export function crearOpenRouter(o: OpcionesOpenRouter): LLMProvider {
@@ -130,14 +156,13 @@ export function crearOpenRouter(o: OpcionesOpenRouter): LLMProvider {
           tools: s.herramientas.map((h) => ({ type: 'function', function: { name: h.name, description: h.description, parameters: h.parameters } })),
           max_tokens: s.maxTokens,
           // Sin retención ni entrenamiento con las conversaciones de clientes (datos personales).
-          provider: { data_collection: 'deny' },
+          provider: { data_collection: o.recoleccionDatos ?? 'deny' },
           temperature: 0.4,
           stream: true,
         }),
         signal: s.senal ?? null,
       });
-      // Nunca se devuelve el cuerpo del error: podría repetir partes de la solicitud.
-      if (!respuesta.ok || !respuesta.body) throw new ErrorProveedor(`OpenRouter respondió ${respuesta.status}.`, respuesta.status);
+      if (!respuesta.ok || !respuesta.body) throw await leerErrorHttp(respuesta);
       yield* eventosDeStream(respuesta.body);
     },
   };

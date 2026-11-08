@@ -132,7 +132,12 @@ async function llaveOpenRouter(): Promise<string | null> {
 export async function crearProveedor(): Promise<LLMProvider | null> {
   const apiKey = await llaveOpenRouter().catch(() => null);
   if (!apiKey) return ejemploPermitido() ? crearMock() : null;
-  return crearOpenRouter({ apiKey, sitio: process.env.SITE_URL ?? 'https://izaoperfumeria.com', titulo: 'Izao Perfumería' });
+  return crearOpenRouter({
+    apiKey,
+    sitio: process.env.SITE_URL ?? 'https://izaoperfumeria.com',
+    titulo: 'Izao Perfumería',
+    recoleccionDatos: process.env.OPENROUTER_DATA_COLLECTION === 'allow' ? 'allow' : 'deny',
+  });
 }
 
 // ── Consumo mensual ──────────────────────────────────────────────────────────────────────────────

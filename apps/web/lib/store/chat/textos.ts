@@ -34,6 +34,9 @@ export const TI = {
     sesionLlena: 'Llegamos al límite de esta conversación. Un asesor puede seguir contigo por WhatsApp.',
     entradaLarga: (max: number) => `Tu mensaje es muy largo; escríbelo en menos de ${max} caracteres.`,
     bot: 'No pudimos verificar tu conexión. Recarga la página e inténtalo de nuevo.',
+    /** Falló el modelo: la persona sigue por WhatsApp con un asesor. */
+    proveedor: 'Iza está descansando un momentico. Un asesor te atiende por WhatsApp.',
+    proveedorSinAsesor: 'Iza está descansando un momentico. Inténtalo de nuevo en unos minutos.',
     error: 'Algo no salió bien. Inténtalo de nuevo o habla con un asesor.',
     red: 'Se cortó la conexión. Revisa tu internet e inténtalo de nuevo.',
   },

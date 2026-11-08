@@ -74,6 +74,7 @@ export default function PanelIza({ pais, abierto, onCerrar, producto }: Props) {
   const [enviando, setEnviando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [limiteAlcanzado, setLimiteAlcanzado] = useState(false);
+  const [izaDescansa, setIzaDescansa] = useState(false);
   const sesion = useRef<string | null>(null);
   const contador = useRef(0);
   const fin = useRef<HTMLDivElement>(null);
@@ -122,6 +123,7 @@ export default function PanelIza({ pais, abierto, onCerrar, producto }: Props) {
       const mensaje = crudo.trim();
       if (!mensaje || enviando || !estado || bloqueado) return;
       setAviso(null);
+      setIzaDescansa(false);
       setTexto('');
       setEnviando(true);
       const idPersona = ++contador.current;
@@ -169,6 +171,7 @@ export default function PanelIza({ pais, abierto, onCerrar, producto }: Props) {
         const dec = new TextDecoder();
         let pendiente = '';
         let huboError = false;
+        let falloModelo = false;
         for (;;) {
           const { done, value } = await lector.read();
           if (done) break;
@@ -182,11 +185,18 @@ export default function PanelIza({ pais, abierto, onCerrar, producto }: Props) {
             else if (ev.evento === 'asesor') parchar((m) => ({ ...m, asesor: ev.datos.enlace }));
             else if (ev.evento === 'tarjeta') parchar((m) => ({ ...m, tarjetas: [...m.tarjetas, ev.datos] }));
             else if (ev.evento === 'fin' && ev.datos.restantes <= 0) setLimiteAlcanzado(true);
-            else if (ev.evento === 'error') huboError = true;
+            else if (ev.evento === 'error') {
+              huboError = true;
+              falloModelo = ev.datos.codigo === 'proveedor' || ev.datos.codigo === 'sin_modelo';
+            }
           }
         }
         if (huboError) {
-          setAviso(TI.estados.error);
+          // Si falla el modelo no se muestra un error crudo: Iza «descansa» y el asesor queda como salida principal.
+          if (falloModelo) {
+            setIzaDescansa(true);
+            setAviso(estado.whatsappNumero ? TI.estados.proveedor : TI.estados.proveedorSinAsesor);
+          } else setAviso(TI.estados.error);
           quitarRespuestaVacia();
         }
       } catch {
@@ -261,7 +271,7 @@ export default function PanelIza({ pais, abierto, onCerrar, producto }: Props) {
           ) : null}
           {estado?.turnstileKey && !descansando ? <div ref={contenedor} /> : null}
           {enlaceAsesor ? (
-            <a href={enlaceAsesor} target="_blank" rel="noopener" data-testid="asesor-iza" className={clasesBoton({ variante: bloqueado ? 'primario' : 'secundario', bloque: true })}>
+            <a href={enlaceAsesor} target="_blank" rel="noopener" data-testid="asesor-iza" className={clasesBoton({ variante: bloqueado || izaDescansa ? 'primario' : 'secundario', bloque: true })}>
               <Icono nombre="chat" tamano={20} />
               {TI.asesor}
               <span className="solo-lectores"> {TI.asesorNota}</span>

@@ -8,7 +8,7 @@
  */
 import type { LineaCarrito } from '../carrito/logica';
 import { DEFINICIONES, MAX_ITERACIONES_HERRAMIENTAS, ejecutarHerramienta, type DepsHerramientas } from './herramientas';
-import type { LLMProvider, MensajeLLM, TurnoGuardado } from './llm';
+import { describirFallo, type FalloProveedor, type LLMProvider, type MensajeLLM, type TurnoGuardado } from './llm';
 import { FiltroMarcadores } from './marcadores';
 import { elegirModelo, estimarCostoMicros, type NivelPresupuesto, type PreciosModelo } from './presupuesto';
 import { construirPrompt, type ContextoPrompt } from './prompt';
@@ -55,7 +55,12 @@ export interface DepsConversar {
   precios: PreciosModelo;
   /** Se llama una vez por turno, al terminar (con o sin error del proveedor tras haber gastado). */
   registrar(r: ResultadoTurno): Promise<void>;
+  /** Cada fallo del proveedor (estado HTTP, código y mensaje corto, sin secretos) para el registro del servidor. */
+  fallo?(f: FalloProveedor & { modelo: string; reintenta: boolean }): void;
 }
+
+/** Con una llave inválida o sin permiso el modelo de respaldo falla igual: no se gasta otra llamada. */
+const SIN_RESPALDO = new Set([401, 403]);
 
 export interface EntradaTurno {
   nivel: NivelPresupuesto;
@@ -133,7 +138,8 @@ export async function* conversar(deps: DepsConversar, e: EntradaTurno): AsyncGen
           costo += ev.uso.costoMicros ?? estimarCostoMicros(ev.uso.tokensIn, ev.uso.tokensOut, deps.precios);
         }
       }
-    } catch {
+    } catch (err) {
+      const info = describirFallo(err);
       // OpenRouter solo informa el uso en el último chunk: si la llamada se corta o se aborta, el costo de lo que ya se
       // procesó se estima por caracteres (≈ 4 por token, redondeando hacia arriba) para que el presupuesto no lo pierda.
       const caracteresPrompt = JSON.stringify(mensajes).length + JSON.stringify(DEFINICIONES).length;
@@ -144,7 +150,9 @@ export async function* conversar(deps: DepsConversar, e: EntradaTurno): AsyncGen
       costo += estimarCostoMicros(tIn, tOut, deps.precios);
       // Si falló antes de decir nada y hay otro modelo, se reintenta una vez con el de respaldo.
       const alterno = e.modeloRespaldo?.trim();
-      if (!huboSalida && !fallido && !e.senal?.aborted && alterno && alterno !== modelo) {
+      const reintenta = !huboSalida && !fallido && !e.senal?.aborted && !!alterno && alterno !== modelo && !(info.estado !== null && SIN_RESPALDO.has(info.estado));
+      deps.fallo?.({ ...info, modelo, reintenta });
+      if (reintenta && alterno) {
         fallido = true;
         modelo = alterno;
         ronda--;

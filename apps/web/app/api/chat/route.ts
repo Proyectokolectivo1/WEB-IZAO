@@ -151,6 +151,11 @@ export async function POST(req: Request) {
             registrar: async (r) => {
               resultado = r;
             },
+            // Solo estado HTTP, código y mensaje corto de OpenRouter, más el modelo: nunca la llave ni el cuerpo.
+            fallo: (f) =>
+              console.error(
+                `[iza] proveedor falló: modelo=${f.modelo} estado=${f.estado ?? 'sin_respuesta'} codigo=${f.codigo ?? '-'} detalle=${JSON.stringify(f.detalle ?? '')} respaldo=${f.reintenta ? 'si' : 'no'}`,
+              ),
           },
           {
             nivel: veredicto.nivel,
