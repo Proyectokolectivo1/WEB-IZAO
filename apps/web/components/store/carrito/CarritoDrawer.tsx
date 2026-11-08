@@ -186,11 +186,11 @@ export function CarritoDrawer() {
         ) : (
           <>
             {ajustado ? (
-              <p role="status" className="mx-5 mt-4 rounded-card bg-surface px-3 py-2 text-[0.875rem]">
+              <p role="status" className="bloque-calido mx-5 mt-4 px-4 py-3 text-[0.875rem]">
                 {T.carrito.ajusteServidor}
               </p>
             ) : null}
-            <ul className="divide-y divide-line px-5">
+            <ul className="separador-blando px-5">
               {lineas.map((l) => (
                 <li key={l.variantId} className="flex gap-4 py-5">
                   <Link href={`/${pais}/perfume/${l.slug}`} onClick={cerrar} className="w-20 shrink-0">
@@ -228,7 +228,7 @@ export function CarritoDrawer() {
               ))}
             </ul>
 
-            <form onSubmit={aplicarCodigo} className="border-t border-line px-5 py-5" noValidate>
+            <form onSubmit={aplicarCodigo} className="bloque-calido mx-5 mt-2 px-4 py-4" noValidate>
               <label htmlFor="codigo-descuento" className="etiqueta block pb-2">
                 {T.carrito.codigo}
               </label>
@@ -267,7 +267,7 @@ export function CarritoDrawer() {
             </form>
 
             {complementos.length > 0 ? (
-              <section className="border-t border-line px-5 py-5" aria-labelledby="complementos-titulo">
+              <section className="bloque-calido-acento mx-5 my-5 px-4 py-5" aria-labelledby="complementos-titulo">
                 <h3 id="complementos-titulo" className="pb-3 text-xl">
                   {T.carrito.complementos}
                 </h3>

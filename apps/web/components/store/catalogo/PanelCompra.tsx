@@ -35,7 +35,7 @@ export function PanelCompra({ ficha, pais, alAgregar, idBotonAgregar, alElegir, 
   const ahorro = v?.compare_at_price && v.compare_at_price > v.price ? v.compare_at_price - v.price : 0;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="bloque-calido flex flex-col gap-5 p-5 sm:p-6">
       {ficha.variants.length > 1 ? (
         <fieldset>
           <legend className="etiqueta pb-2 text-ink/70">{T.ficha.elegir}</legend>

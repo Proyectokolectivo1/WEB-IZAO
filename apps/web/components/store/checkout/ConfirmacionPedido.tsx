@@ -86,7 +86,7 @@ export function ConfirmacionPedido({ pedido, whatsappAsesor, valorEnvio }: Props
           </Link>
         </div>
 
-        <section aria-labelledby="linea-tiempo" className="mt-14 border-t border-line pt-5">
+        <section aria-labelledby="linea-tiempo" className="bloque-calido mt-12 p-5 sm:p-8">
           <h2 id="linea-tiempo" className="text-3xl">
             {TC.pedido.lineaTiempo}
           </h2>
@@ -95,11 +95,11 @@ export function ConfirmacionPedido({ pedido, whatsappAsesor, valorEnvio }: Props
               <li key={p.clave} aria-current={i === actual ? 'step' : undefined} className="flex gap-4">
                 <div className="flex flex-col items-center">
                   <span
-                    className={`flex size-8 shrink-0 items-center justify-center rounded-full border ${p.hecho ? 'border-ink bg-ink text-bg' : 'border-line'}`}
+                    className={`flex size-8 shrink-0 items-center justify-center rounded-full border ${p.hecho ? 'border-ink bg-ink text-bg' : 'border-ink/25 bg-bg'}`}
                   >
                     {p.hecho ? <Icono nombre="check" tamano={16} /> : null}
                   </span>
-                  {i < pasos.length - 1 ? <span className={`w-px grow ${pasos[i + 1]?.hecho ? 'bg-ink' : 'bg-line'}`} style={{ minHeight: '2rem' }} /> : null}
+                  {i < pasos.length - 1 ? <span className={`w-px grow ${pasos[i + 1]?.hecho ? 'bg-ink' : 'bg-ink/20'}`} style={{ minHeight: '2rem' }} /> : null}
                 </div>
                 <div className="pb-6">
                   <p className={p.hecho ? 'font-semibold' : 'text-ink/80'}>
@@ -115,11 +115,11 @@ export function ConfirmacionPedido({ pedido, whatsappAsesor, valorEnvio }: Props
       </div>
 
       <aside className="h-fit lg:sticky lg:top-28" aria-labelledby="resumen-pedido">
-        <div className="rounded-card border border-line p-6">
+        <div className="bloque-calido-acento p-6 sombra-tierna sm:p-7">
           <p id="resumen-pedido" className="etiqueta pb-4">
             {TC.pedido.resumen}
           </p>
-          <ul className="divide-y divide-line border-b border-line">
+          <ul className="separador-blando border-b border-ink/12">
             {pedido.lineas.map((l, i) => (
               <li key={`${l.nombre}-${i}`} className="flex justify-between gap-4 py-3">
                 <span className="min-w-0">
@@ -135,7 +135,7 @@ export function ConfirmacionPedido({ pedido, whatsappAsesor, valorEnvio }: Props
           <div className="pt-4">
             <Totales filas={filas} total etiquetaTotal={TC.resumen.total} valorTotal={precio(pedido.total)} />
             {esContraEntrega ? (
-              <dl className="mt-4 flex flex-col gap-2 border-t border-line pt-4 text-[0.9375rem]">
+              <dl className="mt-4 flex flex-col gap-2 border-t border-ink/12 pt-4 text-[0.9375rem]">
                 <div className="flex justify-between gap-4">
                   <dt>{TC.resumen.abono}</dt>
                   <dd className="tabular-nums">{precio(pedido.abono)}</dd>
@@ -147,7 +147,7 @@ export function ConfirmacionPedido({ pedido, whatsappAsesor, valorEnvio }: Props
               </dl>
             ) : null}
           </div>
-          <div className="mt-6 border-t border-line pt-4 text-[0.9375rem]">
+          <div className="mt-6 border-t border-ink/12 pt-4 text-[0.9375rem]">
             <p className="etiqueta pb-2">{TC.pedido.entrega}</p>
             <p>{[pedido.direccion, pedido.ciudad, pedido.region].filter(Boolean).join(', ')}</p>
             <p className="etiqueta pb-2 pt-4">{TC.pedido.pago}</p>

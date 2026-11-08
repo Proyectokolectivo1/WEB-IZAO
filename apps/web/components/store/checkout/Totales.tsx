@@ -18,7 +18,7 @@ export function Totales({ filas, total, etiquetaTotal, valorTotal }: { filas: Fi
         </div>
       ))}
       {total && valorTotal ? (
-        <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-ink pt-4">
+        <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-ink/25 pt-4">
           <dt className="etiqueta">{etiquetaTotal}</dt>
           <dd className="font-display text-3xl tabular-nums" aria-live="polite" aria-atomic="true">
             {valorTotal}

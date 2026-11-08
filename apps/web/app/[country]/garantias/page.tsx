@@ -32,7 +32,7 @@ export default async function PaginaGarantias({ params }: Props) {
 
   return (
     <div className="mx-auto w-full max-w-[96rem] px-4 pb-24 pt-10 sm:px-8 lg:pt-16">
-      <header className="max-w-3xl border-b border-line pb-6">
+      <header className="bloque-calido textura-calida max-w-3xl px-6 py-8 sm:px-10 sm:py-10">
         <p className="etiqueta text-ink/70">{TG.migas}</p>
         <h1 className="pt-2 text-4xl md:text-5xl">{TG.titulo}</h1>
         <p className="pt-4 text-lg text-ink/90">{TG.intro}</p>
@@ -54,7 +54,7 @@ export default async function PaginaGarantias({ params }: Props) {
         {ajustes.instruccionesHtml || ajustes.condicionesHtml ? (
           <aside className="flex flex-col gap-8 order-first lg:order-last lg:sticky lg:top-28 lg:h-fit" aria-label={TG.condiciones}>
             {ajustes.instruccionesHtml ? (
-              <section aria-labelledby="titulo-instrucciones" className="border-t border-line pt-5">
+              <section aria-labelledby="titulo-instrucciones" className="bloque-calido-acento p-5 sm:p-7">
                 <h2 id="titulo-instrucciones" className="text-2xl">
                   {TG.instrucciones}
                 </h2>
@@ -62,7 +62,7 @@ export default async function PaginaGarantias({ params }: Props) {
               </section>
             ) : null}
             {ajustes.condicionesHtml ? (
-              <section aria-labelledby="titulo-condiciones" className="border-t border-line pt-5">
+              <section aria-labelledby="titulo-condiciones" className="bloque-calido p-5 sm:p-7">
                 <h2 id="titulo-condiciones" className="text-2xl">
                   {TG.condiciones}
                 </h2>

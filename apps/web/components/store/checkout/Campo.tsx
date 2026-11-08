@@ -45,12 +45,3 @@ export function Campo({ id, etiqueta, error, ayuda, className, children }: Props
     </div>
   );
 }
-
-/** Numeración editorial de los pasos (01, 02…), en la fuente de cuerpo y no en la de títulos. */
-export function NumeroPaso({ n }: { n: string }) {
-  return (
-    <span className="etiqueta" style={{ fontFamily: 'var(--font-body)' }} aria-hidden="true">
-      {n}
-    </span>
-  );
-}

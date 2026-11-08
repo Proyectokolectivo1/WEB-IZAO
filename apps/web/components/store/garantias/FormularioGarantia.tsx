@@ -20,7 +20,7 @@ import {
 import { TG } from '@/lib/store/garantias/textos';
 import type { CodigoPais } from '@/lib/store/types';
 import { useTurnstile } from '../useTurnstile';
-import { CLASE_CONTROL, Campo, NumeroPaso, propsControl } from '../checkout/Campo';
+import { CLASE_CONTROL, Campo, propsControl } from '../checkout/Campo';
 
 interface Props {
   pais: CodigoPais;
@@ -225,11 +225,10 @@ export function FormularioGarantia({ pais, motivos, diasPlazo, diasRespuesta, tu
         </div>
       ) : null}
 
-      {/* 01 · Pedido */}
-      <section aria-labelledby="paso-pedido" className="border-t border-line pt-5">
-        <h2 id="paso-pedido" className="flex items-baseline gap-4 text-3xl">
-          <NumeroPaso n="01" />
-          {TG.pasos.pedido}
+      {/* Pedido */}
+      <section aria-labelledby="paso-pedido" className="bloque-calido p-5 sm:p-8">
+        <h2 id="paso-pedido" className="text-3xl">
+            {TG.pasos.pedido}
         </h2>
         <div className="grid gap-5 pt-6 sm:grid-cols-2">
           <Campo id="campo-pedido" etiqueta={etiquetas.pedido} error={campo('pedido')} ayuda={`${TG.ayudaPedido}${TG.ejemploPedido(pais)}`}>
@@ -262,11 +261,10 @@ export function FormularioGarantia({ pais, motivos, diasPlazo, diasRespuesta, tu
         </div>
       </section>
 
-      {/* 02 · Caso */}
-      <section aria-labelledby="paso-caso" className="border-t border-line pt-5">
-        <h2 id="paso-caso" className="flex items-baseline gap-4 text-3xl">
-          <NumeroPaso n="02" />
-          {TG.pasos.caso}
+      {/* Caso */}
+      <section aria-labelledby="paso-caso" className="bloque-calido p-5 sm:p-8">
+        <h2 id="paso-caso" className="text-3xl">
+            {TG.pasos.caso}
         </h2>
         <div className="grid gap-5 pt-6">
           <Campo id="campo-motivo" etiqueta={etiquetas.motivo} error={campo('motivo')}>
@@ -302,11 +300,10 @@ export function FormularioGarantia({ pais, motivos, diasPlazo, diasRespuesta, tu
         </div>
       </section>
 
-      {/* 03 · Evidencia */}
-      <section aria-labelledby="paso-evidencia" className="border-t border-line pt-5">
-        <h2 id="paso-evidencia" className="flex items-baseline gap-4 text-3xl">
-          <NumeroPaso n="03" />
-          {TG.pasos.evidencia}
+      {/* Evidencia */}
+      <section aria-labelledby="paso-evidencia" className="bloque-calido p-5 sm:p-8">
+        <h2 id="paso-evidencia" className="text-3xl">
+            {TG.pasos.evidencia}
         </h2>
         <div className="pt-6">
           <Campo id="campo-adjuntos" etiqueta={etiquetas.adjuntos} error={campo('adjuntos')} ayuda={TG.adjuntos.ayuda(MAX_FOTOS, MAX_BYTES_VIDEO / MB)}>

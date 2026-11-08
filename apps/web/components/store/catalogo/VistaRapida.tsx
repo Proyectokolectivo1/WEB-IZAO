@@ -59,6 +59,7 @@ export function VistaRapida({ pais, slug, abierto, onCerrar }: Props) {
               <div>
                 {ficha.brand_name ? <p className="etiqueta text-ink/70">{ficha.brand_name}</p> : null}
                 <h3 className="pt-1 text-3xl md:text-4xl">{ficha.name}</h3>
+                <span aria-hidden="true" className="mt-3 block h-0.5 w-10 rounded-full bg-accent" />
                 {ficha.concentration_name ? <p className="pt-1 text-[0.9375rem]">{ficha.concentration_name}</p> : null}
               </div>
               <PanelCompra ficha={ficha} pais={pais} alAgregar={onCerrar} />

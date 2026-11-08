@@ -34,7 +34,7 @@ export function ResumenPedido({ lineas, resumen, esContraEntrega, precio, codigo
 
   return (
     <div>
-      <ul className="divide-y divide-line border-b border-line">
+      <ul className="separador-blando border-b border-ink/12">
         {lineas.map((l) => (
           <li key={l.variantId} className="flex gap-4 py-4">
             <div className="relative w-16 shrink-0">
@@ -51,7 +51,7 @@ export function ResumenPedido({ lineas, resumen, esContraEntrega, precio, codigo
         ))}
       </ul>
 
-      <div className="border-b border-line py-5">
+      <div className="border-b border-ink/12 py-5">
         <CodigoDescuento
           id="codigo-checkout"
           codigo={codigo}
@@ -65,7 +65,7 @@ export function ResumenPedido({ lineas, resumen, esContraEntrega, precio, codigo
       <div className="pt-5">
         <Totales filas={filas} total etiquetaTotal={TC.resumen.total} valorTotal={precio(resumen.total)} />
         {esContraEntrega ? (
-          <dl className="mt-4 flex flex-col gap-2 border-t border-line pt-4 text-[0.9375rem]">
+          <dl className="mt-4 flex flex-col gap-2 border-t border-ink/12 pt-4 text-[0.9375rem]">
             <div className="flex items-baseline justify-between gap-4">
               <dt>{TC.resumen.abono}</dt>
               <dd className="tabular-nums">{precio(resumen.abono)}</dd>

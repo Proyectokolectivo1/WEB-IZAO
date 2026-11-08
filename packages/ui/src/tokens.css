@@ -146,6 +146,23 @@
     background: color-mix(in srgb, var(--color-accent) 24%, var(--color-bg));
   }
 
+  /*
+   * Bloques cálidos de contenido (checkout, garantías, bolso, pedido, ficha): un fondo de tierra suave con las esquinas del
+   * panel, sin borde. `bloque-calido` es el de lectura; `bloque-calido-acento` marca el cierre de una pantalla (resumen, confirmar).
+   */
+  .bloque-calido {
+    background: color-mix(in srgb, var(--color-surface) 48%, var(--color-bg));
+    border-radius: var(--radius-panel);
+  }
+  .bloque-calido-acento {
+    background: color-mix(in srgb, var(--color-accent) 24%, var(--color-bg));
+    border-radius: var(--radius-panel);
+  }
+  /* Separador blando para listas dentro de un bloque: tinta al 12 %, no el filete duro del tema. */
+  .separador-blando > * + * {
+    border-top: 1px solid color-mix(in srgb, var(--color-ink) 12%, transparent);
+  }
+
   /* Tonos suaves rotativos para categorías y familias olfativas (`--tono` base, `--tono-fuerte` al pasar el cursor). */
   .tono-0 {
     --tono: var(--color-surface);

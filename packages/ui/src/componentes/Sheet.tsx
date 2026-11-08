@@ -167,7 +167,7 @@ export function Sheet({
         className={`absolute flex flex-col bg-bg text-ink shadow-elev outline-none ${POSICION[lado]} ${className}`}
       >
         {cabecera ? (
-          <div className="flex items-center justify-between border-b border-line px-5">
+          <div className="flex items-center justify-between border-b border-ink/10 px-5">
             <h2 id={idTitulo} className={mostrarTitulo ? 'py-4 text-2xl' : 'solo-lectores'}>
               {titulo}
             </h2>
@@ -200,7 +200,7 @@ export function Sheet({
           </>
         )}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
-        {pie ? <div className="border-t border-line bg-bg px-5 py-4">{pie}</div> : null}
+        {pie ? <div className="border-t border-ink/10 bg-bg px-5 py-4">{pie}</div> : null}
       </div>
     </div>,
     document.getElementById('izao-portal') ?? document.body,

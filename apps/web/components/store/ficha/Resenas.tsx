@@ -36,8 +36,8 @@ export function Resenas({ resenas, pais }: { resenas: FichaProducto['reviews']; 
             return (
               <li key={n} className="grid grid-cols-[4.5rem_minmax(0,1fr)_2rem] items-center gap-3 text-[0.875rem]">
                 <span>{T.ficha.estrellasN(n)}</span>
-                <span aria-hidden="true" className="h-1 bg-line">
-                  <span className="block h-full bg-ink" style={{ width: `${Math.round((cantidad / maximo) * 100)}%` }} />
+                <span aria-hidden="true" className="h-1.5 rounded-full bg-ink/12">
+                  <span className="block h-full rounded-full bg-ink" style={{ width: `${Math.round((cantidad / maximo) * 100)}%` }} />
                 </span>
                 <span className="text-right tabular-nums">{cantidad}</span>
               </li>
@@ -47,9 +47,9 @@ export function Resenas({ resenas, pais }: { resenas: FichaProducto['reviews']; 
       </div>
 
       {resenas.latest.length > 0 ? (
-        <ul data-testid="lista-resenas" className="flex flex-col">
+        <ul data-testid="lista-resenas" className="flex flex-col gap-4">
           {resenas.latest.map((r, k) => (
-            <li key={k} className="flex flex-col gap-2 border-t border-line py-6 first:border-t-0 first:pt-0">
+            <li key={k} className="bloque-calido flex flex-col gap-2 p-5 sm:p-6">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                 <Estrellas valor={r.rating} />
                 {r.is_verified_purchase ? (

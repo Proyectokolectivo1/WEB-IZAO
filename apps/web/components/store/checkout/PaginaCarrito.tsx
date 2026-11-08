@@ -66,10 +66,10 @@ export function PaginaCarrito({ esqueleto }: { esqueleto?: ReactNode }) {
             {vista.ajuste === 'agotado' ? TC.checkout.agotadoQuitado : T.carrito.ajusteServidor}
           </p>
         ) : null}
-        <ul className="divide-y divide-line border-y border-line">
+        <ul className="flex flex-col gap-4">
           {lineas.map((l, i) => (
             <li key={l.variantId}>
-              <Revelar indice={Math.min(i, 6)} className="flex gap-4 py-6 sm:gap-6">
+              <Revelar indice={Math.min(i, 6)} className="bloque-calido flex gap-4 p-4 sm:gap-6 sm:p-5">
                 <Link href={`/${pais}/perfume/${l.slug}`} className="w-24 shrink-0 sm:w-32">
                   <IzaoImage media={l.imagen} alt={l.nombre} sizes="(min-width: 640px) 128px, 96px" />
                 </Link>
@@ -114,13 +114,13 @@ export function PaginaCarrito({ esqueleto }: { esqueleto?: ReactNode }) {
       </section>
 
       <aside aria-labelledby="resumen-bolso" className="h-fit lg:sticky lg:top-28">
-        <div className="rounded-card border border-line p-6">
+        <div className="bloque-calido-acento p-6 sombra-tierna sm:p-7">
           <p id="resumen-bolso" className="etiqueta pb-5">
-            01 · {TC.carrito.resumen} · {TC.carrito.unidades(unidades)}
+            {TC.carrito.resumen} · {TC.carrito.unidades(unidades)}
           </p>
           <Totales filas={filas} total etiquetaTotal={TC.resumen.total} valorTotal={precio(total)} />
           <p className="pt-4 text-[0.875rem] text-ink/80">{notaEnvio}</p>
-          <div className="mt-6 border-t border-line pt-5">
+          <div className="mt-6 border-t border-ink/12 pt-5">
             <CodigoDescuento
               id="codigo-bolso"
               codigo={vista.codigo}

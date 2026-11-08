@@ -31,7 +31,7 @@ import type {
 } from '@/lib/store/checkout/tipos';
 import { useCarritoAcciones, useCarritoLineas } from '../carrito/CarritoProvider';
 import { useVistaPrevia } from '../carrito/useVistaPrevia';
-import { Campo, CLASE_CONTROL, NumeroPaso, propsControl } from './Campo';
+import { Campo, CLASE_CONTROL, propsControl } from './Campo';
 import { MetodosPago } from './MetodosPago';
 import { ResumenPedido } from './ResumenPedido';
 
@@ -385,7 +385,7 @@ export function FormularioCheckout({ config, esqueleto }: { config: ConfigChecko
           onClick={() => setResumenAbierto((a) => !a)}
           aria-expanded={resumenAbierto}
           aria-controls="panel-resumen"
-          className="flex min-h-12 w-full items-center justify-between gap-4 border-y border-line py-3 text-left lg:hidden"
+          className="bloque-calido-acento flex min-h-12 w-full items-center justify-between gap-4 px-4 py-3 text-left lg:hidden"
         >
           <span className="flex items-center gap-2">
             <Icono nombre={resumenAbierto ? 'chevronArriba' : 'chevronAbajo'} tamano={18} />
@@ -393,7 +393,7 @@ export function FormularioCheckout({ config, esqueleto }: { config: ConfigChecko
           </span>
           <span className="font-display text-2xl tabular-nums">{totalTexto}</span>
         </button>
-        <div id="panel-resumen" className={`${resumenAbierto ? 'block' : 'hidden'} pt-4 lg:block lg:rounded-card lg:border lg:border-line lg:p-6`}>
+        <div id="panel-resumen" className={`${resumenAbierto ? 'block' : 'hidden'} bloque-calido-acento mt-3 p-5 sombra-tierna lg:mt-0 lg:block lg:p-7`}>
           <p className="etiqueta hidden pb-4 lg:block">{TC.resumen.titulo}</p>
           <ResumenPedido
             lineas={lineas}
@@ -408,7 +408,7 @@ export function FormularioCheckout({ config, esqueleto }: { config: ConfigChecko
         </div>
       </aside>
 
-      <div className="flex flex-col gap-12 lg:order-1">
+      <div className="flex flex-col gap-6 lg:order-1">
         {aviso ? (
           <p role="status" className="rounded-card bg-surface px-4 py-3 text-[0.9375rem]">
             {aviso}
@@ -432,10 +432,9 @@ export function FormularioCheckout({ config, esqueleto }: { config: ConfigChecko
           </div>
         ) : null}
 
-        {/* 01 · Contacto */}
-        <section aria-labelledby="paso-contacto" className="border-t border-line pt-5">
-          <h2 id="paso-contacto" className="flex items-baseline gap-4 text-3xl">
-            <NumeroPaso n="01" />
+        {/* Contacto */}
+        <section aria-labelledby="paso-contacto" className="bloque-calido p-5 sm:p-8">
+          <h2 id="paso-contacto" className="text-3xl">
             {TC.checkout.pasos.contacto}
           </h2>
           <p className="pt-2 text-[0.9375rem] text-ink/80">{TC.checkout.ayudaContacto}</p>
@@ -492,10 +491,9 @@ export function FormularioCheckout({ config, esqueleto }: { config: ConfigChecko
           </div>
         </section>
 
-        {/* 02 · Documento */}
-        <section aria-labelledby="paso-documento" className="border-t border-line pt-5">
-          <h2 id="paso-documento" className="flex items-baseline gap-4 text-3xl">
-            <NumeroPaso n="02" />
+        {/* Documento */}
+        <section aria-labelledby="paso-documento" className="bloque-calido p-5 sm:p-8">
+          <h2 id="paso-documento" className="text-3xl">
             {TC.checkout.pasos.documento}
           </h2>
           <p className="pt-2 text-[0.9375rem] text-ink/80">{TC.checkout.ayudaDocumento}</p>
@@ -530,10 +528,9 @@ export function FormularioCheckout({ config, esqueleto }: { config: ConfigChecko
           </div>
         </section>
 
-        {/* 03 · Entrega */}
-        <section aria-labelledby="paso-entrega" className="border-t border-line pt-5">
-          <h2 id="paso-entrega" className="flex items-baseline gap-4 text-3xl">
-            <NumeroPaso n="03" />
+        {/* Entrega */}
+        <section aria-labelledby="paso-entrega" className="bloque-calido p-5 sm:p-8">
+          <h2 id="paso-entrega" className="text-3xl">
             {TC.checkout.pasos.entrega}
           </h2>
           <div className="grid gap-5 pt-6 sm:grid-cols-2">
@@ -635,10 +632,9 @@ export function FormularioCheckout({ config, esqueleto }: { config: ConfigChecko
           </div>
         </section>
 
-        {/* 04 · Pago */}
-        <section aria-labelledby="paso-pago" className="border-t border-line pt-5">
-          <h2 id="paso-pago" className="flex items-baseline gap-4 text-3xl">
-            <NumeroPaso n="04" />
+        {/* Pago */}
+        <section aria-labelledby="paso-pago" className="bloque-calido p-5 sm:p-8">
+          <h2 id="paso-pago" className="text-3xl">
             {TC.checkout.pasos.pago}
           </h2>
           <div className="pt-6" id="metodo-lista">
@@ -653,10 +649,9 @@ export function FormularioCheckout({ config, esqueleto }: { config: ConfigChecko
           </div>
         </section>
 
-        {/* 05 · Confirmar */}
-        <section aria-labelledby="paso-confirmar" className="border-t border-line pt-5">
-          <h2 id="paso-confirmar" className="flex items-baseline gap-4 text-3xl">
-            <NumeroPaso n="05" />
+        {/* Confirmar */}
+        <section aria-labelledby="paso-confirmar" className="bloque-calido-acento p-5 sm:p-8">
+          <h2 id="paso-confirmar" className="text-3xl">
             {TC.checkout.pasos.confirmar}
           </h2>
           <div className="flex flex-col gap-4 pt-6">

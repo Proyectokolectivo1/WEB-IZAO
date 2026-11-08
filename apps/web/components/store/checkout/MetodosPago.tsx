@@ -25,7 +25,7 @@ export function MetodosPago({ config, resumen, valor, error, onElegir, precio }:
 
   if (config.metodos.length === 0) {
     return (
-      <div className="rounded-card border border-line p-4">
+      <div className="rounded-card bg-bg p-4">
         <p className="text-[0.9375rem]">{TC.checkout.metodosVacios}</p>
       </div>
     );
@@ -51,7 +51,7 @@ export function MetodosPago({ config, resumen, valor, error, onElegir, precio }:
               key={m.method}
               htmlFor={id}
               className={`flex cursor-pointer gap-4 rounded-card border p-4 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink ${
-                elegido ? 'border-ink bg-surface/60' : 'border-line hover:bg-surface/40'
+                elegido ? 'border-ink bg-bg sombra-tierna' : 'border-transparent bg-bg/70 hover:bg-bg'
               } ${disponible ? '' : 'cursor-not-allowed opacity-70'}`}
             >
               <input

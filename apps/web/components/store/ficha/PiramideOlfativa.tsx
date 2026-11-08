@@ -18,7 +18,7 @@ function Medidor({ nivel, etiqueta }: { nivel: Nivel; etiqueta: string }) {
     <div className="flex items-center gap-3">
       <span role="img" aria-label={`${etiqueta}: ${T.ficha.nivelDe(nombre, n, NIVELES.length)}`} className="flex gap-1">
         {NIVELES.map((_, k) => (
-          <span key={k} aria-hidden="true" className={`h-1.5 w-6 rounded-sm border border-ink ${k < n ? 'bg-ink' : 'bg-transparent'}`} />
+          <span key={k} aria-hidden="true" className={`h-1.5 w-7 rounded-full ${k < n ? 'bg-ink' : 'bg-ink/15'}`} />
         ))}
       </span>
       <span aria-hidden="true" className="text-[0.9375rem]">
@@ -51,17 +51,16 @@ export function PiramideOlfativa({ ficha }: { ficha: FichaProducto }) {
             viewBox="-25 0 150 196"
             preserveAspectRatio="none"
             className="w-24 shrink-0 text-ink sm:w-32"
-            fill="none"
             stroke="currentColor"
             strokeWidth={1}
           >
             {SEGMENTOS.map((d, k) => (
-              <path key={d} d={d} vectorEffect="non-scaling-stroke" className={TODAS[k]!.notas.length ? '' : 'opacity-30'} />
+              <path key={d} d={d} vectorEffect="non-scaling-stroke" style={{ fill: 'var(--tono)' }} className={`tono-${k} ${TODAS[k]!.notas.length ? '' : 'opacity-30'}`} />
             ))}
           </svg>
-          <ol className="grid min-w-0 flex-1 grid-rows-3">
-            {TODAS.map((f) => (
-              <li key={f.clave} className="flex min-h-24 flex-col justify-center gap-1 border-b border-line py-3 last:border-b-0">
+          <ol className="grid min-w-0 flex-1 grid-rows-3 overflow-hidden rounded-card">
+            {TODAS.map((f, k) => (
+              <li key={f.clave} className={`tono-${k} fondo-tono flex min-h-24 flex-col justify-center gap-1 px-5 py-3`}>
                 <p className="etiqueta text-ink/70">{f.titulo}</p>
                 <p className="font-display text-xl leading-snug sm:text-2xl">{f.notas.length ? f.notas.join(' · ') : '—'}</p>
               </li>
@@ -71,7 +70,7 @@ export function PiramideOlfativa({ ficha }: { ficha: FichaProducto }) {
       ) : null}
 
       {hayAtributos ? (
-        <dl data-testid="atributos" className="grid content-start gap-x-6 gap-y-5 sm:grid-cols-[8rem_minmax(0,1fr)]">
+        <dl data-testid="atributos" className="bloque-calido grid content-start gap-x-6 gap-y-5 p-5 sm:grid-cols-[8rem_minmax(0,1fr)] sm:p-7">
           {ficha.longevity ? (
             <>
               <dt className="etiqueta pt-1 text-ink/70">{T.ficha.duracion}</dt>
