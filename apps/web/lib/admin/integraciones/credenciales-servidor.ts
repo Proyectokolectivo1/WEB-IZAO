@@ -357,19 +357,20 @@ export type WebhookRegistrado = { event_name: string; event_id: number; is_enabl
 export async function listarWebhooksMasterShop(
   cliente: Cliente,
   ambiente: AmbienteIntegracion,
+  pais: PaisIntegracion = 'CO',
 ): Promise<WebhookRegistrado[]> {
   const { data, error } = await cliente
     .from('integration_webhooks')
     .select('event_name, event_id, is_enabled, registered_at')
     .eq('provider', 'mastershop')
-    .eq('country_code', 'CO')
+    .eq('country_code', pais)
     .eq('environment', ambiente)
     .order('event_id', { ascending: true });
   if (error) throw new Error(`No se pudieron listar los webhooks: ${error.message}`);
   return (data ?? []) as never;
 }
 
-/** "Registrar webhooks" de MasterShop (CO) con la llave de la credencial elegida. */
+/** "Registrar webhooks" de MasterShop (CO o EC, cada país con su llave) con la llave de la credencial elegida. */
 export async function registrarWebhooksBd(
   args: Ctx & {
     clave: string | undefined;
@@ -378,6 +379,7 @@ export async function registrarWebhooksBd(
     registrar: (
       apiKey: string,
       ambiente: AmbienteIntegracion,
+      opciones: { pais: PaisIntegracion },
     ) => Promise<{ registrados: { idWebhook: number; eventName: string }[] }>;
     secretosExtra?: readonly string[];
   },
@@ -386,23 +388,24 @@ export async function registrarWebhooksBd(
   const abierta = await abrir(cliente, args.clave, id);
   if ('ok' in abierta) return abierta;
   const { fila, proveedor, valores } = abierta;
-  if (proveedor.id !== 'mastershop' || fila.country_code !== 'CO') {
-    return { ok: false, mensaje: 'Los webhooks se registran solo para MasterShop en Colombia.' };
+  if (proveedor.id !== 'mastershop' || (fila.country_code !== 'CO' && fila.country_code !== 'EC')) {
+    return { ok: false, mensaje: 'Los webhooks se registran solo para MasterShop en Colombia o Ecuador.' };
   }
+  const pais: PaisIntegracion = fila.country_code;
   const ambiente = fila.environment as AmbienteIntegracion;
 
   if (args.modo === 'mock') {
     return { ok: true, id, mensaje: 'Simulación: no se registró nada en MasterShop (modo de pruebas).' };
   }
   try {
-    const r = await args.registrar(valores.api_key ?? '', ambiente);
+    const r = await args.registrar(valores.api_key ?? '', ambiente, { pais });
     await auditarCambio({
       actor,
       accion: 'integracion.webhooks_registrados',
       entidad: 'integration_credentials',
       entidadId: id,
       ip,
-      diff: { proveedor: 'mastershop', ambiente, eventos: r.registrados.map((w) => w.eventName) },
+      diff: { proveedor: 'mastershop', pais, ambiente, eventos: r.registrados.map((w) => w.eventName) },
     });
     return {
       ok: true,

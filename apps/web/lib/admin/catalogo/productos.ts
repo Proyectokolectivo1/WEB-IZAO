@@ -59,6 +59,9 @@ const varianteDelPaisForm = z.object({
   cost: t(30),
   stock: t(12),
   low_stock_threshold: t(12),
+  /** Vínculo con la cuenta de MasterShop DE ESTE PAÍS (D-052): cada país tiene sus propios identificadores. */
+  mastershop_product_id: t(12),
+  mastershop_variant_id: t(12),
 });
 
 const varianteForm = z.object({
@@ -67,8 +70,6 @@ const varianteForm = z.object({
   option_value_ids: z.array(guid).max(10).default([]),
   weight_kg: t(12),
   is_default: z.boolean(),
-  mastershop_product_id: t(12),
-  mastershop_variant_id: t(12),
   image_id: z.union([guid, z.literal('')]).default(''),
   countries: z.array(varianteDelPaisForm).max(2),
 });
@@ -194,22 +195,35 @@ export function separarLista(texto: string): string[] {
 // Vínculo con MasterShop
 // ---------------------------------------------------------------------------------------------
 
-export const MENSAJE_SIN_VINCULO =
-  'Para publicar en Colombia, vincula la variante con MasterShop (identificador del producto) o desactívala en Colombia.';
+const NOMBRE_DEL_PAIS: Record<PaisProducto, string> = { CO: 'Colombia', EC: 'Ecuador' };
+
+/** Mensaje para una variante que se vende en el país sin su vínculo de MasterShop. */
+export function mensajeSinVinculo(pais: PaisProducto): string {
+  const n = NOMBRE_DEL_PAIS[pais];
+  return `Para publicar en ${n}, escribe el id de MasterShop de ${n} (cada país tiene su propia cuenta) o desactiva la variante en ${n}.`;
+}
+/** Para quien aún use el texto de Colombia. */
+export const MENSAJE_SIN_VINCULO = mensajeSinVinculo('CO');
 
 /**
- * Posiciones de las variantes que no pueden publicarse: producto activo, visible en Colombia y la
- * variante activa en Colombia sin `mastershop_product_id`. Es la misma regla que repite la base.
+ * Variantes que no pueden publicarse: producto activo, visible en el país, país con MasterShop como transportadora
+ * (`country_settings.carrier_provider`), variante activa allí y sin `mastershop_product_id` DE ESE PAÍS. Es la misma
+ * regla que repite la base (D-052).
  */
 export function variantesSinVinculo(args: {
   status: EstadoProducto;
-  visibleEnCO: boolean;
-  variantes: readonly { activaEnCO: boolean; mastershopProductId: number | null }[];
-}): number[] {
-  if (args.status !== 'active' || !args.visibleEnCO) return [];
-  const faltan: number[] = [];
-  args.variantes.forEach((v, i) => {
-    if (v.activaEnCO && v.mastershopProductId === null) faltan.push(i);
+  /** Países con `carrier_provider = 'mastershop'`. */
+  paisesConMastershop: readonly PaisProducto[];
+  visibleEn: readonly PaisProducto[];
+  variantes: readonly { activaEn: readonly PaisProducto[]; vinculoPorPais: Partial<Record<PaisProducto, number | null>> }[];
+}): { indice: number; pais: PaisProducto }[] {
+  if (args.status !== 'active') return [];
+  const faltan: { indice: number; pais: PaisProducto }[] = [];
+  args.variantes.forEach((v, indice) => {
+    for (const pais of args.paisesConMastershop) {
+      if (!args.visibleEn.includes(pais) || !v.activaEn.includes(pais)) continue;
+      if ((v.vinculoPorPais[pais] ?? null) === null) faltan.push({ indice, pais });
+    }
   });
   return faltan;
 }
@@ -278,6 +292,8 @@ export function paisesVarianteVacios(): VarianteDelPaisForm[] {
     cost: '',
     stock: '0',
     low_stock_threshold: '',
+    mastershop_product_id: '',
+    mastershop_variant_id: '',
   }));
 }
 
@@ -288,8 +304,6 @@ export function varianteNueva(id: string, opciones?: { option_value_ids?: string
     option_value_ids: opciones?.option_value_ids ?? [],
     weight_kg: '0.5',
     is_default: opciones?.esPrimera ?? false,
-    mastershop_product_id: '',
-    mastershop_variant_id: '',
     image_id: '',
     countries: paisesVarianteVacios(),
   };
@@ -406,7 +420,7 @@ export function quitarVariante(form: ProductoForm, varianteId: string): Producto
 
 /**
  * Copia del producto como borrador: nuevos UUID, SKU y URL con sufijo `-copia`, invisible en todos los
- * países, sin vínculo MasterShop (el vínculo es de la variante original) y sin destacado.
+ * países, sin vínculo MasterShop (el vínculo es de la variante original, en cada país) y sin destacado.
  */
 export function duplicarForm(form: ProductoForm, nuevoId: GeneradorId, intento = 1): ProductoForm {
   const sufijo = intento > 1 ? `-copia-${intento}` : '-copia';
@@ -434,8 +448,7 @@ export function duplicarForm(form: ProductoForm, nuevoId: GeneradorId, intento =
       id: nuevoId(),
       sku: v.sku ? `${v.sku}${sufijo.toUpperCase()}`.slice(0, 80) : '',
       option_value_ids: v.option_value_ids.map((x) => mapaValores.get(x) ?? x),
-      mastershop_product_id: '',
-      mastershop_variant_id: '',
+      countries: v.countries.map((c) => ({ ...c, mastershop_product_id: '', mastershop_variant_id: '' })),
     })),
   };
 }
@@ -455,7 +468,12 @@ const nuloSiVacio = (s: string): string | null => (s.trim() === '' ? null : s.tr
  * que el formulario reconoce: `name`, `slug`, `variants.0.sku`, `variants.0.CO.price`, `countries.CO.is_visible`,
  * `options.0.name`, `images`, `variants` (generales).
  */
-export function construirEntrada(form: ProductoForm): ResultadoConstruccion {
+export function construirEntrada(
+  form: ProductoForm,
+  opciones: { paisesConMastershop?: readonly PaisProducto[] } = {},
+): ResultadoConstruccion {
+  // Sin dato de la base se asume el comportamiento previo (solo Colombia); la base repite la regla.
+  const paisesConMastershop = opciones.paisesConMastershop ?? (['CO'] as const);
   const errores: ErroresCampo = {};
   const falla = (clave: string, mensaje: string) => {
     if (!(clave in errores)) errores[clave] = mensaje;
@@ -524,21 +542,22 @@ export function construirEntrada(form: ProductoForm): ResultadoConstruccion {
       } else peso = n;
     }
 
-    const msProducto = v.mastershop_product_id.trim() === '' ? null : entero(v.mastershop_product_id, 2_000_000_000);
-    const msVariante = v.mastershop_variant_id.trim() === '' ? null : entero(v.mastershop_variant_id, 2_000_000_000);
-    if (v.mastershop_product_id.trim() !== '' && msProducto === null) {
-      falla(`variants.${i}.mastershop_product_id`, 'El identificador de MasterShop es un número entero.');
-    }
-    if (v.mastershop_variant_id.trim() !== '' && msVariante === null) {
-      falla(`variants.${i}.mastershop_variant_id`, 'El identificador de MasterShop es un número entero.');
-    }
-
     const paisesVariante: NonNullable<NonNullable<GuardarProductoEntrada['variants']>[number]['countries']> = [];
     for (const c of v.countries) {
       const moneda = COUNTRY_CURRENCY[c.country_code];
       const clave = `variants.${i}.${c.country_code}`;
-      const vacio = c.price.trim() === '' && c.compare_at_price.trim() === '' && c.cost.trim() === '' && !c.is_active;
-      if (vacio) continue; // sin precio y desactivada: el país de la variante no existe
+      const sinVinculoEscrito = c.mastershop_product_id.trim() === '' && c.mastershop_variant_id.trim() === '';
+      const vacio = c.price.trim() === '' && c.compare_at_price.trim() === '' && c.cost.trim() === '' && !c.is_active && sinVinculoEscrito;
+      if (vacio) continue; // sin precio, desactivada y sin vínculo: el país de la variante no existe
+      // Vínculo con MasterShop de ESTE país (D-052): enteros positivos; vacío = sin vínculo.
+      const msProducto = c.mastershop_product_id.trim() === '' ? null : entero(c.mastershop_product_id, 2_000_000_000);
+      const msVariante = c.mastershop_variant_id.trim() === '' ? null : entero(c.mastershop_variant_id, 2_000_000_000);
+      if (c.mastershop_product_id.trim() !== '' && (msProducto === null || msProducto < 1)) {
+        falla(`${clave}.mastershop_product_id`, 'El id de MasterShop es un número entero mayor que 0.');
+      }
+      if (c.mastershop_variant_id.trim() !== '' && (msVariante === null || msVariante < 1)) {
+        falla(`${clave}.mastershop_variant_id`, 'El id de MasterShop es un número entero mayor que 0.');
+      }
       const precio = parsearMonto(c.price, moneda);
       if (!precio.ok) {
         falla(`${clave}.price`, c.price.trim() === '' ? 'Escribe el precio.' : `Precio no válido en ${moneda}.`);
@@ -571,6 +590,8 @@ export function construirEntrada(form: ProductoForm): ResultadoConstruccion {
         cost: costo === null ? null : costo.toString(),
         stock: stock ?? 0,
         low_stock_threshold: umbral,
+        mastershop_product_id: msProducto !== null && msProducto >= 1 ? msProducto : null,
+        mastershop_variant_id: msVariante !== null && msVariante >= 1 ? msVariante : null,
       });
     }
 
@@ -580,8 +601,6 @@ export function construirEntrada(form: ProductoForm): ResultadoConstruccion {
       sku,
       ...(peso !== undefined ? { weight_kg: peso } : {}),
       is_default: v.is_default,
-      mastershop_product_id: msProducto,
-      mastershop_variant_id: msVariante,
       image_id: v.image_id || null,
       sort_order: i,
       countries: paisesVariante,
@@ -614,17 +633,17 @@ export function construirEntrada(form: ProductoForm): ResultadoConstruccion {
     });
   }
 
-  // Vínculo MasterShop (Colombia)
-  const visibleEnCO = paisesProducto.some((p) => p.country_code === 'CO' && p.is_visible);
-  for (const i of variantesSinVinculo({
+  // Vínculo MasterShop: en cada país que despacha con MasterShop, el de ESE país.
+  for (const { indice, pais } of variantesSinVinculo({
     status: form.status,
-    visibleEnCO,
+    paisesConMastershop,
+    visibleEn: paisesProducto.filter((p) => p.is_visible).map((p) => p.country_code),
     variantes: filasVariante.map((v) => ({
-      activaEnCO: Boolean(v.countries?.some((x) => x.country_code === 'CO' && x.is_active)),
-      mastershopProductId: v.mastershop_product_id ?? null,
+      activaEn: (v.countries ?? []).filter((x) => x.is_active).map((x) => x.country_code),
+      vinculoPorPais: Object.fromEntries((v.countries ?? []).map((x) => [x.country_code, x.mastershop_product_id ?? null])),
     })),
   })) {
-    falla(`variants.${i}.mastershop_product_id`, MENSAJE_SIN_VINCULO);
+    falla(`variants.${indice}.${pais}.mastershop_product_id`, mensajeSinVinculo(pais));
   }
 
   // Imágenes
@@ -673,6 +692,8 @@ export function errorDeMotivo(
   motivo: string,
   detalle: string | null | undefined,
   form: Pick<ProductoForm, 'variants'>,
+  /** Solo con `sin_vinculo_mastershop`: países donde falta el vínculo (los informa la base). */
+  paises?: readonly string[] | null,
 ): { mensaje: string; errores: ErroresCampo } {
   const errores: ErroresCampo = {};
   switch (motivo) {
@@ -693,8 +714,21 @@ export function errorDeMotivo(
     case 'sin_variante_por_defecto':
       errores.variants = 'Elige cuál es la variante por defecto.';
       return { mensaje: errores.variants, errores };
-    case 'sin_vinculo_mastershop':
-      return { mensaje: MENSAJE_SIN_VINCULO, errores };
+    case 'sin_vinculo_mastershop': {
+      const lista = (paises ?? []).filter((c): c is PaisProducto => c === 'CO' || c === 'EC');
+      const skus = (detalle ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+      // Cada SKU nombrado se marca en el campo del país afectado cuando está en el formulario.
+      form.variants.forEach((v, i) => {
+        if (!skus.some((s) => s.toLowerCase() === v.sku.trim().toLowerCase())) return;
+        for (const pais of lista.length > 0 ? lista : (['CO'] as const)) errores[`variants.${i}.${pais}.mastershop_product_id`] = mensajeSinVinculo(pais);
+      });
+      const donde = lista.length === 0 ? 'Colombia' : lista.map((c) => NOMBRE_DEL_PAIS[c]).join(' y ');
+      const cuales = skus.length > 0 ? ` Variantes: ${skus.join(', ')}.` : '';
+      return {
+        mensaje: `No se puede publicar todavía: falta el vínculo con MasterShop de ${donde}. Cada país tiene su propia cuenta, así que escribe el id de MasterShop de ese país (en la variante o en las columnas mastershop_*_co / _ec del archivo) o desactívala allí.${cuales}`,
+        errores,
+      };
+    }
     default:
       return { mensaje: `Los datos no son válidos${detalle ? `: ${detalle}` : ''}.`, errores };
   }
@@ -735,8 +769,6 @@ export type ProductoBd = {
     option_value_ids: string[];
     weight_kg: number | string;
     is_default: boolean;
-    mastershop_product_id: number | null;
-    mastershop_variant_id: number | null;
     image_id: string | null;
     sort_order: number;
     countries: {
@@ -747,6 +779,9 @@ export type ProductoBd = {
       cost: number | string | null;
       stock: number;
       low_stock_threshold: number | null;
+      /** Vínculo con MasterShop de este país (D-052). */
+      mastershop_product_id?: number | null;
+      mastershop_variant_id?: number | null;
     }[];
   }[];
   images: { media_id: string; role: RolImagen; sort_order: number; ruta: string; alt: string }[];
@@ -801,8 +836,6 @@ export function aFormulario(bd: ProductoBd): ProductoForm {
       option_value_ids: v.option_value_ids,
       weight_kg: String(Number(v.weight_kg)),
       is_default: v.is_default,
-      mastershop_product_id: v.mastershop_product_id === null ? '' : String(v.mastershop_product_id),
-      mastershop_variant_id: v.mastershop_variant_id === null ? '' : String(v.mastershop_variant_id),
       image_id: v.image_id ?? '',
       countries: PAISES_PRODUCTO.map((country_code) => {
         const c = v.countries.find((x) => x.country_code === country_code);
@@ -816,6 +849,8 @@ export function aFormulario(bd: ProductoBd): ProductoForm {
           cost: montoATexto(c.cost, moneda),
           stock: String(c.stock),
           low_stock_threshold: c.low_stock_threshold === null ? '' : String(c.low_stock_threshold),
+          mastershop_product_id: c.mastershop_product_id == null ? '' : String(c.mastershop_product_id),
+          mastershop_variant_id: c.mastershop_variant_id == null ? '' : String(c.mastershop_variant_id),
         };
       }),
     })),

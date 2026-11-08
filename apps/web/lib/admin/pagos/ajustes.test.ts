@@ -83,6 +83,29 @@ describe('ajustes del país', () => {
     expect(r.data.carrier_wallet_low_balance).toBeNull();
   });
 
+  it('transportadora por país: confirmar automático, modo de descuento y proveedor (opcionales)', () => {
+    const r = esquemaAjustesPais('EC').parse({
+      ...BASE_CO,
+      carrier_provider: 'mastershop',
+      carrier_auto_confirm: 'no',
+      carrier_discount_mode: 'additional_charge',
+    });
+    expect(r).toMatchObject({ carrier_provider: 'mastershop', carrier_auto_confirm: false, carrier_discount_mode: 'additional_charge' });
+    const ninguna = esquemaAjustesPais('EC').parse({ ...BASE_CO, carrier_provider: 'ninguna' });
+    expect(ninguna.carrier_provider).toBeNull();
+    // Si el formulario no los envía, no se tocan (no se confunde "ausente" con "apagado").
+    const sin = esquemaAjustesPais('CO').parse(BASE_CO);
+    expect('carrier_provider' in sin).toBe(false);
+    expect('carrier_auto_confirm' in sin).toBe(false);
+    expect('carrier_discount_mode' in sin).toBe(false);
+  });
+
+  it('rechaza una transportadora o un modo de descuento que no existen', () => {
+    expect(esquemaAjustesPais('CO').safeParse({ ...BASE_CO, carrier_provider: 'otra' }).success).toBe(false);
+    expect(esquemaAjustesPais('CO').safeParse({ ...BASE_CO, carrier_discount_mode: 'x' }).success).toBe(false);
+    expect(esquemaAjustesPais('CO').safeParse({ ...BASE_CO, carrier_auto_confirm: 'quizá' }).success).toBe(false);
+  });
+
   it('cod_resend_max: 0 es válido; negativo, decimal o texto no', () => {
     const val = (v: string) => esquemaAjustesPais('CO').safeParse({ ...BASE_CO, cod_resend_max: v });
     expect(val('0').success).toBe(true);

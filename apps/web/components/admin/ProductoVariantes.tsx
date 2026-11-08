@@ -23,17 +23,20 @@ import { CampoTexto } from './CampoTexto';
 
 type Cambiar = (actualizar: (anterior: ProductoForm) => ProductoForm) => void;
 
-/** Opciones (Tamaño, Presentación...) y variantes con precio, tachado, costo y stock por país, y vínculo MasterShop. */
+/** Opciones (Tamaño, Presentación...) y variantes con precio, tachado, costo y stock por país, y vínculo MasterShop por país. */
 export function ProductoVariantes({
   form,
   cambiar,
   errores,
   nuevoId,
+  paisesMastershop = ['CO'],
 }: {
   form: ProductoForm;
   cambiar: Cambiar;
   errores: ErroresCampo;
   nuevoId: GeneradorId;
+  /** Países que despachan con MasterShop (ahí el vínculo del país es obligatorio para publicar). */
+  paisesMastershop?: readonly string[];
 }) {
   const faltantes = combinacionesFaltantes(form).length;
 
@@ -200,27 +203,6 @@ export function ProductoVariantes({
               </div>
             </div>
 
-            <div className="adm-fila">
-              <CampoTexto
-                id={`v-${i}-ms-producto`}
-                etiqueta="MasterShop: id del producto"
-                inputMode="numeric"
-                value={v.mastershop_product_id}
-                error={errores[`variants.${i}.mastershop_product_id`]}
-                ayuda="Obligatorio para vender en Colombia."
-                onChange={(e) => editarVariante(v.id, { mastershop_product_id: e.target.value })}
-              />
-              <CampoTexto
-                id={`v-${i}-ms-variante`}
-                etiqueta="MasterShop: id de la variante"
-                inputMode="numeric"
-                value={v.mastershop_variant_id}
-                error={errores[`variants.${i}.mastershop_variant_id`]}
-                ayuda="Solo si MasterShop la maneja aparte."
-                onChange={(e) => editarVariante(v.id, { mastershop_variant_id: e.target.value })}
-              />
-            </div>
-
             <div className="adm-paises-variante">
               {v.countries.map((c) => {
                 const moneda = COUNTRY_CURRENCY[c.country_code];
@@ -241,6 +223,30 @@ export function ProductoVariantes({
                       <CampoTexto id={`${idBase}-costo`} etiqueta="Costo" inputMode="decimal" value={c.cost} error={errores[`${clave}.cost`]} onChange={(e) => editarPais(v.id, c.country_code, { cost: e.target.value })} />
                       <CampoTexto id={`${idBase}-stock`} etiqueta="Stock" inputMode="numeric" value={c.stock} error={errores[`${clave}.stock`]} onChange={(e) => editarPais(v.id, c.country_code, { stock: e.target.value })} />
                       <CampoTexto id={`${idBase}-umbral`} etiqueta="Aviso de stock bajo" inputMode="numeric" value={c.low_stock_threshold} error={errores[`${clave}.low_stock_threshold`]} onChange={(e) => editarPais(v.id, c.country_code, { low_stock_threshold: e.target.value })} />
+                    </div>
+                    <div className="adm-fila">
+                      <CampoTexto
+                        id={`${idBase}-ms-producto`}
+                        etiqueta={`MasterShop ${NOMBRE_PAIS[c.country_code]}: id del producto`}
+                        inputMode="numeric"
+                        value={c.mastershop_product_id}
+                        error={errores[`${clave}.mastershop_product_id`]}
+                        ayuda={
+                          paisesMastershop.includes(c.country_code)
+                            ? `Obligatorio para vender en ${NOMBRE_PAIS[c.country_code]}. Es el id de la cuenta de MasterShop de este país.`
+                            : `Id de la cuenta de MasterShop de ${NOMBRE_PAIS[c.country_code]}. Este país aún no despacha con MasterShop.`
+                        }
+                        onChange={(e) => editarPais(v.id, c.country_code, { mastershop_product_id: e.target.value })}
+                      />
+                      <CampoTexto
+                        id={`${idBase}-ms-variante`}
+                        etiqueta={`MasterShop ${NOMBRE_PAIS[c.country_code]}: id de la variante`}
+                        inputMode="numeric"
+                        value={c.mastershop_variant_id}
+                        error={errores[`${clave}.mastershop_variant_id`]}
+                        ayuda="Solo si MasterShop la maneja aparte."
+                        onChange={(e) => editarPais(v.id, c.country_code, { mastershop_variant_id: e.target.value })}
+                      />
                     </div>
                   </div>
                 );

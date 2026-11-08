@@ -3,6 +3,8 @@
 import { useActionState } from 'react';
 import { ESTADO_INICIAL, type ResultadoAccion } from '@/lib/admin/crud/comun';
 import type { FormularioPais } from '@/lib/admin/pagos/ajustes-servidor';
+import { ETIQUETA_MODO_DESCUENTO, MODOS_DESCUENTO } from '@/lib/admin/pagos/ajustes';
+import { CampoSelect } from './CampoSelect';
 import { CampoTexto } from './CampoTexto';
 
 /** Ajustes del país: contra entrega, recargo de financiación, tiempos, horario silencioso y alertas. */
@@ -166,6 +168,45 @@ export function FormularioAjustesPais({
             error={errores.fx_rate_to_cop}
           />
         )}
+        <CampoSelect
+          id="carrier_provider"
+          name="carrier_provider"
+          etiqueta="Transportadora integrada"
+          defaultValue={inicial.carrier_provider === '' ? 'ninguna' : inicial.carrier_provider}
+          opciones={[
+            { valor: 'ninguna', etiqueta: 'Ninguna (los envíos se gestionan aparte)' },
+            { valor: 'mastershop', etiqueta: 'MasterShop' },
+          ]}
+          ayuda={
+            inicial.sin_vinculo > 0 && inicial.carrier_provider !== 'mastershop'
+              ? `Antes de activarla: ${inicial.sin_vinculo} ${inicial.sin_vinculo === 1 ? 'variante publicada no tiene' : 'variantes publicadas no tienen'} el vínculo con MasterShop de este país.`
+              : inicial.sin_vinculo > 0
+                ? `Atención: ${inicial.sin_vinculo} ${inicial.sin_vinculo === 1 ? 'variante publicada no tiene' : 'variantes publicadas no tienen'} el vínculo con MasterShop de este país; esos pedidos no podrán crearse en la transportadora.`
+                : 'Cada país usa su propia cuenta de MasterShop (llave en Integraciones) y sus propios vínculos de producto.'
+          }
+          error={errores.carrier_provider}
+        />
+        <CampoSelect
+          id="carrier_auto_confirm"
+          name="carrier_auto_confirm"
+          etiqueta="Confirmar automáticamente en la transportadora"
+          defaultValue={inicial.carrier_auto_confirm ? 'si' : 'no'}
+          opciones={[
+            { valor: 'si', etiqueta: 'Sí, confirmar apenas se cree el envío' },
+            { valor: 'no', etiqueta: 'No, lo confirmo yo en MasterShop' },
+          ]}
+          ayuda="Con «No», el pedido se crea en MasterShop pero queda sin confirmar hasta que tú lo confirmes allá."
+          error={errores.carrier_auto_confirm}
+        />
+        <CampoSelect
+          id="carrier_discount_mode"
+          name="carrier_discount_mode"
+          etiqueta="Cómo se envía el descuento a la transportadora"
+          defaultValue={inicial.carrier_discount_mode}
+          opciones={MODOS_DESCUENTO.map((m) => ({ valor: m, etiqueta: ETIQUETA_MODO_DESCUENTO[m] }))}
+          ayuda="Hace que el total del pedido en MasterShop coincida con lo que pagó el cliente."
+          error={errores.carrier_discount_mode}
+        />
         <CampoTexto
           id="carrier_wallet_low_balance"
           name="carrier_wallet_low_balance"

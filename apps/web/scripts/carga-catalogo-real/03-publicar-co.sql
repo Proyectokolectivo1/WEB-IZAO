@@ -1,6 +1,6 @@
 -- 03 · Publicar en Colombia los productos de la carga con vínculo MasterShop
 -- Ejecutar DESPUÉS de aplicar la vinculación por SKU (D-050).
--- Publica solo productos active de la carga cuyas variantes activas tienen mastershop_product_id. Los que no lo tengan quedan ocultos.
+-- Publica solo productos active de la carga cuyas variantes activas tienen el vínculo de CO (variant_countries.mastershop_product_id). Los que no lo tengan quedan ocultos.
 -- El stock sigue en 0: con stock 0 la tienda muestra «Agotado». Define el stock en el panel (Productos) o en la importación.
 -- Generado por apps/web/scripts/carga-catalogo-real.ts. No editar a mano: vuelve a generarlo.
 
@@ -16,7 +16,7 @@ select p.id as pid
    and not exists (
          select 1 from public.product_variants v
            join public.variant_countries vc on vc.variant_id = v.id and vc.country_code = 'CO' and vc.is_active
-          where v.product_id = p.id and v.mastershop_product_id is null)
+          where v.product_id = p.id and vc.mastershop_product_id is null)
    and exists (select 1 from public.product_countries pc where pc.product_id = p.id and pc.country_code = 'CO' and not pc.is_visible);
 
 update public.product_countries pc

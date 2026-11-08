@@ -5,6 +5,7 @@
  * El modo mock se pide con `INTEGRACIONES_MODO=mock` y se ignora en producción. Los mensajes devueltos
  * nunca incluyen los valores secretos.
  */
+import { currencyForCountry } from '@izao/core/money';
 import { MasterShopClient } from '@izao/mastershop';
 import { VERSION_GRAPH_POR_DEFECTO } from '@izao/whatsapp';
 import { ErrorWompi, WOMPI_API_BASE, crearClienteWompi } from '@izao/wompi';
@@ -72,10 +73,12 @@ function sondaSoloFormato(id: ProveedorId): Sonda {
 
 function sondasReales(fetchImpl: typeof fetch): Record<ProveedorId, Sonda> {
   return {
-    async mastershop({ valores }) {
+    async mastershop({ pais, valores }) {
       const apiKey = valores.api_key?.trim();
       if (!apiKey) return { ok: false, message: 'Falta la llave de API de MasterShop.' };
-      return new MasterShopClient({ apiKey, fetch: fetchImpl, timeoutMs: TIEMPO_MS }).testCredentials();
+      // Cada país tiene su propio negocio y su moneda (D-052): con `currency` la prueba detecta la llave del país equivocado.
+      const currency = pais ? currencyForCountry(pais) : undefined;
+      return new MasterShopClient({ apiKey, fetch: fetchImpl, timeoutMs: TIEMPO_MS, ...(currency ? { currency } : {}) }).testCredentials();
     },
 
     async wompi({ ambiente, valores }) {

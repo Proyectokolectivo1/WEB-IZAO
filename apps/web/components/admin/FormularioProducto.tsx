@@ -24,6 +24,8 @@ export type OpcionesProducto = {
   familias: readonly OpcionSelect[];
   concentraciones: readonly OpcionSelect[];
   categorias: readonly (OpcionSelect & { nivel: 0 | 1 })[];
+  /** Países con MasterShop como transportadora (vínculo del país obligatorio para publicar). */
+  paisesMastershop?: readonly ('CO' | 'EC')[];
 };
 
 /** Editor completo del producto. Todo el estado vive aquí y viaja al servidor como un solo campo `payload` (JSON). */
@@ -203,7 +205,13 @@ export function FormularioProducto({
         </div>
       </fieldset>
 
-      <ProductoVariantes form={f} cambiar={(actualizar) => setF(actualizar)} errores={errores} nuevoId={nuevoId} />
+      <ProductoVariantes
+        form={f}
+        cambiar={(actualizar) => setF(actualizar)}
+        errores={errores}
+        nuevoId={nuevoId}
+        paisesMastershop={opciones.paisesMastershop ?? ['CO']}
+      />
 
       <ProductoImagenes imagenes={f.images} alCambiar={(imgs) => poner('images', imgs)} altSugerido={f.name} error={errores.images} />
 

@@ -47,8 +47,12 @@ export default async function PaginaIntegraciones() {
   const cliente = crearClienteServicio();
   const filas = await listarCredenciales(cliente);
   const modo = modoIntegraciones();
-  const msActiva = filas.find((f) => f.provider === 'mastershop' && f.country_code === 'CO' && f.is_active);
-  const webhooks = msActiva ? await listarWebhooksMasterShop(cliente, msActiva.environment) : [];
+  const webhooksPorPais = await Promise.all(
+    (['CO', 'EC'] as const).map(async (pais) => {
+      const activa = filas.find((f) => f.provider === 'mastershop' && f.country_code === pais && f.is_active);
+      return { pais, activa, webhooks: activa ? await listarWebhooksMasterShop(cliente, activa.environment, pais) : [] };
+    }),
+  );
 
   return (
     <>
@@ -171,56 +175,66 @@ export default async function PaginaIntegraciones() {
       <section aria-labelledby="h-webhooks-ms">
         <h2 id="h-webhooks-ms">Webhooks de MasterShop</h2>
         <p className="adm-suave">
-          MasterShop avisa a la tienda cuando se crea un pedido o cambia su estado. Se registran con la credencial activa
-          de Colombia; los que ya estaban registrados no se duplican.
+          MasterShop avisa a la tienda cuando se crea un pedido o cambia su estado. Cada país tiene su propio negocio en
+          MasterShop: los webhooks se registran con la credencial activa de ese país y los que ya estaban registrados no
+          se duplican.
         </p>
-        {msActiva ? (
-          <>
-            <div className="adm-tabla-caja">
-              <table className="adm-tabla">
-                <caption className="adm-suave">Webhooks registrados ({ETIQUETA_AMBIENTE[msActiva.environment]})</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Evento</th>
-                    <th scope="col">Estado</th>
-                    <th scope="col">Registrado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {webhooks.length === 0 ? (
-                    <tr>
-                      <td colSpan={3} className="adm-suave">
-                        Aún no hay webhooks registrados.
-                      </td>
-                    </tr>
-                  ) : (
-                    webhooks.map((w) => (
-                      <tr key={w.event_id}>
-                        <td>{w.event_name}</td>
-                        <td>
-                          {w.is_enabled ? (
-                            <span className="adm-insignia adm-insignia-ok">Habilitado</span>
-                          ) : (
-                            <span className="adm-insignia">Deshabilitado</span>
-                          )}
-                        </td>
-                        <td className="adm-suave">{fecha.format(new Date(w.registered_at))}</td>
+        {webhooksPorPais.map(({ pais, activa, webhooks }) => (
+          <div key={pais} className="adm-tarjeta">
+            <h3>{NOMBRE_PAIS[pais]}</h3>
+            {activa ? (
+              <>
+                <div className="adm-tabla-caja">
+                  <table className="adm-tabla">
+                    <caption className="adm-suave">
+                      Webhooks registrados en {NOMBRE_PAIS[pais]} ({ETIQUETA_AMBIENTE[activa.environment]})
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Evento</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col">Registrado</th>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <BotonAccion
-              etiqueta="Registrar webhooks"
-              procesando="Registrando…"
-              accion={registrarWebhooks.bind(null, msActiva.id)}
-              secundario={false}
-            />
-          </>
-        ) : (
-          <p className="adm-vacio">Guarda y activa primero las credenciales de MasterShop para registrar los webhooks.</p>
-        )}
+                    </thead>
+                    <tbody>
+                      {webhooks.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="adm-suave">
+                            Aún no hay webhooks registrados.
+                          </td>
+                        </tr>
+                      ) : (
+                        webhooks.map((w) => (
+                          <tr key={w.event_id}>
+                            <td>{w.event_name}</td>
+                            <td>
+                              {w.is_enabled ? (
+                                <span className="adm-insignia adm-insignia-ok">Habilitado</span>
+                              ) : (
+                                <span className="adm-insignia">Deshabilitado</span>
+                              )}
+                            </td>
+                            <td className="adm-suave">{fecha.format(new Date(w.registered_at))}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <BotonAccion
+                  etiqueta={`Registrar webhooks de ${NOMBRE_PAIS[pais]}`}
+                  procesando="Registrando…"
+                  accion={registrarWebhooks.bind(null, activa.id)}
+                  secundario={false}
+                />
+              </>
+            ) : (
+              <p className="adm-vacio">
+                Guarda y activa primero las credenciales de MasterShop de {NOMBRE_PAIS[pais]} para registrar sus webhooks.
+              </p>
+            )}
+          </div>
+        ))}
       </section>
     </>
   );

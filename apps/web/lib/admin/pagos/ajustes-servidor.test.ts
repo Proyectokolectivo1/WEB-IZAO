@@ -165,6 +165,81 @@ describe('guardarAjustesPaisBd', () => {
   });
 });
 
+describe('transportadora por país (D-052)', () => {
+  const filaEc = { ...FILA_CO, country_code: 'EC', financing_surcharge_pct: {}, fx_rate_to_cop: 4100, carrier_provider: null, carrier_auto_confirm: true, carrier_discount_mode: 'prorate' };
+  const extra = { carrier_provider: 'mastershop', carrier_auto_confirm: 'no', carrier_discount_mode: 'additional_charge', fx_rate_to_cop: '4100', cod_deposit_amount: '2.50', cod_min_collect_amount: '5', carrier_wallet_low_balance: '' };
+
+  it('guarda proveedor, confirmación automática y modo de descuento, y audita el cambio', async () => {
+    const { cliente, llamadas } = clienteFalso({
+      'country_settings.select': { data: filaEc },
+      'variant_countries.select': { data: null, count: 0 },
+      'country_settings.update': { data: null },
+    });
+    const r = await guardarAjustesPaisBd({ cliente, ...comun, pais: 'EC', datos: datosPais(extra, 'EC') });
+    expect(r.ok).toBe(true);
+    const upd = llamadas.find((l) => l.clave === 'country_settings.update')!.args[0] as Record<string, unknown>;
+    expect(upd).toMatchObject({ carrier_provider: 'mastershop', carrier_auto_confirm: false, carrier_discount_mode: 'additional_charge' });
+    const ev = auditar.mock.calls[0]![0] as { entidadId: string; diff: { despues: Record<string, unknown> } };
+    expect(ev.entidadId).toBe('EC');
+    expect(ev.diff.despues).toMatchObject({ carrier_provider: 'mastershop', carrier_auto_confirm: false, carrier_discount_mode: 'additional_charge' });
+  });
+
+  it('no enciende MasterShop en un país si hay variantes publicadas sin el vínculo de ESE país', async () => {
+    const { cliente, llamadas, filtros } = clienteFalso({
+      'country_settings.select': { data: filaEc },
+      'variant_countries.select': { data: null, count: 3 },
+    });
+    const r = await guardarAjustesPaisBd({ cliente, ...comun, pais: 'EC', datos: datosPais(extra, 'EC') });
+    expect(r.ok).toBe(false);
+    expect(r.errores?.carrier_provider).toMatch(/3 variantes publicadas no tienen el vínculo con MasterShop de este país/);
+    expect(r.errores?.carrier_provider).toMatch(/Ecuador/);
+    expect(filtros).toContainEqual({ tabla: 'variant_countries', metodo: 'eq', args: ['country_code', 'EC'] });
+    expect(llamadas.some((l) => l.clave === 'country_settings.update')).toBe(false);
+    expect(auditar).not.toHaveBeenCalled();
+  });
+
+  it('si MasterShop ya estaba activo, cambiar otros ajustes no vuelve a exigir el vínculo', async () => {
+    const { cliente } = clienteFalso({
+      'country_settings.select': { data: { ...filaEc, carrier_provider: 'mastershop' } },
+      'variant_countries.select': { data: null, count: 9 },
+      'country_settings.update': { data: null },
+    });
+    const r = await guardarAjustesPaisBd({ cliente, ...comun, pais: 'EC', datos: datosPais(extra, 'EC') });
+    expect(r.ok).toBe(true);
+  });
+
+  it('apagar la transportadora guarda null', async () => {
+    const { cliente, llamadas } = clienteFalso({
+      'country_settings.select': { data: { ...filaEc, carrier_provider: 'mastershop' } },
+      'country_settings.update': { data: null },
+    });
+    await guardarAjustesPaisBd({ cliente, ...comun, pais: 'EC', datos: datosPais({ ...extra, carrier_provider: 'ninguna' }, 'EC') });
+    const upd = llamadas.find((l) => l.clave === 'country_settings.update')!.args[0] as Record<string, unknown>;
+    expect(upd.carrier_provider).toBeNull();
+  });
+
+  it('un formulario que no trae los campos de transportadora no los toca', async () => {
+    const { cliente, llamadas } = clienteFalso({
+      'country_settings.select': { data: { ...filaEc, carrier_provider: 'mastershop' } },
+      'country_settings.update': { data: null },
+    });
+    await guardarAjustesPaisBd({ cliente, ...comun, pais: 'EC', datos: datosPais({ cod_deposit_amount: '2.50', cod_min_collect_amount: '5', fx_rate_to_cop: '4100', carrier_wallet_low_balance: '' }, 'EC') });
+    const upd = llamadas.find((l) => l.clave === 'country_settings.update')!.args[0] as Record<string, unknown>;
+    expect('carrier_provider' in upd).toBe(false);
+    expect('carrier_auto_confirm' in upd).toBe(false);
+  });
+
+  it('leerAjustes informa cuántas variantes publicadas faltan por vincular', async () => {
+    const { cliente } = clienteFalso({
+      'country_settings.select': { data: filaEc },
+      'payment_method_settings.select': { data: [] },
+      'variant_countries.select': { data: null, count: 2 },
+    });
+    const r = await leerAjustes(cliente, 'EC');
+    expect(r.pais).toMatchObject({ sin_vinculo: 2, carrier_provider: '', carrier_auto_confirm: true, carrier_discount_mode: 'prorate' });
+  });
+});
+
 describe('guardarMetodoBd', () => {
   const previo = { country_code: 'CO', method: 'cod', is_enabled: false, sort_order: 4, display_name: 'Contra entrega', description: null, fee_pct: 0, fee_fixed: 0, fee_tax_pct: 0 };
   const form = { is_enabled: 'on', sort_order: '4', display_name: 'Contra entrega', description: 'Haz un abono por WhatsApp.', fee_pct: '0', fee_fixed: '0', fee_tax_pct: '0' };

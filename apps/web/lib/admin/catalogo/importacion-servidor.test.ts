@@ -116,9 +116,9 @@ describe('exportarCatalogo', () => {
       },
       'product_variants.select': {
         data: [{
-          product_id: 'p1', id: 'v1', sku: 'ROSA-1', option_value_ids: [], weight_kg: '0.5', is_default: true, mastershop_product_id: null,
-          mastershop_variant_id: null, image_id: null, sort_order: 0,
-          variant_countries: [{ country_code: 'CO', is_active: true, price: 90000, compare_at_price: null, cost: null, stock: 2, low_stock_threshold: null }],
+          product_id: 'p1', id: 'v1', sku: 'ROSA-1', option_value_ids: [], weight_kg: '0.5', is_default: true,
+          image_id: null, sort_order: 0,
+          variant_countries: [{ country_code: 'CO', is_active: true, price: 90000, compare_at_price: null, cost: null, stock: 2, low_stock_threshold: null, mastershop_product_id: null, mastershop_variant_id: null }],
         }],
       },
     });

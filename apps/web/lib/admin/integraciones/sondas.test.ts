@@ -107,6 +107,22 @@ describe('sondas reales', () => {
     expect(r.message).not.toContain(llave);
   });
 
+  it('MasterShop detecta una llave del país equivocado por la moneda del negocio (D-052)', async () => {
+    const fetchCop = (async () =>
+      new Response(JSON.stringify({ results: [{ idProduct: 1, baseCurrencyPrice: 'COP' }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })) as unknown as typeof fetch;
+    const sondas = crearSondas('real', fetchCop);
+    const valores = { api_key: 'llave-mastershop-secreta-9999' };
+    const enEc = await sondas.mastershop({ pais: 'EC', ambiente: 'production', valores });
+    expect(enEc.ok).toBe(false);
+    expect(enEc.message).toContain('COP');
+    expect(enEc.message).toContain('USD');
+    expect(enEc.message).not.toContain(valores.api_key);
+    expect((await sondas.mastershop({ pais: 'CO', ambiente: 'production', valores })).ok).toBe(true);
+  });
+
   it('MasterShop sin llave no llama a la red', async () => {
     const r = await crearSondas('real', fetchPorUrl(() => 500)).mastershop({ pais: 'CO', ambiente: 'production', valores: {} });
     expect(r.ok).toBe(false);

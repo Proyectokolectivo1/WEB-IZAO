@@ -139,6 +139,8 @@ export type OpcionesFormulario = {
   familias: { valor: string; etiqueta: string }[];
   concentraciones: { valor: string; etiqueta: string }[];
   categorias: { valor: string; etiqueta: string; nivel: 0 | 1 }[];
+  /** Países con MasterShop como transportadora: ahí el vínculo del país es obligatorio para publicar. */
+  paisesMastershop: PaisProducto[];
 };
 
 /** Listas para los selectores del formulario (taxonomías y categorías en árbol de 2 niveles). */
@@ -165,7 +167,7 @@ export async function opcionesFormulario(cliente: Cliente): Promise<OpcionesForm
       categorias.push({ valor: hija.id, etiqueta: hija.name, nivel: 1 });
     }
   }
-  return { marcas, generos, familias, concentraciones, categorias };
+  return { marcas, generos, familias, concentraciones, categorias, paisesMastershop: await paisesConMastershop(cliente) };
 }
 
 /** Lee el producto completo y lo deja en la forma del formulario. `null` si no existe. */
@@ -183,7 +185,7 @@ export async function obtenerProductoForm(cliente: Cliente, id: string): Promise
     cliente
       .from('product_variants')
       .select(
-        'id, sku, option_value_ids, weight_kg, is_default, mastershop_product_id, mastershop_variant_id, image_id, sort_order, variant_countries(country_code, is_active, price, compare_at_price, cost, stock, low_stock_threshold)',
+        'id, sku, option_value_ids, weight_kg, is_default, image_id, sort_order, variant_countries(country_code, is_active, price, compare_at_price, cost, stock, low_stock_threshold, mastershop_product_id, mastershop_variant_id)',
       )
       .eq('product_id', id),
     cliente.from('product_images').select('media_id, role, sort_order, media(variants, alt)').eq('product_id', id),
@@ -234,7 +236,7 @@ async function guardarYAuditar(args: { entrada: GuardarProductoEntrada; form: Pi
     return { ok: false, mensaje: 'No se pudo guardar el producto. Inténtalo de nuevo.' };
   }
   if (!resultado.ok) {
-    const { mensaje, errores } = errorDeMotivo(resultado.motivo, resultado.detalle, form);
+    const { mensaje, errores } = errorDeMotivo(resultado.motivo, resultado.detalle, form, resultado.paises);
     return { ok: false, mensaje, errores };
   }
 
@@ -258,9 +260,22 @@ async function guardarYAuditar(args: { entrada: GuardarProductoEntrada; form: Pi
   return { ok: true, id: resultado.product_id };
 }
 
+/**
+ * Países que despachan con MasterShop (`country_settings.carrier_provider`): ahí cada variante publicada necesita el
+ * vínculo DE ESE PAÍS (D-052). La base repite la regla; esto solo adelanta el aviso por campo.
+ */
+export async function paisesConMastershop(cliente: Cliente): Promise<PaisProducto[]> {
+  const { data, error } = await cliente.from('country_settings').select('country_code').eq('carrier_provider', 'mastershop');
+  if (error) throw new Error(`No se pudo leer la transportadora de los países: ${error.message}`);
+  return ((data ?? []) as { country_code: string }[]).map((r) => r.country_code).filter((c): c is PaisProducto => c === 'CO' || c === 'EC');
+}
+
 /** Valida el formulario, guarda de forma atómica, audita e invalida la caché. */
-export async function guardarProductoPanel(args: { form: ProductoForm } & Contexto): Promise<ResultadoAccion> {
-  const construido = construirEntrada(args.form);
+export async function guardarProductoPanel(
+  args: { form: ProductoForm; paisesConMastershop?: readonly PaisProducto[] } & Contexto,
+): Promise<ResultadoAccion> {
+  const paises = args.paisesConMastershop ?? (await paisesConMastershop(args.cliente));
+  const construido = construirEntrada(args.form, { paisesConMastershop: paises });
   if (!construido.ok) return { ok: false, mensaje: 'Revisa los campos marcados.', errores: construido.errores };
   return guardarYAuditar({ ...args, entrada: construido.entrada });
 }

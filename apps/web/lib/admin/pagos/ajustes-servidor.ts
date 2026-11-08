@@ -26,7 +26,7 @@ type Ctx = { cliente: Cliente; actor: string; ip: string | null };
 export type ResultadoAjustes = ResultadoAccion & { errores?: ErroresCampo };
 
 const COLUMNAS_PAIS =
-  'country_code, cod_enabled, cod_deposit_amount, cod_min_collect_amount, cod_link_ttl_hours, cod_reminder_offsets_minutes, cod_quiet_hours_start, cod_quiet_hours_end, cod_resend_max, financing_surcharge_pct, pending_payment_ttl_minutes, manual_order_ttl_hours, fx_rate_to_cop, carrier_provider, carrier_wallet_low_balance, carrier_wallet_balance, carrier_wallet_balance_at, updated_at';
+  'country_code, cod_enabled, cod_deposit_amount, cod_min_collect_amount, cod_link_ttl_hours, cod_reminder_offsets_minutes, cod_quiet_hours_start, cod_quiet_hours_end, cod_resend_max, financing_surcharge_pct, pending_payment_ttl_minutes, manual_order_ttl_hours, fx_rate_to_cop, carrier_provider, carrier_auto_confirm, carrier_discount_mode, carrier_wallet_low_balance, carrier_wallet_balance, carrier_wallet_balance_at, updated_at';
 const COLUMNAS_METODO =
   'country_code, method, is_enabled, sort_order, display_name, description, fee_pct, fee_fixed, fee_tax_pct, updated_at';
 
@@ -46,7 +46,12 @@ export type FormularioPais = {
   manual_order_ttl_hours: string;
   fx_rate_to_cop: string;
   carrier_wallet_low_balance: string;
-  /** Solo lectura. */
+  /** `''` = sin transportadora integrada. */
+  carrier_provider: string;
+  carrier_auto_confirm: boolean;
+  carrier_discount_mode: string;
+  /** Solo lectura. Variantes activas de productos publicados sin vínculo de MasterShop en este país. */
+  sin_vinculo: number;
   tiene_transportadora: boolean;
   saldo_billetera: string;
   updated_at: string | null;
@@ -73,7 +78,7 @@ function recargo(json: unknown, clave: string): string {
   return v === undefined || v === null ? '' : String(v);
 }
 
-export function aFormularioPais(f: Fila, pais: PaisAjustes): FormularioPais {
+export function aFormularioPais(f: Fila, pais: PaisAjustes, sinVinculo = 0): FormularioPais {
   const moneda = MONEDA_PAIS[pais];
   return {
     cod_enabled: f.cod_enabled === true,
@@ -90,6 +95,10 @@ export function aFormularioPais(f: Fila, pais: PaisAjustes): FormularioPais {
     manual_order_ttl_hours: txt(f.manual_order_ttl_hours),
     fx_rate_to_cop: txt(f.fx_rate_to_cop),
     carrier_wallet_low_balance: montoATexto(f.carrier_wallet_low_balance, moneda),
+    carrier_provider: txt(f.carrier_provider),
+    carrier_auto_confirm: f.carrier_auto_confirm !== false,
+    carrier_discount_mode: txt(f.carrier_discount_mode) || 'prorate',
+    sin_vinculo: sinVinculo,
     tiene_transportadora: f.carrier_provider !== null && f.carrier_provider !== undefined,
     saldo_billetera: montoATexto(f.carrier_wallet_balance, moneda),
     updated_at: f.updated_at ? String(f.updated_at) : null,
@@ -110,19 +119,37 @@ export function aFormularioMetodo(f: Fila, pais: PaisAjustes): FormularioMetodo 
   };
 }
 
+/**
+ * Variantes activas en el país, de productos publicados, sin `mastershop_product_id` de ESE país (D-052). Es la misma
+ * condición con la que la base rechaza publicar (`sin_vinculo_mastershop`); aquí sirve para avisar y para no encender la
+ * transportadora de un país que aún no tiene sus productos vinculados.
+ */
+export async function contarSinVinculo(cliente: Cliente, pais: PaisAjustes): Promise<number> {
+  const { count, error } = await cliente
+    .from('variant_countries')
+    .select('variant_id, product_variants!inner(product_id, products!inner(status))', { count: 'exact', head: true })
+    .eq('country_code', pais)
+    .eq('is_active', true)
+    .is('mastershop_product_id', null)
+    .eq('product_variants.products.status', 'active');
+  if (error) throw new Error(`No se pudo revisar el vínculo con MasterShop: ${error.message}`);
+  return count ?? 0;
+}
+
 export async function leerAjustes(
   cliente: Cliente,
   pais: PaisAjustes,
 ): Promise<{ pais: FormularioPais | null; metodos: FormularioMetodo[] }> {
-  const [cs, pm] = await Promise.all([
+  const [cs, pm, sinVinculo] = await Promise.all([
     cliente.from('country_settings').select(COLUMNAS_PAIS).eq('country_code', pais).maybeSingle(),
     cliente.from('payment_method_settings').select(COLUMNAS_METODO).eq('country_code', pais).order('sort_order', { ascending: true }),
+    contarSinVinculo(cliente, pais),
   ]);
   if (cs.error) throw new Error(`No se pudieron leer los ajustes del país: ${cs.error.message}`);
   if (pm.error) throw new Error(`No se pudieron leer los métodos de pago: ${pm.error.message}`);
   const orden = (m: MetodoPago) => METODOS.indexOf(m);
   return {
-    pais: cs.data ? aFormularioPais(cs.data as Fila, pais) : null,
+    pais: cs.data ? aFormularioPais(cs.data as Fila, pais, sinVinculo) : null,
     metodos: ((pm.data ?? []) as Fila[])
       .map((f) => aFormularioMetodo(f, pais))
       .sort((a, b) => Number(a.sort_order) - Number(b.sort_order) || orden(a.method) - orden(b.method)),
@@ -172,6 +199,26 @@ export async function guardarAjustesPaisBd(args: Ctx & { pais: PaisAjustes; dato
   delete previoRecargo.sistecredito;
   const recargos = { ...previoRecargo, ...datos.surcharge };
 
+  // Encender MasterShop en un país exige que sus productos publicados ya tengan el vínculo de ESE país: si no, los
+  // pedidos fallarían al crearse en la transportadora (D-052).
+  if (datos.carrier_provider === 'mastershop' && antes.carrier_provider !== 'mastershop') {
+    let faltan: number;
+    try {
+      faltan = await contarSinVinculo(cliente, pais);
+    } catch {
+      return { ok: false, mensaje: 'No se pudo revisar el vínculo de los productos con MasterShop. Inténtalo de nuevo.' };
+    }
+    if (faltan > 0) {
+      return {
+        ok: false,
+        mensaje: 'Revisa los campos marcados.',
+        errores: {
+          carrier_provider: `No se puede activar MasterShop en ${pais === 'CO' ? 'Colombia' : 'Ecuador'} todavía: ${faltan} ${faltan === 1 ? 'variante publicada no tiene' : 'variantes publicadas no tienen'} el vínculo con MasterShop de este país. Vincúlalas en cada producto (sección Variantes) y vuelve a intentarlo.`,
+        },
+      };
+    }
+  }
+
   const nuevo = {
     cod_enabled: datos.cod_enabled,
     cod_deposit_amount: datos.cod_deposit_amount.toString(),
@@ -187,6 +234,9 @@ export async function guardarAjustesPaisBd(args: Ctx & { pais: PaisAjustes; dato
     // Colombia no necesita tasa (su moneda es el peso); no se toca desde aquí.
     ...(pais === 'CO' ? {} : { fx_rate_to_cop: datos.fx_rate_to_cop }),
     carrier_wallet_low_balance: datos.carrier_wallet_low_balance === null ? null : datos.carrier_wallet_low_balance.toString(),
+    ...(datos.carrier_provider === undefined ? {} : { carrier_provider: datos.carrier_provider }),
+    ...(datos.carrier_auto_confirm === undefined ? {} : { carrier_auto_confirm: datos.carrier_auto_confirm }),
+    ...(datos.carrier_discount_mode === undefined ? {} : { carrier_discount_mode: datos.carrier_discount_mode }),
   };
 
   const { error } = await cliente.from('country_settings').update(nuevo).eq('country_code', pais);

@@ -27,7 +27,7 @@ function formValido(): ProductoForm {
   f.name = 'Oud Nocturno';
   f.slug = 'oud-nocturno';
   f.variants[0]!.sku = 'OUD-100';
-  f.variants[0]!.countries[0] = { country_code: 'CO', is_active: true, price: '189.900', compare_at_price: '', cost: '', stock: '5', low_stock_threshold: '' };
+  f.variants[0]!.countries[0] = { country_code: 'CO', is_active: true, price: '189.900', compare_at_price: '', cost: '', stock: '5', low_stock_threshold: '', mastershop_product_id: '', mastershop_variant_id: '' };
   return f;
 }
 
@@ -158,8 +158,8 @@ describe('duplicarProductoBd', () => {
     'product_variants.select': {
       data: [{
         id: '00000000-0000-4000-8000-0000000000de', sku: 'ROSA-1', option_value_ids: [], weight_kg: '0.500', is_default: true,
-        mastershop_product_id: 55, mastershop_variant_id: null, image_id: null, sort_order: 0,
-        variant_countries: [{ country_code: 'EC', is_active: true, price: 4990, compare_at_price: null, cost: null, stock: 3, low_stock_threshold: null }],
+        image_id: null, sort_order: 0,
+        variant_countries: [{ country_code: 'EC', is_active: true, price: 4990, compare_at_price: null, cost: null, stock: 3, low_stock_threshold: null, mastershop_product_id: 55, mastershop_variant_id: 56 }],
       }],
     },
     'product_countries.select': { data: [{ country_code: 'EC', is_visible: true, is_featured: false, featured_rank: null, badges: [] }] },
@@ -174,7 +174,8 @@ describe('duplicarProductoBd', () => {
     expect(e.product).toMatchObject({ slug: 'rosa-copia', status: 'draft' });
     expect(e.product.id).toBeUndefined();
     expect(e.countries!.every((c) => !c.is_visible)).toBe(true);
-    expect(e.variants![0]).toMatchObject({ sku: 'ROSA-1-COPIA', mastershop_product_id: null });
+    expect(e.variants![0]).toMatchObject({ sku: 'ROSA-1-COPIA' });
+    expect(e.variants![0]!.countries![0]).toMatchObject({ country_code: 'EC', mastershop_product_id: null, mastershop_variant_id: null });
   });
 
   it('reintenta con otro sufijo si la URL ya existe', async () => {

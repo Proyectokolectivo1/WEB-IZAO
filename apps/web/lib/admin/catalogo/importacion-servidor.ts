@@ -104,7 +104,7 @@ export async function procesarImportacion(args: {
     reporte.omitidos += r.errores.length;
     for (const e of r.errores) {
       const p = lote[e.indice];
-      const texto = errorDeMotivo(e.motivo, e.detalle, { variants: [] }).mensaje;
+      const texto = errorDeMotivo(e.motivo, e.detalle, { variants: [] }, e.paises).mensaje;
       reporte.errores.push({
         fila: p?.filas[0] ?? null,
         sku: e.sku ?? p?.skus[0] ?? null,
@@ -167,7 +167,7 @@ export async function exportarCatalogo(cliente: Cliente): Promise<string[][]> {
       cliente.from('product_options').select('id, product_id, name, sort_order, product_option_values(id, value, sort_order)').in('product_id', ids),
       cliente
         .from('product_variants')
-        .select('id, product_id, sku, option_value_ids, weight_kg, is_default, mastershop_product_id, mastershop_variant_id, image_id, sort_order, variant_countries(country_code, is_active, price, compare_at_price, cost, stock, low_stock_threshold)')
+        .select('id, product_id, sku, option_value_ids, weight_kg, is_default, image_id, sort_order, variant_countries(country_code, is_active, price, compare_at_price, cost, stock, low_stock_threshold, mastershop_product_id, mastershop_variant_id)')
         .in('product_id', ids),
     ]);
     for (const r of [cats, paises, opciones, variantes]) if (r.error) throw new Error(`No se pudo exportar: ${r.error.message}`);

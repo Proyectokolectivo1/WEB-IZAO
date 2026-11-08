@@ -26,12 +26,21 @@ export const MAX_FILAS_ARCHIVO = 5000;
 export const COLUMNAS = [
   'sku', 'producto_slug', 'nombre', 'marca', 'genero', 'familia', 'concentracion', 'categorias',
   'notas_salida', 'notas_corazon', 'notas_fondo', 'descripcion_corta', 'descripcion',
-  'opcion_1_nombre', 'opcion_1_valor', 'peso_kg', 'mastershop_product_id', 'mastershop_variant_id',
-  'visible_co', 'precio_co', 'tachado_co', 'costo_co', 'stock_co',
-  'visible_ec', 'precio_ec', 'tachado_ec', 'costo_ec', 'stock_ec',
+  'opcion_1_nombre', 'opcion_1_valor', 'peso_kg',
+  'visible_co', 'precio_co', 'tachado_co', 'costo_co', 'stock_co', 'mastershop_product_id_co', 'mastershop_variant_id_co',
+  'visible_ec', 'precio_ec', 'tachado_ec', 'costo_ec', 'stock_ec', 'mastershop_product_id_ec', 'mastershop_variant_id_ec',
   'estado', 'por_defecto', 'opcion_2_nombre', 'opcion_2_valor',
 ] as const;
 export type Columna = (typeof COLUMNAS)[number];
+
+/**
+ * Encabezados antiguos que se siguen aceptando al importar (D-052): antes el vínculo con MasterShop era uno solo y de
+ * Colombia; ahora cada país trae el suyo. Solo se usan si el archivo no trae la columna nueva de Colombia.
+ */
+const ALIAS_ENCABEZADO: Record<string, Columna> = {
+  mastershop_product_id: 'mastershop_product_id_co',
+  mastershop_variant_id: 'mastershop_variant_id_co',
+};
 
 export type ErrorImportacion = { fila: number | null; sku: string | null; columna?: string; mensaje: string };
 
@@ -76,7 +85,11 @@ export function tablaAFilas(tabla: readonly (readonly string[])[]): {
   ignoradas: string[];
   error?: string;
 } {
-  const encabezado = (tabla[0] ?? []).map((h) => normalizarEncabezado(h));
+  const crudo = (tabla[0] ?? []).map((h) => normalizarEncabezado(h));
+  const encabezado = crudo.map((h) => {
+    const nuevo = ALIAS_ENCABEZADO[h];
+    return nuevo !== undefined && !crudo.includes(nuevo) ? nuevo : h;
+  });
   if (!encabezado.includes('sku')) return { filas: [], ignoradas: [], error: 'Falta la columna "sku" en la primera fila.' };
   const conocidas = new Set<string>(COLUMNAS);
   const ignoradas = [...new Set(encabezado.filter((h) => h && !conocidas.has(h)))];
@@ -293,11 +306,6 @@ function construirProducto(
         falla('peso_kg', 'Peso en kg mayor que 0 (hasta 3 decimales).');
       } else variante.weight_kg = Number(texto('peso_kg').replace(',', '.'));
     }
-    for (const c of ['mastershop_product_id', 'mastershop_variant_id'] as const) {
-      if (!texto(c)) continue;
-      if (!/^\d{1,10}$/.test(texto(c)) || Number(texto(c)) > 2_000_000_000) falla(c, 'El identificador de MasterShop es un número entero.');
-      else variante[c] = Number(texto(c));
-    }
     const def = booleano(texto('por_defecto'));
     if (def === 'error') falla('por_defecto', 'Usa sí o no.');
     else if (def === true) variante.is_default = true;
@@ -341,6 +349,18 @@ function construirProducto(
         if (!/^\d{1,7}$/.test(t)) falla(`stock_${s}`, 'El stock es un número entero de 0 en adelante.');
         else {
           pais.stock = Number(t);
+          alguno = true;
+        }
+      }
+      // Vínculo con la cuenta de MasterShop DE ESTE país (D-052).
+      for (const base of ['mastershop_product_id', 'mastershop_variant_id'] as const) {
+        const col = `${base}_${s}` as Columna;
+        const t = texto(col);
+        if (!t) continue;
+        if (!/^\d{1,10}$/.test(t) || Number(t) < 1 || Number(t) > 2_000_000_000) {
+          falla(col, 'El id de MasterShop es un número entero mayor que 0.');
+        } else {
+          pais[base] = Number(t);
           alguno = true;
         }
       }
@@ -401,8 +421,6 @@ export function filasDeExportacion(productos: readonly ProductoExportable[]): st
         descripcion_corta: p.short_description ?? '',
         descripcion: p.description_html ?? '',
         peso_kg: String(Number(v.weight_kg)),
-        mastershop_product_id: v.mastershop_product_id === null ? '' : String(v.mastershop_product_id),
-        mastershop_variant_id: v.mastershop_variant_id === null ? '' : String(v.mastershop_variant_id),
         estado: ETIQUETA_ESTADO_EXPORT[p.status],
         por_defecto: v.is_default ? 'sí' : '',
       };
@@ -422,6 +440,8 @@ export function filasDeExportacion(productos: readonly ProductoExportable[]): st
           celdas[`tachado_${s}` as Columna] = montoATexto(vp.compare_at_price, moneda);
           celdas[`costo_${s}` as Columna] = montoATexto(vp.cost, moneda);
           celdas[`stock_${s}` as Columna] = String(vp.stock);
+          celdas[`mastershop_product_id_${s}` as Columna] = vp.mastershop_product_id == null ? '' : String(vp.mastershop_product_id);
+          celdas[`mastershop_variant_id_${s}` as Columna] = vp.mastershop_variant_id == null ? '' : String(vp.mastershop_variant_id);
         }
       }
       salida.push(COLUMNAS.map((c) => neutralizarFormula(celdas[c] ?? '')));

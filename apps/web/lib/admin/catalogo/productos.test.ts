@@ -5,6 +5,7 @@ import {
   agregarValor,
   combinacionesFaltantes,
   construirEntrada,
+  errorDeMotivo,
   duplicarForm,
   esquemaProductoForm,
   etiquetaVariante,
@@ -42,8 +43,8 @@ function valido(ajustes: Partial<ProductoForm> = {}): ProductoForm {
         ...v,
         sku: 'OUD-100',
         countries: [
-          { country_code: 'CO', is_active: true, price: '189.900', compare_at_price: '', cost: '90000', stock: '12', low_stock_threshold: '3' },
-          { country_code: 'EC', is_active: true, price: '49.90', compare_at_price: '59,90', cost: '', stock: '4', low_stock_threshold: '' },
+          { country_code: 'CO', is_active: true, price: '189.900', compare_at_price: '', cost: '90000', stock: '12', low_stock_threshold: '3', mastershop_product_id: '', mastershop_variant_id: '' },
+          { country_code: 'EC', is_active: true, price: '49.90', compare_at_price: '59,90', cost: '', stock: '4', low_stock_threshold: '', mastershop_product_id: '', mastershop_variant_id: '' },
         ],
       },
     ],
@@ -110,12 +111,36 @@ describe('normalizarImagenes', () => {
   });
 });
 
-describe('vínculo MasterShop', () => {
-  const v = [{ activaEnCO: true, mastershopProductId: null }, { activaEnCO: true, mastershopProductId: 7 }, { activaEnCO: false, mastershopProductId: null }];
-  it('exige vínculo solo si está activo, visible en CO y la variante activa en CO', () => {
-    expect(variantesSinVinculo({ status: 'active', visibleEnCO: true, variantes: v })).toEqual([0]);
-    expect(variantesSinVinculo({ status: 'draft', visibleEnCO: true, variantes: v })).toEqual([]);
-    expect(variantesSinVinculo({ status: 'active', visibleEnCO: false, variantes: v })).toEqual([]);
+describe('vínculo MasterShop por país (D-052)', () => {
+  const v = [
+    { activaEn: ['CO', 'EC'] as const, vinculoPorPais: { CO: null, EC: 9 } },
+    { activaEn: ['CO', 'EC'] as const, vinculoPorPais: { CO: 7, EC: null } },
+    { activaEn: [] as const, vinculoPorPais: { CO: null, EC: null } },
+  ];
+  const base = { status: 'active' as const, paisesConMastershop: ['CO', 'EC'] as const, visibleEn: ['CO', 'EC'] as const, variantes: v };
+  it('exige el vínculo DE CADA PAÍS con MasterShop donde el producto está activo, visible y la variante activa', () => {
+    expect(variantesSinVinculo(base)).toEqual([{ indice: 0, pais: 'CO' }, { indice: 1, pais: 'EC' }]);
+  });
+  it('no lo exige si el país no usa MasterShop, está oculto o el producto no está activo', () => {
+    expect(variantesSinVinculo({ ...base, paisesConMastershop: ['CO'] })).toEqual([{ indice: 0, pais: 'CO' }]);
+    expect(variantesSinVinculo({ ...base, visibleEn: ['EC'] })).toEqual([{ indice: 1, pais: 'EC' }]);
+    expect(variantesSinVinculo({ ...base, status: 'draft' })).toEqual([]);
+  });
+});
+
+describe('errorDeMotivo · sin_vinculo_mastershop (D-052)', () => {
+  const f = valido({ status: 'active' });
+  f.variants[0]!.sku = 'OUD-100';
+  it('nombra el país y las variantes y marca el campo del país afectado', () => {
+    const r = errorDeMotivo('sin_vinculo_mastershop', 'OUD-100', f, ['EC']);
+    expect(r.mensaje).toMatch(/MasterShop de Ecuador/);
+    expect(r.mensaje).toContain('OUD-100');
+    expect(r.errores['variants.0.EC.mastershop_product_id']).toMatch(/Ecuador/);
+    expect(r.errores['variants.0.CO.mastershop_product_id']).toBeUndefined();
+  });
+  it('con varios países los lista; sin países asume Colombia (base anterior)', () => {
+    expect(errorDeMotivo('sin_vinculo_mastershop', 'OUD-100', f, ['CO', 'EC']).mensaje).toMatch(/Colombia y Ecuador/);
+    expect(errorDeMotivo('sin_vinculo_mastershop', 'OUD-100', f).mensaje).toMatch(/Colombia/);
   });
 });
 
@@ -153,7 +178,7 @@ describe('construirEntrada', () => {
 
   it('un país sin precio y desactivado no se envía (la base lo borra)', () => {
     const f = valido({ status: 'draft' });
-    f.variants[0]!.countries[1] = { country_code: 'EC', is_active: false, price: '', compare_at_price: '', cost: '', stock: '0', low_stock_threshold: '' };
+    f.variants[0]!.countries[1] = { country_code: 'EC', is_active: false, price: '', compare_at_price: '', cost: '', stock: '0', low_stock_threshold: '', mastershop_product_id: '', mastershop_variant_id: '' };
     const r = construirEntrada(f);
     expect(r.ok && r.entrada.variants![0]!.countries!.map((c) => c.country_code)).toEqual(['CO']);
   });
@@ -177,15 +202,41 @@ describe('construirEntrada', () => {
     const f = valido({ status: 'active' });
     f.countries[0]!.is_visible = true;
     const r = construirEntrada(f);
-    expect(!r.ok && r.errores['variants.0.mastershop_product_id']).toMatch(/MasterShop/);
-    f.variants[0]!.mastershop_product_id = '1234';
+    expect(!r.ok && r.errores['variants.0.CO.mastershop_product_id']).toMatch(/MasterShop de Colombia/);
+    f.variants[0]!.countries[0]!.mastershop_product_id = '1234';
     expect(construirEntrada(f).ok).toBe(true);
   });
 
-  it('en borrador o solo visible en Ecuador no pide vínculo', () => {
+  it('por defecto solo Colombia pide vínculo: Ecuador visible sin vínculo se guarda', () => {
     const f = valido({ status: 'active' });
     f.countries[1]!.is_visible = true;
     expect(construirEntrada(f).ok).toBe(true);
+  });
+
+  it('con Ecuador en MasterShop, el vínculo de Ecuador es obligatorio y se envía por país', () => {
+    const f = valido({ status: 'active' });
+    f.countries[1]!.is_visible = true;
+    const r = construirEntrada(f, { paisesConMastershop: ['CO', 'EC'] });
+    expect(!r.ok && r.errores['variants.0.EC.mastershop_product_id']).toMatch(/MasterShop de Ecuador/);
+    f.variants[0]!.countries[1]!.mastershop_product_id = '555';
+    f.variants[0]!.countries[1]!.mastershop_variant_id = '556';
+    const ok = construirEntrada(f, { paisesConMastershop: ['EC'] });
+    expect(ok.ok).toBe(true);
+    if (!ok.ok) return;
+    const ec = ok.entrada.variants![0]!.countries!.find((c) => c.country_code === 'EC');
+    expect(ec).toMatchObject({ mastershop_product_id: 555, mastershop_variant_id: 556 });
+    // El vínculo ya no viaja a nivel de variante (deprecado): cada país trae el suyo.
+    expect(ok.entrada.variants![0]).not.toHaveProperty('mastershop_product_id');
+    expect(ec).not.toBe(undefined);
+    expect(ok.entrada.variants![0]!.countries!.find((c) => c.country_code === 'CO')).toMatchObject({ mastershop_product_id: null });
+  });
+
+  it('rechaza ids de MasterShop que no sean enteros positivos', () => {
+    const f = valido({ status: 'draft' });
+    f.variants[0]!.countries[1]!.mastershop_product_id = 'abc';
+    f.variants[0]!.countries[0]!.mastershop_variant_id = '0';
+    const r = construirEntrada(f);
+    expect(!r.ok && Object.keys(r.errores)).toEqual(expect.arrayContaining(['variants.0.EC.mastershop_product_id', 'variants.0.CO.mastershop_variant_id']));
   });
 
   it('no deja mostrar un país donde ninguna variante está activa', () => {
@@ -293,14 +344,16 @@ describe('operaciones sobre variantes', () => {
   it('duplicar crea un borrador sin vínculo, invisible y con ids nuevos', () => {
     const f = valido({ id: '00000000-0000-4000-8000-0000000000f0', status: 'active' });
     f.countries[0]!.is_visible = true;
-    f.variants[0]!.mastershop_product_id = '99';
+    f.variants[0]!.countries[0]!.mastershop_product_id = '99';
+    f.variants[0]!.countries[1]!.mastershop_product_id = '98';
     const d = duplicarForm(f, generador(500));
     expect(d.id).toBeUndefined();
     expect(d.status).toBe('draft');
     expect(d.slug).toBe('oud-nocturno-copia');
     expect(d.name).toBe('Oud Nocturno (copia)');
     expect(d.countries.every((c) => !c.is_visible)).toBe(true);
-    expect(d.variants[0]).toMatchObject({ sku: 'OUD-100-COPIA', mastershop_product_id: '' });
+    expect(d.variants[0]).toMatchObject({ sku: 'OUD-100-COPIA' });
+    expect(d.variants[0]!.countries.map((c) => c.mastershop_product_id)).toEqual(['', '']);
     expect(d.variants[0]!.id).not.toBe(f.variants[0]!.id);
     expect(construirEntrada(d).ok).toBe(true);
   });
@@ -354,11 +407,9 @@ describe('aFormulario', () => {
         option_value_ids: [],
         weight_kg: '0.500',
         is_default: true,
-        mastershop_product_id: null,
-        mastershop_variant_id: null,
         image_id: null,
         sort_order: 0,
-        countries: [{ country_code: 'EC', is_active: true, price: 4990, compare_at_price: '5990', cost: null, stock: 3, low_stock_threshold: null }],
+        countries: [{ country_code: 'EC', is_active: true, price: 4990, compare_at_price: '5990', cost: null, stock: 3, low_stock_threshold: null, mastershop_product_id: 321, mastershop_variant_id: null }],
       },
     ],
     images: [],
@@ -380,7 +431,7 @@ describe('aFormulario', () => {
     const r = construirEntrada(aFormulario(bd));
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.entrada.variants![0]!.countries).toEqual([
-      { country_code: 'EC', is_active: true, price: '4990', compare_at_price: '5990', cost: null, stock: 3, low_stock_threshold: null },
+      { country_code: 'EC', is_active: true, price: '4990', compare_at_price: '5990', cost: null, stock: 3, low_stock_threshold: null, mastershop_product_id: 321, mastershop_variant_id: null },
     ]);
   });
 });

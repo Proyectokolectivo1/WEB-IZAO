@@ -120,7 +120,7 @@ describe('construirImportacion', () => {
         categorias: 'Hombre|Hombre > Amaderados', notas_salida: 'Bergamota, limón', opcion_1_nombre: 'Tamaño', opcion_1_valor: '50 ml',
         peso_kg: '0,3', visible_co: 'sí', precio_co: '189.900', costo_co: '90000', stock_co: '4', visible_ec: 'no', precio_ec: '49,90', tachado_ec: '59.90', por_defecto: 'x',
       },
-      { sku: 'OUD-100', producto_slug: 'oud-nocturno', opcion_1_nombre: 'Tamaño', opcion_1_valor: '100 ml', precio_co: '259900', mastershop_product_id: '777' },
+      { sku: 'OUD-100', producto_slug: 'oud-nocturno', opcion_1_nombre: 'Tamaño', opcion_1_valor: '100 ml', precio_co: '259900', mastershop_product_id_co: '777', mastershop_product_id_ec: '888', mastershop_variant_id_ec: '889', precio_ec: '99.90' },
     );
     expect(errores).toEqual([]);
     expect(productos).toHaveLength(1);
@@ -136,7 +136,11 @@ describe('construirImportacion', () => {
       { country_code: 'CO', price: '189900', is_active: true, cost: '90000', stock: 4 },
       { country_code: 'EC', price: '4990', is_active: true, compare_at_price: '5990' },
     ]);
-    expect(v2).toMatchObject({ sku: 'OUD-100', mastershop_product_id: 777 });
+    expect(v2).toMatchObject({ sku: 'OUD-100' });
+    expect(v2!.countries).toEqual([
+      { country_code: 'CO', price: '259900', is_active: true, mastershop_product_id: 777 },
+      { country_code: 'EC', price: '9990', is_active: true, mastershop_product_id: 888, mastershop_variant_id: 889 },
+    ]);
     expect(v2!.is_default).toBeUndefined();
   });
 
@@ -150,7 +154,7 @@ describe('construirImportacion', () => {
   it('reporta cada problema con fila, columna y SKU y no envía ese producto', () => {
     const r = importar(
       { sku: 'A1', producto_slug: 'bueno', nombre: 'Bueno', precio_co: '1000' },
-      { sku: 'B1', producto_slug: 'malo', marca: 'Inventada', precio_co: '12,50', precio_ec: '1.999', stock_co: '-1', visible_co: 'quizá', mastershop_product_id: 'abc' },
+      { sku: 'B1', producto_slug: 'malo', marca: 'Inventada', precio_co: '12,50', precio_ec: '1.999', stock_co: '-1', visible_co: 'quizá', mastershop_product_id_ec: 'abc' },
       { sku: 'B 2', producto_slug: 'malo' },
       { sku: 'A1', producto_slug: 'otro' },
       { sku: '', producto_slug: 'sinsku' },
@@ -159,7 +163,7 @@ describe('construirImportacion', () => {
     expect(r.productos.map((p) => p.slug)).toEqual(['bueno']);
     expect(r.omitidos).toBe(3);
     const claves = r.errores.map((e) => `${e.fila}:${e.columna}`);
-    expect(claves).toEqual(expect.arrayContaining(['3:marca', '3:precio_co', '3:precio_ec', '3:stock_co', '3:visible_co', '3:mastershop_product_id', '4:sku', '5:sku', '6:sku', '7:producto_slug']));
+    expect(claves).toEqual(expect.arrayContaining(['3:marca', '3:precio_co', '3:precio_ec', '3:stock_co', '3:visible_co', '3:mastershop_product_id_ec', '4:sku', '5:sku', '6:sku', '7:producto_slug']));
     expect(r.errores.find((e) => e.fila === 5)?.mensaje).toMatch(/fila 2/);
     expect(r.errores.every((e) => e.mensaje.length > 5)).toBe(true);
   });
@@ -194,11 +198,11 @@ describe('exportación', () => {
       countries: [{ country_code: 'CO', is_visible: true, is_featured: false, featured_rank: null, badges: [] }],
       options: [{ id: 'o1', name: 'Tamaño', sort_order: 0, values: [{ id: 'v1', value: '50 ml', sort_order: 0 }] }],
       variants: [{
-        id: 'x', sku: 'OUD-50', option_value_ids: ['v1'], weight_kg: '0.300', is_default: true, mastershop_product_id: 5, mastershop_variant_id: null,
+        id: 'x', sku: 'OUD-50', option_value_ids: ['v1'], weight_kg: '0.300', is_default: true,
         image_id: null, sort_order: 0,
         countries: [
-          { country_code: 'CO', is_active: true, price: 189900, compare_at_price: null, cost: '90000', stock: 4, low_stock_threshold: null },
-          { country_code: 'EC', is_active: true, price: 4990, compare_at_price: 5990, cost: null, stock: 1, low_stock_threshold: null },
+          { country_code: 'CO', is_active: true, price: 189900, compare_at_price: null, cost: '90000', stock: 4, low_stock_threshold: null, mastershop_product_id: 5, mastershop_variant_id: null },
+          { country_code: 'EC', is_active: true, price: 4990, compare_at_price: 5990, cost: null, stock: 1, low_stock_threshold: null, mastershop_product_id: 6, mastershop_variant_id: 7 },
         ],
       }],
       images: [],
@@ -212,7 +216,8 @@ describe('exportación', () => {
     expect(fila).toMatchObject({
       sku: 'OUD-50', nombre: "'=Oud", marca: 'Casa Árabe', categorias: 'Hombre', notas_salida: 'Bergamota|Limón',
       precio_co: '189900', costo_co: '90000', stock_co: '4', visible_co: 'sí', precio_ec: '49.90', tachado_ec: '59.90',
-      visible_ec: '', peso_kg: '0.3', estado: 'activo', por_defecto: 'sí', opcion_1_nombre: 'Tamaño', opcion_1_valor: '50 ml', mastershop_product_id: '5',
+      visible_ec: '', peso_kg: '0.3', estado: 'activo', por_defecto: 'sí', opcion_1_nombre: 'Tamaño', opcion_1_valor: '50 ml',
+      mastershop_product_id_co: '5', mastershop_variant_id_co: '', mastershop_product_id_ec: '6', mastershop_variant_id_ec: '7',
     });
   });
 
@@ -222,8 +227,8 @@ describe('exportación', () => {
     expect(r.errores).toEqual([]);
     const v = r.productos[0]!.payload.variants![0]!;
     expect(v.countries).toEqual([
-      { country_code: 'CO', price: '189900', is_active: true, cost: '90000', stock: 4 },
-      { country_code: 'EC', price: '4990', is_active: true, compare_at_price: '5990', stock: 1 },
+      { country_code: 'CO', price: '189900', is_active: true, cost: '90000', stock: 4, mastershop_product_id: 5 },
+      { country_code: 'EC', price: '4990', is_active: true, compare_at_price: '5990', stock: 1, mastershop_product_id: 6, mastershop_variant_id: 7 },
     ]);
     expect(r.productos[0]!.payload.product.name).toBe('=Oud');
   });

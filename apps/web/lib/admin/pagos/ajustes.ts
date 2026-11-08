@@ -143,6 +143,23 @@ export type AjustesPais = {
   /** COP por 1 unidad mayor de la moneda del país; `null` = [COMPLETAR]. */
   fx_rate_to_cop: string | null;
   carrier_wallet_low_balance: bigint | null;
+  /** Transportadora integrada del país (D-052). `undefined` = el formulario no la envió: no se toca. */
+  carrier_provider?: ProveedorTransportadora | null;
+  /** Confirmar el pedido en la transportadora sin intervención. `undefined` = no se toca. */
+  carrier_auto_confirm?: boolean;
+  /** Cómo se cuadra el total del pedido en MasterShop. `undefined` = no se toca. */
+  carrier_discount_mode?: ModoDescuentoTransportadora;
+};
+
+export const PROVEEDORES_TRANSPORTADORA = ['mastershop'] as const;
+export type ProveedorTransportadora = (typeof PROVEEDORES_TRANSPORTADORA)[number];
+export const MODOS_DESCUENTO = ['prorate', 'additional_charge'] as const;
+export type ModoDescuentoTransportadora = (typeof MODOS_DESCUENTO)[number];
+
+/** Texto para el dueño de cada modo de cuadre del total (sin jerga). */
+export const ETIQUETA_MODO_DESCUENTO: Record<ModoDescuentoTransportadora, string> = {
+  prorate: 'Repartir el descuento entre los productos',
+  additional_charge: 'Enviar el descuento como cargo adicional',
 };
 
 /** Esquema del formulario del país. Todo llega como texto; la salida ya está tipada y en unidad menor. */
@@ -164,6 +181,10 @@ export function esquemaAjustesPais(pais: PaisAjustes) {
       manual_order_ttl_hours: entero('La reserva del pedido manual', 1, 168),
       fx_rate_to_cop: z.string().default(''),
       carrier_wallet_low_balance: montoOpcional(moneda, 'El umbral de saldo bajo', false),
+      // Opcionales: si el formulario no los envía, no se modifican (compatibilidad con quien guarda solo el resto).
+      carrier_provider: z.enum(['ninguna', ...PROVEEDORES_TRANSPORTADORA], { message: 'Elige una transportadora de la lista.' }).optional(),
+      carrier_auto_confirm: z.enum(['si', 'no'], { message: 'Elige si se confirma automáticamente.' }).optional(),
+      carrier_discount_mode: z.enum(MODOS_DESCUENTO, { message: 'Elige cómo se envía el descuento.' }).optional(),
     })
     .superRefine((d, ctx) => {
       if (d.cod_quiet_hours_start === d.cod_quiet_hours_end) {
@@ -206,6 +227,9 @@ export function esquemaAjustesPais(pais: PaisAjustes) {
         manual_order_ttl_hours: d.manual_order_ttl_hours,
         fx_rate_to_cop: fx === '' ? null : fx,
         carrier_wallet_low_balance: d.carrier_wallet_low_balance,
+        ...(d.carrier_provider === undefined ? {} : { carrier_provider: d.carrier_provider === 'ninguna' ? null : d.carrier_provider }),
+        ...(d.carrier_auto_confirm === undefined ? {} : { carrier_auto_confirm: d.carrier_auto_confirm === 'si' }),
+        ...(d.carrier_discount_mode === undefined ? {} : { carrier_discount_mode: d.carrier_discount_mode }),
       };
     });
 }

@@ -48,6 +48,19 @@ const okCancelar = (extra: Record<string, unknown> = {}) =>
 const noCancelar = (motivo: 'transicion_invalida' | 'estado_cambiado' | 'pedido_inexistente' | 'datos_invalidos') =>
   vi.fn(async () => ({ ok: false as const, motivo }));
 
+describe('cancelarPedidoBd · llave de MasterShop del país del pedido (D-052)', () => {
+  it('un pedido de Ecuador se cancela con el país EC (no con la llave de Colombia)', async () => {
+    const { cliente } = clienteFalso({
+      'orders.select': { data: pedido('enviado_transportadora', { country_code: 'EC' }) },
+      'shipments.select': { data: envio({ provider_status_id: 1 }) },
+    });
+    const cancelarEnMasterShop = vi.fn(async () => undefined);
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Dirección imposible', cancelar: okCancelar(), cancelarEnMasterShop });
+    expect(r.ok).toBe(true);
+    expect(cancelarEnMasterShop).toHaveBeenCalledWith(777, 'EC');
+  });
+});
+
 describe('cancelarPedidoBd (RPC atómica cancelar_pedido)', () => {
   it('cancela un pedido pendiente manual en una sola llamada (estado, evento y stock) y audita', async () => {
     const { cliente } = clienteFalso({ 'orders.select': { data: pedido('pendiente_manual') }, 'shipments.select': { data: null } });
@@ -85,7 +98,7 @@ describe('cancelarPedidoBd (RPC atómica cancelar_pedido)', () => {
       });
       const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Dirección imposible', cancelar, cancelarEnMasterShop });
       expect(r.ok).toBe(true);
-      expect(cancelarEnMasterShop).toHaveBeenCalledWith(777);
+      expect(cancelarEnMasterShop).toHaveBeenCalledWith(777, 'CO');
       expect(orden).toEqual(['mastershop', 'base']);
     }
   });

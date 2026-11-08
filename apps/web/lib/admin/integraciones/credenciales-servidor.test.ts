@@ -15,6 +15,7 @@ import {
   desactivarCredencialBd,
   guardarCredencialBd,
   listarCredenciales,
+  listarWebhooksMasterShop,
   probarConexionBd,
   registrarWebhooksBd,
 } from './credenciales-servidor';
@@ -379,12 +380,12 @@ describe('probarConexionBd', () => {
 
 describe('registrarWebhooksBd', () => {
   const MS = { api_key: 'llave-mastershop-secreta-9999' };
-  async function filaMs() {
-    const c = await cifrarCredenciales(CLAVE, { provider: 'mastershop', country_code: 'CO', environment: 'production' }, MS);
+  async function filaMs(pais: 'CO' | 'EC' = 'CO') {
+    const c = await cifrarCredenciales(CLAVE, { provider: 'mastershop', country_code: pais, environment: 'production' }, MS);
     return {
       id: ID,
       provider: 'mastershop',
-      country_code: 'CO',
+      country_code: pais,
       environment: 'production',
       data_encrypted: byteaParaPostgrest(c.data_encrypted),
       iv: byteaParaPostgrest(c.iv),
@@ -401,13 +402,22 @@ describe('registrarWebhooksBd', () => {
       ],
     }));
     const r = await registrarWebhooksBd({ cliente, ...comun, clave: CLAVE, id: ID, modo: 'real', registrar });
-    expect(registrar).toHaveBeenCalledWith(MS.api_key, 'production');
+    expect(registrar).toHaveBeenCalledWith(MS.api_key, 'production', { pais: 'CO' });
     expect(r.ok).toBe(true);
     expect(r.mensaje).toContain('creacion_pedido');
     expect(auditar.mock.calls[0]![0]).toMatchObject({
       accion: 'integracion.webhooks_registrados',
       diff: { eventos: ['creacion_pedido', 'cambio_estado'] },
     });
+  });
+
+  it('en Ecuador registra con la llave de Ecuador y lo deja en la auditoría', async () => {
+    const { cliente } = clienteFalso({ 'integration_credentials.select': { data: await filaMs('EC') } });
+    const registrar = vi.fn(async () => ({ registrados: [{ idWebhook: 16, eventName: 'creacion_pedido' }] }));
+    const r = await registrarWebhooksBd({ cliente, ...comun, clave: CLAVE, id: ID, modo: 'real', registrar });
+    expect(r.ok).toBe(true);
+    expect(registrar).toHaveBeenCalledWith(MS.api_key, 'production', { pais: 'EC' });
+    expect(auditar.mock.calls[0]![0]).toMatchObject({ diff: { pais: 'EC' } });
   });
 
   it('si ya estaban registrados lo dice', async () => {
@@ -459,9 +469,22 @@ describe('registrarWebhooksBd', () => {
     expect(r.mensaje).toBe('No se pudieron registrar los webhooks. Inténtalo de nuevo.');
   });
 
-  it('solo aplica a MasterShop de Colombia', async () => {
+  it('solo aplica a MasterShop de Colombia o Ecuador', async () => {
     const { cliente } = clienteFalso({ 'integration_credentials.select': { data: await filaCifrada(WOMPI) } });
     const r = await registrarWebhooksBd({ cliente, ...comun, clave: CLAVE, id: ID, modo: 'real', registrar: async () => ({ registrados: [] }) });
     expect(r.ok).toBe(false);
+  });
+});
+
+describe('listarWebhooksMasterShop (por país, D-052)', () => {
+  it('lee los webhooks del país pedido (por defecto Colombia)', async () => {
+    const { cliente, filtros } = clienteFalso({
+      'integration_webhooks.select': { data: [{ event_name: 'creacion_pedido', event_id: 16, is_enabled: true, registered_at: '2026-11-08T10:00:00Z' }] },
+    });
+    const ec = await listarWebhooksMasterShop(cliente, 'production', 'EC');
+    expect(ec).toHaveLength(1);
+    expect(filtros).toContainEqual({ tabla: 'integration_webhooks', metodo: 'eq', args: ['country_code', 'EC'] });
+    await listarWebhooksMasterShop(cliente, 'production');
+    expect(filtros).toContainEqual({ tabla: 'integration_webhooks', metodo: 'eq', args: ['country_code', 'CO'] });
   });
 });

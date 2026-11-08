@@ -52,10 +52,10 @@ function primerError(r: { success: false; error: z.ZodError }): string {
   return r.error.issues[0]?.message ?? 'Datos no válidos.';
 }
 
-type PedidoBasico = { number: string; status: string; payment_method: string };
+type PedidoBasico = { number: string; status: string; payment_method: string; country_code?: string | null };
 
 async function leerPedido(cliente: Cliente, orderId: string): Promise<PedidoBasico | null> {
-  const { data, error } = await cliente.from('orders').select('number, status, payment_method').eq('id', orderId).maybeSingle();
+  const { data, error } = await cliente.from('orders').select('number, status, payment_method, country_code').eq('id', orderId).maybeSingle();
   if (error) throw new Error('No se pudo leer el pedido.');
   return (data as PedidoBasico | null) ?? null;
 }
@@ -103,7 +103,8 @@ export async function cancelarPedidoBd(
   args: Ctx & {
     orderId: string;
     motivo: string;
-    cancelarEnMasterShop: (providerOrderId: number) => Promise<void>;
+    /** `pais` = país del pedido: cada país tiene su propia llave de MasterShop (D-052). */
+    cancelarEnMasterShop: (providerOrderId: number, pais: 'CO' | 'EC') => Promise<void>;
     cancelar?: CancelarDb;
   },
 ): Promise<ResultadoPedido> {
@@ -130,7 +131,7 @@ export async function cancelarPedidoBd(
       };
     }
     try {
-      await args.cancelarEnMasterShop(envio.provider_order_id);
+      await args.cancelarEnMasterShop(envio.provider_order_id, pedido.country_code === 'EC' ? 'EC' : 'CO');
       canceladoEnMasterShop = true;
     } catch (e) {
       console.error('[panel] no se pudo cancelar en MasterShop:', e instanceof Error ? e.name : 'error');

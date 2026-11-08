@@ -164,7 +164,7 @@ describe('SQL generado', () => {
 
   it('la publicación exige vínculo MasterShop y no publica borradores', () => {
     const p = sqlPublicarCo();
-    expect(p).toContain('v.mastershop_product_id is null');
+    expect(p).toContain('vc.mastershop_product_id is null');
     expect(p).toContain("p.status = 'active'");
     expect(p).toContain("pc.country_code = 'CO'");
   });
