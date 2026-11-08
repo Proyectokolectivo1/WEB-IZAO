@@ -6,7 +6,7 @@
 - `ef2ae16` Vinculación por SKU (D-050): `products.ts` (emparejar, `sqlVinculacion`), cliente `listAllProducts`/`getProduct`, *mock* de productos, CLI de vista previa `jobs/sync/vinculacion-productos.cli.ts` (solo lectura). Real: 2 productos MS vs 1030 variantes del *seed* → 0 emparejan.
 - `46e1fd9`+`a4968ab` D-051: respaldo de etiqueta por el agente cuando el CDN bloquea la IP del VPS (403): `print_job` igual, `label_url` en `claim` (contrato 1.1), `urlEtiquetaSegura` anti-SSRF; polling encola sync si hay `label_url` sin copia local.
 - D-052 MasterShop por país (EC con llave propia, USD): credencial CO+EC, jobs con la llave del país del pedido, polling/billetera por país, webhooks por país, mock con moneda. `652a2cc`.
-- D-052 vinculación por país: lee/escribe `variant_countries` del país con su llave (`vinculacionPorPais`, CLI `--pais`/`--aplicar`), `sqlVinculacion(vista, fecha, pais)`; nunca `product_variants.mastershop_*`. Hash: ver `git log -1 -- apps/worker/src/jobs/sync/vinculacion-productos.ts`.
+- D-052 vinculación por país: lee/escribe `variant_countries` del país con su llave (`vinculacionPorPais`, CLI `--pais`/`--aplicar`), `sqlVinculacion(vista, fecha, pais)`; nunca `product_variants.mastershop_*`. `cb45db3`.
 
 ## Para izao-infra
 - Redesplegar el worker: el contenedor actual **no** tiene D-043 ni el arreglo del 403 (D-044); revisar también D-042.
