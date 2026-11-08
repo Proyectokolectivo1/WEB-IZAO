@@ -105,6 +105,11 @@
   height: 100%;
   object-fit: cover;
 }
+.ban-previa-natural img {
+  position: static;
+  display: block;
+  height: auto;
+}
 .ban-previa-texto {
   position: absolute;
   inset: 0;

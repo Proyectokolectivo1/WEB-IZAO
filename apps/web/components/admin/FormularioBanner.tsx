@@ -21,7 +21,6 @@ import {
   type Ubicacion,
 } from '@/lib/admin/banners/banners';
 import { ESTADO_INICIAL, type ResultadoAccion } from '@/lib/admin/crud/comun';
-import { CAJA_UNICA } from '@/lib/store/banners';
 import { TEXTOS_SUBIDA } from '@/lib/admin/mensaje-subida';
 import { CampoSelect, type OpcionSelect } from './CampoSelect';
 import { CampoTexto } from './CampoTexto';
@@ -145,11 +144,11 @@ export function FormularioBanner({
   const textoAlineado = posicion;
 
   // Proporciones REALES de la tienda por pantalla (celular, tablet, escritorio) para la ubicación elegida.
-  const [cajaMovil, cajaTablet, cajaEscritorio] = CAJA_UNICA[ubicacion].cajas;
 
-  const previa = (img: ImagenInicial, razon: number, etiqueta: string, posicion_: string) => (
+  // Imagen única: la tienda la muestra completa con su propia proporción; solo el banner antiguo (imagen móvil aparte) usa caja fija.
+  const previa = (img: ImagenInicial, razon: number | null, etiqueta: string, posicion_: string) => (
     <figure style={{ margin: 0 }}>
-      <div className="ban-previa" style={{ aspectRatio: String(razon) }}>
+      <div className={razon ? 'ban-previa' : 'ban-previa ban-previa-natural'} style={razon ? { aspectRatio: String(razon) } : undefined}>
         {img?.ruta ? (
           <img src={`/media/${img.ruta}`} alt="" style={{ objectPosition: posicion_ }} />
         ) : (
@@ -448,11 +447,11 @@ export function FormularioBanner({
       <section aria-labelledby="h-previa-banner">
         <h3 id="h-previa-banner">Vista previa</h3>
         <div className="ban-previas">
-          {previa(imgDesktop, cajaEscritorio!.ratio, 'Escritorio', objectPositionDe(focalX, focalY))}
-          {previa(imgDesktop, cajaTablet!.ratio, 'Tablet (recorte a los lados)', objectPositionDe(focalX, focalY))}
+          {previa(imgDesktop, null, 'Escritorio', objectPositionDe(focalX, focalY))}
+          {previa(imgDesktop, null, 'Tablet', objectPositionDe(focalX, focalY))}
           {movilAntigua
             ? previa(movilAntigua, 4 / 5, 'Celular (imagen aparte)', '50% 50%')
-            : previa(imgDesktop, cajaMovil!.ratio, 'Celular (recorte a los lados)', objectPositionDe(focalX, focalY))}
+            : previa(imgDesktop, null, 'Celular', objectPositionDe(focalX, focalY))}
         </div>
       </section>
 

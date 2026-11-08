@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icono, Skeleton, clasesBoton, useMenosMovimiento } from '@izao/ui';
-import { CAJA_ANTIGUA, CAJA_UNICA, CARRUSEL_SEGUNDOS, enlaceBanner } from '@/lib/store/banners';
+import { CAJA_ANTIGUA, cajaImagenUnica, CARRUSEL_SEGUNDOS, enlaceBanner } from '@/lib/store/banners';
 import { T } from '@/lib/store/textos';
 import type { Banner, CodigoPais } from '@/lib/store/types';
 import { ImagenResponsiva } from '../ImagenResponsiva';
@@ -144,6 +144,7 @@ export function Hero({
             const destino = enlaceBanner(b.link_url, pais);
             // El texto del enlace es lo que se ve: el botón, o el título si no hay botón.
             const textoEnlace = b.cta_label ?? b.title;
+            const caja = b.imagen_unica ? cajaImagenUnica(b, 'hero') : { className: CAJA_ANTIGUA.hero, style: undefined };
             return (
               <div
                 key={b.id}
@@ -153,7 +154,8 @@ export function Hero({
                 aria-hidden={!activo}
                 inert={!activo}
                 data-testid="hero-diapositiva"
-                className={`relative [grid-area:1/1] overflow-hidden transition-opacity duration-700 ease-izao motion-reduce:transition-none ${b.imagen_unica ? CAJA_UNICA.hero.clase : CAJA_ANTIGUA.hero} ${
+                style={caja.style}
+                className={`relative [grid-area:1/1] overflow-hidden transition-opacity duration-700 ease-izao motion-reduce:transition-none ${caja.className} ${
                   activo ? 'opacity-100' : 'pointer-events-none opacity-0'
                 }`}
               >

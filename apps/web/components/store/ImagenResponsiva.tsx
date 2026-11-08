@@ -30,12 +30,11 @@ export function ImagenResponsiva({ banner, ubicacion, prioritaria = false, class
     if (!d) return <div role="img" aria-label={alt} className={`h-full w-full bg-surface ${className}`} />;
     const ancho = desktop.width && desktop.height ? desktop.width : undefined;
     const alto = ancho ? desktop.height ?? undefined : undefined;
-    const ratio = ancho && alto ? ancho / alto : null;
     return (
       <img
         src={d.src}
         srcSet={d.srcSet}
-        sizes={sizesImagenUnica(ubicacion, ratio)}
+        sizes={sizesImagenUnica(ubicacion, null)}
         width={ancho}
         height={alto}
         alt={alt}

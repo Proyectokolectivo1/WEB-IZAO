@@ -87,6 +87,20 @@ export function esImagenUnica(b: { desktop_media_id?: string | null; mobile_medi
   return !b.mobile_media_id || b.mobile_media_id === b.desktop_media_id;
 }
 
+/**
+ * Caja de un banner de imagen única: sigue la proporción REAL de la imagen para que se vea completa en todas las pantallas
+ * (sin recorte). Sin dimensiones del original, cae a las proporciones por breakpoint de `CAJA_UNICA`.
+ */
+export function cajaImagenUnica(
+  b: { desktop?: { width?: number | null; height?: number | null } | null },
+  ubicacion: UbicacionBanner,
+): { className: string; style?: { aspectRatio: string } } {
+  const w = b.desktop?.width;
+  const h = b.desktop?.height;
+  if (w && h && w > 0 && h > 0) return { className: '', style: { aspectRatio: `${w} / ${h}` } };
+  return { className: CAJA_UNICA[ubicacion].clase };
+}
+
 export type UbicacionBanner = 'hero' | 'mid' | 'category';
 
 interface CajaBanner {

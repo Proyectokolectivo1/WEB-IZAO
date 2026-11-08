@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { clasesBoton } from '@izao/ui';
-import { CAJA_ANTIGUA, CAJA_UNICA, enlaceBanner, type UbicacionBanner } from '@/lib/store/banners';
+import { CAJA_ANTIGUA, cajaImagenUnica, enlaceBanner, type UbicacionBanner } from '@/lib/store/banners';
 import type { Banner, CodigoPais } from '@/lib/store/types';
 import { ImagenResponsiva } from '../ImagenResponsiva';
 
@@ -33,8 +33,10 @@ export function BannerFijo({
   const textoEnlace = b.cta_label ?? b.title;
   const tieneTexto = Boolean(b.title || b.subtitle || b.cta_label);
 
+  const caja = b.imagen_unica ? cajaImagenUnica(b, ubicacion) : { className: CAJA_ANTIGUA[ubicacion], style: undefined };
+
   return (
-    <div className={`relative overflow-hidden rounded-panel bg-surface ${b.imagen_unica ? CAJA_UNICA[ubicacion].clase : CAJA_ANTIGUA[ubicacion]}`} data-testid={`banner-${ubicacion}`}>
+    <div className={`relative overflow-hidden rounded-panel bg-surface ${caja.className}`} style={caja.style} data-testid={`banner-${ubicacion}`}>
       <ImagenResponsiva banner={b} ubicacion={ubicacion} prioritaria={prioritaria} />
       {tieneTexto ? (
         <div className="absolute inset-0 flex flex-col justify-center px-6 sm:px-10 lg:px-16">
