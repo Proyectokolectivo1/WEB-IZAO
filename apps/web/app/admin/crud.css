@@ -132,7 +132,7 @@
 .adm-fila {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
 }
 .adm-fieldset {
   border: 1px solid var(--adm-borde);
@@ -234,6 +234,7 @@
 /* Pedidos: filtros y atajos de teclado */
 .adm-filtros .adm-campo {
   flex: 1 1 11rem;
+  min-width: 0;
 }
 .adm-tabla a[data-fila-pedido]:focus-visible {
   outline: 3px solid var(--adm-primario);
@@ -247,7 +248,7 @@
 /* Descuentos, influencers y reportes */
 .adm-lista-checks {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
   gap: 0 1rem;
   max-height: 16rem;
   overflow: auto;
@@ -266,4 +267,122 @@
 }
 .adm-filtro-fechas {
   margin-block: 1rem;
+}
+
+/* Los atajos de teclado no sirven en pantallas táctiles sin teclado ni en celular. */
+@media (hover: none), (max-width: 39.99rem) {
+  .adm-atajos-teclado {
+    display: none;
+  }
+}
+
+/* Tablet vertical y celular (< 1024 px): tablas más compactas */
+@media (max-width: 63.99rem) {
+  .adm-tabla th,
+  .adm-tabla td {
+    padding: 0.625rem 0.75rem;
+  }
+}
+
+/*
+ * Celular (< 640 px). Las listas más usadas (`adm-tabla-apilada`: pedidos, productos, agente) pasan de tabla a una
+ * tarjeta por fila: la primera celda es el título y cada una de las demás lleva su encabezado en `data-etiqueta`.
+ * Las demás tablas siguen dentro de su caja con desplazamiento horizontal propio.
+ */
+@media (max-width: 39.99rem) {
+  .adm-tabla-apilada,
+  .adm-tabla-apilada tbody,
+  .adm-tabla-apilada tr,
+  .adm-tabla-apilada td {
+    display: block;
+  }
+  .adm-tabla-apilada thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .adm-tabla-apilada tr {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--adm-borde);
+  }
+  .adm-tabla-apilada td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.25rem 0;
+    border: 0;
+    text-align: right;
+  }
+  .adm-tabla-apilada td::before {
+    content: attr(data-etiqueta);
+    flex: none;
+    font-weight: 600;
+    text-align: left;
+    color: var(--adm-texto-suave);
+  }
+  .adm-tabla-apilada td:first-child {
+    display: block;
+    padding-bottom: 0.5rem;
+    text-align: left;
+    font-size: 1.0625rem;
+  }
+  .adm-tabla-apilada td:first-child::before {
+    content: none;
+  }
+  .adm-tabla-apilada td > .adm-celda-pais {
+    display: grid;
+    justify-items: end;
+  }
+  .adm-tabla-apilada td .adm-boton {
+    min-height: var(--adm-alto-toque);
+  }
+
+  /* Formularios y acciones en una columna; botones fáciles de tocar */
+  .adm-cabecera > .adm-acciones {
+    width: 100%;
+  }
+  .adm-acciones > .adm-boton,
+  .adm-acciones > .adm-enlace-boton,
+  .adm-acciones > form {
+    flex: 1 1 auto;
+  }
+  .adm-acciones > form .adm-boton {
+    width: 100%;
+  }
+  .adm-filtros > .adm-boton,
+  .adm-filtros > .adm-enlace-boton {
+    flex: 1 1 40%;
+  }
+  .adm-tabla-apilada caption {
+    display: block;
+  }
+  .adm-busqueda .adm-campo:has(input[type='search']) {
+    flex-basis: 100%;
+  }
+  .adm-filtros .adm-campo {
+    flex-basis: 9rem;
+  }
+  .adm-fieldset {
+    padding: 0.75rem;
+  }
+  .adm-fila {
+    gap: 0.75rem;
+  }
+  .adm-paginacion {
+    justify-content: flex-start;
+  }
+  .adm-editor-html {
+    min-height: 12rem;
+  }
+  .adm-previa {
+    padding: 0.75rem;
+  }
+  .adm-pie-fijo > .adm-boton,
+  .adm-pie-fijo > .adm-enlace-boton {
+    flex: 1 1 0;
+  }
 }

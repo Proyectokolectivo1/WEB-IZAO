@@ -4,12 +4,12 @@
 .adm-prod-celda { display: flex; align-items: center; gap: 0.75rem; }
 .adm-prod-miniatura { width: 2.75rem; height: 3.5rem; object-fit: cover; border-radius: var(--adm-radio); border: 1px solid var(--adm-borde); background: var(--adm-aviso-fondo); flex: none; }
 .adm-filtros { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; margin-block: 1rem; }
-.adm-filtros .adm-campo { min-width: 10rem; }
+.adm-filtros .adm-campo { min-width: 0; }
 .adm-bloque-pais { display: grid; gap: 0.75rem; padding: 0.75rem; border: 1px dashed var(--adm-borde-fuerte); border-radius: var(--adm-radio); }
 .adm-bloque-pais h4 { margin: 0; font-size: 0.9375rem; }
 .adm-variante { display: grid; gap: 1rem; padding: 1rem; border: 1px solid var(--adm-borde-fuerte); border-radius: var(--adm-radio); background: var(--adm-superficie); }
 .adm-variante-cabecera { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: space-between; }
-.adm-paises-variante { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); }
+.adm-paises-variante { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); }
 .adm-boton-chico { min-height: var(--adm-alto-toque); padding-inline: 0.75rem; }
 .adm-galeria { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); list-style: none; padding: 0; margin: 0; }
 .adm-galeria li { display: grid; gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--adm-borde); border-radius: var(--adm-radio); background: var(--adm-superficie); }
@@ -19,3 +19,8 @@
 .adm-pie-fijo { position: sticky; bottom: 0; z-index: 2; padding: 0.75rem 0; background: var(--adm-fondo); border-top: 1px solid var(--adm-borde); }
 .adm-resumen-errores { border: 1px solid var(--adm-error); background: var(--adm-error-fondo); border-radius: var(--adm-radio); padding: 0.75rem 1rem; }
 .adm-resumen-errores ul { margin: 0.5rem 0 0; padding-left: 1.25rem; }
+@media (max-width: 39.99rem) {
+  .adm-galeria { grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr)); }
+  .adm-variante { padding: 0.75rem; }
+  .adm-pie-fijo { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
+}

@@ -21,7 +21,7 @@
   padding: 0;
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13.5rem), 1fr));
 }
 .met-kpi {
   display: grid;
@@ -164,4 +164,22 @@
   flex-wrap: wrap;
   gap: 1rem;
   align-items: center;
+}
+
+/* Celular: dos tarjetas por fila y cifras proporcionadas */
+@media (max-width: 39.99rem) {
+  .met-kpis {
+    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr));
+  }
+  .met-kpi {
+    padding: 0.75rem;
+  }
+  .met-kpi-valor {
+    font-size: 1.125rem;
+  }
+  .met-pais {
+    margin-block: 1.25rem;
+    padding-top: 1rem;
+  }
 }

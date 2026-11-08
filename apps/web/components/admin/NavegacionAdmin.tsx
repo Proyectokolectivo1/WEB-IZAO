@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 export type ItemNavegacion = { id: string; etiqueta: string; ruta: string };
 
 export function NavegacionAdmin({ items }: { items: ItemNavegacion[] }) {
-  const actual = usePathname();
+  const actual = usePathname() ?? '';
   return (
     <nav aria-label="Módulos del panel">
       <ul className="adm-nav">

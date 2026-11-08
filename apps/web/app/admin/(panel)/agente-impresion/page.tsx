@@ -39,7 +39,7 @@ export default async function PaginaAgenteImpresion() {
         </p>
       ) : (
         <div className="adm-tabla-caja">
-          <table className="adm-tabla">
+          <table className="adm-tabla adm-tabla-apilada">
             <caption className="adm-suave">Agentes registrados</caption>
             <thead>
               <tr>
@@ -60,15 +60,15 @@ export default async function PaginaAgenteImpresion() {
                 return (
                   <tr key={a.id}>
                     <td>{gestiona ? <Link href={`/admin/agente-impresion/${a.id}`}>{a.name}</Link> : a.name}</td>
-                    <td>
+                    <td data-etiqueta="Estado">
                       <span className={CLASE_CONEXION[a.conexion]}>{ETIQUETA_CONEXION[a.conexion]}</span>
                     </td>
-                    <td className="adm-suave">{a.last_heartbeat_at ? fecha.format(new Date(a.last_heartbeat_at)) : '—'}</td>
-                    <td>{a.printer_name ?? '—'}</td>
-                    <td className="adm-suave">{a.version ?? '—'}</td>
-                    <td>{a.mode === 'panel' ? 'Panel de MasterShop' : 'API'}</td>
-                    <td>{typeof enCola === 'number' ? enCola : '—'}</td>
-                    <td className="adm-suave">{typeof error === 'string' && error ? error : '—'}</td>
+                    <td data-etiqueta="Último latido" className="adm-suave">{a.last_heartbeat_at ? fecha.format(new Date(a.last_heartbeat_at)) : '—'}</td>
+                    <td data-etiqueta="Impresora">{a.printer_name ?? '—'}</td>
+                    <td data-etiqueta="Versión" className="adm-suave">{a.version ?? '—'}</td>
+                    <td data-etiqueta="Modo">{a.mode === 'panel' ? 'Panel de MasterShop' : 'API'}</td>
+                    <td data-etiqueta="En cola">{typeof enCola === 'number' ? enCola : '—'}</td>
+                    <td data-etiqueta="Último error" className="adm-suave">{typeof error === 'string' && error ? error : '—'}</td>
                   </tr>
                 );
               })}
@@ -91,7 +91,7 @@ export default async function PaginaAgenteImpresion() {
           <p className="adm-vacio">Todavía no se ha pedido ninguna impresión.</p>
         ) : (
           <div className="adm-tabla-caja">
-            <table className="adm-tabla">
+            <table className="adm-tabla adm-tabla-apilada">
               <caption className="adm-suave">Más recientes primero</caption>
               <thead>
                 <tr>
@@ -108,18 +108,18 @@ export default async function PaginaAgenteImpresion() {
                 {cola.map((t) => (
                   <tr key={t.id}>
                     <td>{ETIQUETA_TIPO_IMPRESION[t.type] ?? t.type}</td>
-                    <td>
+                    <td data-etiqueta="Pedido">
                       {t.order_id && t.orders ? <Link href={`/admin/pedidos/${t.order_id}`}>{t.orders.number}</Link> : '—'}
                     </td>
-                    <td>
+                    <td data-etiqueta="Estado">
                       <span className={t.status === 'failed' ? 'adm-insignia adm-insignia-aviso' : 'adm-insignia'}>
                         {ETIQUETA_IMPRESION[t.status] ?? t.status}
                       </span>
                     </td>
-                    <td className="adm-suave">{t.requested_by === 'auto' ? 'Automática' : 'Panel'}</td>
-                    <td className="adm-suave">{fecha.format(new Date(t.created_at))}</td>
-                    <td className="adm-suave">{t.status === 'failed' && t.error ? t.error : t.attempts > 1 ? `${t.attempts} intentos` : '—'}</td>
-                    <td>
+                    <td data-etiqueta="Origen" className="adm-suave">{t.requested_by === 'auto' ? 'Automática' : 'Panel'}</td>
+                    <td data-etiqueta="Creado" className="adm-suave">{fecha.format(new Date(t.created_at))}</td>
+                    <td data-etiqueta="Detalle" className="adm-suave">{t.status === 'failed' && t.error ? t.error : t.attempts > 1 ? `${t.attempts} intentos` : '—'}</td>
+                    <td data-etiqueta="Acciones">
                       {t.type === 'label' && t.order_id && puede(admin.rol, 'agente.reimprimir') ? (
                         <AccionSimple etiqueta="Reimprimir" accion={reimprimirDesdeAgente.bind(null, t.order_id)} />
                       ) : null}

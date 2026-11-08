@@ -19,6 +19,8 @@
 
 - Cierre voluntario de sesión (`cerrarSesion` en `app/admin/acciones.ts`) redirige a `/` (home pública, país por cookie/geo; `RUTA_TRAS_CIERRE` en `lib/auth/decision.ts`). La sesión expirada/sin acceso sigue al login. Prueba: `app/admin/acciones.test.ts`; E2E con sesión real no viable con el Supabase falso.
 
+- **Panel adaptable (celular 375 / tablet 768, sin cambiar datos ni permisos):** causa raíz: la tira horizontal del menú dejaba la página en 2 496 px de ancho a 375 px. Ahora `components/admin/CascaronAdmin.tsx` (cliente; menú fijo >= 1024 px, hoja lateral por debajo con foco atrapado, `Esc`, velo, `inert`, aria-expanded/controls). CSS en `admin.css`/`crud.css`/`metricas.css`/`productos.css`; listas de pedidos, productos y agente pasan a tarjetas < 640 px (`adm-tabla-apilada` + `data-etiqueta`); el resto de tablas sigue con scroll propio. Prueba `tests/e2e/panel-responsive.spec.ts` (esbuild + `CascaronAdmin` real + `tests/support/panel-fixtures.ts`; el panel real no se puede abrir en E2E sin sesión). Si cambias el marcado de pedidos/productos/agente, actualiza el ejemplo. Capturas: `docs/fases/F9-evidencia/admin-responsive/`.
+
 ## Pendiente
 - **Carga real:** aprobación del dueño y aplicar 01/02/03; stock [COMPLETAR]; fotos (el Excel no trae); decidir IZAO-MEN-101 (ejemplo duplicado, cargado como borrador); revisar ~97 productos de la vista previa (descripciones cortadas en el origen).
 - **Revisión 78e6c0f..920910b (corregida):** procesar.ts con límite 40 MP panel / 25 MP público, `sharp.cache(false)`, un pipeline por salida y semáforo (2 a la vez, espera 20 s, `ErrorImagen`); guardar.ts con `link` (no sobrescribe); banners: `esUbicacion` en redirecciones, `kind='banner'`, sin enlaces a otro país ni a categoría/producto no visibles.

@@ -29,14 +29,14 @@ export default async function PaginaPedidos({
       <h1>Pedidos</h1>
       <AtajosPedidos idBusqueda={ID_BUSQUEDA_PEDIDOS} />
       <FiltrosPedidos filtros={filtros} />
-      <p className="adm-suave adm-chico">
+      <p className="adm-suave adm-chico adm-atajos-teclado">
         Atajos: <kbd>/</kbd> buscar · <kbd>j</kbd> / <kbd>k</kbd> bajar y subir por la lista · <kbd>Enter</kbd> abrir el pedido
       </p>
       {filas.length === 0 ? (
         <p className="adm-vacio">{hayFiltros ? 'Ningún pedido coincide con esos filtros.' : 'Aún no hay pedidos.'}</p>
       ) : (
         <div className="adm-tabla-caja">
-          <table className="adm-tabla">
+          <table className="adm-tabla adm-tabla-apilada">
             <caption className="adm-suave">Pedidos más recientes primero</caption>
             <thead>
               <tr>
@@ -57,14 +57,14 @@ export default async function PaginaPedidos({
                       {f.number}
                     </Link>
                   </td>
-                  <td>{f.country_code}</td>
-                  <td>
+                  <td data-etiqueta="País">{f.country_code}</td>
+                  <td data-etiqueta="Estado">
                     <span className="adm-insignia">{ETIQUETA_ESTADO_PEDIDO[f.status] ?? f.status}</span>
                   </td>
-                  <td>{ETIQUETA_METODO_PAGO[f.payment_method] ?? f.payment_method}</td>
-                  <td>{dinero(f.total_customer, f.currency_code)}</td>
-                  <td className="adm-suave">{f.shipping_city_name ?? '—'}</td>
-                  <td className="adm-suave">{fecha.format(new Date(f.created_at))}</td>
+                  <td data-etiqueta="Pago">{ETIQUETA_METODO_PAGO[f.payment_method] ?? f.payment_method}</td>
+                  <td data-etiqueta="Total">{dinero(f.total_customer, f.currency_code)}</td>
+                  <td data-etiqueta="Ciudad" className="adm-suave">{f.shipping_city_name ?? '—'}</td>
+                  <td data-etiqueta="Fecha" className="adm-suave">{fecha.format(new Date(f.created_at))}</td>
                 </tr>
               ))}
             </tbody>

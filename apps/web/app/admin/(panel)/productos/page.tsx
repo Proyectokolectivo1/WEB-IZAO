@@ -108,7 +108,7 @@ export default async function ListaProductos({
       ) : (
         <>
           <div className="adm-tabla-caja">
-            <table className="adm-tabla adm-tabla-prod">
+            <table className="adm-tabla adm-tabla-prod adm-tabla-apilada">
               <caption className="adm-suave">Productos, del modificado más recientemente al más antiguo</caption>
               <thead>
                 <tr>
@@ -138,18 +138,19 @@ export default async function ListaProductos({
                         </div>
                       </div>
                     </td>
-                    <td>
+                    <td data-etiqueta="Estado">
                       <span
                         className={`adm-insignia ${f.status === 'active' ? 'adm-insignia-ok' : f.status === 'draft' ? 'adm-insignia-aviso' : ''}`.trim()}
                       >
                         {ETIQUETA_ESTADO[f.status]}
                       </span>
                     </td>
-                    <td>{f.variantes}</td>
+                    <td data-etiqueta="Variantes">{f.variantes}</td>
                     {PAISES_PRODUCTO.map((p) => {
                       const r = f.paises[p];
                       return (
-                        <td key={p}>
+                        <td key={p} data-etiqueta={NOMBRE_PAIS[p]}>
+                          <div className="adm-celda-pais">
                           <span className={`adm-insignia ${r.visible ? 'adm-insignia-ok' : ''}`.trim()}>
                             {r.visible ? 'Visible' : 'Oculto'}
                           </span>
@@ -161,6 +162,7 @@ export default async function ListaProductos({
                             )}
                           </div>
                           <div className="adm-suave adm-chico">Stock {r.stock}</div>
+                          </div>
                         </td>
                       );
                     })}
