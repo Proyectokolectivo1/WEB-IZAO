@@ -25,7 +25,31 @@ export const TEXTOS_SUBIDA = {
   sinConexion: 'No se pudo subir. Revisa tu conexión e inténtalo de nuevo.',
   generico: 'No se pudo subir el archivo. Inténtalo de nuevo.',
   entrarAlPanel: 'Entrar al panel (se abre en otra pestaña)',
+  // Texto alternativo antes de subir: no es un error, es un paso pendiente (accesibilidad y SEO).
+  ayudaAlt: 'Una frase corta que diga qué se ve (mínimo 3 caracteres). Escríbela antes de elegir el archivo.',
+  ayudaAltBanner: 'Describe lo que se ve en el banner (mínimo 3 caracteres); lo leen los lectores de pantalla. Escríbelo antes de subir la imagen.',
+  altGuia: 'Escríbela en el campo «Texto alternativo» y pulsa «Subir ahora».',
+  subirAhora: 'Subir ahora',
+  descartarPendiente: 'Descartar',
 } as const;
+
+/** Largo mínimo del texto alternativo que exige el servidor. */
+export const ALT_MINIMO = 3;
+
+export function altSuficiente(alt: string): boolean {
+  return alt.trim().length >= ALT_MINIMO;
+}
+
+/** Aviso amable (no es un error) cuando se eligió un archivo y todavía falta el texto alternativo. */
+export function mensajeAltPendiente(archivos: readonly string[]): string {
+  if (archivos.length === 1) return `Falta una descripción corta para subir "${archivos[0]}".`;
+  return `Falta una descripción corta para subir ${archivos.length} archivos.`;
+}
+
+/** Aviso cuando ya hay descripción y el archivo espera el botón. */
+export function mensajeAltListo(archivos: readonly string[]): string {
+  return archivos.length === 1 ? `"${archivos[0]}" está listo para subir.` : `${archivos.length} archivos listos para subir.`;
+}
 
 export type FalloSubida = {
   /** Frase lista para mostrar, en español, sin códigos. Con nombre de archivo si se indicó. */

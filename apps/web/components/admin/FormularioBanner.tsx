@@ -20,6 +20,7 @@ import {
   type Ubicacion,
 } from '@/lib/admin/banners/banners';
 import { ESTADO_INICIAL, type ResultadoAccion } from '@/lib/admin/crud/comun';
+import { TEXTOS_SUBIDA } from '@/lib/admin/mensaje-subida';
 import { CampoSelect, type OpcionSelect } from './CampoSelect';
 import { CampoTexto } from './CampoTexto';
 import { SelectorImagen, type ImagenInicial } from './SelectorImagen';
@@ -212,7 +213,7 @@ export function FormularioBanner({
           value={alt}
           onChange={(e) => setAlt(e.target.value)}
           maxLength={200}
-          ayuda="Describe lo que se ve en el banner; lo leen los lectores de pantalla."
+          ayuda={TEXTOS_SUBIDA.ayudaAltBanner}
           error={errores.alt}
         />
         <SelectorImagen
@@ -221,6 +222,7 @@ export function FormularioBanner({
           kind="banner"
           inicial={escritorio}
           altControlado={alt}
+          idCampoAlt="alt"
           anchoVista={800}
           alCambiar={setImgDesktop}
           ayuda={`Recomendado ${TAMANO_RECOMENDADO[ubicacion]}.`}

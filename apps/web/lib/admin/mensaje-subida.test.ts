@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { TEXTOS_SUBIDA, enviarSubida, esCodigoTecnico, mensajeDeSubida, mensajeSinConexion } from './mensaje-subida';
+import {
+  ALT_MINIMO,
+  TEXTOS_SUBIDA,
+  altSuficiente,
+  enviarSubida,
+  esCodigoTecnico,
+  mensajeAltListo,
+  mensajeAltPendiente,
+  mensajeDeSubida,
+  mensajeSinConexion,
+} from './mensaje-subida';
 
 const CODIGOS = ['sin-sesion', 'sin-acceso', 'sin-permiso', 'mfa-pendiente', 'mfa-no-aprobado', 'sesion-expirada'];
 
@@ -129,5 +139,25 @@ describe('enviarSubida', () => {
     expect(ok).toEqual({ ok: true, cuerpo: { id: 'm1' } });
     const mal = await enviarSubida<{ id: string }>('/x', datos, { valida: (c) => Boolean(c.id), peticion: async () => respuesta(201, {}) });
     expect(mal.ok).toBe(false);
+  });
+});
+
+describe('texto alternativo pendiente', () => {
+  it('exige 3 caracteres sin contar espacios de los lados', () => {
+    expect(ALT_MINIMO).toBe(3);
+    expect(altSuficiente('')).toBe(false);
+    expect(altSuficiente('  ab  ')).toBe(false);
+    expect(altSuficiente(' abc ')).toBe(true);
+  });
+
+  it('avisa con el nombre del archivo y sin tono de error ni códigos', () => {
+    expect(mensajeAltPendiente(['frasco.png'])).toBe('Falta una descripción corta para subir "frasco.png".');
+    expect(mensajeAltPendiente(['a.png', 'b.png'])).toBe('Falta una descripción corta para subir 2 archivos.');
+    expect(mensajeAltListo(['frasco.png'])).toBe('"frasco.png" está listo para subir.');
+    expect(mensajeAltListo(['a.png', 'b.png'])).toBe('2 archivos listos para subir.');
+    for (const t of [mensajeAltPendiente(['x.png']), TEXTOS_SUBIDA.altGuia, TEXTOS_SUBIDA.ayudaAlt]) {
+      expect(esCodigoTecnico(t)).toBe(false);
+      expect(t).not.toMatch(/error|inválid|obligatori/i);
+    }
   });
 });

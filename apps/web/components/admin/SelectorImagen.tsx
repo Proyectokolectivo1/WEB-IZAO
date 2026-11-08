@@ -1,8 +1,8 @@
 'use client';
 
-import { useId, useState } from 'react';
-import { enviarSubida, type FalloSubida } from '@/lib/admin/mensaje-subida';
-import { AvisoSubida } from './AvisoSubida';
+import { useId, useRef, useState } from 'react';
+import { TEXTOS_SUBIDA, altSuficiente, enviarSubida, type FalloSubida } from '@/lib/admin/mensaje-subida';
+import { AvisoAltPendiente, AvisoSubida } from './AvisoSubida';
 
 export type ImagenInicial = { id: string; ruta: string; alt: string } | null;
 
@@ -10,7 +10,8 @@ type Subida = { id: string; variants: Record<string, string>; alt: string };
 
 /**
  * Sube una imagen a `POST /api/admin/media` y deja su id en un campo oculto.
- * El texto alternativo es obligatorio (accesibilidad y SEO, §27.1).
+ * El texto alternativo es obligatorio (accesibilidad y SEO, §27.1): el campo va antes del archivo. Si se elige el archivo
+ * sin descripción suficiente, queda pendiente (no se pierde), se lleva el foco al campo y se sube con «Subir ahora».
  */
 export function SelectorImagen({
   nombre,
@@ -21,6 +22,7 @@ export function SelectorImagen({
   recorte45 = false,
   variante,
   altControlado,
+  idCampoAlt,
   anchoVista = 0,
   alCambiar,
   sugerencia,
@@ -39,6 +41,8 @@ export function SelectorImagen({
    * ese valor al subir.
    */
   altControlado?: string;
+  /** Con `altControlado`: id del campo de texto alternativo del formulario, para llevarle el foco cuando falta. */
+  idCampoAlt?: string;
   /** Ancho mínimo de la variante que se muestra como miniatura (0 = la más chica). */
   anchoVista?: number;
   /** Avisa a la vista previa del formulario cuando cambia la imagen elegida. */
@@ -48,23 +52,29 @@ export function SelectorImagen({
   error?: string | undefined;
 }) {
   const id = useId();
+  const refAlt = useRef<HTMLInputElement>(null);
+  const refArchivo = useRef<HTMLInputElement>(null);
   const [actual, setActual] = useState<ImagenInicial>(inicial ?? null);
   const [altPropio, setAlt] = useState(inicial?.alt ?? '');
   const alt = altControlado ?? altPropio;
   const [subiendo, setSubiendo] = useState(false);
   const [falla, setFalla] = useState<FalloSubida | string | null>(null);
+  /** Archivo elegido que espera su texto alternativo. */
+  const [pendiente, setPendiente] = useState<File | null>(null);
 
-  async function alElegir(archivo: File | undefined) {
-    if (!archivo) return;
+  function enfocarAlt() {
+    const campo = altControlado !== undefined ? (idCampoAlt ? document.getElementById(idCampoAlt) : null) : refAlt.current;
+    campo?.focus();
+  }
+
+  function descartar() {
+    setPendiente(null);
+    if (refArchivo.current) refArchivo.current.value = '';
+  }
+
+  async function subir(archivo: File) {
     setFalla(null);
-    if (alt.trim().length < 3) {
-      setFalla(
-        altControlado !== undefined
-          ? 'Primero escribe el texto alternativo del banner (al menos 3 caracteres).'
-          : 'Primero describe la imagen (texto alternativo de al menos 3 caracteres).',
-      );
-      return;
-    }
+    setPendiente(null);
     setSubiendo(true);
     try {
       const datos = new FormData();
@@ -87,7 +97,32 @@ export function SelectorImagen({
       alCambiar?.(nueva);
     } finally {
       setSubiendo(false);
+      if (refArchivo.current) refArchivo.current.value = '';
     }
+  }
+
+  function alElegir(archivo: File | undefined) {
+    setFalla(null);
+    if (!archivo) {
+      setPendiente(null);
+      return;
+    }
+    if (!altSuficiente(alt)) {
+      // No es un error: el archivo queda pendiente y se pide la descripción.
+      setPendiente(archivo);
+      enfocarAlt();
+      return;
+    }
+    void subir(archivo);
+  }
+
+  function subirPendiente() {
+    if (!pendiente) return;
+    if (!altSuficiente(alt)) {
+      enfocarAlt();
+      return;
+    }
+    void subir(pendiente);
   }
 
   const mensaje = falla ?? error;
@@ -106,13 +141,18 @@ export function SelectorImagen({
             Texto alternativo
           </label>
           <input
+            ref={refAlt}
             id={`${id}-alt`}
             className="adm-input"
             value={altPropio}
             maxLength={200}
+            aria-describedby={`${id}-alt-ayuda`}
             onChange={(e) => setAlt(e.target.value)}
             placeholder={sugerencia?.trim() ? `Ej.: ${sugerencia.trim()}` : 'Describe lo que se ve en la imagen'}
           />
+          <p id={`${id}-alt-ayuda`} className="adm-suave adm-chico">
+            {TEXTOS_SUBIDA.ayudaAlt}
+          </p>
         </div>
       ) : null}
       <div className="adm-campo">
@@ -120,16 +160,24 @@ export function SelectorImagen({
           {actual ? 'Reemplazar imagen' : 'Subir imagen'}
         </label>
         <input
+          ref={refArchivo}
           id={`${id}-archivo`}
           type="file"
           accept="image/jpeg,image/png,image/webp,image/avif"
           disabled={subiendo}
-          onChange={(e) => void alElegir(e.target.files?.[0])}
+          onChange={(e) => alElegir(e.target.files?.[0])}
         />
         <p className="adm-suave adm-chico">
           JPG, PNG, WebP o AVIF; se convierte a WebP al subir. {ayuda ?? ''} {subiendo ? 'Subiendo…' : ''}
         </p>
       </div>
+      <AvisoAltPendiente
+        archivos={pendiente ? [pendiente.name] : []}
+        altListo={altSuficiente(alt)}
+        subiendo={subiendo}
+        alSubir={subirPendiente}
+        alDescartar={descartar}
+      />
       {actual ? (
         <button type="button" className="adm-boton adm-boton-secundario" onClick={() => {
             setActual(null);

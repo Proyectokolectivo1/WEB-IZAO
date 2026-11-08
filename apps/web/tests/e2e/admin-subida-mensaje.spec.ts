@@ -68,7 +68,7 @@ for (const caso of CASOS) {
   });
 }
 
-test('la validación del texto alternativo sigue ahí y no llama a la API', async ({ page }) => {
+test('la validación del texto alternativo sigue ahí: sin él no llama a la API y lo avisa sin error rojo', async ({ page }) => {
   let llamadas = 0;
   await page.route('**/__subida__', (r) =>
     r.fulfill({ contentType: 'text/html', body: '<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Subida</title></head><body><div id="raiz"></div></body></html>' }),
@@ -80,6 +80,7 @@ test('la validación del texto alternativo sigue ahí y no llama a la API', asyn
   await page.goto('/__subida__');
   await page.addScriptTag({ content: bundle });
   await page.getByLabel('Subir imagen').setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: PNG_1X1 });
-  await expect(page.getByRole('alert')).toContainText('Primero describe la imagen');
+  await expect(page.getByRole('status')).toContainText('Falta una descripción corta para subir "foto.png"');
+  await expect(page.getByRole('alert')).toHaveCount(0);
   expect(llamadas).toBe(0);
 });
