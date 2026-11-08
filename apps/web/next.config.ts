@@ -13,6 +13,8 @@ const config: NextConfig = {
   // los lectores de vista previa que no ejecutan JS solo miran <head> (F9 D-4: «sin meta description»). Costo: ninguno,
   // las páginas son ISR y sus metadatos salen de caché.
   htmlLimitedBots: /.*/,
+  // El middleware (que cubre /api/admin/*) recorta el cuerpo a 10 MB por defecto; la subida de imágenes admite hasta 15 MB.
+  experimental: { middlewareClientMaxBodySize: '16mb' },
   // Paquetes del workspace que se publican como TypeScript.
   transpilePackages: ['@izao/ui', '@izao/core', '@izao/wompi', '@izao/whatsapp', '@izao/addi'],
   // Archivos de `public/` (sin hash en el nombre): se sirven de caché y se revalidan en segundo plano. Las imágenes del
