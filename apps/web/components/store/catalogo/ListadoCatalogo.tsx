@@ -348,6 +348,7 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
                   prioritaria={i === 0}
                   ansiosa={i > 0 && i < 4}
                   nivelTitulo="h2"
+                  diferir
                   concentracion={item.concentration_slug ? nombreDe(opciones.concentraciones, item.concentration_slug) : null}
                 />
               ))

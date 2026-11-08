@@ -14,7 +14,7 @@ export const TP = {
     entrar: (pais: string) => `Entrar a ${pais}`,
     llevando: (pais: string) => `Te llevamos a ${pais}…`,
     cerrar: 'Cerrar',
-    cambiar: (pais: string) => `Tu país: ${pais}. Cambiar de país`,
+    cambiar: (pais: string) => `Tu país es ${pais}. Cambiar de país`,
     paises: {
       co: { nombre: 'Colombia', moneda: 'Pesos colombianos · COP', envio: 'Envíos a toda Colombia', pago: 'Pago contra entrega o en línea' },
       ec: { nombre: 'Ecuador', moneda: 'Dólares · USD', envio: 'Envíos a todo Ecuador', pago: 'Cierras tu pedido por WhatsApp con tu asesor' },
