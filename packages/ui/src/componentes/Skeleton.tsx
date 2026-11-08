@@ -23,6 +23,9 @@ export function TarjetaEsqueleto({ testId = 'esqueleto-tarjeta' }: { testId?: st
         <Skeleton className="mt-auto h-5 w-2/5" />
       </div>
       <Skeleton className="mt-1 h-11 w-full" />
+      <div className="mt-0.5 flex h-11 items-center justify-center">
+        <Skeleton className="h-4 w-1/3" />
+      </div>
     </div>
   );
 }

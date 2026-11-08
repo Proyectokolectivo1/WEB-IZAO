@@ -4,11 +4,12 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { memo, useEffect, useRef, useState } from 'react';
 import { Button, Etiqueta, Icono, IzaoImage, rutasDeMedio } from '@izao/ui';
-import { lineaDe } from '@/lib/store/ficha-util';
+import { lineaDe, varianteDirecta } from '@/lib/store/ficha-util';
 import { formatearPrecio } from '@/lib/store/pais';
 import { T } from '@/lib/store/textos';
 import type { CodigoPais, ItemCatalogo } from '@/lib/store/types';
 import { useCarritoAcciones, useDeseo } from '../carrito/CarritoProvider';
+import { useComprarAhora } from '../carrito/useComprarAhora';
 import { pedirFicha } from './useFicha';
 
 const VistaRapida = dynamic(() => import('./VistaRapida').then((m) => m.VistaRapida), { ssr: false });
@@ -36,12 +37,13 @@ const TAMANOS = '(min-width:1536px) 18vw, (min-width:1024px) 23vw, (min-width:76
 export const TarjetaProducto = memo(function TarjetaProducto({ item, pais, concentracion, prioritaria = false, ansiosa = false, nivelTitulo = 'h3' }: Props) {
   const Titulo = nivelTitulo;
   const { agregar, alternarDeseo } = useCarritoAcciones();
+  const comprarAhora = useComprarAhora();
   const guardado = useDeseo(item.product_id);
   const [hoverListo, setHoverListo] = useState(false);
   const [pagina, setPagina] = useState(0);
   const [vista, setVista] = useState(false);
   const [vistaMontada, setVistaMontada] = useState(false);
-  const [estado, setEstado] = useState<'reposo' | 'cargando' | 'agregado' | 'error'>('reposo');
+  const [estado, setEstado] = useState<'reposo' | 'cargando' | 'comprando' | 'agregado' | 'error'>('reposo');
   const carrusel = useRef<HTMLDivElement>(null);
   const hayHover = !!item.img_hover;
   const sinFoto = !rutasDeMedio(item.img_primary);
@@ -77,11 +79,31 @@ export const TarjetaProducto = memo(function TarjetaProducto({ item, pais, conce
     }
   }
 
+  // «Comprar ahora»: igual que agregar, pero al terminar va directo al pago. Con varias presentaciones (o ninguna disponible)
+  // no se elige por la persona: se abre la vista rápida para que escoja.
+  async function alComprar() {
+    if (item.variant_count > 1) return abrirVista();
+    setEstado('comprando');
+    const f = await pedirFicha(pais, item.slug);
+    if (!f) return setEstado('error');
+    const v = varianteDirecta(f.variants);
+    if (v) return comprarAhora(lineaDe(f, v));
+    setEstado('reposo');
+    abrirVista();
+  }
+
+  useEffect(() => {
+    if (estado !== 'comprando') return;
+    const t = setTimeout(() => setEstado('reposo'), 8000);
+    return () => clearTimeout(t);
+  }, [estado]);
+
   function abrirVista() {
     setVistaMontada(true);
     setVista(true);
   }
 
+  const ocupado = estado === 'cargando' || estado === 'comprando';
   const precioDesde = item.max_price > item.min_price;
   const textoBoton =
     estado === 'agregado' ? T.tarjeta.agregado : item.variant_count > 1 ? T.tarjeta.elegirOpcion : T.tarjeta.agregar;
@@ -206,11 +228,23 @@ export const TarjetaProducto = memo(function TarjetaProducto({ item, pais, conce
         bloque
         className="mt-1"
         data-testid="boton-agregar"
-        disabled={!item.in_stock || estado === 'cargando'}
+        disabled={!item.in_stock || ocupado}
         onClick={alAgregar}
       >
         {estado === 'agregado' ? <Icono nombre="check" tamano={16} /> : null}
         {!item.in_stock ? T.tarjeta.agotado : estado === 'error' ? T.listado.reintentar : textoBoton}
+      </Button>
+      {/* Segunda acción, discreta: texto subrayado bajo el botón (no compite con él ni con el toque que abre la ficha). */}
+      <Button
+        variante="texto"
+        bloque
+        className="mt-0.5"
+        data-testid="boton-comprar-ahora"
+        aria-label={item.in_stock ? T.tarjeta.comprarAhoraDe(item.name) : undefined}
+        disabled={!item.in_stock || ocupado}
+        onClick={alComprar}
+      >
+        {estado === 'comprando' ? T.tarjeta.comprando : T.tarjeta.comprarAhora}
       </Button>
 
       {vistaMontada ? <VistaRapida pais={pais} slug={item.slug} abierto={vista} onCerrar={() => setVista(false)} /> : null}

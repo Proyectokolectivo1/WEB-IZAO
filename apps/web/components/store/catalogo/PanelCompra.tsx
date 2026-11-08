@@ -8,6 +8,7 @@ import { T } from '@/lib/store/textos';
 import type { CodigoPais, FichaProducto } from '@/lib/store/types';
 import { Cantidad } from '../Cantidad';
 import { useCarritoAcciones } from '../carrito/CarritoProvider';
+import { useComprarAhora } from '../carrito/useComprarAhora';
 
 interface Props {
   ficha: FichaProducto;
@@ -25,6 +26,7 @@ interface Props {
 /** Variantes en chips con precio, cantidad y botón de agregar. Lo comparten la vista rápida y la ficha. */
 export function PanelCompra({ ficha, pais, alAgregar, idBotonAgregar, alElegir, varianteIdPedida }: Props) {
   const { agregar } = useCarritoAcciones();
+  const comprarAhora = useComprarAhora();
   const [elegida, setElegida] = useState(() => varianteInicial(ficha.variants)?.id ?? null);
   const [cantidad, setCantidad] = useState(1);
   useEffect(() => {
@@ -72,31 +74,48 @@ export function PanelCompra({ ficha, pais, alAgregar, idBotonAgregar, alElegir, 
 
       {v?.in_stock && v.stock_bajo ? <p className="text-[0.9375rem]">{T.ficha.pocasUnidades}</p> : null}
 
-      <div className="flex flex-wrap items-center gap-3">
-        {v?.in_stock ? (
-          <Cantidad
-            valor={cantidad}
-            max={Math.max(v.stock_disponible, 1)}
-            onCambiar={setCantidad}
-            etiqueta={T.ficha.cantidad}
-            etiquetaMas={T.ficha.mas}
-            etiquetaMenos={T.ficha.menos}
-          />
-        ) : null}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {v?.in_stock ? (
+            <Cantidad
+              valor={cantidad}
+              max={Math.max(v.stock_disponible, 1)}
+              onCambiar={setCantidad}
+              etiqueta={T.ficha.cantidad}
+              etiquetaMas={T.ficha.mas}
+              etiquetaMenos={T.ficha.menos}
+            />
+          ) : null}
+          <Button
+            id={idBotonAgregar}
+            data-testid="boton-agregar"
+            tamano="lg"
+            className="min-w-[12rem] flex-1 whitespace-nowrap px-4!"
+            disabled={!v || !v.in_stock}
+            onClick={() => {
+              if (!v) return;
+              agregar(lineaDe(ficha, v, cantidad), { abrirBolso: true });
+              alAgregar?.();
+            }}
+          >
+            <Icono nombre="bolso" tamano={18} />
+            {v?.in_stock ? T.ficha.agregarAlBolso : T.ficha.agotado}
+          </Button>
+        </div>
+        {/* «Comprar ahora»: suma la cantidad elegida y va directo al pago, sin pasar por el bolso. */}
         <Button
-          id={idBotonAgregar}
-          data-testid="boton-agregar"
+          variante="secundario"
           tamano="lg"
-          className="min-w-[12rem] flex-1 whitespace-nowrap px-4!"
+          bloque
+          data-testid="boton-comprar-ahora"
           disabled={!v || !v.in_stock}
           onClick={() => {
             if (!v) return;
-            agregar(lineaDe(ficha, v, cantidad), { abrirBolso: true });
             alAgregar?.();
+            comprarAhora(lineaDe(ficha, v, cantidad));
           }}
         >
-          <Icono nombre="bolso" tamano={18} />
-          {v?.in_stock ? T.ficha.agregarAlBolso : T.ficha.agotado}
+          {T.ficha.comprarAhora}
         </Button>
       </div>
     </div>

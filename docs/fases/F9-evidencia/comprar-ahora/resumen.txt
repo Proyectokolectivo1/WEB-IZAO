@@ -1,0 +1,2 @@
+Lighthouse móvil local (build de ejemplo, corrida en caliente): categoría perf 94, acc 100, CLS 0, LCP 1,8 s, TBT 60 ms; ficha perf 94, acc 100, CLS 0, LCP 1,8 s, TBT 40 ms. (La primera corrida en frío de la ficha ISR dio 70 por el arranque del servidor.)
+JS inicial gzip (KB): catálogo 143,3; categoría 143,7; ficha 144,8; checkout 149,8; inicio 139,1 (< 170).

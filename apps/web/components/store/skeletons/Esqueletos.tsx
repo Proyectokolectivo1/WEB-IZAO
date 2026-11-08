@@ -83,9 +83,12 @@ export function EsqueletoVistaRapida() {
           <Skeleton className="h-14 w-28" />
         </div>
         <Skeleton className="h-10 w-40" />
-        <div className="flex flex-wrap items-center gap-3">
-          <Skeleton className="h-12 w-32" />
-          <Skeleton className="h-12 min-w-[12rem] flex-1" />
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Skeleton className="h-12 w-32" />
+            <Skeleton className="h-12 min-w-[12rem] flex-1" />
+          </div>
+          <Skeleton className="h-12 w-full" />
         </div>
         <Skeleton className="h-5 w-32" />
       </div>

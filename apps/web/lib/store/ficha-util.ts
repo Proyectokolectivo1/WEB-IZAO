@@ -41,3 +41,11 @@ export function lineaDe(ficha: FichaProducto, v: VarianteProducto, cantidad = 1)
     imagen: imagen ? { variants: imagen.variants ?? null, lqip: imagen.lqip ?? null, alt: imagen.alt ?? null, width: imagen.width ?? null, height: imagen.height ?? null } : null,
   };
 }
+
+/**
+ * Compra con un toque desde la tarjeta: solo hay variante «obvia» si el aroma tiene una única presentación y está
+ * disponible. En cualquier otro caso se le deja elegir (vista rápida) en vez de agregar a ciegas.
+ */
+export function varianteDirecta(variantes: readonly VarianteProducto[]): VarianteProducto | null {
+  return variantes.length === 1 && variantes[0]!.in_stock ? variantes[0]! : null;
+}

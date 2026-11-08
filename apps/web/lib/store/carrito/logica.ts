@@ -28,6 +28,11 @@ export function claveCarrito(pais: string): string {
   return `izao:carrito:${pais}`;
 }
 
+/** Ruta del checkout del país: destino de «Comprar ahora» (el servidor recalcula todo allí). */
+export function rutaCheckout(pais: string): string {
+  return `/${pais}/checkout`;
+}
+
 export function serializar(lineas: readonly LineaCarrito[]): string {
   return JSON.stringify({ v: VERSION_CARRITO, lineas });
 }
