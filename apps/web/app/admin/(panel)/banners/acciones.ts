@@ -1,11 +1,12 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { esUbicacion, esquemaBanner } from '@/lib/admin/banners/banners';
+import { esUbicacion, esquemaBanner, esquemaCarrusel } from '@/lib/admin/banners/banners';
 import {
   alternarBannerBd,
   buscarProductosVisibles,
   eliminarBannerBd,
+  guardarAjustesCarruselBd,
   guardarBannerBd,
   moverBannerBd,
   variantesDeProducto,
@@ -86,4 +87,16 @@ export async function variantesBanner(pais: string, productId: string): Promise<
   const ctx = await contexto();
   if ('error' in ctx || !esPais(pais) || !UUID.test(productId)) return [];
   return variantesDeProducto(ctx.cliente, productId, pais);
+}
+
+/** Ajustes del carrusel de un país: segundos entre imágenes y si sale arriba del catálogo. */
+export async function guardarAjustesCarrusel(_previo: ResultadoAccion, formData: FormData): Promise<ResultadoAccion> {
+  const ctx = await contexto();
+  if ('error' in ctx) return ctx.error;
+  const analizado = esquemaCarrusel.safeParse(Object.fromEntries(formData));
+  if (!analizado.success) {
+    return { ok: false, mensaje: 'Revisa los campos marcados.', errores: erroresPorCampo(analizado.error) };
+  }
+  const r = await guardarAjustesCarruselBd({ ...ctx, datos: analizado.data });
+  return r.ok ? { ok: true, mensaje: 'Ajustes del carrusel guardados. Se ven en la tienda en pocos minutos.' } : r;
 }

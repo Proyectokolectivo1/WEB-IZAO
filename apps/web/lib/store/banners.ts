@@ -35,6 +35,24 @@ export function bannerVigente(b: { starts_at?: string | null; ends_at?: string |
   return true;
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Ajustes del carrusel (se editan en el panel: `home_sections.config` de la sección `hero` de cada país)
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** Tiempo entre imágenes: defecto de la semilla y límites que acepta el panel (el carrusel los aplica también al leer). */
+export const CARRUSEL_SEGUNDOS = { defecto: 6, minimo: 3, maximo: 30 } as const;
+
+/** Segundos entre imágenes según `config.interval_seconds`; fuera de rango o ausente → defecto/limite. */
+export function segundosCarrusel(config: Record<string, unknown> | null | undefined): number {
+  const v = config?.['interval_seconds'];
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : Number.NaN;
+  if (!Number.isFinite(n)) return CARRUSEL_SEGUNDOS.defecto;
+  return Math.min(CARRUSEL_SEGUNDOS.maximo, Math.max(CARRUSEL_SEGUNDOS.minimo, Math.round(n)));
+}
+
+/** El catálogo repite el carrusel del home salvo que el panel lo apague (`config.show_in_catalog === false`). */
+export const carruselEnCatalogo = (config: Record<string, unknown> | null | undefined): boolean => config?.['show_in_catalog'] !== false;
+
 export const bannersDe = (banners: readonly Banner[], ubicacion: Banner['placement']): Banner[] => banners.filter((b) => b.placement === ubicacion);
 
 /**

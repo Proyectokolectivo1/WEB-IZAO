@@ -4,9 +4,9 @@ import { Icono, IzaoImage, Revelar, clasesBoton, type NombreIcono } from '@izao/
 import type { ContenidoHome } from '@/lib/store/repo';
 import { T } from '@/lib/store/textos';
 import type { Banner, CodigoPais, SeccionHome } from '@/lib/store/types';
-import { bannersDe } from '@/lib/store/banners';
+import { bannersDe, segundosCarrusel } from '@/lib/store/banners';
+import { CarruselBanners } from '../CarruselBanners';
 import { BannerFijo } from './BannerFijo';
-import { Hero } from './Hero';
 import { PestanasColecciones } from './PestanasColecciones';
 
 const ICONOS_VALIDOS: readonly NombreIcono[] = ['camion', 'caja', 'escudo', 'tarjeta', 'chat', 'reloj', 'check', 'estrella', 'gota', 'flor', 'hoja'];
@@ -75,25 +75,41 @@ function Encabezado({
   );
 }
 
+/** Anclas de las secciones del home: el panel las ofrece como destino de un banner (`/co#seccion-reviews`). */
+const ID_SECCION = {
+  hero: 'seccion-hero',
+  categories: 'seccion-categories',
+  families: 'seccion-families',
+  banner: 'seccion-banner',
+  collection_tabs: 'seccion-collection_tabs',
+  advice: 'seccion-advice',
+  benefits: 'seccion-benefits',
+  reviews: 'seccion-reviews',
+} as const;
+
 const CONTENEDOR = 'mx-auto w-full max-w-[96rem] px-4 sm:px-8';
 
 /** Sección sobre el fondo de la página, con aire arriba. */
-function Plana({ children }: { children: ReactNode }) {
-  return <section className={`${CONTENEDOR} pt-16 md:pt-24`}>{children}</section>;
+function Plana({ id, children }: { id?: string; children: ReactNode }) {
+  return (
+    <section id={id} className={`${CONTENEDOR} scroll-mt-24 pt-16 md:pt-24`}>
+      {children}
+    </section>
+  );
 }
 
 /** Sección sobre una banda de color a todo el ancho: da ritmo sin líneas. */
-function Banda({ tono, children }: { tono: 'banda-suave' | 'banda-acento'; children: ReactNode }) {
+function Banda({ id, tono, children }: { id?: string; tono: 'banda-suave' | 'banda-acento'; children: ReactNode }) {
   return (
-    <section className={`mt-16 md:mt-24 ${tono}`}>
+    <section id={id} className={`mt-16 md:mt-24 scroll-mt-24 ${tono}`}>
       <div className={`${CONTENEDOR} py-14 md:py-20`}>{children}</div>
     </section>
   );
 }
 
-function BannersMid({ banners, pais }: { banners: Banner[]; pais: CodigoPais }) {
+function BannersMid({ banners, pais, id }: { banners: Banner[]; pais: CodigoPais; id?: string }) {
   return (
-    <section className={`${CONTENEDOR} flex flex-col gap-4 pt-16 md:pt-24`}>
+    <section id={id} className={`${CONTENEDOR} flex scroll-mt-24 flex-col gap-4 pt-16 md:pt-24`}>
       {banners.map((b) => (
         <BannerFijo key={b.id} banner={b} ubicacion="mid" pais={pais} />
       ))}
@@ -107,12 +123,12 @@ function Seccion({ s, contenido, pais, bannersMid }: { s: SeccionHome; contenido
   const bajada = texto(s.config['subtitle']) ?? T.home.bajada[s.type] ?? null;
   switch (s.type) {
     case 'hero':
-      return <Hero banners={bannersDe(contenido.banners, 'hero')} pais={pais} />;
+      return <CarruselBanners id={ID_SECCION.hero} banners={bannersDe(contenido.banners, 'hero')} pais={pais} segundos={segundosCarrusel(s.config)} />;
 
     case 'categories': {
       if (contenido.categorias.length === 0) return null;
       return (
-        <Plana>
+        <Plana id={ID_SECCION.categories}>
           <Encabezado kicker={kicker} titulo={titulo ?? T.home.categorias} bajada={bajada} />
           <ul className="grid grid-cols-2 items-start gap-x-4 gap-y-9 pb-8 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4 2xl:grid-cols-6">
             {contenido.categorias.map((c, k) => (
@@ -162,7 +178,7 @@ function Seccion({ s, contenido, pais, bannersMid }: { s: SeccionHome; contenido
     case 'families': {
       if (contenido.familias.length === 0) return null;
       return (
-        <Banda tono="banda-suave">
+        <Banda id={ID_SECCION.families} tono="banda-suave">
           <Encabezado kicker={kicker} titulo={titulo ?? T.home.queAromaQuieresHoy} bajada={bajada} />
           <ul className="flex flex-wrap gap-3 md:gap-4">
             {contenido.familias.map((f, k) => (
@@ -189,13 +205,13 @@ function Seccion({ s, contenido, pais, bannersMid }: { s: SeccionHome; contenido
 
     case 'banner': {
       if (bannersMid.length === 0) return null;
-      return <BannersMid banners={bannersMid} pais={pais} />;
+      return <BannersMid id={ID_SECCION.banner} banners={bannersMid} pais={pais} />;
     }
 
     case 'collection_tabs': {
       if (contenido.colecciones.length === 0) return null;
       return (
-        <Plana>
+        <Plana id={ID_SECCION.collection_tabs}>
           <Encabezado kicker={titulo ? kicker : null} titulo={titulo ?? kicker} />
           <PestanasColecciones pais={pais} colecciones={contenido.colecciones} />
         </Plana>
@@ -210,7 +226,7 @@ function Seccion({ s, contenido, pais, bannersMid }: { s: SeccionHome; contenido
       const url = enlace(s.config['cta_url']);
       const imagen = contenido.espacios.find((e) => e.key === 'asesoria')?.media ?? null;
       return (
-        <Plana>
+        <Plana id={ID_SECCION.advice}>
           <div className="textura-calida grid items-center gap-8 rounded-panel bg-surface px-6 py-12 md:grid-cols-2 md:gap-16 md:px-14 md:py-14">
             <div className="flex flex-col items-start gap-5">
               {kicker ? (
@@ -237,7 +253,7 @@ function Seccion({ s, contenido, pais, bannersMid }: { s: SeccionHome; contenido
       const items = leerBeneficios(s.config);
       if (items.length === 0) return null;
       return (
-        <Banda tono="banda-acento">
+        <Banda id={ID_SECCION.benefits} tono="banda-acento">
           <Encabezado kicker={kicker} titulo={titulo} />
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
             {items.map((b) => (
@@ -259,7 +275,7 @@ function Seccion({ s, contenido, pais, bannersMid }: { s: SeccionHome; contenido
     case 'reviews': {
       if (contenido.resenas.length === 0) return null;
       return (
-        <Plana>
+        <Plana id={ID_SECCION.reviews}>
           <Encabezado kicker={kicker} titulo={titulo ?? T.home.resenas} />
           <ul className="sin-scroll-visible -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-6 sm:-mx-8 sm:px-8" tabIndex={0} aria-label={titulo ?? T.home.resenas}>
             {contenido.resenas.map((r, k) => (
@@ -296,7 +312,7 @@ export function HomeSecciones({ contenido, pais }: { contenido: ContenidoHome; p
   const indiceColecciones = contenido.secciones.findIndex((s) => s.type === 'collection_tabs');
   return (
     <>
-      {!hayHero && bannersHero.length > 0 ? <Hero banners={bannersHero} pais={pais} /> : null}
+      {!hayHero && bannersHero.length > 0 ? <CarruselBanners id={ID_SECCION.hero} banners={bannersHero} pais={pais} segundos={segundosCarrusel(null)} /> : null}
       {contenido.secciones.map((s, k) => (
         <Fragment key={s.id}>
           <Seccion s={s} contenido={contenido} pais={pais} bannersMid={bannersMid} />

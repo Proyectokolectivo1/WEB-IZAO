@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { FormularioCarrusel } from '@/components/admin/FormularioCarrusel';
 import { leerPais, PestanasPais } from '@/components/admin/PestanasPais';
 import {
   AYUDA_UBICACION,
@@ -9,14 +10,15 @@ import {
   estadoVigencia,
   leerUbicacion,
   NOMBRE_PAIS_BANNER,
+  SECCIONES_TIENDA,
   UBICACIONES,
   type Destino,
 } from '@/lib/admin/banners/banners';
-import { conteoPorUbicacion, listarBanners } from '@/lib/admin/banners/servidor';
+import { conteoPorUbicacion, leerAjustesCarrusel, listarBanners } from '@/lib/admin/banners/servidor';
 import { fechaHoraBogota } from '@/lib/admin/formato';
 import { requerirAdmin } from '@/lib/auth/guard';
 import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
-import { alternarBanner, moverBanner } from './acciones';
+import { alternarBanner, guardarAjustesCarrusel, moverBanner } from './acciones';
 
 export const metadata: Metadata = { title: 'Banners' };
 
@@ -28,6 +30,8 @@ function textoDestino(d: Destino): string {
       return `Lleva al producto «${d.slug}»${d.sku ? ` (variante ${d.sku})` : ''}`;
     case 'categoria':
       return `Lleva a la categoría «${d.slug}»`;
+    case 'seccion':
+      return `Lleva a la sección «${SECCIONES_TIENDA.find((s) => s.clave === d.clave)?.etiqueta ?? d.clave}»`;
     case 'url':
       return `Lleva a ${d.url}`;
   }
@@ -43,7 +47,11 @@ export default async function ListaBanners({
   const pais = leerPais(sp.pais);
   const ubicacion = leerUbicacion(sp.ubicacion);
   const cliente = crearClienteServicio();
-  const [filas, conteos] = await Promise.all([listarBanners(cliente, pais, ubicacion), conteoPorUbicacion(cliente, pais)]);
+  const [filas, conteos, carrusel] = await Promise.all([
+    listarBanners(cliente, pais, ubicacion),
+    conteoPorUbicacion(cliente, pais),
+    ubicacion === 'hero' ? leerAjustesCarrusel(cliente, pais) : Promise.resolve(null),
+  ]);
   const error = typeof sp.error === 'string' ? sp.error : null;
   const nuevo = `/admin/banners/nuevo?pais=${pais}&ubicacion=${ubicacion}`;
 
@@ -70,8 +78,14 @@ export default async function ListaBanners({
             </Link>
           </li>
         ))}
+        <li>
+          <Link href={`/admin/banners/cinta?pais=${pais}`}>Cinta superior</Link>
+        </li>
       </ul>
       <p className="adm-suave adm-chico">{AYUDA_UBICACION[ubicacion]}</p>
+      {carrusel ? (
+        <FormularioCarrusel key={`${pais}-${carrusel.segundos}-${carrusel.enCatalogo}`} pais={pais} segundos={carrusel.segundos} enCatalogo={carrusel.enCatalogo} accion={guardarAjustesCarrusel} />
+      ) : null}
       {sp.guardado ? <p className="adm-ok" role="status">Banner guardado.</p> : null}
       {sp.eliminado ? <p className="adm-ok" role="status">Banner eliminado.</p> : null}
       {error ? <p className="adm-alerta" role="alert">{error}</p> : null}

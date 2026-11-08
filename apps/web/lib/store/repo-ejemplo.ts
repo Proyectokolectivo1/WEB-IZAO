@@ -4,7 +4,7 @@
  * ni productos reales. Imita el orden por claves y el cursor keyset de los RPC `catalog_*`.
  */
 import 'server-only';
-import type { ConsultaCatalogo, ContenidoHome, TiendaRepo } from './repo';
+import type { CarruselTienda, ConsultaCatalogo, ContenidoHome, TiendaRepo } from './repo';
 import type {
   AjustesTienda,
   Banner,
@@ -411,6 +411,10 @@ export const repoEjemplo: TiendaRepo = {
       )
       .slice(0, limite)
       .map((d) => d.item);
+  },
+  async carrusel(pais): Promise<CarruselTienda> {
+    const destacado = seleccionar(pais, { filtros: {}, orden: 'featured', cursor: null, limite: 1 })[0]?.item ?? null;
+    return { banners: bannersEjemplo(pais, destacado).filter((b) => b.placement === 'hero'), segundos: 6, enCatalogo: true };
   },
   async home(pais): Promise<ContenidoHome> {
     const destacados = seleccionar(pais, { filtros: {}, orden: 'featured', cursor: null, limite: 8 })

@@ -38,6 +38,15 @@ export interface ConsultaCatalogo {
   conTotal?: boolean;
 }
 
+/** Carrusel de banners `hero` (home y catálogo) con sus ajustes del panel. */
+export interface CarruselTienda {
+  banners: Banner[];
+  /** Segundos entre imágenes (3–30). */
+  segundos: number;
+  /** El panel puede apagar el carrusel en `/catalogo` sin tocar el del home. */
+  enCatalogo: boolean;
+}
+
 export interface ContenidoHome {
   secciones: SeccionHome[];
   banners: Banner[];
@@ -60,6 +69,8 @@ export interface TiendaRepo {
   producto(pais: CodigoPais, slug: string): Promise<FichaProducto | null>;
   relacionados(pais: CodigoPais, productoId: string, limite: number): Promise<ItemCatalogo[]>;
   home(pais: CodigoPais): Promise<ContenidoHome>;
+  /** Solo el carrusel `hero` y sus ajustes (consulta liviana para `/catalogo`). */
+  carrusel(pais: CodigoPais): Promise<CarruselTienda>;
   paginaLegal(pais: CodigoPais, slug: string): Promise<PaginaLegal | null>;
   /** Página publicada de un tipo (`pages.kind`, distinto de `general`); `null` si el país no la tiene publicada. */
   paginaPorTipo(pais: CodigoPais, kind: Exclude<TipoPagina, 'general'>): Promise<PaginaLegal | null>;
