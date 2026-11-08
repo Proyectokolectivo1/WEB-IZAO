@@ -168,8 +168,19 @@ describe('sqlVinculacion', () => {
     const vista = emparejarPorSku([izao(1, "IZ-'1")], [ms(10, 'Diez', [[100, "IZ-'1"]])]);
     const sql = sqlVinculacion(vista, new Date('2026-11-06T00:00:00Z'))!;
     expect(sql).toContain(`('${UUID(1)}'::uuid, 'IZ-''1', 10, 100)`);
-    expect(sql).toContain('v.mastershop_product_id is null');
+    expect(sql).toContain('update public.variant_countries as vc');
+    expect(sql).toContain("vc.country_code = 'CO'");
+    expect(sql).toContain('vc.mastershop_product_id is null');
     expect(sql).toContain('v.sku = x.sku');
+    expect(sql).not.toMatch(/update public\.product_variants/);
+  });
+
+  it('Ecuador escribe solo en su fila de variant_countries (D-052)', () => {
+    const vista = emparejarPorSku([izao(1, 'A')], [ms(10, 'Diez', [[100, 'A']])]);
+    const sql = sqlVinculacion(vista, new Date(0), 'EC')!;
+    expect(sql).toContain("vc.country_code = 'EC'");
+    expect(sql).toContain('(EC)');
+    expect(() => sqlVinculacion(vista, new Date(0), "CO' or 1=1 --" as never)).toThrow(/País/);
     expect(sql.startsWith('-- Vinculación')).toBe(true);
     expect(sql).toMatch(/begin;[\s\S]*commit;/);
   });

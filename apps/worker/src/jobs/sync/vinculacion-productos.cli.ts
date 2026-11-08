@@ -1,16 +1,22 @@
 /**
- * Vista previa de la vinculación por SKU (solo lectura). Escribe en `--salida`:
+ * Vinculación por SKU por país (D-050, D-052). Cada país usa su propia llave de MasterShop. Escribe en `--salida`,
+ * por país (`<salida>/<PAIS>/`):
  * - `vista-previa.json`: clasificación completa (nuevas, sin cambio, conflictos, sin equivalente, sugerencias).
- * - `vinculacion.sql`: `UPDATE` idempotente de las nuevas, para que el dueño lo apruebe y lo ejecute.
+ * - `vinculacion.sql`: `UPDATE` idempotente de `variant_countries` del país, para revisarlo y ejecutarlo.
+ * Con `--aplicar` además escribe las nuevas en `variant_countries` (solo filas del país sin vínculo). Sin esa
+ * bandera solo lee.
  *
  * Uso (desde `apps/worker`, sin imprimir secretos):
- *   pnpm exec tsx --env-file=<archivo .env> src/jobs/sync/vinculacion-productos.cli.ts --salida <carpeta>
+ *   pnpm exec tsx --env-file=<archivo .env> src/jobs/sync/vinculacion-productos.cli.ts --salida <carpeta> [--pais CO|EC] [--aplicar]
  * Variables: SUPABASE_URL, SUPABASE_SECRET_KEY, APP_ENCRYPTION_KEY.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import type { CountryCode } from '@izao/core/money';
 import { sqlVinculacion } from '@izao/mastershop';
-import { crearFuenteVinculacionPostgrest, vistaPreviaVinculacion } from './vinculacion-productos.js';
+import { crearFuenteVinculacionPostgrest, vinculacionPorPais } from './vinculacion-productos.js';
+
+const PAISES: readonly CountryCode[] = ['CO', 'EC'];
 
 function requerida(nombre: string): string {
   const v = process.env[nombre];
@@ -18,32 +24,55 @@ function requerida(nombre: string): string {
   return v.trim();
 }
 
+function argumento(nombre: string): string | null {
+  const i = process.argv.indexOf(nombre);
+  return i > 0 && process.argv[i + 1] ? process.argv[i + 1]! : null;
+}
+
 async function main(): Promise<void> {
-  const i = process.argv.indexOf('--salida');
-  const salida = resolve(i > 0 && process.argv[i + 1] ? process.argv[i + 1]! : '.');
-  mkdirSync(salida, { recursive: true });
+  const salida = resolve(argumento('--salida') ?? '.');
+  const pais = argumento('--pais');
+  if (pais !== null && !PAISES.includes(pais as CountryCode)) throw new Error('--pais debe ser CO o EC.');
+  const paises = pais === null ? PAISES : [pais as CountryCode];
+  const aplicar = process.argv.includes('--aplicar');
 
   const fuente = crearFuenteVinculacionPostgrest({
     supabaseUrl: requerida('SUPABASE_URL'),
     secretKey: requerida('SUPABASE_SECRET_KEY'),
     claveCifrado: requerida('APP_ENCRYPTION_KEY'),
   });
-  const { vista } = await vistaPreviaVinculacion({ fuente });
+  const resultados = await vinculacionPorPais({ fuente }, { paises, aplicar });
   const ahora = new Date();
-  writeFileSync(join(salida, 'vista-previa.json'), JSON.stringify(vista, null, 1));
-  const sql = sqlVinculacion(vista, ahora);
-  if (sql !== null) writeFileSync(join(salida, 'vinculacion.sql'), sql);
-
-  const t = vista.totales;
-  console.log(
-    [
-      `Variantes Izao: ${t.variantesIzao} · productos MasterShop: ${t.productosMasterShop} (${t.variantesMasterShop} variantes)`,
-      `Nuevas por SKU: ${t.nuevas} · sin cambio: ${t.sinCambio} · conflictos: ${t.conflictos} · sin equivalente: ${t.sinEquivalente}`,
-      `Sugerencias por nombre: ${vista.sugerenciasPorNombre.length} · SKU ambiguos: ${vista.skuAmbiguos.length} · deshabilitadas en MasterShop: ${vista.deshabilitadasEnMasterShop.length}`,
-      `MasterShop sin usar: ${vista.masterShopSinUsar.length}`,
-      sql === null ? 'Sin SQL: no hay variantes nuevas que vincular.' : `SQL: ${join(salida, 'vinculacion.sql')}`,
-    ].join('\n'),
-  );
+  const lineas: string[] = [];
+  for (const p of paises) {
+    const r = resultados[p];
+    if (!r || r.accion === 'sin_credenciales') {
+      lineas.push(`${p}: sin llave activa de MasterShop (se omite).`);
+      continue;
+    }
+    if (r.accion === 'error') {
+      lineas.push(`${p}: error (${r.error}).`);
+      process.exitCode = 1;
+      continue;
+    }
+    const dir = join(salida, p);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'vista-previa.json'), JSON.stringify(r.vista, null, 1));
+    const sql = sqlVinculacion(r.vista, ahora, p === 'EC' ? 'EC' : 'CO');
+    if (sql !== null) writeFileSync(join(dir, 'vinculacion.sql'), sql);
+    const t = r.vista.totales;
+    lineas.push(
+      `${p}: variantes ${t.variantesIzao} · productos MasterShop ${t.productosMasterShop} (${t.variantesMasterShop} variantes)`,
+      `    nuevas ${t.nuevas} · sin cambio ${t.sinCambio} · conflictos ${t.conflictos} · sin equivalente ${t.sinEquivalente}`,
+      `    sugerencias por nombre ${r.vista.sugerenciasPorNombre.length} · SKU ambiguos ${r.vista.skuAmbiguos.length} · MasterShop sin usar ${r.vista.masterShopSinUsar.length}`,
+      r.accion === 'aplicado'
+        ? `    aplicado: ${r.vinculadas} variantes vinculadas en variant_countries (${p}).`
+        : sql === null
+          ? '    sin SQL: no hay variantes nuevas que vincular.'
+          : `    SQL: ${join(dir, 'vinculacion.sql')}`,
+    );
+  }
+  console.log(lineas.join('\n'));
 }
 
 main().catch((e: unknown) => {

@@ -307,12 +307,21 @@ function literal(s: string): string {
   return `'${s.replace(/'/g, "''")}'`;
 }
 
+/** Países con cuenta propia de MasterShop (D-052). */
+const PAISES_VINCULO = new Set(['CO', 'EC']);
+
 /**
- * `UPDATE` idempotente de las variantes `nuevas`: solo escribe si la variante sigue sin vínculo y su SKU no
- * cambió desde la vista previa. Ejecutarlo dos veces no hace nada la segunda. Conflictos y sugerencias no
- * se incluyen. Devuelve `null` si no hay nada que aplicar.
+ * `UPDATE` idempotente de `variant_countries` del país (`mastershop_product_id/_variant_id`, D-052): solo escribe
+ * si la fila de ese país sigue sin vínculo y el SKU de la variante no cambió desde la vista previa. Ejecutarlo dos
+ * veces no hace nada la segunda. No toca `product_variants.mastershop_*` (espejo de CO que mantienen los triggers).
+ * Conflictos y sugerencias no se incluyen. Devuelve `null` si no hay nada que aplicar.
  */
-export function sqlVinculacion(vista: Pick<VistaPreviaVinculacion, 'nuevas'>, generadoEn: Date): string | null {
+export function sqlVinculacion(
+  vista: Pick<VistaPreviaVinculacion, 'nuevas'>,
+  generadoEn: Date,
+  pais: 'CO' | 'EC' = 'CO',
+): string | null {
+  if (!PAISES_VINCULO.has(pais)) throw new Error(`País inválido: ${String(pais)}`);
   if (vista.nuevas.length === 0) return null;
   const filas = vista.nuevas.map((e) => {
     if (!UUID.test(e.variant_id)) throw new Error(`variant_id inválido: ${e.variant_id}`);
@@ -322,22 +331,22 @@ export function sqlVinculacion(vista: Pick<VistaPreviaVinculacion, 'nuevas'>, ge
     return `  (${literal(e.variant_id)}::uuid, ${literal(e.sku)}, ${e.propuesto.idProduct}, ${e.propuesto.idVariant})`;
   });
   return [
-    `-- Vinculación de variantes con MasterShop por SKU (${vista.nuevas.length} filas).`,
-    `-- Generado ${generadoEn.toISOString()} desde la vista previa. Idempotente: solo llena variantes sin vínculo.`,
+    `-- Vinculación de variantes con MasterShop (${pais}) por SKU (${vista.nuevas.length} filas).`,
+    `-- Generado ${generadoEn.toISOString()} desde la vista previa. Idempotente: solo llena filas de ${pais} sin vínculo.`,
     'begin;',
     'with x(id, sku, ms_product, ms_variant) as (values',
     filas.join(',\n'),
     '), cambios as (',
-    '  update public.product_variants as v',
+    '  update public.variant_countries as vc',
     '     set mastershop_product_id = x.ms_product,',
-    '         mastershop_variant_id = x.ms_variant,',
-    '         updated_at = now()',
+    '         mastershop_variant_id = x.ms_variant',
     '    from x',
-    '   where v.id = x.id',
-    '     and v.sku = x.sku',
-    '     and v.mastershop_product_id is null',
-    '     and v.mastershop_variant_id is null',
-    '  returning v.id',
+    '    join public.product_variants as v on v.id = x.id and v.sku = x.sku',
+    '   where vc.variant_id = x.id',
+    `     and vc.country_code = ${literal(pais)}`,
+    '     and vc.mastershop_product_id is null',
+    '     and vc.mastershop_variant_id is null',
+    '  returning vc.variant_id',
     ')',
     'select count(*) as variantes_vinculadas from cambios;',
     'commit;',
