@@ -1,6 +1,8 @@
 'use client';
 
 import { useId, useState } from 'react';
+import { enviarSubida, type FalloSubida } from '@/lib/admin/mensaje-subida';
+import { AvisoSubida } from './AvisoSubida';
 
 export type ImagenInicial = { id: string; ruta: string; alt: string } | null;
 
@@ -21,6 +23,7 @@ export function SelectorImagen({
   altControlado,
   anchoVista = 0,
   alCambiar,
+  sugerencia,
   error,
 }: {
   nombre: string;
@@ -40,6 +43,8 @@ export function SelectorImagen({
   anchoVista?: number;
   /** Avisa a la vista previa del formulario cuando cambia la imagen elegida. */
   alCambiar?: (imagen: ImagenInicial) => void;
+  /** Nombre del elemento (categoría, producto) ya conocido en el formulario: solo se muestra como ejemplo en el campo. */
+  sugerencia?: string | undefined;
   error?: string | undefined;
 }) {
   const id = useId();
@@ -47,7 +52,7 @@ export function SelectorImagen({
   const [altPropio, setAlt] = useState(inicial?.alt ?? '');
   const alt = altControlado ?? altPropio;
   const [subiendo, setSubiendo] = useState(false);
-  const [falla, setFalla] = useState<string | null>(null);
+  const [falla, setFalla] = useState<FalloSubida | string | null>(null);
 
   async function alElegir(archivo: File | undefined) {
     if (!archivo) return;
@@ -68,20 +73,18 @@ export function SelectorImagen({
       datos.set('alt', alt.trim());
       datos.set('recorte45', String(recorte45));
       if (variante) datos.set('variante', variante);
-      const r = await fetch('/api/admin/media', { method: 'POST', body: datos });
-      const cuerpo = (await r.json().catch(() => ({}))) as Partial<Subida> & { error?: string };
-      if (!r.ok || !cuerpo.id) {
-        setFalla(cuerpo.error ?? 'No se pudo subir la imagen.');
+      const r = await enviarSubida<Subida>('/api/admin/media', datos, { valida: (c) => Boolean(c.id) });
+      if (!r.ok) {
+        setFalla(r.fallo);
         return;
       }
+      const cuerpo = r.cuerpo;
       // Miniatura: la variante más chica con el ancho pedido (o la mayor si ninguna llega).
       const anchos = Object.keys(cuerpo.variants ?? {}).map(Number).sort((a, b) => a - b);
       const ancho = anchos.find((a) => a >= anchoVista) ?? anchos.at(-1);
       const nueva = { id: cuerpo.id, ruta: ancho ? (cuerpo.variants?.[String(ancho)] ?? '') : '', alt: cuerpo.alt ?? alt };
       setActual(nueva);
       alCambiar?.(nueva);
-    } catch {
-      setFalla('No se pudo subir la imagen. Revisa tu conexión.');
     } finally {
       setSubiendo(false);
     }
@@ -108,7 +111,7 @@ export function SelectorImagen({
             value={altPropio}
             maxLength={200}
             onChange={(e) => setAlt(e.target.value)}
-            placeholder="Describe lo que se ve en la imagen"
+            placeholder={sugerencia?.trim() ? `Ej.: ${sugerencia.trim()}` : 'Describe lo que se ve en la imagen'}
           />
         </div>
       ) : null}
@@ -136,11 +139,7 @@ export function SelectorImagen({
           Quitar imagen
         </button>
       ) : null}
-      {mensaje ? (
-        <p className="adm-error-campo" role="alert">
-          {mensaje}
-        </p>
-      ) : null}
+      <AvisoSubida fallo={mensaje} />
     </fieldset>
   );
 }

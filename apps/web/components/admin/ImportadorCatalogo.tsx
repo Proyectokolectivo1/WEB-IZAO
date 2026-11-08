@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { enviarSubida, type FalloSubida } from '@/lib/admin/mensaje-subida';
 import type { ReporteImagenes, ReporteImportacion } from '@/lib/admin/catalogo/importacion-servidor';
+import { AvisoSubida } from './AvisoSubida';
 
 type Fase = 'inicio' | 'procesando' | 'simulado' | 'aplicado';
 
@@ -10,29 +12,23 @@ export function ImportadorCatalogo() {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [fase, setFase] = useState<Fase>('inicio');
   const [reporte, setReporte] = useState<ReporteImportacion | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FalloSubida | null>(null);
 
   async function enviar(modo: 'simular' | 'aplicar') {
     if (!archivo) return;
     setError(null);
     setFase('procesando');
-    try {
-      const datos = new FormData();
-      datos.set('archivo', archivo);
-      datos.set('modo', modo);
-      const r = await fetch('/api/admin/catalogo/importar', { method: 'POST', body: datos });
-      const cuerpo = (await r.json().catch(() => ({}))) as Partial<ReporteImportacion> & { error?: string };
-      if (!r.ok || cuerpo.error) {
-        setError(cuerpo.error ?? 'No se pudo procesar el archivo.');
-        setFase(modo === 'aplicar' ? 'simulado' : 'inicio');
-        return;
-      }
-      setReporte(cuerpo as ReporteImportacion);
-      setFase(modo === 'simular' ? 'simulado' : 'aplicado');
-    } catch {
-      setError('No se pudo procesar el archivo. Revisa tu conexión.');
+    const datos = new FormData();
+    datos.set('archivo', archivo);
+    datos.set('modo', modo);
+    const r = await enviarSubida<ReporteImportacion>('/api/admin/catalogo/importar', datos, { tipo: 'archivo' });
+    if (!r.ok) {
+      setError(r.fallo);
       setFase(modo === 'aplicar' ? 'simulado' : 'inicio');
+      return;
     }
+    setReporte(r.cuerpo);
+    setFase(modo === 'simular' ? 'simulado' : 'aplicado');
   }
 
   const ocupado = fase === 'procesando';
@@ -67,11 +63,7 @@ export function ImportadorCatalogo() {
           </button>
         ) : null}
       </div>
-      {error ? (
-        <p className="adm-error-campo" role="alert">
-          {error}
-        </p>
-      ) : null}
+      <AvisoSubida fallo={error} />
       {reporte ? (
         <div role="status" aria-live="polite">
           <h3>{fase === 'aplicado' ? 'Importación aplicada' : 'Simulación (no se guardó nada)'}</h3>
@@ -133,7 +125,7 @@ export function CargaImagenesPorSku() {
   const [trabajando, setTrabajando] = useState(false);
   const [avance, setAvance] = useState('');
   const [reporte, setReporte] = useState<ReporteImagenes | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FalloSubida | null>(null);
 
   async function subir() {
     setTrabajando(true);
@@ -147,17 +139,15 @@ export function CargaImagenesPorSku() {
         setAvance(`Tanda ${i + 1} de ${tandas.length}…`);
         const datos = new FormData();
         for (const f of tandas[i] as File[]) datos.append('archivos', f);
-        const r = await fetch('/api/admin/catalogo/imagenes', { method: 'POST', body: datos });
-        const cuerpo = (await r.json().catch(() => ({}))) as Partial<ReporteImagenes> & { error?: string };
-        if (!r.ok || cuerpo.error) {
-          setError(cuerpo.error ?? 'No se pudo subir una tanda de imágenes.');
+        const r = await enviarSubida<Partial<ReporteImagenes>>('/api/admin/catalogo/imagenes', datos, { tipo: 'archivo' });
+        if (!r.ok) {
+          setError(r.fallo);
           break;
         }
+        const cuerpo = r.cuerpo;
         total.asignadas.push(...(cuerpo.asignadas ?? []));
         total.errores.push(...(cuerpo.errores ?? []));
       }
-    } catch {
-      setError('No se pudieron subir las imágenes. Revisa tu conexión.');
     } finally {
       setReporte(total);
       setTrabajando(false);
@@ -192,11 +182,7 @@ export function CargaImagenesPorSku() {
           {trabajando ? avance || 'Subiendo…' : `Subir ${archivos.length} archivo${archivos.length === 1 ? '' : 's'}`}
         </button>
       </div>
-      {error ? (
-        <p className="adm-error-campo" role="alert">
-          {error}
-        </p>
-      ) : null}
+      <AvisoSubida fallo={error} />
       {reporte ? (
         <div role="status" aria-live="polite">
           <p>

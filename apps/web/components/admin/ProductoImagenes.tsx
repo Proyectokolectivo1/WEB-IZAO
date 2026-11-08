@@ -9,6 +9,8 @@ import {
   type ImagenForm,
   type RolImagen,
 } from '@/lib/admin/catalogo/productos';
+import { enviarSubida, type FalloSubida } from '@/lib/admin/mensaje-subida';
+import { AvisoSubida } from './AvisoSubida';
 
 type Subida = { id: string; variants: Record<string, string>; alt: string };
 
@@ -30,7 +32,7 @@ export function ProductoImagenes({
   const id = useId();
   const [alt, setAlt] = useState('');
   const [subiendo, setSubiendo] = useState(false);
-  const [falla, setFalla] = useState<string | null>(null);
+  const [falla, setFalla] = useState<FalloSubida | string | null>(null);
   const textoAlt = alt.trim() || altSugerido.trim();
 
   async function subir(archivos: FileList | null) {
@@ -49,16 +51,17 @@ export function ProductoImagenes({
         datos.set('kind', 'product');
         datos.set('alt', textoAlt);
         datos.set('recorte45', 'true');
-        const r = await fetch('/api/admin/media', { method: 'POST', body: datos });
-        const cuerpo = (await r.json().catch(() => ({}))) as Partial<Subida> & { error?: string };
-        if (!r.ok || !cuerpo.id) {
-          setFalla(`${archivo.name}: ${cuerpo.error ?? 'no se pudo subir.'}`);
+        const r = await enviarSubida<Subida>('/api/admin/media', datos, {
+          valida: (c) => Boolean(c.id),
+          ...(archivos.length > 1 ? { archivo: archivo.name } : {}),
+        });
+        if (!r.ok) {
+          setFalla(r.fallo);
           break;
         }
+        const cuerpo = r.cuerpo;
         nuevas.push({ media_id: cuerpo.id, role: 'gallery', ruta: cuerpo.variants?.['400'] ?? '', alt: cuerpo.alt ?? textoAlt });
       }
-    } catch {
-      setFalla('No se pudo subir la imagen. Revisa tu conexión.');
     } finally {
       setSubiendo(false);
       if (nuevas.length) alCambiar(normalizarImagenes([...imagenes, ...nuevas]));
@@ -148,11 +151,7 @@ export function ProductoImagenes({
           JPG, PNG, WebP o AVIF; se convierten a WebP al subir. La primera es la principal; la segunda puede ser la de cursor. {subiendo ? 'Subiendo…' : ''}
         </p>
       </div>
-      {mensaje ? (
-        <p className="adm-error-campo" role="alert">
-          {mensaje}
-        </p>
-      ) : null}
+      <AvisoSubida fallo={mensaje} />
     </fieldset>
   );
 }

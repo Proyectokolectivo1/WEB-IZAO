@@ -139,12 +139,13 @@ export function FormularioCategoria({
           error={errores.sort_order}
         />
       </fieldset>
-      <SelectorImagen nombre="image_id" etiqueta="Imagen de la categoría" kind="category" inicial={inicial.imagen} error={errores.image_id} />
+      <SelectorImagen nombre="image_id" etiqueta="Imagen de la categoría" kind="category" inicial={inicial.imagen} sugerencia={nombre} error={errores.image_id} />
       <SelectorImagen
         nombre="banner_image_id"
         etiqueta="Banner de la categoría"
         kind="category"
         inicial={inicial.banner}
+        sugerencia={nombre}
         error={errores.banner_image_id}
       />
       <fieldset className="adm-fieldset">
