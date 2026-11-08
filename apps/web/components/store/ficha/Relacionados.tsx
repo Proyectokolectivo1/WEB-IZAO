@@ -13,8 +13,6 @@ interface Props {
   productoId: string;
   /** Cuántos aromas pedir (4 llena una fila en escritorio). */
   limite?: number;
-  /** Número de la sección (01, 02…). */
-  numero: number;
 }
 
 /**
@@ -22,7 +20,7 @@ interface Props {
  * el navegador está ocioso o la sección se acerca. Mientras llega, reserva el alto exacto de las tarjetas.
  * Si no hay coincidencias, la sección desaparece sin dejar hueco.
  */
-export function Relacionados({ pais, productoId, limite = 4, numero }: Props) {
+export function Relacionados({ pais, productoId, limite = 4 }: Props) {
   const raiz = useRef<HTMLElement>(null);
   const [estado, setEstado] = useState<'espera' | 'cargando' | 'listo' | 'vacio'>('espera');
   const [items, setItems] = useState<ItemCatalogo[]>([]);
@@ -63,8 +61,8 @@ export function Relacionados({ pais, productoId, limite = 4, numero }: Props) {
   if (estado === 'vacio') return null;
 
   return (
-    <section ref={raiz} data-testid="relacionados" aria-label={T.ficha.relacionados} className="pt-20">
-      <EncabezadoSeccion n={numero} titulo={T.ficha.relacionados} />
+    <section ref={raiz} data-testid="relacionados" aria-label={T.ficha.relacionados} className="pt-16 md:pt-24">
+      <EncabezadoSeccion titulo={T.ficha.relacionados} />
       {estado === 'listo' ? (
         <ul className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
           {items.map((it) => (

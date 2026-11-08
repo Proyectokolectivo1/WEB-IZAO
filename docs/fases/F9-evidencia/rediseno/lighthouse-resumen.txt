@@ -1,0 +1,15 @@
+Fecha de las corridas: 2026_11_08
+
+| URL | Rend. | Acces. | Prác. | SEO | FCP s | LCP s | CLS | TBT ms | JS KB | corridas |
+|---|---|---|---|---|---|---|---|---|---|---|
+| /co | 97 | 100 | 100 | 100 | 1.07 | 2.63 | 0.000 | 20 | 150 | 2 |
+| /co/catalogo | 97 | 100 | 100 | 100 | 1.06 | 2.64 | 0.000 | 16 | 159 | 2 |
+| /co/categoria/arabes | 97 | 100 | 100 | 92 | 1.06 | 2.64 | 0.000 | 17 | 159 | 2 |
+| /co/perfume/cuero-suave-casa-alba-11 | 97 | 100 | 100 | 100 | 1.06 | 2.63 | 0.000 | 17 | 149 | 2 |
+| /ec | 97 | 100 | 100 | 100 | 1.06 | 2.64 | 0.000 | 24 | 150 | 2 |
+| /ec/perfume/cuero-suave-casa-alba-11 | 97 | 100 | 100 | 100 | 1.06 | 2.64 | 0.000 | 24 | 149 | 2 |
+
+Auditorías de accesibilidad fallidas: ninguna
+
+uses-text-compression: 1 []
+Elemento LCP (primera URL): <p class="mt-3 max-w-prose text-[1.0625rem] text-ink/80">

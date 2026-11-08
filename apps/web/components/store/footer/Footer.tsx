@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { IzaoImage } from '@izao/ui';
+import { Icono, IzaoImage } from '@izao/ui';
 import { T } from '@/lib/store/textos';
 import { SelectorPais } from './SelectorPais';
 import type { AjustesTienda, CodigoPais, EspacioContenido, PaginaListada } from '@/lib/store/types';
@@ -27,16 +27,25 @@ export function Footer({ pais, ajustes, paginas, espacios }: Props) {
 
   return (
     <footer className="mt-24 rounded-t-panel bg-ink text-bg">
-      <div className="mx-auto grid max-w-[96rem] gap-12 px-4 py-14 sm:px-8 md:grid-cols-12">
+      {wa ? (
+        <div className="mx-auto max-w-[96rem] px-4 pt-12 sm:px-8 md:pt-16">
+          <div className="textura-calida flex flex-col gap-6 rounded-card bg-bg/10 p-6 md:flex-row md:items-center md:justify-between md:p-10">
+            <p className="max-w-xl font-display text-3xl leading-tight md:text-4xl">{T.footer.invitacion}</p>
+            <a
+              href={`https://wa.me/${wa}`}
+              rel="noopener"
+              className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-control bg-bg px-7 text-[0.9375rem] font-semibold text-ink transition-colors hover:bg-surface"
+            >
+              <Icono nombre="chat" tamano={20} />
+              {T.footer.escribenos}
+            </a>
+          </div>
+        </div>
+      ) : null}
+      <div className="mx-auto grid max-w-[96rem] gap-12 px-4 py-12 sm:px-8 md:grid-cols-12 md:py-14">
         <div className="md:col-span-5">
           <p className="font-display text-4xl leading-none">{ajustes.nombreTienda}</p>
-          {wa ? (
-            <p className="pt-6">
-              <a href={`https://wa.me/${wa}`} className={`${enlace} text-[1.0625rem]`} rel="noopener">
-                {T.footer.escribenos}
-              </a>
-            </p>
-          ) : null}
+          <p className="max-w-xs pt-4 text-[1.0625rem] text-bg/90">{T.footer.lema}</p>
           <address className="space-y-1 pt-4 text-[0.9375rem] not-italic text-bg/90">
             {correo ? <p>{correo}</p> : null}
             {telefono ? <p>{telefono}</p> : null}

@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { memo, useEffect, useRef, useState } from 'react';
-import { Button, Etiqueta, Icono, IzaoImage } from '@izao/ui';
+import { Button, Etiqueta, Icono, IzaoImage, rutasDeMedio } from '@izao/ui';
 import { lineaDe } from '@/lib/store/ficha-util';
 import { formatearPrecio } from '@/lib/store/pais';
 import { T } from '@/lib/store/textos';
@@ -42,6 +42,7 @@ export const TarjetaProducto = memo(function TarjetaProducto({ item, pais, conce
   const [estado, setEstado] = useState<'reposo' | 'cargando' | 'agregado' | 'error'>('reposo');
   const carrusel = useRef<HTMLDivElement>(null);
   const hayHover = !!item.img_hover;
+  const sinFoto = !rutasDeMedio(item.img_primary);
   const badges = new Set(item.badges.map(norm));
   const href = `/${pais}/perfume/${item.slug}`;
 
@@ -91,7 +92,7 @@ export const TarjetaProducto = memo(function TarjetaProducto({ item, pais, conce
       className="diferir group relative flex flex-col"
       onPointerEnter={() => hayHover && setHoverListo(true)}
     >
-      <div className="relative aspect-[4/5] overflow-hidden rounded-card bg-surface">
+      <div className="sombra-tarjeta relative aspect-[4/5] overflow-hidden rounded-card bg-surface transition-shadow duration-500 ease-izao">
         <Link href={href} aria-label={item.name} className="absolute inset-0 block">
           {/* Ratón: crossfade 450 ms con leve zoom */}
           <div className="absolute inset-0 hidden transition-transform duration-[450ms] ease-izao raton:block raton:group-hover:scale-[1.03]">
@@ -136,6 +137,13 @@ export const TarjetaProducto = memo(function TarjetaProducto({ item, pais, conce
           </div>
         </Link>
 
+        {sinFoto ? (
+          // Sin foto no se deja una caja vacía: papel con textura y una gota de aroma.
+          <span aria-hidden="true" className="textura-calida pointer-events-none absolute inset-0 grid place-items-center">
+            <Icono nombre="gota" tamano={44} className="text-ink/25" />
+          </span>
+        ) : null}
+
         {hayHover ? (
           <div data-testid="tarjeta-puntos" className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center gap-1.5 raton:hidden" role="img" aria-label={T.tarjeta.imagenN(pagina + 1, 2)}>
             {[0, 1].map((k) => (
@@ -173,7 +181,7 @@ export const TarjetaProducto = memo(function TarjetaProducto({ item, pais, conce
       </div>
 
       <div className="flex h-[7.25rem] flex-col pt-3">
-        <p className="etiqueta truncate text-ink/70">{[item.brand_name, concentracion].filter(Boolean).join(' · ')}</p>
+        <p className="etiqueta truncate text-ink/75">{[item.brand_name, concentracion].filter(Boolean).join(' · ')}</p>
         <Titulo className="mt-1 text-xl leading-tight">
           {/* Objetivo táctil de 44 px (§8.8) sin mover el diseño: el relleno se compensa con margen negativo. */}
           <Link href={href} className="-my-2.5 line-clamp-2 block py-2.5 underline-offset-4 hover:underline">
@@ -182,7 +190,7 @@ export const TarjetaProducto = memo(function TarjetaProducto({ item, pais, conce
         </Titulo>
         <p className="mt-auto flex flex-wrap items-baseline gap-x-2 text-[0.9375rem]">
           {precioDesde ? <span className="text-ink/70">{T.tarjeta.desdePrecio}</span> : null}
-          <span className="font-semibold tabular-nums">{formatearPrecio(item.min_price, pais)}</span>
+          <span className="text-[1.0625rem] font-semibold tabular-nums">{formatearPrecio(item.min_price, pais)}</span>
           {item.compare_at_price && item.compare_at_price > item.min_price ? (
             <s className="text-[0.875rem] text-ink/70 tabular-nums">{formatearPrecio(item.compare_at_price, pais)}</s>
           ) : null}

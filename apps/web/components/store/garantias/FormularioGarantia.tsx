@@ -181,7 +181,7 @@ export function FormularioGarantia({ pais, motivos, diasPlazo, diasRespuesta, tu
 
   if (listo) {
     return (
-      <section aria-labelledby="titulo-listo" data-testid="garantia-recibida" className="flex flex-col items-start gap-5 border-t border-ink pt-6">
+      <section aria-labelledby="titulo-listo" data-testid="garantia-recibida" className="flex flex-col items-start gap-5 border-t border-line pt-6">
         <Icono nombre="check" tamano={32} />
         <h2 id="titulo-listo" ref={confirmacion} tabIndex={-1} className="text-3xl outline-none md:text-4xl">
           {TG.listo.titulo}
@@ -226,7 +226,7 @@ export function FormularioGarantia({ pais, motivos, diasPlazo, diasRespuesta, tu
       ) : null}
 
       {/* 01 · Pedido */}
-      <section aria-labelledby="paso-pedido" className="border-t border-ink pt-5">
+      <section aria-labelledby="paso-pedido" className="border-t border-line pt-5">
         <h2 id="paso-pedido" className="flex items-baseline gap-4 text-3xl">
           <NumeroPaso n="01" />
           {TG.pasos.pedido}
@@ -263,7 +263,7 @@ export function FormularioGarantia({ pais, motivos, diasPlazo, diasRespuesta, tu
       </section>
 
       {/* 02 · Caso */}
-      <section aria-labelledby="paso-caso" className="border-t border-ink pt-5">
+      <section aria-labelledby="paso-caso" className="border-t border-line pt-5">
         <h2 id="paso-caso" className="flex items-baseline gap-4 text-3xl">
           <NumeroPaso n="02" />
           {TG.pasos.caso}
@@ -303,7 +303,7 @@ export function FormularioGarantia({ pais, motivos, diasPlazo, diasRespuesta, tu
       </section>
 
       {/* 03 · Evidencia */}
-      <section aria-labelledby="paso-evidencia" className="border-t border-ink pt-5">
+      <section aria-labelledby="paso-evidencia" className="border-t border-line pt-5">
         <h2 id="paso-evidencia" className="flex items-baseline gap-4 text-3xl">
           <NumeroPaso n="03" />
           {TG.pasos.evidencia}

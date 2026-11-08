@@ -17,7 +17,7 @@ export function Chip({ seleccionado = false, className, children, type = 'button
         'inline-flex min-h-11 items-center justify-center gap-2 rounded-control border px-4 text-[0.875rem] transition-colors duration-200',
         seleccionado
           ? 'border-ink bg-ink text-bg'
-          : 'border-line bg-transparent text-ink hover:border-ink hover:bg-surface',
+          : 'border-transparent bg-surface/70 text-ink hover:bg-surface',
         'disabled:cursor-not-allowed disabled:opacity-45 disabled:line-through',
         className ?? '',
       ].join(' ')}

@@ -134,6 +134,101 @@
   .sin-scroll-visible::-webkit-scrollbar {
     display: none;
   }
+
+  /*
+   * Calidez editorial: todo se deriva de los tokens (nada de hex), así que sigue al tema del panel y al de cada país.
+   * Bandas de sección a todo el ancho, en lugar de líneas duras.
+   */
+  .banda-suave {
+    background: color-mix(in srgb, var(--color-surface) 48%, var(--color-bg));
+  }
+  .banda-acento {
+    background: color-mix(in srgb, var(--color-accent) 24%, var(--color-bg));
+  }
+
+  /* Tonos suaves rotativos para categorías y familias olfativas (`--tono` base, `--tono-fuerte` al pasar el cursor). */
+  .tono-0 {
+    --tono: var(--color-surface);
+    --tono-fuerte: color-mix(in srgb, var(--color-surface) 70%, var(--color-muted));
+  }
+  .tono-1 {
+    --tono: color-mix(in srgb, var(--color-accent) 42%, var(--color-bg));
+    --tono-fuerte: color-mix(in srgb, var(--color-accent) 70%, var(--color-bg));
+  }
+  .tono-2 {
+    --tono: color-mix(in srgb, var(--color-muted) 24%, var(--color-bg));
+    --tono-fuerte: color-mix(in srgb, var(--color-muted) 42%, var(--color-bg));
+  }
+  .tono-3 {
+    --tono: color-mix(in srgb, var(--color-success) 20%, var(--color-bg));
+    --tono-fuerte: color-mix(in srgb, var(--color-success) 38%, var(--color-bg));
+  }
+  .fondo-tono {
+    background-color: var(--tono);
+    transition: background-color 400ms var(--ease-izao);
+  }
+  .group:hover .fondo-tono,
+  .group:focus-visible .fondo-tono {
+    background-color: var(--tono-fuerte);
+  }
+
+  /* Textura sutil de papel: puntos finos de tinta y un halo de luz arriba a la izquierda. */
+  .textura-calida {
+    background-image:
+      radial-gradient(120% 90% at 15% 0%, color-mix(in srgb, var(--color-bg) 60%, transparent), transparent 60%),
+      radial-gradient(color-mix(in srgb, var(--color-ink) 9%, transparent) 0.8px, transparent 1.2px);
+    background-size:
+      auto,
+      12px 12px;
+  }
+
+  /* Ondas concéntricas, como el aroma que se abre: adorno de las categorías sin foto. */
+  .ondas {
+    background-image: repeating-radial-gradient(
+      circle at 50% 108%,
+      transparent 0 26px,
+      color-mix(in srgb, var(--color-ink) 9%, transparent) 26px 27px
+    );
+  }
+
+  /* Sombras suaves de color tierra, nunca negras. */
+  .sombra-suave {
+    box-shadow:
+      0 1px 2px color-mix(in srgb, var(--color-ink) 6%, transparent),
+      0 14px 28px -14px color-mix(in srgb, var(--color-ink) 22%, transparent);
+  }
+  .sombra-tierna {
+    box-shadow: 0 10px 30px -18px color-mix(in srgb, var(--color-ink) 28%, transparent);
+  }
+
+  /* Sombra de las tarjetas de producto: cabe dentro de la caja de la tarjeta (se pinta contenida), por eso es corta hacia los lados. */
+  .sombra-tarjeta {
+    box-shadow: 0 14px 16px -14px color-mix(in srgb, var(--color-ink) 22%, transparent);
+  }
+  .group:hover .sombra-tarjeta {
+    box-shadow: 0 16px 18px -12px color-mix(in srgb, var(--color-ink) 34%, transparent);
+  }
+
+  /* Elevación al pasar el cursor: solo `transform`; con movimiento reducido no se mueve. */
+  .elevar {
+    transition:
+      transform 400ms var(--ease-izao),
+      box-shadow 400ms var(--ease-izao);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .group:hover .elevar,
+    .elevar:hover {
+      transform: translateY(-3px);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .elevar,
+  .group:hover .elevar,
+  .elevar:hover {
+    transform: none !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

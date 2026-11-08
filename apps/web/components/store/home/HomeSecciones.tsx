@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Fragment } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { Icono, IzaoImage, Revelar, clasesBoton, type NombreIcono } from '@izao/ui';
 import type { ContenidoHome } from '@/lib/store/repo';
 import { T } from '@/lib/store/textos';
@@ -28,12 +28,43 @@ export function leerBeneficios(config: Record<string, unknown>) {
     .filter((b) => b.titulo);
 }
 
-function Encabezado({ n, titulo, enlaceTodos, pais }: { n: number; titulo: string | null; enlaceTodos?: string; pais?: CodigoPais }) {
+/** Ícono suave de cada familia olfativa según su nombre; si no se reconoce, rota entre tres. */
+function iconoFamilia(slug: string, k: number): NombreIcono {
+  if (/flor|rosa|jazmin|blanc/.test(slug)) return 'flor';
+  if (/madera|amader|verde|herb|arom|fougere|chipre|musg|tierra/.test(slug)) return 'hoja';
+  if (/citr|fresc|acuat|marin|fruta|frut|agua/.test(slug)) return 'gota';
+  if (/orient|ambar|dulce|gourmand|vainill|especi/.test(slug)) return 'estrella';
+  return (['flor', 'hoja', 'gota'] as const)[k % 3]!;
+}
+
+/**
+ * Encabezado de sección: rótulo corto, título y bajada. Sin números ni filetes: el ritmo lo dan el aire y las bandas de fondo.
+ * Los tres textos salen de la configuración de la sección en el panel (`title`, `kicker`, `subtitle`); T trae solo los del seed.
+ */
+function Encabezado({
+  kicker,
+  titulo,
+  bajada,
+  enlaceTodos,
+  pais,
+}: {
+  kicker?: string | null;
+  titulo: string | null;
+  bajada?: string | null;
+  enlaceTodos?: string;
+  pais?: CodigoPais;
+}) {
   return (
-    <div className="mb-8 flex items-end justify-between gap-6 border-t border-ink pt-4">
-      <div className="flex items-baseline gap-4">
-        <span className="etiqueta text-ink/70 tabular-nums">{T.home.seccion(n)}</span>
-        {titulo ? <h2 className="text-3xl md:text-5xl">{titulo}</h2> : null}
+    <div className="mb-9 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 md:mb-12">
+      <div className="max-w-2xl">
+        {kicker ? (
+          <p className="etiqueta flex items-center gap-3 text-ink/70">
+            <span aria-hidden="true" className="h-0.5 w-8 rounded-full bg-accent" />
+            {kicker}
+          </p>
+        ) : null}
+        {titulo ? <h2 className="mt-3 text-[2.125rem] leading-[1.05] md:text-5xl">{titulo}</h2> : null}
+        {bajada ? <p className="mt-3 max-w-prose text-[1.0625rem] text-ink/80">{bajada}</p> : null}
       </div>
       {enlaceTodos && pais ? (
         <Link href={`/${pais}${enlaceTodos}`} className="inline-flex min-h-11 items-center text-[0.9375rem] underline underline-offset-4">
@@ -46,9 +77,23 @@ function Encabezado({ n, titulo, enlaceTodos, pais }: { n: number; titulo: strin
 
 const CONTENEDOR = 'mx-auto w-full max-w-[96rem] px-4 sm:px-8';
 
+/** Sección sobre el fondo de la página, con aire arriba. */
+function Plana({ children }: { children: ReactNode }) {
+  return <section className={`${CONTENEDOR} pt-16 md:pt-24`}>{children}</section>;
+}
+
+/** Sección sobre una banda de color a todo el ancho: da ritmo sin líneas. */
+function Banda({ tono, children }: { tono: 'banda-suave' | 'banda-acento'; children: ReactNode }) {
+  return (
+    <section className={`mt-16 md:mt-24 ${tono}`}>
+      <div className={`${CONTENEDOR} py-14 md:py-20`}>{children}</div>
+    </section>
+  );
+}
+
 function BannersMid({ banners, pais }: { banners: Banner[]; pais: CodigoPais }) {
   return (
-    <section className={`${CONTENEDOR} flex flex-col gap-4 pt-20`}>
+    <section className={`${CONTENEDOR} flex flex-col gap-4 pt-16 md:pt-24`}>
       {banners.map((b) => (
         <BannerFijo key={b.id} banner={b} ubicacion="mid" pais={pais} />
       ))}
@@ -56,8 +101,10 @@ function BannersMid({ banners, pais }: { banners: Banner[]; pais: CodigoPais }) 
   );
 }
 
-function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; contenido: ContenidoHome; pais: CodigoPais; n: number; bannersMid: Banner[] }) {
+function Seccion({ s, contenido, pais, bannersMid }: { s: SeccionHome; contenido: ContenidoHome; pais: CodigoPais; bannersMid: Banner[] }) {
   const titulo = texto(s.config['title']);
+  const kicker = texto(s.config['kicker']) ?? T.home.kicker[s.type] ?? null;
+  const bajada = texto(s.config['subtitle']) ?? T.home.bajada[s.type] ?? null;
   switch (s.type) {
     case 'hero':
       return <Hero banners={bannersDe(contenido.banners, 'hero')} pais={pais} />;
@@ -65,53 +112,78 @@ function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; conten
     case 'categories': {
       if (contenido.categorias.length === 0) return null;
       return (
-        <section className={`${CONTENEDOR} pt-20`}>
-          <Encabezado n={n} titulo={titulo ?? T.home.categorias} />
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
+        <Plana>
+          <Encabezado kicker={kicker} titulo={titulo ?? T.home.categorias} bajada={bajada} />
+          <ul className="grid grid-cols-2 items-start gap-x-4 gap-y-9 pb-8 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4 2xl:grid-cols-6">
             {contenido.categorias.map((c, k) => (
-              <li key={c.id}>
+              <li key={c.id} className="even:mt-8">
                 <Revelar indice={k}>
                   <Link href={`/${pais}/categoria/${c.slug}`} className="group block">
-                    {c.image ? (
-                      <>
-                        <div className="overflow-hidden rounded-card">
-                          <IzaoImage media={c.image} alt="" sizes="(min-width:1536px) 15vw, (min-width:1024px) 22vw, 45vw" redondeo="none" className="transition-transform duration-500 ease-izao group-hover:scale-[1.03]" />
-                        </div>
-                        <span className="mt-3 block font-display text-2xl underline-offset-8 group-hover:underline">{c.name}</span>
-                      </>
-                    ) : (
-                      // Sin foto de categoría no se pinta una caja vacía: el nombre es la tarjeta.
-                      <span className="flex aspect-[4/3] items-end rounded-card bg-surface p-5 font-display text-2xl underline-offset-8 transition-colors group-hover:bg-accent/40 group-hover:underline">
-                        {c.name}
+                    {/* Arco: la silueta de un frasco. Con foto, la foto; sin ella, un fondo cálido con textura, ondas y la inicial. */}
+                    <div
+                      className={`tono-${k % 4} fondo-tono ondas sombra-tierna elevar relative aspect-[4/5] overflow-hidden rounded-t-[999px] rounded-b-card`}
+                    >
+                      {c.image ? (
+                        <IzaoImage
+                          media={c.image}
+                          alt=""
+                          sizes="(min-width:1536px) 15vw, (min-width:1024px) 22vw, 45vw"
+                          redondeo="none"
+                          className="absolute inset-0 h-full object-cover transition-transform duration-500 ease-izao motion-reduce:transform-none group-hover:scale-[1.04]"
+                        />
+                      ) : (
+                        <>
+                          <span aria-hidden="true" className="textura-calida absolute inset-0" />
+                          <span
+                            aria-hidden="true"
+                            className="absolute inset-x-0 top-[34%] -translate-y-1/2 text-center font-display text-[7rem] leading-none text-ink/15 transition-transform duration-500 ease-izao motion-reduce:transform-none group-hover:scale-105 md:text-[8rem]"
+                          >
+                            {c.name.trim().charAt(0).toUpperCase()}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    <span className="mt-4 block font-display text-[1.625rem] leading-tight md:text-3xl">{c.name}</span>
+                    <span className="mt-1 inline-flex items-center gap-1.5 text-[0.875rem] text-ink/75">
+                      {T.home.verCategoria}
+                      <span aria-hidden="true" className="transition-transform duration-300 ease-izao motion-reduce:transform-none group-hover:translate-x-1">
+                        →
                       </span>
-                    )}
+                    </span>
                   </Link>
                 </Revelar>
               </li>
             ))}
           </ul>
-        </section>
+        </Plana>
       );
     }
 
     case 'families': {
       if (contenido.familias.length === 0) return null;
       return (
-        <section className={`${CONTENEDOR} pt-20`}>
-          <Encabezado n={n} titulo={titulo ?? T.home.queAromaQuieresHoy} />
-          <ul className="flex flex-wrap gap-3">
-            {contenido.familias.map((f) => (
+        <Banda tono="banda-suave">
+          <Encabezado kicker={kicker} titulo={titulo ?? T.home.queAromaQuieresHoy} bajada={bajada} />
+          <ul className="flex flex-wrap gap-3 md:gap-4">
+            {contenido.familias.map((f, k) => (
               <li key={f.slug}>
                 <Link
                   href={`/${pais}/familia/${f.slug}`}
-                  className="inline-flex min-h-12 items-center rounded-control border border-ink px-6 font-display text-xl transition-colors hover:bg-ink hover:text-bg"
+                  className={`tono-${k % 4} fondo-tono group elevar inline-flex min-h-14 items-center gap-3 rounded-full py-1.5 pl-1.5 pr-6 font-display text-[1.375rem]`}
                 >
+                  <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-full bg-bg/75">
+                    {f.image ? (
+                      <IzaoImage media={f.image} alt="" sizes="44px" proporcion={1} redondeo="none" className="h-full object-cover" />
+                    ) : (
+                      <Icono nombre={iconoFamilia(f.slug, k)} tamano={22} />
+                    )}
+                  </span>
                   {f.name}
                 </Link>
               </li>
             ))}
           </ul>
-        </section>
+        </Banda>
       );
     }
 
@@ -123,10 +195,10 @@ function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; conten
     case 'collection_tabs': {
       if (contenido.colecciones.length === 0) return null;
       return (
-        <section className={`${CONTENEDOR} pt-20`}>
-          <Encabezado n={n} titulo={titulo} />
+        <Plana>
+          <Encabezado kicker={titulo ? kicker : null} titulo={titulo ?? kicker} />
           <PestanasColecciones pais={pais} colecciones={contenido.colecciones} />
-        </section>
+        </Plana>
       );
     }
 
@@ -138,10 +210,15 @@ function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; conten
       const url = enlace(s.config['cta_url']);
       const imagen = contenido.espacios.find((e) => e.key === 'asesoria')?.media ?? null;
       return (
-        <section className={`${CONTENEDOR} pt-20`}>
-          <div className="grid items-center gap-8 rounded-panel bg-surface px-6 py-12 md:grid-cols-2 md:gap-16 md:px-14 md:py-14">
+        <Plana>
+          <div className="textura-calida grid items-center gap-8 rounded-panel bg-surface px-6 py-12 md:grid-cols-2 md:gap-16 md:px-14 md:py-14">
             <div className="flex flex-col items-start gap-5">
-              <span className="etiqueta text-ink/70 tabular-nums">{T.home.seccion(n)}</span>
+              {kicker ? (
+                <p className="etiqueta flex items-center gap-3 text-ink/70">
+                  <span aria-hidden="true" className="h-0.5 w-8 rounded-full bg-accent" />
+                  {kicker}
+                </p>
+              ) : null}
               <h2 className="text-4xl md:text-5xl">{t}</h2>
               {cuerpo ? <p className="max-w-prose text-lg">{cuerpo}</p> : null}
               {cta && url ? (
@@ -152,7 +229,7 @@ function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; conten
             </div>
             {imagen ? <IzaoImage media={imagen} alt="" sizes="(min-width:768px) 45vw, 100vw" proporcion={4 / 3} redondeo="card" /> : null}
           </div>
-        </section>
+        </Plana>
       );
     }
 
@@ -160,32 +237,39 @@ function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; conten
       const items = leerBeneficios(s.config);
       if (items.length === 0) return null;
       return (
-        <section className={`${CONTENEDOR} pt-20`}>
-          <Encabezado n={n} titulo={titulo} />
-          <ul className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <Banda tono="banda-acento">
+          <Encabezado kicker={kicker} titulo={titulo} />
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
             {items.map((b) => (
-              <li key={b.titulo} className="flex flex-col gap-3 border-t border-line pt-5">
-                <Icono nombre={b.icono} tamano={28} />
-                <p className="font-display text-2xl">{b.titulo}</p>
-                {b.texto ? <p className="text-[0.9375rem]">{b.texto}</p> : null}
+              <li key={b.titulo} className="sombra-tierna flex gap-4 rounded-card bg-bg/80 p-5 lg:flex-col lg:p-6">
+                <span className="grid size-12 shrink-0 place-items-center rounded-full bg-surface">
+                  <Icono nombre={b.icono} tamano={26} />
+                </span>
+                <div>
+                  <p className="font-display text-2xl leading-tight">{b.titulo}</p>
+                  {b.texto ? <p className="mt-1.5 text-[0.9375rem]">{b.texto}</p> : null}
+                </div>
               </li>
             ))}
           </ul>
-        </section>
+        </Banda>
       );
     }
 
     case 'reviews': {
       if (contenido.resenas.length === 0) return null;
       return (
-        <section className={`${CONTENEDOR} pt-20`}>
-          <Encabezado n={n} titulo={titulo ?? T.home.resenas} />
-          <ul className="sin-scroll-visible -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 sm:-mx-8 sm:px-8" tabIndex={0} aria-label={titulo ?? T.home.resenas}>
-            {contenido.resenas.map((r) => (
-              <li key={r.id} className="w-[80%] shrink-0 snap-start rounded-card border border-line p-6 sm:w-[26rem]">
+        <Plana>
+          <Encabezado kicker={kicker} titulo={titulo ?? T.home.resenas} />
+          <ul className="sin-scroll-visible -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-6 sm:-mx-8 sm:px-8" tabIndex={0} aria-label={titulo ?? T.home.resenas}>
+            {contenido.resenas.map((r, k) => (
+              <li key={r.id} className={`tono-${(k + 1) % 2 ? 0 : 1} fondo-tono sombra-tierna relative w-[82%] shrink-0 snap-start rounded-card p-6 sm:w-[26rem]`}>
+                <span aria-hidden="true" className="absolute right-5 top-1 font-display text-7xl leading-none text-ink/15">
+                  “
+                </span>
                 <p aria-label={T.home.calificacion(r.rating)} className="flex gap-0.5 pb-3">
-                  {Array.from({ length: 5 }, (_, k) => (
-                    <Icono key={k} nombre="estrella" tamano={16} className={k < r.rating ? 'fill-ink' : ''} />
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Icono key={i} nombre="estrella" tamano={16} className={i < r.rating ? 'fill-ink' : ''} />
                   ))}
                 </p>
                 {r.body ? <p className="font-display text-xl leading-snug">{r.body}</p> : null}
@@ -196,7 +280,7 @@ function Seccion({ s, contenido, pais, n, bannersMid }: { s: SeccionHome; conten
               </li>
             ))}
           </ul>
-        </section>
+        </Plana>
       );
     }
   }
@@ -210,19 +294,15 @@ export function HomeSecciones({ contenido, pais }: { contenido: ContenidoHome; p
   const hayHero = contenido.secciones.some((s) => s.type === 'hero');
   const hayMid = contenido.secciones.some((s) => s.type === 'banner');
   const indiceColecciones = contenido.secciones.findIndex((s) => s.type === 'collection_tabs');
-  let n = 0;
   return (
     <>
       {!hayHero && bannersHero.length > 0 ? <Hero banners={bannersHero} pais={pais} /> : null}
-      {contenido.secciones.map((s, k) => {
-        if (s.type !== 'hero') n += 1;
-        return (
-          <Fragment key={s.id}>
-            <Seccion s={s} contenido={contenido} pais={pais} n={n} bannersMid={bannersMid} />
-            {!hayMid && bannersMid.length > 0 && k === indiceColecciones ? <BannersMid banners={bannersMid} pais={pais} /> : null}
-          </Fragment>
-        );
-      })}
+      {contenido.secciones.map((s, k) => (
+        <Fragment key={s.id}>
+          <Seccion s={s} contenido={contenido} pais={pais} bannersMid={bannersMid} />
+          {!hayMid && bannersMid.length > 0 && k === indiceColecciones ? <BannersMid banners={bannersMid} pais={pais} /> : null}
+        </Fragment>
+      ))}
       {!hayMid && bannersMid.length > 0 && indiceColecciones < 0 ? <BannersMid banners={bannersMid} pais={pais} /> : null}
     </>
   );

@@ -260,11 +260,11 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
       {hrefSiguiente ? <link rel="next" href={hrefSiguiente} /> : null}
       {hrefAnterior ? <link rel="prev" href={hrefAnterior} /> : null}
 
-      <header className="border-b border-line pb-6">
+      <header className="textura-calida banda-suave mb-2 rounded-panel px-6 py-8 md:px-10 md:py-11">
         <h1 id={`${uid}-titulo`} className="text-4xl md:text-5xl">
           {titulo}
         </h1>
-        {descripcion ? <p className="mt-3 max-w-2xl text-ink/80">{descripcion}</p> : null}
+        {descripcion ? <p className="mt-3 max-w-2xl text-[1.0625rem] text-ink/80">{descripcion}</p> : null}
       </header>
 
       <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 border-b border-line py-2">

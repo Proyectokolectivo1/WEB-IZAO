@@ -88,8 +88,6 @@ export default async function FichaPerfume({ params }: Props) {
   ];
   const detalles = [ficha.concentration_name, ficha.family_name, ficha.gender_name].filter(Boolean) as string[];
 
-  let n = 0;
-  const siguiente = () => ++n;
 
   return (
     <article className={`${CONTENEDOR} pb-28 pt-6 lg:pb-24`} data-testid="ficha">
@@ -141,26 +139,26 @@ export default async function FichaPerfume({ params }: Props) {
       </div>
 
       {descripcion ? (
-        <Revelar como="section" className="pt-20">
-          <EncabezadoSeccion n={siguiente()} titulo={T.ficha.sobreAroma} />
+        <Revelar como="section" className="pt-16 md:pt-24">
+          <EncabezadoSeccion titulo={T.ficha.sobreAroma} />
           <div className="contenido-legal max-w-3xl text-lg" dangerouslySetInnerHTML={{ __html: descripcion }} />
         </Revelar>
       ) : null}
 
-      <Revelar como="section" className="pt-20">
-        <EncabezadoSeccion n={siguiente()} titulo={T.ficha.piramide} />
+      <Revelar como="section" className="pt-16 md:pt-24">
+        <EncabezadoSeccion titulo={T.ficha.piramide} />
         <PiramideOlfativa ficha={ficha} />
       </Revelar>
 
-      <Revelar como="section" className="pt-20">
+      <Revelar como="section" className="pt-16 md:pt-24">
         <div id="resenas" className="scroll-mt-24">
-          <EncabezadoSeccion n={siguiente()} titulo={T.ficha.resenas} />
+          <EncabezadoSeccion titulo={T.ficha.resenas} />
           <Resenas resenas={ficha.reviews} pais={pais} />
           <EscribirResena pais={pais} productoId={ficha.product_id} />
         </div>
       </Revelar>
 
-      <Relacionados pais={pais} productoId={ficha.product_id} numero={siguiente()} />
+      <Relacionados pais={pais} productoId={ficha.product_id} />
     </article>
   );
 }

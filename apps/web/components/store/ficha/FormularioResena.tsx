@@ -154,7 +154,7 @@ export default function FormularioResena({ pais, productoId, turnstileKey }: Pro
 
   if (listo) {
     return (
-      <div data-testid="resena-recibida" className="flex flex-col items-start gap-3 border-t border-ink pt-6">
+      <div data-testid="resena-recibida" className="flex flex-col items-start gap-3 border-t border-line pt-6">
         <Icono nombre="check" tamano={28} />
         <h3 ref={confirmacion} tabIndex={-1} className="text-3xl outline-none">
           {TR.listo.titulo}
@@ -168,7 +168,7 @@ export default function FormularioResena({ pais, productoId, turnstileKey }: Pro
   const campo = (c: CampoResena) => errores[c];
 
   return (
-    <form onSubmit={enviar} noValidate data-testid="formulario-resena" className="flex flex-col gap-8 border-t border-ink pt-6">
+    <form onSubmit={enviar} noValidate data-testid="formulario-resena" className="flex flex-col gap-8 border-t border-line pt-6">
       <div>
         <h3 className="text-3xl">{TR.titulo}</h3>
         <p className="pt-2 text-[0.9375rem] text-ink/80">{TR.intro}</p>

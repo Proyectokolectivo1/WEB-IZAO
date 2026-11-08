@@ -54,7 +54,7 @@ export default async function PaginaGarantias({ params }: Props) {
         {ajustes.instruccionesHtml || ajustes.condicionesHtml ? (
           <aside className="flex flex-col gap-8 order-first lg:order-last lg:sticky lg:top-28 lg:h-fit" aria-label={TG.condiciones}>
             {ajustes.instruccionesHtml ? (
-              <section aria-labelledby="titulo-instrucciones" className="border-t border-ink pt-5">
+              <section aria-labelledby="titulo-instrucciones" className="border-t border-line pt-5">
                 <h2 id="titulo-instrucciones" className="text-2xl">
                   {TG.instrucciones}
                 </h2>
@@ -62,7 +62,7 @@ export default async function PaginaGarantias({ params }: Props) {
               </section>
             ) : null}
             {ajustes.condicionesHtml ? (
-              <section aria-labelledby="titulo-condiciones" className="border-t border-ink pt-5">
+              <section aria-labelledby="titulo-condiciones" className="border-t border-line pt-5">
                 <h2 id="titulo-condiciones" className="text-2xl">
                   {TG.condiciones}
                 </h2>

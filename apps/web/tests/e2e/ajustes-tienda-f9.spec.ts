@@ -57,7 +57,7 @@ test.describe('Inicio a 375 px (F9, sección vacía sobre las categorías)', () 
 
   test('la sección de categorías tiene título y tarjetas con nombre', async ({ page }) => {
     await page.goto(RUTAS.home('co'));
-    const titulo = page.getByRole('heading', { level: 2, name: 'Elige tu categoría' });
+    const titulo = page.getByRole('heading', { level: 2, name: 'Empieza por lo que te provoca' });
     await titulo.scrollIntoViewIfNeeded();
     await expect(titulo).toBeVisible();
     const lista = page.locator('section', { has: titulo }).locator('ul a');

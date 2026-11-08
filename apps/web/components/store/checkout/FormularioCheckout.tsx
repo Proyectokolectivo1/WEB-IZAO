@@ -433,7 +433,7 @@ export function FormularioCheckout({ config, esqueleto }: { config: ConfigChecko
         ) : null}
 
         {/* 01 · Contacto */}
-        <section aria-labelledby="paso-contacto" className="border-t border-ink pt-5">
+        <section aria-labelledby="paso-contacto" className="border-t border-line pt-5">
           <h2 id="paso-contacto" className="flex items-baseline gap-4 text-3xl">
             <NumeroPaso n="01" />
             {TC.checkout.pasos.contacto}
@@ -493,7 +493,7 @@ export function FormularioCheckout({ config, esqueleto }: { config: ConfigChecko
         </section>
 
         {/* 02 · Documento */}
-        <section aria-labelledby="paso-documento" className="border-t border-ink pt-5">
+        <section aria-labelledby="paso-documento" className="border-t border-line pt-5">
           <h2 id="paso-documento" className="flex items-baseline gap-4 text-3xl">
             <NumeroPaso n="02" />
             {TC.checkout.pasos.documento}
@@ -531,7 +531,7 @@ export function FormularioCheckout({ config, esqueleto }: { config: ConfigChecko
         </section>
 
         {/* 03 · Entrega */}
-        <section aria-labelledby="paso-entrega" className="border-t border-ink pt-5">
+        <section aria-labelledby="paso-entrega" className="border-t border-line pt-5">
           <h2 id="paso-entrega" className="flex items-baseline gap-4 text-3xl">
             <NumeroPaso n="03" />
             {TC.checkout.pasos.entrega}
@@ -636,7 +636,7 @@ export function FormularioCheckout({ config, esqueleto }: { config: ConfigChecko
         </section>
 
         {/* 04 · Pago */}
-        <section aria-labelledby="paso-pago" className="border-t border-ink pt-5">
+        <section aria-labelledby="paso-pago" className="border-t border-line pt-5">
           <h2 id="paso-pago" className="flex items-baseline gap-4 text-3xl">
             <NumeroPaso n="04" />
             {TC.checkout.pasos.pago}
@@ -654,7 +654,7 @@ export function FormularioCheckout({ config, esqueleto }: { config: ConfigChecko
         </section>
 
         {/* 05 · Confirmar */}
-        <section aria-labelledby="paso-confirmar" className="border-t border-ink pt-5">
+        <section aria-labelledby="paso-confirmar" className="border-t border-line pt-5">
           <h2 id="paso-confirmar" className="flex items-baseline gap-4 text-3xl">
             <NumeroPaso n="05" />
             {TC.checkout.pasos.confirmar}

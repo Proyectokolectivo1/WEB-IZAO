@@ -9,7 +9,7 @@ const BASE =
 
 const VARIANTES: Record<VarianteBoton, string> = {
   primario: 'bg-ink text-bg hover:bg-ink-hover border border-ink',
-  secundario: 'border border-ink bg-transparent text-ink hover:bg-surface',
+  secundario: 'border border-ink/25 bg-surface/60 text-ink hover:border-ink hover:bg-ink hover:text-bg',
   texto: 'border border-transparent bg-transparent text-ink underline underline-offset-4 hover:bg-surface',
 };
 

@@ -1,13 +1,11 @@
-import { T } from '@/lib/store/textos';
-
-/** Encabezado numerado de las secciones de la ficha: filete de 1 px, número en versalitas y título editorial. */
-export function EncabezadoSeccion({ n, titulo, id }: { n: number; titulo: string; id?: string }) {
+/** Encabezado de las secciones de la ficha: título editorial con una pincelada de color debajo; sin números ni filetes. */
+export function EncabezadoSeccion({ titulo, id }: { titulo: string; id?: string }) {
   return (
-    <div className="mb-8 flex items-baseline gap-4 border-t border-ink pt-4">
-      <span className="etiqueta tabular-nums text-ink/70">{T.home.seccion(n)}</span>
-      <h2 id={id} className="text-3xl md:text-5xl">
+    <div className="mb-8">
+      <h2 id={id} className="text-[2rem] leading-[1.05] md:text-5xl">
         {titulo}
       </h2>
+      <span aria-hidden="true" className="mt-4 block h-0.5 w-12 rounded-full bg-accent" />
     </div>
   );
 }

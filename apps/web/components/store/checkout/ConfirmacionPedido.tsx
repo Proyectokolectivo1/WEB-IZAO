@@ -86,7 +86,7 @@ export function ConfirmacionPedido({ pedido, whatsappAsesor, valorEnvio }: Props
           </Link>
         </div>
 
-        <section aria-labelledby="linea-tiempo" className="mt-14 border-t border-ink pt-5">
+        <section aria-labelledby="linea-tiempo" className="mt-14 border-t border-line pt-5">
           <h2 id="linea-tiempo" className="text-3xl">
             {TC.pedido.lineaTiempo}
           </h2>

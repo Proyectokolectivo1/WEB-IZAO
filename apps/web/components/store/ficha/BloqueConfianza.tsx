@@ -16,14 +16,16 @@ export interface Beneficio {
 export function BloqueConfianza({ beneficios, medios }: { beneficios: Beneficio[]; medios: EspacioContenido | null }) {
   if (beneficios.length === 0 && !medios?.media) return null;
   return (
-    <section aria-labelledby="confianza-titulo" data-testid="confianza" className="border-t border-line pt-5">
-      <h2 id="confianza-titulo" className="etiqueta pb-4 !font-body text-[0.8125rem] text-ink/70">
+    <section aria-labelledby="confianza-titulo" data-testid="confianza" className="rounded-card bg-surface/50 p-5 sm:p-6">
+      <h2 id="confianza-titulo" className="pb-4 text-[1.375rem] leading-tight">
         {T.confianza.titulo}
       </h2>
       <ul className="grid gap-4 sm:grid-cols-2">
         {beneficios.map((b) => (
           <li key={b.titulo} className="flex items-start gap-3">
-            <Icono nombre={b.icono} tamano={24} className="mt-0.5 shrink-0" />
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-bg/80">
+              <Icono nombre={b.icono} tamano={22} />
+            </span>
             <div>
               <p className="text-[0.9375rem] font-semibold">{b.titulo}</p>
               {b.texto ? <p className="text-[0.875rem]">{b.texto}</p> : null}

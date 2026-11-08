@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useRef, useState } from 'react';
-import { IzaoImage } from '@izao/ui';
+import { Icono, IzaoImage } from '@izao/ui';
 import { T } from '@/lib/store/textos';
 import type { MediaRef } from '@/lib/store/types';
 
@@ -95,7 +95,10 @@ export function Galeria({ imagenes, nombre }: Props) {
             />
           </div>
           {actual ? null : (
-            <span className="absolute inset-0 flex items-center justify-center font-display text-2xl text-ink/70">{T.ficha.sinFoto}</span>
+            <span className="textura-calida absolute inset-0 flex flex-col items-center justify-center gap-3 font-display text-2xl text-ink/70">
+              <Icono nombre="gota" tamano={40} className="text-ink/30" />
+              {T.ficha.sinFoto}
+            </span>
           )}
         </button>
 
