@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { tienda } from '@/lib/store/datos';
 import { esPais } from '@/lib/store/pais';
+import { CACHE_CATALOGO, jsonCacheable } from '@/lib/store/http-cache';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
   if (!esPais(pais) || !UUID.test(id)) return NextResponse.json({ error: 'parametros' }, { status: 400 });
   try {
     const items = await tienda().relacionados(pais, id, limite);
-    return NextResponse.json({ items }, { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } });
+    return jsonCacheable(req, { items }, CACHE_CATALOGO.ficha);
   } catch {
     return NextResponse.json({ error: 'no-disponible' }, { status: 503 });
   }

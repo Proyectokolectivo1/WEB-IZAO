@@ -9,8 +9,9 @@ import { Icono } from '../iconos/Icono';
  * - `derecha` / `izquierda`: drawer lateral (carrito, menú).
  * - `abajo`: hoja inferior (filtros en móvil).
  * - `responsivo`: hoja inferior en móvil y modal centrado desde 768 px (vista rápida).
+ * - `centrado`: igual que `responsivo`, pero el modal es angosto (elección de sede).
  */
-export type LadoSheet = 'derecha' | 'izquierda' | 'abajo' | 'responsivo';
+export type LadoSheet = 'derecha' | 'izquierda' | 'abajo' | 'responsivo' | 'centrado';
 
 interface Props {
   abierto: boolean;
@@ -26,6 +27,16 @@ interface Props {
   className?: string;
   /** `data-testid` del diálogo (pruebas e2e). */
   testId?: string;
+  /** `false`: no se puede cerrar con `Esc`, clic fuera ni botón (p. ej. elegir sede en la primera visita). El foco sigue atrapado. */
+  cerrable?: boolean;
+  /** `false`: sin barra de título; el título sigue siendo el nombre del diálogo (`claseTitulo` lo deja visible o no). */
+  cabecera?: boolean;
+  /** Clases del título cuando no hay cabecera (por defecto, solo para lectores de pantalla). */
+  claseTitulo?: string;
+  /** `panel`: el foco inicial va al diálogo (el lector lee nombre y descripción antes de la primera opción). */
+  focoInicial?: 'primero' | 'panel';
+  /** `id` del texto que describe el diálogo. */
+  describedBy?: string;
 }
 
 const FOCOS =
@@ -41,6 +52,8 @@ const POSICION: Record<LadoSheet, string> = {
   abajo: 'inset-x-0 bottom-0 max-h-[88dvh] rounded-t-panel',
   responsivo:
     'inset-x-0 bottom-0 max-h-[92dvh] rounded-t-panel md:inset-auto md:left-1/2 md:top-1/2 md:w-[min(92vw,62rem)] md:max-h-[90dvh] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-panel',
+  centrado:
+    'inset-x-0 bottom-0 max-h-[94dvh] rounded-t-panel md:inset-auto md:left-1/2 md:top-1/2 md:w-[min(92vw,46rem)] md:max-h-[90dvh] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-panel',
 };
 
 /** Diálogo modal accesible: portal, foco atrapado, `Esc`, bloqueo de scroll y retorno del foco. */
@@ -55,6 +68,11 @@ export function Sheet({
   pie,
   className = '',
   testId,
+  cerrable = true,
+  cabecera = true,
+  claseTitulo,
+  focoInicial = 'primero',
+  describedBy,
 }: Props) {
   const [montado, setMontado] = useState(abierto);
   const panel = useRef<HTMLDivElement>(null);
@@ -64,7 +82,7 @@ export function Sheet({
   const cerrando = useRef(false);
 
   const direccion = useCallback((): 'derecha' | 'izquierda' | 'abajo' | 'centro' => {
-    if (lado !== 'responsivo') return lado;
+    if (lado !== 'responsivo' && lado !== 'centrado') return lado;
     return window.matchMedia('(min-width: 768px)').matches ? 'centro' : 'abajo';
   }, [lado]);
 
@@ -100,7 +118,7 @@ export function Sheet({
     if (anchoBarra > 0) document.body.style.paddingRight = `${anchoBarra}px`;
     const frame = requestAnimationFrame(() => {
       const [primero] = enfocables(p);
-      (primero ?? p).focus();
+      (focoInicial === 'panel' ? p : (primero ?? p)).focus();
     });
     return () => {
       cancelAnimationFrame(frame);
@@ -108,12 +126,12 @@ export function Sheet({
       document.body.style.paddingRight = paddingRight;
       previo.current?.focus?.();
     };
-  }, [abierto, montado, direccion]);
+  }, [abierto, montado, direccion, focoInicial]);
 
   const alTeclear = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Escape') {
       e.stopPropagation();
-      onCerrar();
+      if (cerrable) onCerrar();
       return;
     }
     if (e.key !== 'Tab' || !panel.current) return;
@@ -137,29 +155,50 @@ export function Sheet({
 
   return createPortal(
     <div className="fixed inset-0 z-50" onKeyDown={alTeclear}>
-      <div ref={velo} className="absolute inset-0 bg-ink/45" onClick={onCerrar} aria-hidden="true" />
+      <div ref={velo} className="absolute inset-0 bg-ink/45" onClick={cerrable ? onCerrar : undefined} aria-hidden="true" />
       <div
         ref={panel}
         role="dialog"
         data-testid={testId}
         aria-modal="true"
         aria-labelledby={idTitulo}
+        aria-describedby={describedBy}
         tabIndex={-1}
         className={`absolute flex flex-col bg-bg text-ink shadow-elev outline-none ${POSICION[lado]} ${className}`}
       >
-        <div className="flex items-center justify-between border-b border-line px-5">
-          <h2 id={idTitulo} className={mostrarTitulo ? 'py-4 text-2xl' : 'solo-lectores'}>
-            {titulo}
-          </h2>
-          <button
-            type="button"
-            onClick={onCerrar}
-            aria-label={etiquetaCerrar}
-            className="-mr-3 inline-flex size-11 items-center justify-center rounded-control hover:bg-surface"
-          >
-            <Icono nombre="cerrar" />
-          </button>
-        </div>
+        {cabecera ? (
+          <div className="flex items-center justify-between border-b border-line px-5">
+            <h2 id={idTitulo} className={mostrarTitulo ? 'py-4 text-2xl' : 'solo-lectores'}>
+              {titulo}
+            </h2>
+            {cerrable ? (
+              <button
+                type="button"
+                onClick={onCerrar}
+                aria-label={etiquetaCerrar}
+                className="-mr-3 inline-flex size-11 items-center justify-center rounded-control hover:bg-surface"
+              >
+                <Icono nombre="cerrar" />
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <>
+            <h2 id={idTitulo} className={claseTitulo ?? 'solo-lectores'}>
+              {titulo}
+            </h2>
+            {cerrable ? (
+              <button
+                type="button"
+                onClick={onCerrar}
+                aria-label={etiquetaCerrar}
+                className="absolute right-2 top-2 z-10 inline-flex size-11 items-center justify-center rounded-control hover:bg-surface"
+              >
+                <Icono nombre="cerrar" />
+              </button>
+            ) : null}
+          </>
+        )}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
         {pie ? <div className="border-t border-line bg-bg px-5 py-4">{pie}</div> : null}
       </div>

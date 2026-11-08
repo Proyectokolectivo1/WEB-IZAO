@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { Icono, Sheet } from '@izao/ui';
+import { BotonSede } from '@/components/store/sede/BotonSede';
 import { T } from '@/lib/store/textos';
 import type { CategoriaMenu, CodigoPais } from '@/lib/store/types';
 
 /** Menú móvil: panel lateral con categorías y subcategorías plegables. */
-export function MenuMovil({ pais, categorias }: { pais: CodigoPais; categorias: CategoriaMenu[] }) {
+export function MenuMovil({ pais, categorias, etiquetaSede }: { pais: CodigoPais; categorias: CategoriaMenu[]; etiquetaSede: string }) {
   const [abierto, setAbierto] = useState(false);
   const [desplegada, setDesplegada] = useState<string | null>(null);
   const cerrar = () => setAbierto(false);
@@ -71,6 +72,9 @@ export function MenuMovil({ pais, categorias }: { pais: CodigoPais; categorias: 
             ))}
           </ul>
         </nav>
+        <div className="px-3 py-4">
+          <BotonSede pais={pais} etiqueta={etiquetaSede} texto={T.paises[pais]} antes={cerrar} />
+        </div>
       </Sheet>
     </>
   );

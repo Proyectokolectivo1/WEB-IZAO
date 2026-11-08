@@ -44,6 +44,9 @@ export default defineConfig({
   ],
   use: {
     baseURL: URL_WEB,
+    // País ya elegido: la ventana de sede (primera visita) no tapa las demás pruebas. Su prueba (`sede-modal.spec.ts`)
+    // parte de un contexto vacío con `test.use({ storageState: { cookies: [], origins: [] } })`.
+    storageState: { cookies: [{ name: 'country', value: 'co', domain: new URL(URL_WEB).hostname, path: '/', expires: -1, httpOnly: false, secure: false, sameSite: 'Lax' }], origins: [] },
     locale: 'es-CO',
     timezoneId: 'America/Bogota',
     trace: 'retain-on-failure',

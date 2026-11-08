@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { tienda } from '@/lib/store/datos';
 import { TAMANO_LOTE, codificarCursor, decodificarCursor, parsearEstado } from '@/lib/store/filtros';
 import { esPais } from '@/lib/store/pais';
+import { CACHE_CATALOGO, jsonCacheable } from '@/lib/store/http-cache';
 
 /**
  * `GET /api/catalog?country=co&cursor=…&orden=…&marca=…` (§7.1). Paginación keyset: el cursor es opaco (base64url).
@@ -28,7 +29,8 @@ export async function GET(req: NextRequest) {
       limite: soloTotal ? 1 : TAMANO_LOTE,
       conTotal: !cursor,
     });
-    return NextResponse.json(
+    return jsonCacheable(
+      req,
       {
         items: soloTotal ? [] : pagina.items,
         nextCursor: soloTotal ? null : codificarCursor(pagina.next_cursor),
@@ -36,7 +38,7 @@ export async function GET(req: NextRequest) {
         precioMin: pagina.precio_min,
         precioMax: pagina.precio_max,
       },
-      { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' } },
+      CACHE_CATALOGO.listado,
     );
   } catch {
     return NextResponse.json({ error: 'no-disponible' }, { status: 503 });

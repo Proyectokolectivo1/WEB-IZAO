@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { tienda } from '@/lib/store/datos';
 import { esPais } from '@/lib/store/pais';
+import { CACHE_CATALOGO, jsonCacheable } from '@/lib/store/http-cache';
 
 /** `GET /api/catalog/suggest?country=co&q=…` — sugerencias en vivo (§7.3). */
 export async function GET(req: NextRequest) {
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
   if (!esPais(pais) || q.length < 2) return NextResponse.json({ error: 'parametros' }, { status: 400 });
   try {
     const datos = await tienda().sugerencias(pais, q, 6);
-    return NextResponse.json(datos, { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' } });
+    return jsonCacheable(req, datos, CACHE_CATALOGO.listado);
   } catch {
     return NextResponse.json({ error: 'no-disponible' }, { status: 503 });
   }

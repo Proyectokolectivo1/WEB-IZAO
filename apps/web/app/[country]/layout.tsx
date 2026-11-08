@@ -6,10 +6,12 @@ import { Footer } from '@/components/store/footer/Footer';
 import { LimiteError } from '@/components/store/LimiteError';
 import { Header } from '@/components/store/header/Header';
 import { LanzadorIza } from '@/components/store/iza/LanzadorIza';
+import { SelectorSede } from '@/components/store/sede/SelectorSede';
 import { NavegacionPendiente } from '@/components/store/skeletons/NavegacionPendiente';
 import { chatHabilitado } from '@/lib/store/chat/fuente-supabase';
 import { tienda } from '@/lib/store/datos';
 import { esPais } from '@/lib/store/pais';
+import { opcionesSede } from '@/lib/store/sede-opciones';
 import { alternos } from '@/lib/store/seo';
 import { textosSeo } from '@/lib/store/seo-textos';
 import { textosEnvio } from '@/lib/store/envio';
@@ -37,7 +39,8 @@ export default async function LayoutPais({ children, params }: { children: React
   if (!esPais(pais)) notFound();
 
   const repo = tienda();
-  const [ajustes, anuncios, menu, populares, paginas, espacios, override, iza] = await Promise.all([
+  const otro = pais === 'co' ? 'ec' : 'co';
+  const [ajustes, anuncios, menu, populares, paginas, espacios, override, iza, espaciosOtro] = await Promise.all([
     repo.ajustes(pais),
     repo.anuncios(pais),
     repo.menu(pais),
@@ -46,7 +49,10 @@ export default async function LayoutPais({ children, params }: { children: React
     repo.espacios(pais),
     temaDePais(pais),
     chatHabilitado(),
+    // Líneas de envío y de pago del otro país para la ventana de sede; si falla, las del seed.
+    repo.espacios(otro).catch(() => []),
   ]);
+  const sede = opcionesSede(pais === 'co' ? { co: espacios, ec: espaciosOtro } : { co: espaciosOtro, ec: espacios });
 
   // Nota y valor del envío editables en el panel (espacios `nota_envio` y `valor_envio`); sin ellos, los del seed.
   const envio = textosEnvio(espacios);
@@ -66,6 +72,7 @@ export default async function LayoutPais({ children, params }: { children: React
         </Suspense>
         <Footer pais={pais} ajustes={ajustes} paginas={paginas} espacios={espacios} />
         {iza ? <LanzadorIza pais={pais} /> : null}
+        <SelectorSede pais={pais} opciones={sede} />
       </CarritoProvider>
       {/* Los diálogos se montan aquí para heredar el tema del país. */}
       <div id="izao-portal" />

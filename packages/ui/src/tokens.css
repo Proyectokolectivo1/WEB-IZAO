@@ -209,6 +209,20 @@
     box-shadow: 0 16px 18px -12px color-mix(in srgb, var(--color-ink) 34%, transparent);
   }
 
+  /* Banderas dibujadas a mano en SVG (elección de sede): sus colores son los de cada país, no los de la marca. */
+  .bandera {
+    --bandera-amarillo: #fcd116;
+    --bandera-azul: #003893;
+    --bandera-rojo: #ce1126;
+    --bandera-verde: #4c8f3a;
+    --bandera-tierra: #8e6a3d;
+  }
+  .bandera .b-amarillo { fill: var(--bandera-amarillo); }
+  .bandera .b-azul { fill: var(--bandera-azul); }
+  .bandera .b-rojo { fill: var(--bandera-rojo); }
+  .bandera .b-verde { fill: var(--bandera-verde); }
+  .bandera .b-tierra { fill: var(--bandera-tierra); }
+
   /* Elevación al pasar el cursor: solo `transform`; con movimiento reducido no se mueve. */
   .elevar {
     transition:

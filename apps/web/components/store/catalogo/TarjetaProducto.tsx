@@ -18,8 +18,10 @@ interface Props {
   pais: CodigoPais;
   /** Nombre de la concentración (del filtro), p. ej. «Eau de parfum». */
   concentracion?: string | null;
-  /** Primeras tarjetas de la página: cargan ansiosas (LCP). */
+  /** La primera tarjeta de la página (posible LCP): `fetchpriority=high`. */
   prioritaria?: boolean;
+  /** Las siguientes del primer viewport: cargan sin esperar, con prioridad normal. */
+  ansiosa?: boolean;
   /** Nivel del nombre: `h2` en listados (bajo el `h1` de la página), `h3` dentro de una sección con su propio `h2`. */
   nivelTitulo?: 'h2' | 'h3';
 }
@@ -31,7 +33,7 @@ const TAMANOS = '(min-width:1536px) 18vw, (min-width:1024px) 23vw, (min-width:76
  * `memo`: la grilla puede tener cientos de tarjetas y no deben repintarse cuando cambia el bolso, otro deseo o el estado del
  * listado (cargando, scroll). Solo se actualiza la tarjeta cuyo producto cambió.
  */
-export const TarjetaProducto = memo(function TarjetaProducto({ item, pais, concentracion, prioritaria = false, nivelTitulo = 'h3' }: Props) {
+export const TarjetaProducto = memo(function TarjetaProducto({ item, pais, concentracion, prioritaria = false, ansiosa = false, nivelTitulo = 'h3' }: Props) {
   const Titulo = nivelTitulo;
   const { agregar, alternarDeseo } = useCarritoAcciones();
   const guardado = useDeseo(item.product_id);
@@ -101,6 +103,7 @@ export const TarjetaProducto = memo(function TarjetaProducto({ item, pais, conce
               alt={item.img_primary?.alt ?? item.name}
               sizes={TAMANOS}
               prioritaria={prioritaria}
+              ansiosa={ansiosa}
               className="h-full object-cover"
               data-testid="tarjeta-imagen-principal"
             />
@@ -126,6 +129,7 @@ export const TarjetaProducto = memo(function TarjetaProducto({ item, pais, conce
                 alt={item.img_primary?.alt ?? item.name}
                 sizes={TAMANOS}
                 prioritaria={prioritaria}
+                ansiosa={ansiosa}
                 className="h-full object-cover"
               />
             </div>

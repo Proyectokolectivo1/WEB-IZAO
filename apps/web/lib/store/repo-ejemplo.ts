@@ -445,7 +445,9 @@ export const repoEjemplo: TiendaRepo = {
       categorias: categoriasEjemplo(),
     };
   },
-  async paginaLegal(_pais, slug) {
+  async paginaLegal(pais, slug) {
+    // Página que solo existe en Colombia (no sale en el pie): sirve para probar el aviso «en preparación» de Ecuador.
+    if (slug === 'solo-colombia') return pais === 'co' ? { ...PAGINAS_EJEMPLO[0]!, slug, title: 'Solo para Colombia' } : null;
     return PAGINAS_EJEMPLO.find((x) => x.slug === slug) ?? null;
   },
   async paginaPorTipo(_pais, kind) {

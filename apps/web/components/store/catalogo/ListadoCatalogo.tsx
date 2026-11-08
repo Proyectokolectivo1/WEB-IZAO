@@ -345,7 +345,8 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
                   key={item.product_id}
                   item={item}
                   pais={pais}
-                  prioritaria={i < 4}
+                  prioritaria={i === 0}
+                  ansiosa={i > 0 && i < 4}
                   nivelTitulo="h2"
                   concentracion={item.concentration_slug ? nombreDe(opciones.concentraciones, item.concentration_slug) : null}
                 />

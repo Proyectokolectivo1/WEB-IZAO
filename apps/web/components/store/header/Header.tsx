@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { rutasDeMedio } from '@izao/ui';
 import { T } from '@/lib/store/textos';
+import { TP } from '@/lib/store/textos-pais';
 import type { AjustesTienda, Anuncio, CategoriaMenu, CodigoPais } from '@/lib/store/types';
 import { AnuncioBarra } from './AnuncioBarra';
 import { BarraSuperior } from './BarraSuperior';
 import { BotonBolso } from './BotonBolso';
+import { BotonSede } from '@/components/store/sede/BotonSede';
 import { Buscador } from './Buscador';
 import { MenuEscritorio } from './MenuEscritorio';
 import { MenuMovil } from './MenuMovil';
@@ -19,6 +21,7 @@ interface Props {
 
 export function Header({ pais, ajustes, anuncios, categorias, populares }: Props) {
   const logo = rutasDeMedio(ajustes.logo);
+  const etiquetaSede = TP.sede.cambiar(T.paises[pais]);
   return (
     <header>
       <a
@@ -32,7 +35,7 @@ export function Header({ pais, ajustes, anuncios, categorias, populares }: Props
         <div className="relative border-b border-line">
           <div className="mx-auto grid h-16 max-w-[96rem] grid-cols-[1fr_auto_1fr] items-center gap-2 px-2 sm:px-4 lg:h-20 lg:grid-cols-[auto_1fr_auto] lg:gap-8 lg:px-8">
             <div className="flex items-center lg:hidden">
-              <MenuMovil pais={pais} categorias={categorias} />
+              <MenuMovil pais={pais} categorias={categorias} etiquetaSede={etiquetaSede} />
             </div>
             <Link href={`/${pais}`} aria-label={`${ajustes.nombreTienda}. ${T.marca.irInicio}`} className="inline-flex min-h-11 items-center justify-self-center lg:justify-self-start">
               {logo ? (
@@ -44,7 +47,6 @@ export function Header({ pais, ajustes, anuncios, categorias, populares }: Props
                   width={ajustes.logo?.width ?? 160}
                   height={ajustes.logo?.height ?? 40}
                   className="h-8 w-auto lg:h-10"
-                  fetchPriority="high"
                 />
               ) : (
                 <span className="font-display text-[1.625rem] leading-none lg:text-3xl">{ajustes.nombreTienda}</span>
@@ -54,6 +56,7 @@ export function Header({ pais, ajustes, anuncios, categorias, populares }: Props
               <MenuEscritorio pais={pais} categorias={categorias} />
             </div>
             <div className="flex items-center justify-end gap-1">
+              <BotonSede pais={pais} etiqueta={etiquetaSede} className="hidden lg:inline-flex" />
               <Buscador pais={pais} populares={populares} />
               <BotonBolso />
             </div>

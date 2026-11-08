@@ -16,8 +16,10 @@ interface Props extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'srcSe
   sizes: string;
   /** Proporción ancho/alto cuando el medio no trae dimensiones, p. ej. 4/5. */
   proporcion?: number;
-  /** Solo para la imagen LCP: carga ansiosa y prioridad alta. */
+  /** Solo para la imagen LCP (una por pantalla): carga ansiosa y `fetchpriority=high`. */
   prioritaria?: boolean;
+  /** Imágenes visibles en el primer viewport que no son la LCP: carga sin esperar, sin pedir prioridad alta. */
+  ansiosa?: boolean;
   raiz?: string;
   /** Radio de las esquinas (tokens): `card` por defecto, `control` para miniaturas pequeñas, `none` si el contenedor ya recorta. */
   redondeo?: 'card' | 'control' | 'none';
@@ -49,6 +51,7 @@ export function IzaoImage({
   sizes,
   proporcion = 4 / 5,
   prioritaria = false,
+  ansiosa = false,
   raiz,
   redondeo = 'card',
   className = '',
@@ -81,7 +84,7 @@ export function IzaoImage({
       alt={alt}
       width={media?.width ?? Math.round(rutas.ancho)}
       height={media?.height ?? Math.round(rutas.ancho / ratio)}
-      loading={prioritaria ? 'eager' : 'lazy'}
+      loading={prioritaria || ansiosa ? 'eager' : 'lazy'}
       fetchPriority={prioritaria ? 'high' : undefined}
       decoding={prioritaria ? 'sync' : 'async'}
       className={`block w-full ${radio} ${className}`}

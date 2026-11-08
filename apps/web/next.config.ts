@@ -15,6 +15,16 @@ const config: NextConfig = {
   htmlLimitedBots: /.*/,
   // Paquetes del workspace que se publican como TypeScript.
   transpilePackages: ['@izao/ui', '@izao/core', '@izao/wompi', '@izao/whatsapp', '@izao/addi'],
+  // Archivos de `public/` (sin hash en el nombre): se sirven de caché y se revalidan en segundo plano. Las imágenes del
+  // catálogo (`/media/{tipo}/{año}/{mes}/{uuid}-{ancho}.webp`) las sirve Nginx con `immutable`; los estáticos con hash de
+  // `/_next/static` ya salen `immutable` de Next.
+  async headers() {
+    const revalidar = [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }];
+    return [
+      { source: '/icono-defecto.svg', headers: revalidar },
+      { source: '/media/ejemplo/:path*', headers: revalidar },
+    ];
+  },
   // El lint corre aparte con `pnpm lint`.
   eslint: { ignoreDuringBuilds: true },
 };
