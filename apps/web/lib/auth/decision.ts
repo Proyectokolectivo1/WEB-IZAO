@@ -7,6 +7,12 @@
 import { esRol, puedeVerRuta, type Rol } from './permissions';
 
 export const RUTA_LOGIN = '/admin/login';
+/**
+ * Destino tras el cierre VOLUNTARIO de sesión: la home pública. Es relativa (sin host) para que funcione
+ * detrás de Nginx; la raíz resuelve el país por cookie o geolocalización, así que no se fija /co ni /ec.
+ * La sesión expirada o sin acceso sigue yendo al login con su aviso.
+ */
+export const RUTA_TRAS_CIERRE = '/';
 export const RUTA_MFA_INSCRIBIR = '/admin/mfa/inscribir';
 export const RUTA_MFA_VERIFICAR = '/admin/mfa/verificar';
 export const RUTA_INICIO = '/admin';

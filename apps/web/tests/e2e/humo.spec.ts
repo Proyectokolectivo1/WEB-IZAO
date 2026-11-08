@@ -74,4 +74,13 @@ test.describe('humo', () => {
     expect([301, 302, 303, 307, 308, 401, 403, 404]).toContain(r.status());
     expect(await r.text()).not.toMatch(/"data"|"items"/);
   });
+
+  test('el destino del cierre voluntario de sesión (/) es la home pública y resuelve el país con ruta relativa', async ({ request }) => {
+    const r = await request.get('/', { maxRedirects: 0 });
+    expect([302, 307, 308]).toContain(r.status());
+    const ubicacion = r.headers()['location'] ?? '';
+    // Relativa o del mismo host (nunca el host interno de Nginx) y nunca el login del panel.
+    expect(ubicacion).toMatch(/^(\/|https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/)(co|ec)(\/|$|\?)/);
+    expect(ubicacion).not.toContain('/admin');
+  });
 });

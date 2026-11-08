@@ -25,7 +25,8 @@ describe('ningún código del panel llama a signOut() sin alcance', () => {
     const hallazgos: string[] = [];
     const recorrer = (dir: string) => {
       for (const nombre of readdirSync(dir)) {
-        if (['node_modules', '.next', 'test'].includes(nombre)) continue;
+        // `.next*` incluye los builds por variante (.next-ejemplo, .next-tienda…), que pesan miles de archivos y vencían la prueba.
+        if (['node_modules', 'test'].includes(nombre) || nombre.startsWith('.next')) continue;
         const ruta = path.join(dir, nombre);
         if (statSync(ruta).isDirectory()) recorrer(ruta);
         else if (/\.(ts|tsx)$/.test(nombre) && !/\.test\.ts$/.test(nombre) && nombre !== 'cerrar-sesion.ts') {
