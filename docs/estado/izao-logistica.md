@@ -5,7 +5,7 @@
 - Prueba real 3084317 (Coordinadora, autoconfirmada a 3, cancelada a mano). Etiqueta 403 → `User-Agent` (D-044).
 - `ef2ae16` Vinculación por SKU (D-050): `products.ts` (emparejar, `sqlVinculacion`), cliente `listAllProducts`/`getProduct`, *mock* de productos, CLI de vista previa `jobs/sync/vinculacion-productos.cli.ts` (solo lectura). Real: 2 productos MS vs 1030 variantes del *seed* → 0 emparejan.
 - `46e1fd9`+`a4968ab` D-051: respaldo de etiqueta por el agente cuando el CDN bloquea la IP del VPS (403): `print_job` igual, `label_url` en `claim` (contrato 1.1), `urlEtiquetaSegura` anti-SSRF; polling encola sync si hay `label_url` sin copia local.
-- D-052 MasterShop por país (EC con llave propia, USD): credencial CO+EC, jobs con la llave del país del pedido, polling/billetera por país, webhooks por país, mock con moneda. Hash: ver `git log -1 -- docs/estado/izao-logistica.md`.
+- D-052 MasterShop por país (EC con llave propia, USD): credencial CO+EC, jobs con la llave del país del pedido, polling/billetera por país, webhooks por país, mock con moneda. `652a2cc`.
 
 ## Para izao-infra
 - Redesplegar el worker: el contenedor actual **no** tiene D-043 ni el arreglo del 403 (D-044); revisar también D-042.
