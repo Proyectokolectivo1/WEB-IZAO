@@ -93,9 +93,13 @@ export function Footer({ pais, ajustes, paginas, espacios }: Props) {
 
       <div className="border-t border-bg/20">
         <div className="mx-auto flex max-w-[96rem] flex-col gap-4 px-4 py-6 text-[0.8125rem] sm:px-8 md:flex-row md:items-center md:justify-between">
-          <p>
-            {T.footer.derechos(new Date().getFullYear(), razon ?? ajustes.nombreTienda)}
-          </p>
+          <div className="flex flex-wrap items-center gap-x-6">
+            <p>{T.footer.derechos(new Date().getFullYear(), razon ?? ajustes.nombreTienda)}</p>
+            {/* Enlace del equipo: <a> simple (sin precarga del panel), no depende del país ni va a sitemaps. */}
+            <a href="/admin" rel="nofollow" className={`${enlace} text-bg/80 hover:text-bg`}>
+              {T.footer.accesoEquipo}
+            </a>
+          </div>
           {medios?.media ? (
             <div className="w-56">
               <p className="solo-lectores">{T.footer.medios}</p>

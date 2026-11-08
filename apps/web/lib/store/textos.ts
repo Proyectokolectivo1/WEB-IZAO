@@ -42,6 +42,7 @@ export const T = {
     invitacion: '¿Dudas con tu aroma? Te asesoramos sin compromiso.',
     escribenos: 'Escríbenos por WhatsApp',
     medios: 'Medios de pago',
+    accesoEquipo: 'Acceso del equipo',
     derechos: (anio: number, nombre: string) => `© ${anio} ${nombre}`,
   },
   paises: { co: 'Colombia', ec: 'Ecuador' } as const,

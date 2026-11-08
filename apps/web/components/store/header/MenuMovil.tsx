@@ -74,6 +74,9 @@ export function MenuMovil({ pais, categorias, etiquetaSede }: { pais: CodigoPais
         </nav>
         <div className="px-3 py-4">
           <BotonSede pais={pais} etiqueta={etiquetaSede} texto={T.paises[pais]} antes={cerrar} />
+          <a href="/admin" rel="nofollow" className="mt-1 flex min-h-11 items-center px-2 text-[0.875rem] text-ink/80 underline-offset-4 hover:underline">
+            {T.footer.accesoEquipo}
+          </a>
         </div>
       </Sheet>
     </>
