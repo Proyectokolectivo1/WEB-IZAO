@@ -27,8 +27,6 @@ const fila = {
   sku: 'BRU-100',
   option_value_ids: [OV1],
   weight_kg: 0.5,
-  mastershop_product_id: 77,
-  mastershop_variant_id: null,
   products: {
     name: 'Bruma Silvestre',
     status: 'active',
@@ -39,8 +37,28 @@ const fila = {
     ],
   },
   variant_countries: [
-    { country_code: 'CO', is_active: true, price: 200000, compare_at_price: null, cost: '80000', stock: 7, stock_reserved: 2 },
-    { country_code: 'EC', is_active: true, price: 4999, compare_at_price: 5999, cost: null, stock: 1, stock_reserved: 3 },
+    {
+      country_code: 'CO',
+      is_active: true,
+      price: 200000,
+      compare_at_price: null,
+      cost: '80000',
+      stock: 7,
+      stock_reserved: 2,
+      mastershop_product_id: 77,
+      mastershop_variant_id: null,
+    },
+    {
+      country_code: 'EC',
+      is_active: true,
+      price: 4999,
+      compare_at_price: 5999,
+      cost: null,
+      stock: 1,
+      stock_reserved: 3,
+      mastershop_product_id: 9001,
+      mastershop_variant_id: 9002,
+    },
   ],
 };
 
@@ -72,7 +90,37 @@ describe('fuente Supabase del checkout: mapeos', () => {
 
   it('sin fila en el país: sin precio y no vendible', () => {
     const f = filaVariante.parse({ ...fila, variant_countries: [] });
-    expect(mapearVariante(f, 'CO', new Map())).toMatchObject({ vendible: false, precio: null, disponible: 0 });
+    expect(mapearVariante(f, 'CO', new Map())).toMatchObject({
+      vendible: false,
+      precio: null,
+      disponible: 0,
+      mastershop_product_id: null,
+      mastershop_variant_id: null,
+    });
+  });
+
+  it('vínculo MasterShop por país (D-052): EC toma el de EC y CO el de CO', () => {
+    const f = filaVariante.parse(fila);
+    expect(mapearVariante(f, 'EC', new Map())).toMatchObject({ mastershop_product_id: 9001, mastershop_variant_id: 9002 });
+    expect(mapearVariante(f, 'CO', new Map())).toMatchObject({ mastershop_product_id: 77, mastershop_variant_id: null });
+  });
+
+  it('EC sin vínculo propio no hereda el de CO ni el espejo deprecado de product_variants', () => {
+    const f = filaVariante.parse({
+      ...fila,
+      mastershop_product_id: 77, // espejo deprecado (CO) si llegara en la fila: se ignora
+      mastershop_variant_id: 78,
+      variant_countries: [
+        fila.variant_countries[0],
+        { ...fila.variant_countries[1], mastershop_product_id: null, mastershop_variant_id: null },
+      ],
+    });
+    expect(mapearVariante(f, 'EC', new Map())).toMatchObject({ mastershop_product_id: null, mastershop_variant_id: null });
+  });
+
+  it('un vínculo no entero en la fila del país se rechaza', () => {
+    const vc = [{ ...fila.variant_countries[0], mastershop_product_id: 1.5 }];
+    expect(filaVariante.safeParse({ ...fila, variant_countries: vc }).success).toBe(false);
   });
 
   it('código con fechas y montos tipados; límite por cliente sin evaluar', () => {
@@ -230,6 +278,17 @@ function consultaFalsa(resultado: { data: unknown; error: null }) {
 }
 
 describe('fuente Supabase del checkout: consultas', () => {
+  it('variantes pide el vínculo MasterShop dentro de variant_countries, no en product_variants (D-052)', async () => {
+    const q = consultaFalsa({ data: [{ ...fila, option_value_ids: null }], error: null });
+    fijarClienteDbParaPruebas(q.cliente as never);
+    const m = await fuenteSupabase.variantes('EC', [V]);
+    expect(m.get(V)).toMatchObject({ mastershop_product_id: 9001, mastershop_variant_id: 9002 });
+    const sel = q.filtros.find((x) => x[0] === 'select')?.[1] as string;
+    const [antes, vc] = sel.split('variant_countries(');
+    expect(antes).not.toMatch(/mastershop/);
+    expect(vc).toMatch(/mastershop_product_id, mastershop_variant_id/);
+  });
+
   it('código: siempre en mayúsculas y sin espacios contra la columna (única vía índice)', async () => {
     const q = consultaFalsa({ data: null, error: null });
     fijarClienteDbParaPruebas(q.cliente as never);

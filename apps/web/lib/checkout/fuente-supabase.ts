@@ -39,8 +39,6 @@ export const filaVariante = z.object({
   sku: z.string(),
   option_value_ids: z.array(uuid).nullable(),
   weight_kg: z.union([z.number(), z.string()]).nullable(),
-  mastershop_product_id: entero.nullable(),
-  mastershop_variant_id: entero.nullable(),
   products: z.object({
     name: z.string(),
     status: z.string(),
@@ -56,6 +54,10 @@ export const filaVariante = z.object({
       cost: montoNulo,
       stock: entero,
       stock_reserved: entero,
+      // Vínculo MasterShop de la cuenta de ESE país (D-052). `product_variants.mastershop_*` es un espejo de CO
+      // deprecado y no se lee: un pedido de EC nunca debe salir con el vínculo de CO.
+      mastershop_product_id: entero.nullable(),
+      mastershop_variant_id: entero.nullable(),
     }),
   ),
 });
@@ -132,8 +134,8 @@ export function mapearVariante(
     costo: vc ? vc.cost : null,
     disponible: vc ? Math.max(0, vc.stock - vc.stock_reserved) : 0,
     peso_kg: f.weight_kg === null ? null : String(f.weight_kg),
-    mastershop_product_id: f.mastershop_product_id,
-    mastershop_variant_id: f.mastershop_variant_id,
+    mastershop_product_id: vc ? vc.mastershop_product_id : null,
+    mastershop_variant_id: vc ? vc.mastershop_variant_id : null,
   };
 }
 
@@ -238,9 +240,10 @@ export const fuenteSupabase: FuenteCheckout = {
     const { data, error } = await db
       .from('product_variants')
       .select(
-        'id, product_id, sku, option_value_ids, weight_kg, mastershop_product_id, mastershop_variant_id, ' +
+        'id, product_id, sku, option_value_ids, weight_kg, ' +
           'products(name, status, product_categories(category_id), product_countries(country_code, is_visible)), ' +
-          'variant_countries(country_code, is_active, price, compare_at_price, cost, stock, stock_reserved)',
+          'variant_countries(country_code, is_active, price, compare_at_price, cost, stock, stock_reserved, ' +
+          'mastershop_product_id, mastershop_variant_id)',
       )
       .in('id', [...ids]);
     revisar('product_variants', error);
