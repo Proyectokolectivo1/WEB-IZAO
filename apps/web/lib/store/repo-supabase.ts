@@ -8,7 +8,7 @@ import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
 import { catalogPage, catalogProduct, catalogRelated, catalogSearchPage, catalogSuggest, type CursorCatalogo, type FiltrosCatalogoDb } from '@/lib/db/catalogo';
-import type { ConsultaCatalogo, ContenidoHome, TiendaRepo } from './repo';
+import type { CarruselTienda, ConsultaCatalogo, ContenidoHome, TiendaRepo } from './repo';
 import { aFiltrosRpc } from './filtros';
 import type {
   AjustesTienda,
@@ -29,7 +29,7 @@ import type {
   Sugerencias,
   TipoPagina,
 } from './types';
-import { bannerVigente, esImagenUnica } from './banners';
+import { bannerVigente, carruselEnCatalogo, esImagenUnica, segundosCarrusel } from './banners';
 import { etiquetasPagina } from './etiquetas';
 import { normalizarTipo, ordenarPaginas } from './paginas';
 
@@ -222,26 +222,19 @@ const leerEspacios = conCache('espacios', 300, contenido, async (p): Promise<Esp
   return [...porClave.values()] as unknown as EspacioContenido[];
 });
 
-const leerHome = conCache('home', 300, (p: CodigoPais, ..._a: unknown[]) => [...contenido(p), ...catalogo(p)], async (p): Promise<ContenidoHome> => {
-  const ahora = new Date();
-  const [sec, ban, espacios, col, res, fam, menu] = await Promise.all([
-    db().from('home_sections').select('id,type,config').eq('country_code', upper(p)).eq('is_active', true).order('sort_order'),
-    db()
-      .from('banners')
-      .select(
-        `id,placement,alt,title,subtitle,cta_label,link_url,text_position,text_color,desktop_media_id,mobile_media_id,focal_x,focal_y,starts_at,ends_at,category:categories!category_id(slug),desktop:media!desktop_media_id(${MEDIA}),mobile:media!mobile_media_id(${MEDIA})`,
-      )
-      .eq('country_code', upper(p))
-      .eq('is_active', true)
-      .order('sort_order'),
-    leerEspacios(p),
-    db().from('collections').select('id,name,slug,sort_order').eq('country_code', upper(p)).eq('is_active', true).eq('show_in_home_tabs', true).order('sort_order'),
-    db().from('reviews').select('id,author_name,city,rating,body').eq('country_code', upper(p)).eq('status', 'approved').eq('featured_home', true).order('created_at', { ascending: false }).limit(12),
-    db().from('olfactory_families').select(`slug,name`).order('sort_order'),
-    leerMenu(p),
-  ]);
-  const secciones = lista(ok(sec, 'home_sections')) as unknown as SeccionHome[];
-  const banners = lista(ok(ban, 'banners'))
+const consultaBanners = (p: CodigoPais) =>
+  db()
+    .from('banners')
+    .select(
+      `id,placement,alt,title,subtitle,cta_label,link_url,text_position,text_color,desktop_media_id,mobile_media_id,focal_x,focal_y,starts_at,ends_at,category:categories!category_id(slug),desktop:media!desktop_media_id(${MEDIA}),mobile:media!mobile_media_id(${MEDIA})`,
+    )
+    .eq('country_code', upper(p))
+    .eq('is_active', true)
+    .order('sort_order');
+
+/** Filas de `banners` → banners de la tienda: solo los vigentes y con imagen; una sola imagen repite `mobile` = `desktop`. */
+function aBannersTienda(filas: Fila[], ahora: Date): Banner[] {
+  return filas
     .filter((b) => bannerVigente({ starts_at: b.starts_at as string | null, ends_at: b.ends_at as string | null }, ahora))
     .filter((b) => b.desktop)
     .map(({ category, desktop_media_id, mobile_media_id, ...b }) => {
@@ -249,6 +242,32 @@ const leerHome = conCache('home', 300, (p: CodigoPais, ..._a: unknown[]) => [...
       // Con una sola imagen `mobile` repite a `desktop`; `focal_x/focal_y` viajan tal cual y `puntoFocal` los valida.
       return { ...b, mobile: unica ? b.desktop : b.mobile, imagen_unica: unica, category_slug: texto((category as Fila | null)?.slug) };
     }) as unknown as Banner[];
+}
+
+/** Carrusel `hero` del país (el mismo del home) con el tiempo entre imágenes y si se repite en `/catalogo`. */
+const leerCarrusel = conCache('carrusel', 300, contenido, async (p): Promise<CarruselTienda> => {
+  const ahora = new Date();
+  const [ban, sec] = await Promise.all([
+    consultaBanners(p).eq('placement', 'hero'),
+    db().from('home_sections').select('config').eq('country_code', upper(p)).eq('type', 'hero').eq('is_active', true).order('sort_order').limit(1),
+  ]);
+  const config = (lista(ok(sec, 'home_sections'))[0]?.config ?? null) as Record<string, unknown> | null;
+  return { banners: aBannersTienda(lista(ok(ban, 'banners')), ahora), segundos: segundosCarrusel(config), enCatalogo: carruselEnCatalogo(config) };
+});
+
+const leerHome = conCache('home', 300, (p: CodigoPais, ..._a: unknown[]) => [...contenido(p), ...catalogo(p)], async (p): Promise<ContenidoHome> => {
+  const ahora = new Date();
+  const [sec, ban, espacios, col, res, fam, menu] = await Promise.all([
+    db().from('home_sections').select('id,type,config').eq('country_code', upper(p)).eq('is_active', true).order('sort_order'),
+    consultaBanners(p),
+    leerEspacios(p),
+    db().from('collections').select('id,name,slug,sort_order').eq('country_code', upper(p)).eq('is_active', true).eq('show_in_home_tabs', true).order('sort_order'),
+    db().from('reviews').select('id,author_name,city,rating,body').eq('country_code', upper(p)).eq('status', 'approved').eq('featured_home', true).order('created_at', { ascending: false }).limit(12),
+    db().from('olfactory_families').select(`slug,name`).order('sort_order'),
+    leerMenu(p),
+  ]);
+  const secciones = lista(ok(sec, 'home_sections')) as unknown as SeccionHome[];
+  const banners = aBannersTienda(lista(ok(ban, 'banners')), ahora);
   const colecciones: ContenidoHome['colecciones'] = await Promise.all(
     lista(ok(col, 'collections')).map(async (c) => {
       const pagina = await catalogPage(p, { filtros: { collection: String(c.slug) }, limite: 8 }).catch(() => null);
@@ -310,6 +329,7 @@ export const repoSupabase: TiendaRepo = {
   opcionesFiltros: leerOpciones,
   busquedasPopulares: leerPopulares,
   home: leerHome,
+  carrusel: leerCarrusel,
   espacios: leerEspacios,
   paginaLegal: leerLegal,
   paginaPorTipo: leerPaginaPorTipo,

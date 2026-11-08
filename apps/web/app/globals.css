@@ -127,3 +127,27 @@
     text-align: left;
   }
 }
+
+/*
+ * Esqueleto de carga de toda imagen de la tienda (IzaoImage y banners): mientras el archivo llega, el recuadro (que ya
+ * reserva su proporción: sin CLS) respira entre dos tonos del tema. Al pintarse, la foto tapa el fondo. Sin LQIP es el
+ * único marcador; con LQIP el desenfoque ya lo es. El pulso se corta solo tras unos segundos y con
+ * `prefers-reduced-motion` no se anima.
+ */
+@keyframes izao-img-esqueleto {
+  0%,
+  100% {
+    background-color: var(--color-surface);
+  }
+  50% {
+    background-color: color-mix(in srgb, var(--color-surface) 80%, var(--color-ink));
+  }
+}
+.img-esqueleto {
+  animation: izao-img-esqueleto 1.4s ease-in-out 8;
+}
+@media (prefers-reduced-motion: reduce) {
+  .img-esqueleto {
+    animation: none;
+  }
+}

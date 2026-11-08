@@ -25,6 +25,8 @@ interface Props {
   ansiosa?: boolean;
   /** Nivel del nombre: `h2` en listados (bajo el `h1` de la página), `h3` dentro de una sección con su propio `h2`. */
   nivelTitulo?: 'h2' | 'h3';
+  /** Listas largas (catálogo infinito): la tarjeta fuera de pantalla no se pinta (`content-visibility`). En secciones cortas no hace falta. */
+  diferir?: boolean;
 }
 
 const norm = (b: string) => b.toLowerCase().replace(/[\s-]+/g, '_');
@@ -34,7 +36,7 @@ const TAMANOS = '(min-width:1536px) 18vw, (min-width:1024px) 23vw, (min-width:76
  * `memo`: la grilla puede tener cientos de tarjetas y no deben repintarse cuando cambia el bolso, otro deseo o el estado del
  * listado (cargando, scroll). Solo se actualiza la tarjeta cuyo producto cambió.
  */
-export const TarjetaProducto = memo(function TarjetaProducto({ item, pais, concentracion, prioritaria = false, ansiosa = false, nivelTitulo = 'h3' }: Props) {
+export const TarjetaProducto = memo(function TarjetaProducto({ item, pais, concentracion, prioritaria = false, ansiosa = false, nivelTitulo = 'h3', diferir = false }: Props) {
   const Titulo = nivelTitulo;
   const { agregar, alternarDeseo } = useCarritoAcciones();
   const comprarAhora = useComprarAhora();
@@ -113,7 +115,7 @@ export const TarjetaProducto = memo(function TarjetaProducto({ item, pais, conce
       data-testid="tarjeta-producto"
       data-product-id={item.product_id}
       data-slug={item.slug}
-      className="diferir group relative flex flex-col"
+      className={`${diferir ? 'diferir ' : ''}group relative flex flex-col`}
       onPointerEnter={() => hayHover && setHoverListo(true)}
     >
       <div className="sombra-tarjeta relative aspect-[4/5] overflow-hidden rounded-card bg-surface transition-shadow duration-500 ease-izao">

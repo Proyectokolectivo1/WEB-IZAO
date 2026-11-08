@@ -67,6 +67,7 @@ export default async function EditarBanner({
     destino_producto: destino.producto,
     destino_variante_id: destino.varianteId ?? '',
     destino_categoria_id: destino.categoriaId ?? '',
+    destino_seccion: destino.seccion,
     destino_url: destino.url,
   };
   const imagen = (m: MediaMini | null, grande = true) => (m ? { id: m.id, ruta: grande ? m.rutaPrevia : m.ruta, alt: m.alt } : null);

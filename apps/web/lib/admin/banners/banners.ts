@@ -8,19 +8,20 @@
  * solo cambian `columnasBanner` y `destinoDeFila`; el formulario y la tienda no.
  */
 import { z } from 'zod';
+import { CARRUSEL_SEGUNDOS } from '@/lib/store/banners';
 import { nulaSiVacio } from '../crud/comun';
 
 export const UBICACIONES = ['hero', 'mid', 'category'] as const;
 export type Ubicacion = (typeof UBICACIONES)[number];
 
 export const ETIQUETA_UBICACION: Record<Ubicacion, string> = {
-  hero: 'Carrusel del home',
+  hero: 'Carrusel (home y catálogo)',
   mid: 'Banner intermedio',
   category: 'Banner de categoría',
 };
 
 export const AYUDA_UBICACION: Record<Ubicacion, string> = {
-  hero: 'Se muestra arriba del home, en carrusel.',
+  hero: 'Se muestra en carrusel arriba del home y arriba del catálogo. Con una sola imagen no se mueve ni muestra flechas.',
   mid: 'Banner de descuento entre las secciones del home.',
   category: 'Cabecera de la página de una categoría.',
 };
@@ -84,13 +85,14 @@ export function leerUbicacion(v: string | string[] | undefined): Ubicacion {
 
 // ── Destino ──────────────────────────────────────────────────────────────────────────────────────
 
-export const TIPOS_DESTINO = ['ninguno', 'producto', 'categoria', 'url'] as const;
+export const TIPOS_DESTINO = ['ninguno', 'producto', 'categoria', 'seccion', 'url'] as const;
 export type TipoDestino = (typeof TIPOS_DESTINO)[number];
 
 export const ETIQUETA_DESTINO: Record<TipoDestino, string> = {
   ninguno: 'Sin enlace',
   producto: 'Un producto (lleva a su ficha para comprar)',
   categoria: 'Una categoría',
+  seccion: 'Una sección de la página',
   url: 'Otra página o dirección web',
 };
 
@@ -98,10 +100,30 @@ export type Destino =
   | { tipo: 'ninguno' }
   | { tipo: 'producto'; slug: string; sku: string | null }
   | { tipo: 'categoria'; slug: string }
+  | { tipo: 'seccion'; clave: string }
   | { tipo: 'url'; url: string };
 
 const PRODUCTO = /^\/(co|ec)\/perfume\/([a-z0-9]+(?:-[a-z0-9]+)*)(?:\?variante=([A-Za-z0-9][A-Za-z0-9._-]{0,63}))?$/;
 const CATEGORIA = /^\/(co|ec)\/categoria\/([a-z0-9]+(?:-[a-z0-9]+)*)$/;
+
+/**
+ * Secciones de la tienda a las que puede llevar un banner (ancla dentro de la página). Los ids viven en la tienda
+ * (`HomeSecciones.tsx`, `ListadoCatalogo.tsx`): si cambias uno, cambia el otro. `ruta` es relativa al país.
+ */
+export const SECCIONES_TIENDA = [
+  { clave: 'productos', etiqueta: 'Catálogo: lista de productos', ruta: '/catalogo', ancla: 'productos' },
+  { clave: 'categorias', etiqueta: 'Inicio: categorías', ruta: '', ancla: 'seccion-categories' },
+  { clave: 'aromas', etiqueta: 'Inicio: aromas por familia olfativa', ruta: '', ancla: 'seccion-families' },
+  { clave: 'colecciones', etiqueta: 'Inicio: colecciones', ruta: '', ancla: 'seccion-collection_tabs' },
+  { clave: 'asesoria', etiqueta: 'Inicio: asesoría', ruta: '', ancla: 'seccion-advice' },
+  { clave: 'beneficios', etiqueta: 'Inicio: beneficios', ruta: '', ancla: 'seccion-benefits' },
+  { clave: 'resenas', etiqueta: 'Inicio: reseñas de clientes', ruta: '', ancla: 'seccion-reviews' },
+] as const;
+export type ClaveSeccion = (typeof SECCIONES_TIENDA)[number]['clave'];
+
+export function esClaveSeccion(v: unknown): v is ClaveSeccion {
+  return SECCIONES_TIENDA.some((s) => s.clave === v);
+}
 
 /** Ruta interna que debe seguir la tienda. Es lo que se guarda en `banners.link_url`. */
 export function urlDeDestino(destino: Destino, pais: PaisBanner): string | null {
@@ -113,6 +135,10 @@ export function urlDeDestino(destino: Destino, pais: PaisBanner): string | null 
       return `/${p}/perfume/${destino.slug}${destino.sku ? `?variante=${encodeURIComponent(destino.sku)}` : ''}`;
     case 'categoria':
       return `/${p}/categoria/${destino.slug}`;
+    case 'seccion': {
+      const s = SECCIONES_TIENDA.find((x) => x.clave === destino.clave);
+      return s ? `/${p}${s.ruta}#${s.ancla}` : null;
+    }
     case 'url':
       return destino.url;
   }
@@ -126,6 +152,8 @@ export function destinoDeUrl(url: string | null | undefined): Destino {
   if (prod) return { tipo: 'producto', slug: prod[2]!, sku: prod[3] ?? null };
   const cat = CATEGORIA.exec(u);
   if (cat) return { tipo: 'categoria', slug: cat[2]! };
+  const sec = SECCIONES_TIENDA.find((x) => u === `/co${x.ruta}#${x.ancla}` || u === `/ec${x.ruta}#${x.ancla}`);
+  if (sec) return { tipo: 'seccion', clave: sec.clave };
   return { tipo: 'url', url: u };
 }
 
@@ -244,6 +272,7 @@ export const esquemaBanner = z
     destino_producto_id: uuidOpcional,
     destino_variante_id: uuidOpcional,
     destino_categoria_id: uuidOpcional,
+    destino_seccion: z.string().trim().default(''),
     destino_url: z.string().trim().default(''),
   })
   .superRefine((d, ctx) => {
@@ -266,6 +295,9 @@ export const esquemaBanner = z
     }
     if (d.destino_tipo === 'categoria' && !d.destino_categoria_id) {
       ctx.addIssue({ code: 'custom', path: ['destino_categoria_id'], message: 'Elige la categoría a la que lleva el banner.' });
+    }
+    if (d.destino_tipo === 'seccion' && !esClaveSeccion(d.destino_seccion)) {
+      ctx.addIssue({ code: 'custom', path: ['destino_seccion'], message: 'Elige la sección a la que lleva el banner.' });
     }
     if (d.destino_tipo === 'url' && d.destino_url.startsWith('/') && apuntaAOtroPais(d.destino_url, d.country_code)) {
       ctx.addIssue({
@@ -309,3 +341,25 @@ export function columnasBanner(d: DatosBanner, linkUrl: string | null): Record<s
     ...(d.focal_x !== undefined && d.focal_y !== undefined ? { focal_x: d.focal_x, focal_y: d.focal_y } : {}),
   };
 }
+
+// ── Ajustes del carrusel (tiempo entre imágenes) ─────────────────────────────────────────────────
+
+export { CARRUSEL_SEGUNDOS };
+
+/**
+ * Ajustes del carrusel por país. Se guardan en `home_sections.config` de la sección `hero` (`interval_seconds`,
+ * `show_in_catalog`): sin migración. La tienda los lee con `segundosCarrusel` y `carruselEnCatalogo`.
+ */
+export const esquemaCarrusel = z.object({
+  country_code: z.enum(['CO', 'EC'], { message: 'Elige el país.' }),
+  interval_seconds: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() !== '' ? Number(v.replace(',', '.')) : v),
+    z
+      .number({ message: 'Escribe los segundos entre imágenes.' })
+      .int('Usa un número entero de segundos.')
+      .min(CARRUSEL_SEGUNDOS.minimo, `Mínimo ${CARRUSEL_SEGUNDOS.minimo} segundos.`)
+      .max(CARRUSEL_SEGUNDOS.maximo, `Máximo ${CARRUSEL_SEGUNDOS.maximo} segundos.`),
+  ),
+  show_in_catalog: casilla,
+});
+export type DatosCarrusel = z.infer<typeof esquemaCarrusel>;

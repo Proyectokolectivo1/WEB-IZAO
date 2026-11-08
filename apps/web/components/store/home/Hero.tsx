@@ -2,14 +2,12 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Icono, clasesBoton, useMenosMovimiento } from '@izao/ui';
-import { CAJA_ANTIGUA, CAJA_UNICA, enlaceBanner } from '@/lib/store/banners';
+import { Icono, Skeleton, clasesBoton, useMenosMovimiento } from '@izao/ui';
+import { CAJA_ANTIGUA, CAJA_UNICA, CARRUSEL_SEGUNDOS, enlaceBanner } from '@/lib/store/banners';
 import { T } from '@/lib/store/textos';
 import type { Banner, CodigoPais } from '@/lib/store/types';
 import { ImagenResponsiva } from '../ImagenResponsiva';
 
-/** Valor por defecto: ni `home_sections.config` ni `site_settings` tienen hoy un campo de intervalo (pendiente izao-admin/izao-db). */
-const AUTOPLAY_MS = 6000;
 const UMBRAL_DESLIZAR_PX = 48;
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 
@@ -25,12 +23,24 @@ const BOTON_FLECHA =
 /**
  * Carrusel de banners de la parte superior del home (ubicación `hero`).
  * - Desvanecido (solo `opacity`) con leve *ken burns* en escritorio; la caja reserva la proporción: 4:5 móvil, 12:5 escritorio (sin CLS).
- * - Autoplay 6 s: se detiene con el puntero encima, con el foco dentro, mientras se toca, con la pestaña oculta, con
+ * - Autoplay con el tiempo del panel (defecto 6 s): se detiene con el puntero encima, con el foco dentro, mientras se toca, con la pestaña oculta, con
  *   `prefers-reduced-motion` y con el botón de pausa (WCAG 2.2.2).
  * - Solo la primera diapositiva pide su imagen con prioridad; las demás se montan cuando les toca (la siguiente se precarga).
  * - Cada banner sigue `link_url` tal cual; si el destino es una ficha (`/…/perfume/{slug}?variante={sku}`) la ficha preselecciona la variante.
  */
-export function Hero({ banners, pais }: { banners: Banner[]; pais: CodigoPais }) {
+export function Hero({
+  banners,
+  pais,
+  segundos = CARRUSEL_SEGUNDOS.defecto,
+  prioritaria = true,
+}: {
+  banners: Banner[];
+  pais: CodigoPais;
+  /** Tiempo entre imágenes: lo fija el panel (`home_sections.config.interval_seconds`); se acota a 3–30 s. */
+  segundos?: number;
+  /** La primera imagen es la del primer viewport (LCP). `false` si el carrusel queda más abajo. */
+  prioritaria?: boolean;
+}) {
   const [i, setI] = useState(0);
   const [encima, setEncima] = useState(false);
   const [tocando, setTocando] = useState(false);
@@ -54,9 +64,10 @@ export function Hero({ banners, pais }: { banners: Banner[]; pais: CodigoPais })
 
   useEffect(() => {
     if (n < 2 || detenido) return;
-    const t = setInterval(() => setI((x) => (x + 1) % n), AUTOPLAY_MS);
+    const ms = Math.min(CARRUSEL_SEGUNDOS.maximo, Math.max(CARRUSEL_SEGUNDOS.minimo, Number.isFinite(segundos) ? segundos : CARRUSEL_SEGUNDOS.defecto)) * 1000;
+    const t = setInterval(() => setI((x) => (x + 1) % n), ms);
     return () => clearInterval(t);
-  }, [n, detenido]);
+  }, [n, detenido, segundos]);
 
   useEffect(() => {
     const alCambiar = () => setOculta(document.hidden);
@@ -87,6 +98,12 @@ export function Hero({ banners, pais }: { banners: Banner[]; pais: CodigoPais })
       onMouseLeave={() => setEncima(false)}
       onFocus={() => setEncima(true)}
       onBlur={() => setEncima(false)}
+      onKeyDown={(e) => {
+        // Flechas del teclado con el foco dentro del carrusel (no roba las del campo de texto de otra parte: solo aplica aquí).
+        if (n < 2 || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+        e.preventDefault();
+        ir(i + (e.key === 'ArrowRight' ? 1 : -1));
+      }}
     >
       <div
         className="relative touch-pan-y select-none overflow-hidden rounded-panel bg-surface"
@@ -142,9 +159,9 @@ export function Hero({ banners, pais }: { banners: Banner[]; pais: CodigoPais })
               >
                 <div className={`h-full w-full transition-transform duration-[7000ms] ease-linear motion-reduce:transition-none ${activo && !reducido ? 'md:scale-[1.04]' : 'scale-100'}`}>
                   {montadas.has(k) ? (
-                    <ImagenResponsiva banner={b} ubicacion="hero" prioritaria={k === 0} />
+                    <ImagenResponsiva banner={b} ubicacion="hero" prioritaria={prioritaria && k === 0} />
                   ) : (
-                    <div className="h-full w-full bg-surface" />
+                    <Skeleton className="h-full w-full rounded-none" />
                   )}
                 </div>
 

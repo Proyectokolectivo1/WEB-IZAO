@@ -267,7 +267,7 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
         {descripcion ? <p className="mt-3 max-w-2xl text-[1.0625rem] text-ink/80">{descripcion}</p> : null}
       </header>
 
-      <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 border-b border-line py-2">
+      <div id="productos" className="flex min-h-14 scroll-mt-24 flex-wrap items-center justify-between gap-3 border-b border-line py-2">
         <div className="flex items-center gap-4">
           <button
             type="button"
@@ -348,6 +348,7 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
                   prioritaria={i === 0}
                   ansiosa={i > 0 && i < 4}
                   nivelTitulo="h2"
+                  diferir
                   concentracion={item.concentration_slug ? nombreDe(opciones.concentraciones, item.concentration_slug) : null}
                 />
               ))

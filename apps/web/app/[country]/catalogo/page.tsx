@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { CarruselCatalogo } from '@/components/store/catalogo/CarruselCatalogo';
 import { PaginaListado, type ParamsBusqueda } from '@/components/store/catalogo/PaginaListado';
+import { parsearEstado } from '@/lib/store/filtros';
 import { esPais } from '@/lib/store/pais';
 import { tienda } from '@/lib/store/datos';
 import { metaListado } from '@/lib/store/seo';
@@ -21,5 +23,12 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 export default async function Catalogo({ params, searchParams }: Props) {
   const { country: pais } = await params;
   if (!esPais(pais)) notFound();
-  return <PaginaListado pais={pais} titulo={T.listado.titulo} base={`/${pais}/catalogo`} searchParams={await searchParams} />;
+  const sp = await searchParams;
+  return (
+    <>
+      {/* Solo en la primera página: las siguientes (respaldo sin JavaScript) van directo a los productos. */}
+      {parsearEstado(sp).pagina === 1 ? <CarruselCatalogo pais={pais} /> : null}
+      <PaginaListado pais={pais} titulo={T.listado.titulo} base={`/${pais}/catalogo`} searchParams={sp} />
+    </>
+  );
 }

@@ -5,6 +5,7 @@ import type { crearClienteServicio } from '@/lib/auth/supabase/servicio';
 import { diffCampos, escaparBusqueda, type ResultadoAccion } from '../crud/comun';
 import { invalidarContenido, traducirErrorBd, type Pais } from '../crud/servidor';
 import { moverEnLista } from '../catalogo/colecciones';
+import { CARRUSEL_SEGUNDOS, carruselEnCatalogo, segundosCarrusel } from '@/lib/store/banners';
 import {
   apuntaAOtroPais,
   columnasBanner,
@@ -14,6 +15,7 @@ import {
   tieneMovilPropia,
   urlDeDestino,
   type DatosBanner,
+  type DatosCarrusel,
   type Destino,
   type Ubicacion,
 } from './banners';
@@ -224,7 +226,9 @@ export async function categoriasVisibles(cliente: Cliente, pais: Pais): Promise<
  */
 export async function resolverDestinoBd(
   cliente: Cliente,
-  d: Pick<DatosBanner, 'country_code' | 'destino_tipo' | 'destino_producto_id' | 'destino_variante_id' | 'destino_categoria_id' | 'destino_url'>,
+  d: Pick<DatosBanner, 'country_code' | 'destino_tipo' | 'destino_producto_id' | 'destino_variante_id' | 'destino_categoria_id' | 'destino_url'> & {
+    destino_seccion?: string;
+  },
 ): Promise<{ ok: true; url: string | null } | { ok: false; errores: Record<string, string> }> {
   const pais = d.country_code;
   const nombrePais = pais === 'CO' ? 'Colombia' : 'Ecuador';
@@ -271,6 +275,11 @@ export async function resolverDestinoBd(
       }
       return { ok: true, url: urlDeDestino({ tipo: 'producto', slug: fila.slug, sku }, pais) };
     }
+    case 'seccion': {
+      // Lista cerrada de anclas de la tienda: nunca se arma un `#` con texto del navegador.
+      const url = urlDeDestino({ tipo: 'seccion', clave: d.destino_seccion ?? '' }, pais);
+      return url ? { ok: true, url } : { ok: false, errores: { destino_seccion: 'Elige la sección a la que lleva el banner.' } };
+    }
     case 'categoria': {
       const cats = await categoriasVisibles(cliente, pais);
       const c = cats.find((x) => x.id === d.destino_categoria_id);
@@ -285,13 +294,16 @@ export type DestinoEditable = {
   producto: ProductoVisible | null;
   varianteId: string | null;
   categoriaId: string | null;
+  /** Clave de `SECCIONES_TIENDA` cuando el destino es una sección de la página. */
+  seccion: string;
   url: string;
 };
 
 /** Reconstruye lo elegido a partir de `link_url` (el esquema aún no guarda el destino por separado). */
 export async function destinoEditable(cliente: Cliente, pais: Pais, linkUrl: string | null): Promise<DestinoEditable> {
   const d = destinoDeUrl(linkUrl);
-  const vacio: DestinoEditable = { tipo: d.tipo, producto: null, varianteId: null, categoriaId: null, url: '' };
+  const vacio: DestinoEditable = { tipo: d.tipo, producto: null, varianteId: null, categoriaId: null, seccion: '', url: '' };
+  if (d.tipo === 'seccion') return { ...vacio, seccion: d.clave };
   if (d.tipo === 'url') return { ...vacio, url: d.url };
   if (d.tipo === 'producto') {
     const producto = await productoVisiblePorSlug(cliente, pais, d.slug);
@@ -412,5 +424,45 @@ export async function eliminarBannerBd(args: Ctx & { id: string }): Promise<Resu
   // `media_file_deletions` admita ese motivo (izao-db; su `reason` solo acepta 'anonimizacion'). Pendiente en la bitácora.
   await auditarCambio({ actor, accion: 'banners.eliminado', entidad: 'banners', entidadId: id, diff: { antes }, ip });
   invalidarContenido([(antes as { country_code: Pais }).country_code]);
+  return { ok: true };
+}
+
+// ── Ajustes del carrusel (tiempo entre imágenes) ─────────────────────────────────────────────────
+
+export type AjustesCarrusel = { segundos: number; enCatalogo: boolean };
+
+/** Ajustes guardados en la sección `hero` del home del país; sin ellos, los valores de la semilla. */
+export async function leerAjustesCarrusel(cliente: Cliente, pais: Pais): Promise<AjustesCarrusel> {
+  const { data } = await cliente.from('home_sections').select('config').eq('country_code', pais).eq('type', 'hero').order('sort_order', { ascending: true }).limit(1);
+  const config = ((data as { config: Record<string, unknown> | null }[] | null)?.[0]?.config ?? null) as Record<string, unknown> | null;
+  return { segundos: segundosCarrusel(config), enCatalogo: carruselEnCatalogo(config) };
+}
+
+/**
+ * Guarda el tiempo entre imágenes y si el carrusel sale en el catálogo, en `home_sections.config` (se conservan las demás
+ * claves). Si el país aún no tiene la sección `hero`, la crea al principio. Audita e invalida el contenido del país.
+ */
+export async function guardarAjustesCarruselBd(args: Ctx & { datos: DatosCarrusel }): Promise<ResultadoAccion> {
+  const { cliente, datos, actor, ip } = args;
+  const { data } = await cliente.from('home_sections').select('id, config, sort_order').eq('country_code', datos.country_code).eq('type', 'hero').order('sort_order', { ascending: true }).limit(1);
+  const fila = (data as { id: string; config: Record<string, unknown> | null; sort_order: number }[] | null)?.[0];
+  const previo = fila?.config ?? {};
+  const config = { ...previo, interval_seconds: datos.interval_seconds, show_in_catalog: datos.show_in_catalog };
+  if (fila) {
+    const { error } = await cliente.from('home_sections').update({ config }).eq('id', fila.id);
+    if (error) return { ok: false, ...traducirErrorBd(error) };
+  } else {
+    const { error } = await cliente.from('home_sections').insert({ country_code: datos.country_code, type: 'hero', config, sort_order: 0, is_active: true });
+    if (error) return { ok: false, ...traducirErrorBd(error) };
+  }
+  await auditarCambio({
+    actor,
+    accion: 'banners.carrusel_ajustado',
+    entidad: 'home_sections',
+    entidadId: fila?.id ?? datos.country_code,
+    diff: { antes: { interval_seconds: previo['interval_seconds'] ?? CARRUSEL_SEGUNDOS.defecto, show_in_catalog: previo['show_in_catalog'] ?? true }, despues: { interval_seconds: datos.interval_seconds, show_in_catalog: datos.show_in_catalog } },
+    ip,
+  });
+  invalidarContenido([datos.country_code]);
   return { ok: true };
 }

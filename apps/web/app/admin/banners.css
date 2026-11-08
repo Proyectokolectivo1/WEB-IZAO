@@ -88,7 +88,7 @@
 .ban-previas {
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr) minmax(0, 1.3fr);
   align-items: start;
 }
 .ban-previa {
@@ -97,12 +97,6 @@
   background: var(--adm-aviso-fondo);
   border: 1px solid var(--adm-borde);
   border-radius: var(--adm-radio);
-}
-.ban-previa-escritorio {
-  aspect-ratio: 12 / 5;
-}
-.ban-previa-movil {
-  aspect-ratio: 4 / 5;
 }
 .ban-previa img {
   position: absolute;
@@ -194,8 +188,8 @@
   .ban-previas {
     grid-template-columns: 1fr;
   }
-  .ban-previa-movil {
-    max-width: 16rem;
+  .ban-previas figure {
+    max-width: 28rem;
   }
 }
 
@@ -240,4 +234,75 @@
 .ban-movil-antigua p {
   flex: 1 1 14rem;
   margin: 0;
+}
+
+/* Ajustes del carrusel y cinta superior */
+.ban-ajustes {
+  max-width: 34rem;
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  background: var(--adm-superficie);
+  border: 1px solid var(--adm-borde);
+  border-radius: var(--adm-radio);
+}
+.ban-ajustes h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.0625rem;
+}
+.cinta-lista {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.cinta-fila {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem 1rem;
+  align-items: start;
+  padding: 0.75rem;
+  background: var(--adm-superficie);
+  border: 1px solid var(--adm-borde);
+  border-radius: var(--adm-radio);
+}
+.cinta-fila[data-activo='false'] {
+  background: var(--adm-aviso-fondo);
+}
+.cinta-fila form.cinta-edicion {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.cinta-controles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+.cinta-controles form {
+  display: inline-flex;
+}
+.cinta-controles .adm-boton {
+  min-height: var(--adm-alto-toque);
+  min-width: var(--adm-alto-toque);
+}
+.cinta-previa {
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 1rem;
+  background: var(--adm-texto);
+  color: var(--adm-superficie);
+  border-radius: var(--adm-radio);
+  font-size: 0.8125rem;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+@media (max-width: 52rem) {
+  .cinta-fila {
+    grid-template-columns: 1fr;
+  }
+  .cinta-controles {
+    justify-content: flex-start;
+  }
 }

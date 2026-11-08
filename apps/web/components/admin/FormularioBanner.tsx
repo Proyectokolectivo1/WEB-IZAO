@@ -9,6 +9,7 @@ import {
   ETIQUETA_POSICION,
   ETIQUETA_UBICACION,
   NOMBRE_PAIS_BANNER,
+  SECCIONES_TIENDA,
   objectPositionDe,
   POSICIONES_FOCALES,
   POSICIONES_TEXTO,
@@ -20,6 +21,7 @@ import {
   type Ubicacion,
 } from '@/lib/admin/banners/banners';
 import { ESTADO_INICIAL, type ResultadoAccion } from '@/lib/admin/crud/comun';
+import { CAJA_UNICA } from '@/lib/store/banners';
 import { TEXTOS_SUBIDA } from '@/lib/admin/mensaje-subida';
 import { CampoSelect, type OpcionSelect } from './CampoSelect';
 import { CampoTexto } from './CampoTexto';
@@ -46,6 +48,7 @@ export type ValoresBanner = {
   destino_producto: ProductoElegido | null;
   destino_variante_id: string;
   destino_categoria_id: string;
+  destino_seccion: string;
   destino_url: string;
 };
 
@@ -141,9 +144,12 @@ export function FormularioBanner({
   const alineacion = posicion === 'center' ? 'center' : posicion === 'right' ? 'flex-end' : 'flex-start';
   const textoAlineado = posicion;
 
-  const previa = (img: ImagenInicial, clase: string, etiqueta: string, posicion_: string) => (
+  // Proporciones REALES de la tienda por pantalla (celular, tablet, escritorio) para la ubicación elegida.
+  const [cajaMovil, cajaTablet, cajaEscritorio] = CAJA_UNICA[ubicacion].cajas;
+
+  const previa = (img: ImagenInicial, razon: number, etiqueta: string, posicion_: string) => (
     <figure style={{ margin: 0 }}>
-      <div className={`ban-previa ${clase}`}>
+      <div className="ban-previa" style={{ aspectRatio: String(razon) }}>
         {img?.ruta ? (
           <img src={`/media/${img.ruta}`} alt="" style={{ objectPosition: posicion_ }} />
         ) : (
@@ -401,6 +407,19 @@ export function FormularioBanner({
           />
         ) : null}
 
+        {destino === 'seccion' ? (
+          <CampoSelect
+            id="destino_seccion"
+            name="destino_seccion"
+            etiqueta="Sección"
+            vacio="Elige una sección"
+            opciones={SECCIONES_TIENDA.map((s) => ({ valor: s.clave, etiqueta: s.etiqueta }))}
+            defaultValue={inicial.destino_seccion}
+            error={errores.destino_seccion}
+            ayuda="La página baja sola hasta esa parte (por ejemplo, las reseñas del inicio o la lista de productos del catálogo)."
+          />
+        ) : null}
+
         {destino === 'url' ? (
           <CampoTexto
             id="destino_url"
@@ -429,10 +448,11 @@ export function FormularioBanner({
       <section aria-labelledby="h-previa-banner">
         <h3 id="h-previa-banner">Vista previa</h3>
         <div className="ban-previas">
-          {previa(imgDesktop, 'ban-previa-escritorio', 'Escritorio', objectPositionDe(focalX, focalY))}
+          {previa(imgDesktop, cajaEscritorio!.ratio, 'Escritorio', objectPositionDe(focalX, focalY))}
+          {previa(imgDesktop, cajaTablet!.ratio, 'Tablet (recorte a los lados)', objectPositionDe(focalX, focalY))}
           {movilAntigua
-            ? previa(movilAntigua, 'ban-previa-movil', 'Móvil (imagen aparte)', '50% 50%')
-            : previa(imgDesktop, 'ban-previa-movil', 'Móvil (recorte a los lados)', objectPositionDe(focalX, focalY))}
+            ? previa(movilAntigua, 4 / 5, 'Celular (imagen aparte)', '50% 50%')
+            : previa(imgDesktop, cajaMovil!.ratio, 'Celular (recorte a los lados)', objectPositionDe(focalX, focalY))}
         </div>
       </section>
 

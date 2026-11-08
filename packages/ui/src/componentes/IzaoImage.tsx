@@ -87,7 +87,7 @@ export function IzaoImage({
       loading={prioritaria || ansiosa ? 'eager' : 'lazy'}
       fetchPriority={prioritaria ? 'high' : undefined}
       decoding={prioritaria ? 'sync' : 'async'}
-      className={`block w-full ${radio} ${className}`}
+      className={`img-esqueleto block w-full ${radio} ${className}`}
       style={{ ...fondo, ...style }}
       {...resto}
     />

@@ -40,7 +40,7 @@ export function ImagenResponsiva({ banner, ubicacion, prioritaria = false, class
         height={alto}
         alt={alt}
         {...prio}
-        className={`h-full w-full object-cover ${className}`}
+        className={`img-esqueleto h-full w-full object-cover ${className}`}
         style={{ ...fondo(desktop), objectPosition: puntoFocal(banner) }}
       />
     );
@@ -50,7 +50,7 @@ export function ImagenResponsiva({ banner, ubicacion, prioritaria = false, class
   return (
     <picture>
       {d ? <source media="(min-width: 768px)" srcSet={d.srcSet} sizes={SIZES_ANTIGUO} /> : null}
-      <img src={m.src} srcSet={m.srcSet} sizes={SIZES_ANTIGUO} alt={alt} {...prio} className={`h-full w-full object-cover ${className}`} style={fondo(mobile)} />
+      <img src={m.src} srcSet={m.srcSet} sizes={SIZES_ANTIGUO} alt={alt} {...prio} className={`img-esqueleto h-full w-full object-cover ${className}`} style={fondo(mobile)} />
     </picture>
   );
 }
