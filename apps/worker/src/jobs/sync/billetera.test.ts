@@ -147,3 +147,33 @@ describe('job de billetera de MasterShop', () => {
     expect(fechaBogota('2026-10-20T03:00:00.000Z')).toBe('2026-10-19');
   });
 });
+
+describe('billetera por país (D-052)', () => {
+  it('Ecuador: llave propia, montos en centavos USD y gasto con país EC', async () => {
+    const clock = new FakeClock();
+    const mockEC = new MasterShopMock({ apiKey: 'llave-ec', clock, currency: 'USD' });
+    mockEC.seedMovement({ movementType: 'Cobro por envío mensaje de WhatsApp', movementValue: -0.35, balanceMovementDate: new Date(clock.now() - 60_000) });
+    const gastos: { g: GastoBilletera; pais: string }[] = [];
+    const deps: DepsBilletera = {
+      paises: ['CO', 'EC'],
+      fuente: {
+        credenciales: async (pais) => (pais === 'EC' ? { apiKey: 'llave-ec' } : null),
+        pedidosPorIdProveedor: async () => [],
+        guardarCostos: async () => undefined,
+        registrarGasto: async (g, pais) => {
+          gastos.push({ g, pais });
+          return true;
+        },
+        estadoSaldo: async () => null,
+        guardarSaldo: async () => undefined,
+      },
+      listar: (c, desde, pais) =>
+        new MasterShopClient({ apiKey: c.apiKey, fetch: mockEC.fetch, clock, currency: pais === 'EC' ? 'USD' : 'COP' }).listAllWalletMovements({ startDate: desde }),
+      avisarSaldoBajo: async () => undefined,
+      ahora: () => clock.date(),
+    };
+    const r = await billeteraMasterShop(deps);
+    expect(r).toMatchObject({ accion: 'procesado', gastos_creados: 1, por_pais: { CO: { accion: 'sin_credenciales' }, EC: { accion: 'procesado' } } });
+    expect(gastos).toEqual([{ g: expect.objectContaining({ amount: 35n }), pais: 'EC' }]);
+  });
+});

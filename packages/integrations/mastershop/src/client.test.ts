@@ -5,7 +5,7 @@ import { MasterShopError } from './errors';
 import { MasterShopMock } from './mock/server';
 import { MS_ERRORS } from './mock/fixtures';
 import { buildCarrierOrder } from './order';
-import { makeItem, makeOrder } from './test-utils/orders';
+import { makeItem, makeOrder, makeOrderEC } from './test-utils/orders';
 
 const KEY = 'clave-de-prueba';
 const DAY = 24 * 60 * 60 * 1000;
@@ -560,5 +560,66 @@ describe('MasterShopClient.testCredentials', () => {
       ok: false,
       message: 'La llave de API de MasterShop no es válida o no tiene permiso.',
     });
+  });
+});
+
+describe('Ecuador: llave propia en USD (D-052)', () => {
+  function setupEC() {
+    const clock = new FakeClock();
+    const mock = new MasterShopMock({ apiKey: 'llave-ec', clock, currency: 'USD' });
+    const client = new MasterShopClient({ apiKey: 'llave-ec', fetch: mock.fetch, clock, currency: 'USD' });
+    return { clock, mock, client };
+  }
+  const opts = { mode: 'prorate' as const, paymentGateway: 'wompi', paymentReference: 'ref-ec' };
+
+  it('crea el pedido con total decimal exacto (cuadra en el mock con igualdad decimal)', async () => {
+    const { mock, client } = setupEC();
+    const items = [
+      makeItem({ sku: 'A', unit_price: 1_999n, quantity: 3, mastershop_product_id: 7001 }),
+      makeItem({ id: 'i2', sku: 'B', unit_price: 4_990n, line_discount: 499n, mastershop_product_id: 7002 }),
+    ];
+    const r = await client.createOrder(buildCarrierOrder(makeOrderEC({ items, payment_method: 'wompi' }), opts).body);
+    expect(r.duplicated).toBe(false);
+    const sent = mock.findByExternalId('IZ-EC-000045')!.rawBody;
+    expect(sent).toContain('"currency":"USD"');
+    expect(sent).toContain('"total":104.88');
+    expect(mock.findByExternalId('IZ-EC-000045')?.totalOrder).toBe(104.88);
+  });
+
+  it('el mock rechaza un total calculado en coma flotante (1.1 × 3 = 3.3000000000000003) como MasterShop', async () => {
+    const { mock } = setupEC();
+    const cuerpo = buildCarrierOrder(makeOrderEC({ items: [makeItem({ unit_price: 110n, quantity: 3, mastershop_product_id: 7001 })], payment_method: 'wompi' }), opts).body;
+    const json = JSON.stringify({ ...cuerpo, order_items: cuerpo.order_items.map((i) => ({ ...i, price: 1.1 })), order_transaction: { ...cuerpo.order_transaction, total: 1.1 * 3 } });
+    const res = await mock.fetch('https://prod.api.mastershop.com/api/orders', {
+      method: 'POST',
+      headers: { 'ms-api-key': 'llave-ec', 'content-type': 'application/json' },
+      body: json,
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('lee montos del listado y de la billetera en centavos', async () => {
+    const { mock, clock, client } = setupEC();
+    mock.inject('list', {
+      status: 200,
+      body: [{ idOrder: 1, orderStatus: 'Pendiente', shippingRate: 4.5, totalProvider: '12.00', totalOrder: '1.234' }],
+    });
+    const [row] = await client.listOrders({ startDate: new Date(clock.now() - DAY), page: 1 });
+    expect(row).toMatchObject({ shippingRate: 450n, totalProvider: 1_200n, totalOrder: null });
+    mock.seedMovement({ movementType: 'Cobro por Envío', movementValue: -4.75, balanceMovementDate: new Date(clock.now() - 1_000), idOrder: 1, newBalance: 95.25 });
+    const w = await client.listWalletMovements({ startDate: new Date(clock.now() - DAY), page: 1 });
+    expect(w.movimientos[0]).toMatchObject({ moneda: 'USD', valor: -475n, saldoNuevo: 9_525n });
+  });
+
+  it('Probar conexión detecta una llave de otro país por la moneda del negocio', async () => {
+    const clock = new FakeClock();
+    const mockCO = new MasterShopMock({ apiKey: 'llave-co', clock });
+    mockCO.seedProduct({ idProduct: 1, name: 'P', basePrice: 1000, variants: [] });
+    const comoEC = new MasterShopClient({ apiKey: 'llave-co', fetch: mockCO.fetch, clock, currency: 'USD' });
+    const r = await comoEC.testCredentials();
+    expect(r.ok).toBe(false);
+    expect(r.message).toContain('COP');
+    const comoCO = new MasterShopClient({ apiKey: 'llave-co', fetch: mockCO.fetch, clock, currency: 'COP' });
+    expect(await comoCO.testCredentials()).toEqual({ ok: true, message: 'Conexión con MasterShop correcta.' });
   });
 });

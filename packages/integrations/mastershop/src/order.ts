@@ -30,8 +30,35 @@ export const MASTERSHOP_DOCUMENT_TYPES = [
 ] as const;
 export type MasterShopDocumentType = (typeof MASTERSHOP_DOCUMENT_TYPES)[number];
 
-/** Países donde opera MasterShop y su moneda legal. */
-export const MASTERSHOP_COUNTRIES = { CO: 'COP' } as const;
+/** Países donde opera MasterShop y su moneda legal (cada uno con su propia llave, D-052). */
+export const MASTERSHOP_COUNTRIES = { CO: 'COP', EC: 'USD' } as const;
+
+/**
+ * Documento de la tienda → tipo de MasterShop. El enum de MasterShop es el colombiano; en Ecuador se mapea por
+ * equivalencia (`[VERIFICAR]` con el primer pedido real de Ecuador, D-052): cédula → CC, RUC → NIT, pasaporte → PAS.
+ */
+const DOCUMENT_TYPE_MAP: Readonly<Record<string, string>> = {
+  CEDULA: 'CC',
+  RUC: 'NIT',
+  PASAPORTE: 'PAS',
+};
+
+/** Celular nacional por país: CO 10 dígitos (3XXXXXXXXX); EC con el 0 troncal (09XXXXXXXX), `[VERIFICAR]` D-052. */
+function nationalPhone(country: string, e164: string): string | null {
+  if (country === 'CO') return normalizePhone('CO', e164)?.national ?? null;
+  if (country === 'EC') {
+    const n = normalizePhone('EC', e164)?.national ?? null;
+    return n === null ? null : `0${n}`;
+  }
+  return null;
+}
+
+const PHONE_MESSAGE: Readonly<Record<string, string>> = {
+  CO: 'El celular debe ser un número de Colombia de 10 dígitos.',
+  EC: 'El celular debe ser un número de Ecuador de 9 dígitos que empiece por 9.',
+};
+
+const REGION_LABEL: Readonly<Record<string, string>> = { CO: 'el departamento', EC: 'la provincia' };
 
 export const ORDER_NUMBER_PATTERN = /^[A-Za-z0-9-]+$/;
 /** `[VERIFICAR]` si MasterShop acepta tildes y ñ como "letras". */
@@ -43,7 +70,7 @@ const NATIONAL_PHONE_PATTERN = /^\d{10}$/;
 // ---------------------------------------------------------------------------
 
 const nameSchema = z.string().min(1).regex(NAME_PATTERN, 'Solo letras y espacios');
-const phoneSchema = z.string().regex(NATIONAL_PHONE_PATTERN, 'Teléfono nacional de 10 dígitos');
+const phoneSchema = z.string().regex(NATIONAL_PHONE_PATTERN, 'Teléfono nacional de 10 dígitos (CO 3…, EC 09…)');
 const nonEmpty = z.string().trim().min(1);
 
 export const MasterShopAddressSchema = z.strictObject({
@@ -259,13 +286,9 @@ export function buildCarrierOrder(order: Order, options: CarrierOrderOptions): B
   const fullName = `${firstName} ${lastName}`.trim();
 
   // Teléfono
-  const phone = normalizePhone('CO', order.contact_phone_e164)?.national ?? null;
-  if (phone === null) {
-    add(
-      'telefono_invalido',
-      'contact_phone_e164',
-      'El celular debe ser un número de Colombia de 10 dígitos.',
-    );
+  const phone = nationalPhone(country, order.contact_phone_e164);
+  if (phone === null && legalCurrency !== undefined) {
+    add('telefono_invalido', 'contact_phone_e164', PHONE_MESSAGE[country] ?? 'El celular no es válido.');
   }
 
   // Correo `[VERIFICAR]` si MasterShop admite null.
@@ -275,7 +298,9 @@ export function buildCarrierOrder(order: Order, options: CarrierOrderOptions): B
   }
 
   // Documento: los dos o ninguno
-  const docType = blankToNull(order.document_type)?.toUpperCase() ?? null;
+  const rawDocType = blankToNull(order.document_type)?.toUpperCase() ?? null;
+  const docType =
+    rawDocType === null || country !== 'EC' ? rawDocType : (DOCUMENT_TYPE_MAP[rawDocType] ?? rawDocType);
   const docNumber = blankToNull(order.document_number);
   if ((docType === null) !== (docNumber === null)) {
     add('documento_incompleto', 'document_number', 'El tipo y el número de documento van juntos.');
@@ -286,7 +311,7 @@ export function buildCarrierOrder(order: Order, options: CarrierOrderOptions): B
     add(
       'documento_tipo_invalido',
       'document_type',
-      `MasterShop no acepta el tipo de documento ${docType}.`,
+      `MasterShop no acepta el tipo de documento ${rawDocType}.`,
     );
   }
 
@@ -295,7 +320,9 @@ export function buildCarrierOrder(order: Order, options: CarrierOrderOptions): B
   const state = blankToNull(order.shipping_region_name);
   const address1 = blankToNull(order.shipping_address1);
   if (city === null) add('direccion_incompleta', 'shipping_city_name', 'Falta la ciudad.');
-  if (state === null) add('direccion_incompleta', 'shipping_region_name', 'Falta el departamento.');
+  if (state === null) {
+    add('direccion_incompleta', 'shipping_region_name', `Falta ${REGION_LABEL[country] ?? 'el departamento'}.`);
+  }
   if (address1 === null) add('direccion_incompleta', 'shipping_address1', 'Falta la dirección.');
 
   // Ítems: vínculo y peso

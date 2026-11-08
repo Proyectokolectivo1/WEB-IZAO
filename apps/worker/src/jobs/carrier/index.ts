@@ -12,6 +12,7 @@
  * Variables: SUPABASE_URL, SUPABASE_SECRET_KEY, APP_ENCRYPTION_KEY, MEDIA_ROOT (defecto /srv/izao/media) y
  * MASTERSHOP_MODO=simulado (opcional, nunca en producción) para usar el servidor simulado en memoria.
  */
+import { currencyForCountry } from '@izao/core/money';
 import type { Processor } from 'bullmq';
 import {
   COLA_CARRIER,
@@ -111,7 +112,8 @@ export function dependenciasCarrierDesdeEnv(
       programar,
       ...(recalcularMetricas ? { recalcularMetricas } : {}),
       etiquetas: crearAlmacenEtiquetas({ mediaRoot, fetchImpl: fetchSimulado as typeof fetch, hostsPermitidos: [MOCK_LABEL_HOST] }),
-      transportadora: (_c, opciones) => carrierCon(new MasterShopClient({ apiKey: LLAVE_SIMULADA, fetch: fetchSimulado }), opciones),
+      transportadora: (_c, opciones, pais) =>
+        carrierCon(new MasterShopClient({ apiKey: LLAVE_SIMULADA, fetch: fetchSimulado, currency: currencyForCountry(pais) }), opciones),
     };
   }
 
@@ -120,7 +122,9 @@ export function dependenciasCarrierDesdeEnv(
     programar,
     ...(recalcularMetricas ? { recalcularMetricas } : {}),
     etiquetas: crearAlmacenEtiquetas({ mediaRoot }),
-    transportadora: (creds, opciones) => carrierCon(new MasterShopClient({ apiKey: creds.apiKey }), opciones),
+    // La moneda del cliente es la del país de la llave (COP / USD): con ella lee los montos de las respuestas (D-052).
+    transportadora: (creds, opciones, pais) =>
+      carrierCon(new MasterShopClient({ apiKey: creds.apiKey, currency: currencyForCountry(pais) }), opciones),
   };
 }
 

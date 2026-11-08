@@ -78,3 +78,30 @@ export function makeOrder(overrides: Partial<Order> = {}): Order {
     items,
   };
 }
+
+/**
+ * Pedido de prueba en Ecuador (USD, unidad menor = centavos): 2 × USD 49,90 (caso 9 de §11.3 sin descuento),
+ * cédula, celular 09…, provincia y cantón. Contra entrega con abono de USD 5,00 si no se indica otro método.
+ */
+export function makeOrderEC(overrides: Partial<Order> = {}): Order {
+  const items = overrides.items ?? [makeItem({ unit_price: 4_990n, unit_cost: 2_000n, quantity: 2, mastershop_product_id: 7001 })];
+  const paymentMethod = overrides.payment_method ?? 'cod';
+  return makeOrder({
+    number: 'IZ-EC-000045',
+    country_code: 'EC',
+    currency_code: 'USD',
+    contact_first_name: 'María José',
+    contact_last_name: 'Andrade',
+    contact_phone_e164: '+593991234567',
+    document_type: 'CEDULA',
+    document_number: '1712345678',
+    shipping_region_id: 'reg-pic',
+    shipping_city_id: 'city-uio',
+    shipping_region_name: 'Pichincha',
+    shipping_city_name: 'Quito',
+    shipping_district: 'La Carolina',
+    ...(paymentMethod === 'cod' ? { cod_deposit_amount: 500n } : {}),
+    ...overrides,
+    items,
+  });
+}

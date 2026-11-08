@@ -12,7 +12,7 @@
  *
  * Los reintentos largos (30 s … 2 h) son del job, con `planCarrierRetry`.
  */
-import { fromDbAmount } from '@izao/core/money';
+import { CURRENCY_EXPONENT, type CurrencyCode } from '@izao/core/money';
 import { z } from 'zod';
 import { systemClock } from './clock';
 import type { Clock } from './clock';
@@ -43,6 +43,11 @@ export type FetchLike = (input: string | URL | Request, init?: RequestInit) => P
 
 export interface MasterShopClientOptions {
   apiKey: string;
+  /**
+   * Moneda del negocio dueño de la llave (COP en Colombia, USD en Ecuador; D-052). MasterShop deriva el país y la
+   * moneda de la llave; aquí solo sirve para leer los montos de las respuestas (unidad mayor → unidad menor).
+   */
+  currency?: CurrencyCode;
   fetch?: FetchLike;
   baseUrl?: string;
   clock?: Clock;
@@ -268,29 +273,53 @@ export interface ListItemWarning {
   value: string;
 }
 
-const DECIMAL_TEXT = /^-?\d+(?:\.(\d+))?$/;
+const DECIMAL_TEXT = /^(-?)(\d+)(?:\.(\d+))?$/;
 
 /**
- * Monto COP de la API → bigint, sin pasar por `float`. Acepta enteros y textos
- * decimales cuyos decimales sean cero (`"12000.00"`). Cualquier otra cosa (`12000.5`,
- * `"89.900"`, `1e21`) queda en `null` con un aviso en la fila, para que una fila rara
- * no tumbe todo el listado. `[VERIFICAR]` el formato real: la colección solo muestra
- * enteros.
+ * Monto de la API (unidad mayor) → bigint en unidad menor de `currency`, sin pasar por `float`. Acepta
+ * enteros y textos decimales cuyos decimales sobrantes sean cero (COP `"12000.00"`; USD `12.5` → 1250).
+ * Cualquier otra cosa (COP `12000.5`, USD `1.234`, `1e21`) queda en `null` con un aviso en la fila, para
+ * que una fila rara no tumbe todo el listado. `[VERIFICAR]` el formato real: la colección solo muestra
+ * enteros en COP.
  */
 function amountOrWarn(
   v: unknown,
   field: ListItemWarning['field'],
   warnings: ListItemWarning[],
+  currency: CurrencyCode,
 ): bigint | null {
   if (v === null || v === undefined) return null;
-  if (typeof v === 'bigint') return v;
-  if (typeof v === 'number' && Number.isSafeInteger(v)) return fromDbAmount(v);
-  const textValue = typeof v === 'number' || typeof v === 'string' ? String(v).trim() : null;
+  const exp = CURRENCY_EXPONENT[currency];
+  if (typeof v === 'bigint') return v * 10n ** BigInt(exp);
+  const textValue =
+    (typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= Number.MAX_SAFE_INTEGER) || typeof v === 'string'
+      ? String(v).trim()
+      : null;
   const m = textValue === null ? null : DECIMAL_TEXT.exec(textValue);
-  if (textValue !== null && m && (m[1] === undefined || /^0+$/.test(m[1]))) {
-    return BigInt(textValue.split('.')[0]!);
+  if (m) {
+    const [, sign, whole, frac = ''] = m;
+    const kept = frac.slice(0, exp).padEnd(exp, '0');
+    if (/^0*$/.test(frac.slice(exp))) {
+      const minor = BigInt(whole! + kept);
+      return sign === '-' ? -minor : minor;
+    }
   }
   warnings.push({ code: 'monto_no_entero', field, value: textValue ?? typeof v });
+  return null;
+}
+
+const CURRENCY_TEXT = /^[A-Z]{3}$/;
+
+/** Moneda de los productos del negocio si es distinta de `expected` (`null` si coincide o no hay productos). */
+function otherBusinessCurrency(data: unknown, expected: CurrencyCode): string | null {
+  const results =
+    typeof data === 'object' && data !== null && Array.isArray((data as { results?: unknown }).results)
+      ? ((data as { results: unknown[] }).results)
+      : [];
+  for (const p of results) {
+    const c = typeof p === 'object' && p !== null ? (p as { baseCurrencyPrice?: unknown }).baseCurrencyPrice : undefined;
+    if (typeof c === 'string' && CURRENCY_TEXT.test(c) && c !== expected) return c;
+  }
   return null;
 }
 
@@ -328,6 +357,9 @@ export class MasterShopClient {
   readonly #apiKey: string;
   private readonly fetchImpl: FetchLike;
   private readonly baseUrl: string;
+  private readonly currency: CurrencyCode;
+  /** `true` si la moneda vino en las opciones: "Probar conexión" comprueba que la llave sea de ese país. */
+  private readonly currencyExplicit: boolean;
   private readonly clock: Clock;
   private readonly timeoutMs: number;
   private readonly listTimeoutMs: number;
@@ -343,6 +375,8 @@ export class MasterShopClient {
     this.#apiKey = options.apiKey;
     this.fetchImpl = options.fetch ?? ((input, init) => fetch(input, init));
     this.baseUrl = (options.baseUrl ?? MASTERSHOP_BASE_URL).replace(/\/+$/, '');
+    this.currency = options.currency ?? 'COP';
+    this.currencyExplicit = options.currency !== undefined;
     this.clock = options.clock ?? systemClock;
     this.timeoutMs = options.timeoutMs ?? 10_000;
     this.listTimeoutMs = options.listTimeoutMs ?? 45_000;
@@ -641,9 +675,9 @@ export class MasterShopClient {
         alerts: badge.alerts,
         carrierName: r.carrierName,
         trackingCode: text(r.carrierTrackingCode),
-        shippingRate: amountOrWarn(r.shippingRate, 'shippingRate', warnings),
-        totalProvider: amountOrWarn(r.totalProvider, 'totalProvider', warnings),
-        totalOrder: amountOrWarn(r.totalOrder, 'totalOrder', warnings),
+        shippingRate: amountOrWarn(r.shippingRate, 'shippingRate', warnings, this.currency),
+        totalProvider: amountOrWarn(r.totalProvider, 'totalProvider', warnings, this.currency),
+        totalOrder: amountOrWarn(r.totalOrder, 'totalOrder', warnings, this.currency),
         createdAt: r.createdAt,
         lastCarrierStatusUpdate: r.lastCarrierStatusUpdate,
         warnings,
@@ -769,12 +803,12 @@ export class MasterShopClient {
     const movimientos: MovimientoBilletera[] = [];
     const avisos: WalletMovementWarning[] = [];
     for (const r of rows) {
-      const moneda = r.currency ?? 'COP';
-      if (moneda !== 'COP') {
+      const moneda = r.currency ?? this.currency;
+      if (moneda !== this.currency) {
         avisos.push({ idBalanceMovement: r.idBalanceMovement, motivo: 'moneda_no_soportada' });
         continue;
       }
-      const valor = montoBilletera(r.movementValue, 'COP');
+      const valor = montoBilletera(r.movementValue, this.currency);
       if (valor === null) {
         avisos.push({ idBalanceMovement: r.idBalanceMovement, motivo: 'monto_invalido' });
         continue;
@@ -784,9 +818,9 @@ export class MasterShopClient {
         idOrder: r.idOrder,
         concepto: r.movementType,
         estado: r.movementStatus,
-        moneda: 'COP',
+        moneda: this.currency,
         valor,
-        saldoNuevo: r.newBalance === undefined || r.newBalance === null ? null : montoBilletera(r.newBalance, 'COP'),
+        saldoNuevo: r.newBalance === undefined || r.newBalance === null ? null : montoBilletera(r.newBalance, this.currency),
         fecha: r.balanceMovementDate,
         guia: text(r.carrierTrackingCode),
       });
@@ -923,11 +957,24 @@ export class MasterShopClient {
     return out;
   }
 
-  /** Prueba la llave con una lectura inocua (`GET /api/products`). */
+  /**
+   * Prueba la llave con una lectura inocua (`GET /api/products`). Con `currency` en las opciones, además
+   * comprueba que la moneda del negocio (`baseCurrencyPrice` de sus productos) sea la del país donde se guarda
+   * la llave: una llave de Colombia guardada en Ecuador (o al revés) falla aquí y no al crear un pedido (D-052).
+   */
   async testCredentials(): Promise<{ ok: boolean; message: string }> {
     try {
       const res = await this.send('GET', '/api/products', { query: { page: '1' } });
-      if (res.status === 200) return { ok: true, message: 'Conexión con MasterShop correcta.' };
+      if (res.status === 200) {
+        const otra = this.currencyExplicit ? otherBusinessCurrency(res.data, this.currency) : null;
+        if (otra !== null) {
+          return {
+            ok: false,
+            message: `La llave es de un negocio de MasterShop en ${otra}; para este país se espera ${this.currency}. Revisa que sea la llave del país correcto.`,
+          };
+        }
+        return { ok: true, message: 'Conexión con MasterShop correcta.' };
+      }
       const e = this.fail(res, 'GET');
       return { ok: false, message: e.message };
     } catch (e) {

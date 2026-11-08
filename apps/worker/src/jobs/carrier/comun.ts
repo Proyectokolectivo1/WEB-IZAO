@@ -3,6 +3,7 @@
  * + `aplicar_transicion_pedido`, actualización de `shipments` desde la API y guardado de la etiqueta.
  */
 import type { CarrierOrder, CarrierProvider } from '@izao/core/contracts';
+import type { CountryCode } from '@izao/core/money';
 import { transicionar, type JsonValue, type OrderStatus } from '@izao/core/order-state';
 import {
   CarrierOrderError,
@@ -20,7 +21,7 @@ export interface DepsCarrier {
    * Adaptador `CarrierProvider` con esa llave. `opciones` (modo A/B y pago) solo hacen falta para crear;
    * sin ellas, `createOrder` debe fallar.
    */
-  transportadora(creds: MasterShopCredentials, opciones?: CarrierOrderOptions): CarrierProvider;
+  transportadora(creds: MasterShopCredentials, opciones: CarrierOrderOptions | undefined, pais: CountryCode): CarrierProvider;
   programar: ProgramadorCarrier;
   etiquetas: AlmacenEtiquetas;
   /**

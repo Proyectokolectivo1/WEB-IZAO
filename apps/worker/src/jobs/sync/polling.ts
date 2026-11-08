@@ -8,6 +8,7 @@
  * Idempotente: id de job fijo por pedido (`carrier.sync.polling.{idOrder}`), así una corrida repetida no
  * duplica trabajo pendiente; si nada cambió no encola nada.
  */
+import type { CountryCode } from '@izao/core/money';
 import { jobIdSync, type DatosJobSync, type MasterShopCredentials, type MasterShopListItem } from '@izao/mastershop';
 
 export const JOB_POLLING_MASTERSHOP = 'mastershop.polling';
@@ -30,15 +31,19 @@ export interface EnvioAbierto {
   etiqueta_pendiente?: boolean;
 }
 
+/** Cada país tiene su propia llave y su propio negocio en MasterShop (D-052): se recorre país por país. */
 export interface FuentePolling {
-  credenciales(): Promise<MasterShopCredentials | null>;
-  enviosAbiertos(): Promise<EnvioAbierto[]>;
+  credenciales(pais: CountryCode): Promise<MasterShopCredentials | null>;
+  /** Envíos abiertos de pedidos de ese país. */
+  enviosAbiertos(pais: CountryCode): Promise<EnvioAbierto[]>;
 }
 
 export interface DepsPolling {
   fuente: FuentePolling;
-  /** Todas las páginas desde `desde` (`MasterShopClient.listAllOrders`). */
-  listar(creds: MasterShopCredentials, desde: Date): Promise<MasterShopListItem[]>;
+  /** Países a revisar (defecto `['CO']`). Un país sin llave activa queda en `sin_credenciales` sin tocar a los demás. */
+  paises?: readonly CountryCode[];
+  /** Todas las páginas desde `desde` (`MasterShopClient.listAllOrders`) con la llave del país. */
+  listar(creds: MasterShopCredentials, desde: Date, pais: CountryCode): Promise<MasterShopListItem[]>;
   encolarSync(datos: DatosJobSync, jobId: string): Promise<'encolado' | 'ya_pendiente'>;
   ahora?: () => Date;
 }
@@ -53,6 +58,8 @@ export interface ResultadoPolling {
   estado_desconocido: number;
   /** Envíos abiertos que no salieron en el listado y se reconsultan por id. */
   ausentes: number;
+  /** Con más de un país: resultado de cada uno (los contadores de arriba son la suma). */
+  por_pais?: Partial<Record<CountryCode, ResultadoPolling['accion']>>;
 }
 
 export function jobIdPolling(providerOrderId: number): string {
@@ -65,7 +72,38 @@ function difiere(local: EnvioAbierto, remoto: MasterShopListItem): boolean {
   return remoto.trackingCode !== null && remoto.trackingCode !== local.tracking_code;
 }
 
+/** Revisa cada país con su llave; un error en un país no impide revisar los demás (se relanza al final). */
 export async function pollingMasterShop(deps: DepsPolling): Promise<ResultadoPolling> {
+  const paises = deps.paises ?? ['CO'];
+  if (paises.length === 1) return pollingPais(deps, paises[0]!);
+  const total: ResultadoPolling = {
+    accion: 'sin_credenciales',
+    listados: 0,
+    abiertos: 0,
+    encolados: 0,
+    ya_pendientes: 0,
+    estado_desconocido: 0,
+    ausentes: 0,
+    por_pais: {},
+  };
+  let fallo: unknown = null;
+  for (const pais of paises) {
+    let r: ResultadoPolling;
+    try {
+      r = await pollingPais(deps, pais);
+    } catch (e) {
+      fallo ??= e;
+      continue;
+    }
+    total.por_pais![pais] = r.accion;
+    for (const k of ['listados', 'abiertos', 'encolados', 'ya_pendientes', 'estado_desconocido', 'ausentes'] as const) total[k] += r[k];
+    if (r.accion === 'revisado' || (r.accion === 'sin_envios_abiertos' && total.accion === 'sin_credenciales')) total.accion = r.accion;
+  }
+  if (fallo !== null) throw fallo;
+  return total;
+}
+
+async function pollingPais(deps: DepsPolling, pais: CountryCode): Promise<ResultadoPolling> {
   const r: ResultadoPolling = {
     accion: 'revisado',
     listados: 0,
@@ -75,15 +113,15 @@ export async function pollingMasterShop(deps: DepsPolling): Promise<ResultadoPol
     estado_desconocido: 0,
     ausentes: 0,
   };
-  const creds = await deps.fuente.credenciales();
+  const creds = await deps.fuente.credenciales(pais);
   if (!creds) return { ...r, accion: 'sin_credenciales' };
-  const abiertos = await deps.fuente.enviosAbiertos();
+  const abiertos = await deps.fuente.enviosAbiertos(pais);
   r.abiertos = abiertos.length;
   if (abiertos.length === 0) return { ...r, accion: 'sin_envios_abiertos' };
 
   const ahora = (deps.ahora ?? (() => new Date()))();
   const desde = new Date(ahora.getTime() - VENTANA_POLLING_DIAS * 86_400_000);
-  const remotos = await deps.listar(creds, desde);
+  const remotos = await deps.listar(creds, desde, pais);
   r.listados = remotos.length;
   const porId = new Map(remotos.map((x) => [x.idOrder, x]));
 

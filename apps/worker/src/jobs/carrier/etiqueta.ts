@@ -40,7 +40,7 @@ export async function procesarEtiqueta(
   if (!envio || envio.provider_order_id === null) return r('sin_envio');
   if (envio.label_local_path) return r(await guardarEtiqueta(deps, pedido.id, pedido.number, envio, ACTOR_SISTEMA));
 
-  const creds = await deps.fuente.credenciales();
+  const creds = await deps.fuente.credenciales(pedido.country_code);
   if (!creds) {
     await deps.fuente.registrarEvento(pedido.id, 'alerta', ACTOR_SISTEMA, { motivo: 'sin_credenciales', etapa: 'etiqueta' });
     return r('sin_credenciales');
@@ -60,7 +60,7 @@ export async function procesarEtiqueta(
   };
 
   try {
-    const remoto = await deps.transportadora(creds).getOrder({ providerOrderId: envio.provider_order_id });
+    const remoto = await deps.transportadora(creds, undefined, pedido.country_code).getOrder({ providerOrderId: envio.provider_order_id });
     const actualizado = await guardarRemoto(deps, pedido.id, pedido.number, envio, remoto, 'poll_label');
     if (remoto.statusId === 9) return r('cancelado');
     if (!actualizado.label_url) return r(await siguiente());

@@ -9,6 +9,8 @@ import { MasterShopClient, registrarWebhooksIzao, urlWebhookIzao, type AlmacenWe
 import { clienteDb } from '@/lib/db/cliente';
 
 export type AmbienteWebhook = 'sandbox' | 'production';
+/** Cada país tiene su propio negocio y su propia llave en MasterShop (D-052): los webhooks se registran por país. */
+export type PaisWebhook = 'CO' | 'EC';
 
 /** Lo mínimo del cliente de Supabase que usa el almacén (inyectable en pruebas). */
 export interface DbWebhooks {
@@ -23,10 +25,14 @@ export interface DbWebhooks {
   };
 }
 
-export function almacenWebhooksSupabase(ambiente: AmbienteWebhook, db: DbWebhooks = clienteDb() as unknown as DbWebhooks): AlmacenWebhooks {
+export function almacenWebhooksSupabase(
+  ambiente: AmbienteWebhook,
+  db: DbWebhooks = clienteDb() as unknown as DbWebhooks,
+  pais: PaisWebhook = 'CO',
+): AlmacenWebhooks {
   return {
     async registrados() {
-      const { data, error } = await db.from('integration_webhooks').select('event_id').eq('provider', 'mastershop').eq('country_code', 'CO').eq('environment', ambiente);
+      const { data, error } = await db.from('integration_webhooks').select('event_id').eq('provider', 'mastershop').eq('country_code', pais).eq('environment', ambiente);
       if (error) throw new Error(`integration_webhooks: ${error.code ?? 'error'}`);
       return new Set((data ?? []).map((r) => r.event_id));
     },
@@ -34,7 +40,7 @@ export function almacenWebhooksSupabase(ambiente: AmbienteWebhook, db: DbWebhook
       const { error } = await db.from('integration_webhooks').upsert(
         {
           provider: 'mastershop',
-          country_code: 'CO',
+          country_code: pais,
           environment: ambiente,
           event_id: w.idWebhook,
           event_name: w.eventName,
@@ -52,11 +58,15 @@ export interface ResultadoRegistroWebhooks {
   registrados: { idWebhook: number; eventName: string }[];
 }
 
-/** Registra 16 y 17 con la llave activa de MasterShop (CO). `SITE_URL` y `MASTERSHOP_WEBHOOK_PATH_SECRET` del entorno. */
+/**
+ * Registra 16 y 17 con la llave activa de MasterShop del país (`opciones.pais`, defecto CO). Misma URL para los dos
+ * países: el job reconsulta cada pedido con la llave de su propio país. `SITE_URL` y `MASTERSHOP_WEBHOOK_PATH_SECRET`
+ * del entorno.
+ */
 export async function registrarWebhooksMasterShop(
   apiKey: string,
   ambiente: AmbienteWebhook,
-  opciones: { almacen?: AlmacenWebhooks; client?: MasterShopClient; env?: Record<string, string | undefined> } = {},
+  opciones: { pais?: PaisWebhook; almacen?: AlmacenWebhooks; client?: MasterShopClient; env?: Record<string, string | undefined> } = {},
 ): Promise<ResultadoRegistroWebhooks> {
   const env = opciones.env ?? process.env;
   if (!env.SITE_URL || !env.MASTERSHOP_WEBHOOK_PATH_SECRET) throw new Error('Faltan SITE_URL o MASTERSHOP_WEBHOOK_PATH_SECRET');
@@ -64,7 +74,7 @@ export async function registrarWebhooksMasterShop(
   const r = await registrarWebhooksIzao(
     opciones.client ?? new MasterShopClient({ apiKey }),
     url,
-    opciones.almacen ?? almacenWebhooksSupabase(ambiente),
+    opciones.almacen ?? almacenWebhooksSupabase(ambiente, undefined, opciones.pais ?? 'CO'),
   );
   return { registrados: r.map((w) => ({ idWebhook: w.idWebhook, eventName: w.eventName })) };
 }

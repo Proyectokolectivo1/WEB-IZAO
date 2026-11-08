@@ -15,6 +15,7 @@
  * Variables: SUPABASE_URL, SUPABASE_SECRET_KEY, APP_ENCRYPTION_KEY. Con MASTERSHOP_MODO=simulado no se llama
  * a la API (no hay pedidos simulados compartidos con la cola carrier).
  */
+import { currencyForCountry, type CountryCode } from '@izao/core/money';
 import { JOB_CARRIER_SYNC, MasterShopClient, encolarJobCarrier, type ColaMinima } from '@izao/mastershop';
 import type { RecalcularMetricasPedido } from '../metrics/tras-transicion.js';
 import type { DepsBilletera } from './billetera.js';
@@ -25,6 +26,9 @@ export { CRON_POLLING_MASTERSHOP, JOB_POLLING_MASTERSHOP, pollingMasterShop } fr
 export type { DepsPolling, ResultadoPolling } from './polling.js';
 export { CRON_BILLETERA_MASTERSHOP, JOB_BILLETERA_MASTERSHOP, billeteraMasterShop } from './billetera.js';
 export type { DepsBilletera, ResultadoBilletera } from './billetera.js';
+
+/** Países con MasterShop: cada uno con su propia llave (D-052). Sin llave activa, el país se salta. */
+export const PAISES_MASTERSHOP: readonly CountryCode[] = ['CO', 'EC'];
 
 function opcionesDesdeEnv(env: NodeJS.ProcessEnv) {
   const supabaseUrl = env.SUPABASE_URL;
@@ -41,7 +45,9 @@ export function dependenciasPollingDesdeEnv(colaCarrier: ColaMinima, env: NodeJS
   const simulado = env.MASTERSHOP_MODO === 'simulado';
   return {
     fuente: simulado ? { ...fuente, credenciales: async () => null } : fuente,
-    listar: (creds, desde) => new MasterShopClient({ apiKey: creds.apiKey }).listAllOrders({ startDate: desde }),
+    paises: PAISES_MASTERSHOP,
+    listar: (creds, desde, pais) =>
+      new MasterShopClient({ apiKey: creds.apiKey, currency: currencyForCountry(pais) }).listAllOrders({ startDate: desde }),
     encolarSync: (datos, jobId) => encolarJobCarrier(colaCarrier, JOB_CARRIER_SYNC, datos, jobId),
   };
 }
@@ -56,10 +62,13 @@ export function dependenciasBilleteraDesdeEnv(
   return {
     fuente: simulado ? { ...fuente, credenciales: async () => null } : fuente,
     ...(recalcularMetricas ? { recalcularMetricas } : {}),
-    listar: (creds, desde) => new MasterShopClient({ apiKey: creds.apiKey }).listAllWalletMovements({ startDate: desde }),
+    paises: PAISES_MASTERSHOP,
+    listar: (creds, desde, pais) =>
+      new MasterShopClient({ apiKey: creds.apiKey, currency: currencyForCountry(pais) }).listAllWalletMovements({ startDate: desde }),
     // PENDIENTE: canal de alertas al admin (WhatsApp/correo, §15.5). Hoy queda la bandera en country_settings.
-    async avisarSaldoBajo(saldo, umbral) {
-      console.warn(`[worker] billetera MasterShop con saldo bajo: ${saldo.toString()} < ${umbral.toString()} COP`);
+    async avisarSaldoBajo(saldo, umbral, pais) {
+      const moneda = currencyForCountry(pais);
+      console.warn(`[worker] billetera MasterShop ${pais} con saldo bajo: ${saldo.toString()} < ${umbral.toString()} (${moneda}, unidad menor)`);
     },
   };
 }

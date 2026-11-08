@@ -4,6 +4,7 @@
  */
 import type { Order } from '@izao/core/contracts';
 import type { OrderStatus } from '@izao/core/order-state';
+import type { CountryCode } from '@izao/core/money';
 import type { MasterShopCredentials } from '@izao/mastershop';
 import type {
   AjustesTransportadora,
@@ -67,7 +68,7 @@ export class FuenteMemoria implements FuenteCarrier {
   async pagoAprobado() {
     return this.pago;
   }
-  async credenciales() {
+  async credenciales(_pais: CountryCode) {
     return this.creds;
   }
   async envio(id: string) {

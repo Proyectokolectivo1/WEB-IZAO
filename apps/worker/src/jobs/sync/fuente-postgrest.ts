@@ -2,7 +2,7 @@
  * Lecturas de PostgREST para el polling de MasterShop (llave de servidor). Solo lee: la escritura la hace
  * `carrier.sync`.
  */
-import { fromDbAmount } from '@izao/core/money';
+import { currencyForCountry, fromDbAmount } from '@izao/core/money';
 import { TERMINAL_STATUSES } from '@izao/core/order-state';
 import { parseMasterShopCredentials } from '@izao/mastershop';
 import { crearClientePostgrest, eq, ErrorPostgrest, type Fila, type OpcionesPostgrest } from '../postgrest.js';
@@ -31,7 +31,7 @@ export function aEnvioAbierto(r: Fila): EnvioAbierto | null {
 const json = (v: unknown): string => JSON.stringify(v, (_k, x) => (typeof x === 'bigint' ? x.toString() : x));
 
 /**
- * Columnas del saldo en `country_settings` (CO) pedidas a izao-db: `carrier_wallet_low_balance` (umbral, `null` =
+ * Columnas del saldo en `country_settings` (por país, D-052) pedidas a izao-db: `carrier_wallet_low_balance` (umbral, `null` =
  * sin alerta), `carrier_wallet_balance`, `carrier_wallet_balance_at`, `carrier_wallet_low_alert_at`. Mientras no
  * existan (`42703`), el saldo se omite y los costos siguen funcionando.
  */
@@ -41,8 +41,8 @@ export function crearFuenteBilleteraPostgrest(o: OpcionesPostgrest): FuenteBille
   const c = crearClientePostgrest(o);
   let categoria: string | null = null;
   return {
-    async credenciales() {
-      const cred = await c.credencial('mastershop', 'CO', 'billetera');
+    async credenciales(pais) {
+      const cred = await c.credencial('mastershop', pais, 'billetera');
       return cred ? parseMasterShopCredentials(cred.valores) : null;
     },
     async pedidosPorIdProveedor(ids) {
@@ -69,7 +69,7 @@ export function crearFuenteBilleteraPostgrest(o: OpcionesPostgrest): FuenteBille
         body: json({ shipping_cost_real: real, carrier_fees: fees }),
       });
     },
-    async registrarGasto(g) {
+    async registrarGasto(g, pais) {
       if (categoria === null) {
         const rows = await c.filas('expense_categories', 'expense_categories?slug=eq.mastershop&select=id');
         if (!rows[0]) throw new Error('expense_categories: falta la categoría "mastershop" del seed');
@@ -80,11 +80,11 @@ export function crearFuenteBilleteraPostgrest(o: OpcionesPostgrest): FuenteBille
           method: 'POST',
           headers: { prefer: 'return=minimal' },
           body: json({
-            country_code: 'CO',
+            country_code: pais,
             category_id: categoria,
             date: g.date,
             amount: g.amount,
-            currency_code: 'COP',
+            currency_code: currencyForCountry(pais),
             description: g.description.slice(0, 300),
             source: 'mastershop_wallet',
             external_ref: g.external_ref,
@@ -96,9 +96,9 @@ export function crearFuenteBilleteraPostgrest(o: OpcionesPostgrest): FuenteBille
         throw e;
       }
     },
-    async estadoSaldo() {
+    async estadoSaldo(pais) {
       try {
-        const rows = await c.filas('country_settings', `country_settings?country_code=eq.CO&select=${COLUMNAS_SALDO}`);
+        const rows = await c.filas('country_settings', `country_settings?country_code=${eq(pais)}&select=${COLUMNAS_SALDO}`);
         const r = rows[0];
         if (!r) return null;
         const u = r.carrier_wallet_low_balance;
@@ -111,14 +111,14 @@ export function crearFuenteBilleteraPostgrest(o: OpcionesPostgrest): FuenteBille
         throw e;
       }
     },
-    async guardarSaldo(s, activa, ahora) {
+    async guardarSaldo(s, activa, ahora, pais) {
       const cuerpo: Record<string, unknown> = {};
       if (s) {
         cuerpo.carrier_wallet_balance = s.valor;
         cuerpo.carrier_wallet_balance_at = s.fecha.toISOString();
       }
       cuerpo.carrier_wallet_low_alert_at = activa ? ahora.toISOString() : null;
-      await c.pedir('country_settings', 'country_settings?country_code=eq.CO', {
+      await c.pedir('country_settings', `country_settings?country_code=${eq(pais)}`, {
         method: 'PATCH',
         headers: { prefer: 'return=minimal' },
         body: json(cuerpo),
@@ -130,17 +130,17 @@ export function crearFuenteBilleteraPostgrest(o: OpcionesPostgrest): FuenteBille
 export function crearFuentePollingPostgrest(o: OpcionesPostgrest): FuentePolling {
   const c = crearClientePostgrest(o);
   return {
-    async credenciales() {
-      const cred = await c.credencial('mastershop', 'CO', 'polling');
+    async credenciales(pais) {
+      const cred = await c.credencial('mastershop', pais, 'polling');
       return cred ? parseMasterShopCredentials(cred.valores) : null;
     },
-    async enviosAbiertos() {
+    async enviosAbiertos(pais) {
       const terminales = TERMINAL_STATUSES.join(',');
       const rows = await c.filas(
         'shipments',
         'shipments?provider=eq.mastershop&provider_order_id=not.is.null' +
-          '&select=order_id,external_order_id,provider_order_id,provider_status_id,has_novelty,tracking_code,last_synced_at,label_url,label_local_path,orders!inner(status)' +
-          `&orders.status=not.in.(${terminales})&limit=5000`,
+          '&select=order_id,external_order_id,provider_order_id,provider_status_id,has_novelty,tracking_code,last_synced_at,label_url,label_local_path,orders!inner(status,country_code)' +
+          `&orders.status=not.in.(${terminales})&orders.country_code=${eq(pais)}&limit=5000`,
       );
       return rows.flatMap((r) => {
         const e = aEnvioAbierto(r);

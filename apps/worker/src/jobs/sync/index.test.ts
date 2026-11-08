@@ -26,8 +26,9 @@ describe('cableado de jobs/sync', () => {
 
   it('modo simulado: sin credenciales, no sale a la API real', async () => {
     const p = dependenciasPollingDesdeEnv({ getJob: async () => null, add: async () => null }, { ...ENV, MASTERSHOP_MODO: 'simulado' });
-    expect(await p.fuente.credenciales()).toBeNull();
-    expect(await dependenciasBilleteraDesdeEnv({ ...ENV, MASTERSHOP_MODO: 'simulado' }).fuente.credenciales()).toBeNull();
+    expect(await p.fuente.credenciales('CO')).toBeNull();
+    expect(await dependenciasBilleteraDesdeEnv({ ...ENV, MASTERSHOP_MODO: 'simulado' }).fuente.credenciales('EC')).toBeNull();
+    expect(p.paises).toEqual(['CO', 'EC']);
   });
 
   it('encolarSync usa la cola carrier con el nombre carrier.sync e id fijo', async () => {

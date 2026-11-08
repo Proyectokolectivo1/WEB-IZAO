@@ -1,6 +1,6 @@
 /**
  * `FuenteCarrier` contra Supabase por PostgREST con la llave de servidor (dueño: izao-logistica).
- * Credencial de MasterShop: `integration_credentials` activa de `mastershop`/CO, descifrada con
+ * Credencial de MasterShop: `integration_credentials` activa de `mastershop` del país del pedido (D-052), descifrada con
  * `@izao/core/credentials` (vía `ClientePostgrest.credencial`). Nunca se registran llaves ni respuestas.
  */
 import type { Order, OrderItem } from '@izao/core/contracts';
@@ -120,7 +120,8 @@ export function crearFuenteCarrierPostgrest(o: OpcionesPostgrest): FuenteCarrier
       return rows[0] ? filaAPedido(rows[0]) : null;
     },
     async pedidoPorNumero(numero) {
-      const rows = await filas('orders', `orders?number=${eq(numero)}&country_code=eq.CO&select=id`);
+      // El número lleva el país (`IZ-CO-…`, `IZ-EC-…`): no se filtra por país; si hubiera dos, no se elige.
+      const rows = await filas('orders', `orders?number=${eq(numero)}&select=id`);
       return rows.length === 1 ? String(rows[0]!.id) : null;
     },
     async pedidoPorIdProveedor(pid) {
@@ -150,8 +151,8 @@ export function crearFuenteCarrierPostgrest(o: OpcionesPostgrest): FuenteCarrier
       if (!r) return null;
       return { provider: String(r.provider), referencia: txt(r.provider_transaction_id) ?? txt(r.provider_reference) };
     },
-    async credenciales() {
-      const cred = await c.credencial('mastershop', 'CO', 'carrier');
+    async credenciales(pais) {
+      const cred = await c.credencial('mastershop', pais, 'carrier');
       return cred ? parseMasterShopCredentials(cred.valores) : null;
     },
     async envio(id) {

@@ -25,6 +25,7 @@ import {
   type MasterShopCredentials,
   type MovimientoBilletera,
 } from '@izao/mastershop';
+import type { CountryCode } from '@izao/core/money';
 import type { RecalcularMetricasPedido } from '../metrics/tras-transicion.js';
 
 export const JOB_BILLETERA_MASTERSHOP = 'mastershop.billetera';
@@ -51,23 +52,30 @@ export interface EstadoSaldo {
   alertaActiva: boolean;
 }
 
+/**
+ * Cada país tiene su propia llave, su billetera y su moneda en MasterShop (D-052): todo lo que depende del país
+ * (llave, gasto, saldo) recibe `pais`.
+ */
 export interface FuenteBilletera {
-  credenciales(): Promise<MasterShopCredentials | null>;
+  credenciales(pais: CountryCode): Promise<MasterShopCredentials | null>;
   /** Pedidos de la tienda por `provider_order_id`. */
   pedidosPorIdProveedor(ids: readonly number[]): Promise<PedidoBilletera[]>;
   guardarCostos(orderId: string, shipping_cost_real: bigint, carrier_fees: CarrierFees): Promise<void>;
-  /** `true` si lo creó; `false` si ya existía (índice único). */
-  registrarGasto(g: GastoBilletera): Promise<boolean>;
+  /** `true` si lo creó; `false` si ya existía (índice único). Gasto del país, en su moneda. */
+  registrarGasto(g: GastoBilletera, pais: CountryCode): Promise<boolean>;
   /** `null` si el país aún no tiene las columnas del saldo (pendiente de izao-db). */
-  estadoSaldo(): Promise<EstadoSaldo | null>;
-  guardarSaldo(saldo: { valor: bigint; fecha: Date } | null, alertaActiva: boolean, ahora: Date): Promise<void>;
+  estadoSaldo(pais: CountryCode): Promise<EstadoSaldo | null>;
+  guardarSaldo(saldo: { valor: bigint; fecha: Date } | null, alertaActiva: boolean, ahora: Date, pais: CountryCode): Promise<void>;
 }
 
 export interface DepsBilletera {
   fuente: FuenteBilletera;
-  listar(creds: MasterShopCredentials, desde: Date): Promise<{ movimientos: MovimientoBilletera[]; avisos: unknown[] }>;
+  /** Países a revisar (defecto `['CO']`). */
+  paises?: readonly CountryCode[];
+  /** Movimientos con la llave del país (montos leídos en su moneda). */
+  listar(creds: MasterShopCredentials, desde: Date, pais: CountryCode): Promise<{ movimientos: MovimientoBilletera[]; avisos: unknown[] }>;
   /** Aviso de saldo bajo al admin (canal pendiente; hoy registro en log y bandera en `country_settings`). */
-  avisarSaldoBajo(saldo: bigint, umbral: bigint): Promise<void>;
+  avisarSaldoBajo(saldo: bigint, umbral: bigint, pais: CountryCode): Promise<void>;
   /**
    * Encola `metrics.recompute_day` de los días del pedido (creación y pago, §21.4) cuando cambian su costo real
    * de envío o sus comisiones. Si falla no tumba el job: lo corrige el nocturno `metrics.recompute_recent`.
@@ -84,6 +92,8 @@ export interface ResultadoBilletera {
   gastos_creados: number;
   gastos_existentes: number;
   alerta_saldo: EstadoAlertaSaldo | 'no_configurado';
+  /** Con más de un país: resultado de cada uno (los contadores son la suma; `alerta_saldo` queda en `por_pais`). */
+  por_pais?: Partial<Record<CountryCode, { accion: ResultadoBilletera['accion']; alerta_saldo: ResultadoBilletera['alerta_saldo'] }>>;
 }
 
 const FECHA_BOGOTA = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -92,7 +102,38 @@ export function fechaBogota(iso: string): string {
   return FECHA_BOGOTA.format(new Date(iso));
 }
 
+/** Revisa cada país con su llave; un error en un país no impide revisar los demás (se relanza al final). */
 export async function billeteraMasterShop(deps: DepsBilletera): Promise<ResultadoBilletera> {
+  const paises = deps.paises ?? ['CO'];
+  if (paises.length === 1) return billeteraPais(deps, paises[0]!);
+  const total: ResultadoBilletera = {
+    accion: 'sin_credenciales',
+    movimientos: 0,
+    avisos: 0,
+    pedidos_actualizados: 0,
+    gastos_creados: 0,
+    gastos_existentes: 0,
+    alerta_saldo: 'no_configurado',
+    por_pais: {},
+  };
+  let fallo: unknown = null;
+  for (const pais of paises) {
+    let r: ResultadoBilletera;
+    try {
+      r = await billeteraPais(deps, pais);
+    } catch (e) {
+      fallo ??= e;
+      continue;
+    }
+    total.por_pais![pais] = { accion: r.accion, alerta_saldo: r.alerta_saldo };
+    for (const k of ['movimientos', 'avisos', 'pedidos_actualizados', 'gastos_creados', 'gastos_existentes'] as const) total[k] += r[k];
+    if (r.accion === 'procesado') total.accion = 'procesado';
+  }
+  if (fallo !== null) throw fallo;
+  return total;
+}
+
+async function billeteraPais(deps: DepsBilletera, pais: CountryCode): Promise<ResultadoBilletera> {
   const r: ResultadoBilletera = {
     accion: 'procesado',
     movimientos: 0,
@@ -102,11 +143,11 @@ export async function billeteraMasterShop(deps: DepsBilletera): Promise<Resultad
     gastos_existentes: 0,
     alerta_saldo: 'no_configurado',
   };
-  const creds = await deps.fuente.credenciales();
+  const creds = await deps.fuente.credenciales(pais);
   if (!creds) return { ...r, accion: 'sin_credenciales' };
   const ahora = (deps.ahora ?? (() => new Date()))();
   const desde = new Date(ahora.getTime() - VENTANA_BILLETERA_DIAS * 86_400_000);
-  const { movimientos, avisos } = await deps.listar(creds, desde);
+  const { movimientos, avisos } = await deps.listar(creds, desde, pais);
   r.movimientos = movimientos.length;
   r.avisos = avisos.length;
 
@@ -131,7 +172,7 @@ export async function billeteraMasterShop(deps: DepsBilletera): Promise<Resultad
       description: [m.concepto, m.idOrder !== null ? `pedido MasterShop ${m.idOrder}` : null, m.guia ? `guía ${m.guia}` : null]
         .filter(Boolean)
         .join(' · '),
-    });
+    }, pais);
     if (creado) r.gastos_creados++;
     else r.gastos_existentes++;
   }
@@ -151,15 +192,15 @@ export async function billeteraMasterShop(deps: DepsBilletera): Promise<Resultad
     }
   }
 
-  const estado = await deps.fuente.estadoSaldo();
+  const estado = await deps.fuente.estadoSaldo(pais);
   if (estado) {
     const s = saldoMasReciente(movimientos);
     const alerta = evaluarSaldo(s?.saldo ?? null, estado.umbral, estado.alertaActiva);
     r.alerta_saldo = alerta;
-    if (alerta === 'nueva' && s && estado.umbral !== null) await deps.avisarSaldoBajo(s.saldo, estado.umbral);
+    if (alerta === 'nueva' && s && estado.umbral !== null) await deps.avisarSaldoBajo(s.saldo, estado.umbral, pais);
     const activa = alerta === 'nueva' || alerta === 'activa' || (alerta === 'sin_saldo' && estado.alertaActiva);
     if (s || activa !== estado.alertaActiva) {
-      await deps.fuente.guardarSaldo(s ? { valor: s.saldo, fecha: new Date(s.fecha) } : null, activa, ahora);
+      await deps.fuente.guardarSaldo(s ? { valor: s.saldo, fecha: new Date(s.fecha) } : null, activa, ahora, pais);
     }
   }
   return r;

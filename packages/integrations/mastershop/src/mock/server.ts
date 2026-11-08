@@ -111,6 +111,11 @@ export interface MasterShopMockOptions {
   firstOrderId?: number;
   /** Modo simulado del worker: al confirmar (1→2) adjunta guía y etiqueta al instante. */
   autoLabelOnConfirm?: boolean;
+  /**
+   * Moneda del negocio dueño de la llave (MasterShop la deriva de la llave, D-052): COP en Colombia (defecto),
+   * USD en Ecuador. Sale en productos, pedidos y movimientos, y fija los decimales que admite el total.
+   */
+  currency?: 'COP' | 'USD';
 }
 
 /** Host de las etiquetas simuladas; `mock.fetch` sirve ahí un PDF mínimo sin pedir la llave. */
@@ -184,7 +189,22 @@ const LIST_FILTER_KEYS = [
   'externalOrderId',
 ];
 const DOC_TYPES = new Set(['CC', 'NIT', 'CE', 'DIE', 'NITEXT', 'PAS', 'RC', 'TE', 'TI']);
-const LEGAL_CURRENCY: Record<string, string> = { CO: 'COP' };
+const LEGAL_CURRENCY: Record<string, string> = { CO: 'COP', EC: 'USD' };
+const CURRENCY_DECIMALS: Record<string, number> = { COP: 0, USD: 2 };
+
+/**
+ * Número del JSON → unidad menor exacta, como compara MasterShop (igualdad decimal sin tolerancia). Más
+ * decimales de los que admite la moneda (p. ej. `59.97000000000001`) → `null`, que acaba en 400.
+ */
+function exactMinor(n: unknown, decimals: number): bigint | null {
+  if (typeof n !== 'number' || !Number.isFinite(n) || Math.abs(n) > Number.MAX_SAFE_INTEGER) return null;
+  const m = /^(-?)(\d+)(?:\.(\d+))?$/.exec(String(n));
+  if (!m) return null;
+  const [, sign, whole, frac = ''] = m;
+  if (frac.length > decimals) return null;
+  const v = BigInt(whole! + frac.padEnd(decimals, '0'));
+  return sign === '-' ? -v : v;
+}
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 function isObject(v: unknown): v is Record<string, unknown> {
@@ -264,7 +284,7 @@ export class MasterShopMock {
       idOrder: null,
       movementStatus: 'SUCCESS',
       newBalance: 0,
-      currency: 'COP',
+      currency: this.options.currency ?? 'COP',
       carrierTrackingCode: null,
       ...partial,
     };
@@ -439,7 +459,7 @@ export class MasterShopMock {
       idProduct: p.idProduct,
       name: p.name,
       description: 'Descripcion',
-      baseCurrencyPrice: 'COP',
+      baseCurrencyPrice: this.options.currency ?? 'COP',
       basePrice: p.basePrice,
       suggestedPrice: 0,
       nameType: 'Fisico',
@@ -536,7 +556,8 @@ export class MasterShopMock {
           formatIssues.push({ path: `${who}.${k}`, message: 'Solo letras y espacios' });
         }
       }
-      if (typeof b[who].phone !== 'string' || !/^\d{10}$/.test(b[who].phone)) {
+      // Teléfono nacional: CO 3XXXXXXXXX; EC 09XXXXXXXX (D-052, [VERIFICAR]).
+      if (typeof b[who].phone !== 'string' || !/^(3\d{9}|09\d{8})$/.test(b[who].phone)) {
         formatIssues.push({ path: `${who}.phone`, message: 'Teléfono inválido' });
       }
     }
@@ -554,16 +575,20 @@ export class MasterShopMock {
     const charges = Array.isArray(b.additional_charge)
       ? (b.additional_charge as Record<string, unknown>[])
       : [];
-    const allIntegers = [
-      b.order_transaction.total,
-      ...items.flatMap((i) => [i.price, i.quantity]),
-      ...charges.map((c) => c.value),
-    ].every((n) => Number.isSafeInteger(n));
-    if (!allIntegers) return this.badRequest(MS_ERRORS.totalMismatch, null, headers);
+    const decimals = CURRENCY_DECIMALS[String(b.order_transaction.currency)] ?? 0;
+    const total = exactMinor(b.order_transaction.total, decimals);
+    const prices = items.map((i) => exactMinor(i.price, decimals));
+    const values = charges.map((c) => exactMinor(c.value, decimals));
+    const exact =
+      total !== null &&
+      prices.every((p) => p !== null) &&
+      values.every((v) => v !== null) &&
+      items.every((i) => Number.isSafeInteger(i.quantity));
+    if (!exact) return this.badRequest(MS_ERRORS.totalMismatch, null, headers);
     const sum =
-      items.reduce((a, i) => a + BigInt(i.price as number) * BigInt(i.quantity as number), 0n) +
-      charges.reduce((a, c) => a + BigInt(c.value as number), 0n);
-    if (sum !== BigInt(b.order_transaction.total)) {
+      items.reduce((a, i, k) => a + prices[k]! * BigInt(i.quantity as number), 0n) +
+      values.reduce((a, v) => a + v!, 0n);
+    if (sum !== total) {
       return this.badRequest(MS_ERRORS.totalMismatch, null, headers);
     }
     if (LEGAL_CURRENCY[b.shipping_address.country] !== b.order_transaction.currency) {
@@ -903,7 +928,7 @@ export class MasterShopMock {
       clientInfo: null,
       confirmationStatusName: null,
       createdAt: o.createdAt.toISOString(),
-      currency: 'COP',
+      currency: this.options.currency ?? 'COP',
       externalOrderId: o.externalOrderId,
       // Trampa real (D-042): producción manda 0/1, no booleano.
       hasNovelty: o.hasNovelty ? 1 : 0,

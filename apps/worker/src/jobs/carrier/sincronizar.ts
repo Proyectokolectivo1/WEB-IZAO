@@ -56,7 +56,7 @@ export async function procesarSync(datos: DatosJobSync, deps: DepsCarrier): Prom
   const pedido = orderId === null ? null : await deps.fuente.pedido(orderId);
   if (!pedido) return marcar(deps, datos, { accion: 'pedido_desconocido', order_id: null });
 
-  const creds = await deps.fuente.credenciales();
+  const creds = await deps.fuente.credenciales(pedido.country_code);
   if (!creds) return marcar(deps, datos, { accion: 'sin_credenciales', order_id: pedido.id });
 
   const envio = await deps.fuente.envio(pedido.id);
@@ -64,7 +64,7 @@ export async function procesarSync(datos: DatosJobSync, deps: DepsCarrier): Prom
   let remoto;
   try {
     remoto = await deps
-      .transportadora(creds)
+      .transportadora(creds, undefined, pedido.country_code)
       .getOrder(providerOrderId !== null ? { providerOrderId } : { externalOrderId: pedido.number });
   } catch (e) {
     if (esReintentable(e)) throw e;

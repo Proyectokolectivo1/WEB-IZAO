@@ -7,7 +7,8 @@ import type { CredentialSchema } from '@izao/core/contracts';
 
 export const MASTERSHOP_CREDENTIALS: CredentialSchema = {
   provider: 'mastershop',
-  countries: ['CO'],
+  // Una credencial independiente por país (D-052): MasterShop deriva de la llave el negocio, el país y la moneda.
+  countries: ['CO', 'EC'],
   // `[VERIFICAR]`: la documentación solo publica la base de producción.
   environments: ['production'],
   fields: [

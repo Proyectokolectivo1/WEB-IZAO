@@ -143,14 +143,18 @@ export async function procesarCrear(datos: DatosJobCrear, deps: DepsCarrier): Pr
 
   let actual: OrderStatus = pedido.status;
   try {
-    const creds = await deps.fuente.credenciales();
+    const creds = await deps.fuente.credenciales(pedido.country_code);
     if (!creds) throw new FalloDefinitivo('sin_credenciales');
     const pago = await deps.fuente.pagoAprobado(pedido.id);
-    const carrier = deps.transportadora(creds, {
-      mode: ajustes.modo,
-      paymentGateway: pago?.provider ?? pedido.payment_method,
-      paymentReference: pago?.referencia ?? null,
-    });
+    const carrier = deps.transportadora(
+      creds,
+      {
+        mode: ajustes.modo,
+        paymentGateway: pago?.provider ?? pedido.payment_method,
+        paymentReference: pago?.referencia ?? null,
+      },
+      pedido.country_code,
+    );
 
     const envio: EnvioFila | null = await deps.fuente.envio(pedido.id);
     let providerOrderId = envio?.provider_order_id ?? null;

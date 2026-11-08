@@ -66,8 +66,11 @@ export interface FuenteCarrier {
   pedidoPorIdProveedor(providerOrderId: number): Promise<string | null>;
   ajustes(pais: CountryCode): Promise<AjustesTransportadora | null>;
   pagoAprobado(orderId: string): Promise<PagoAprobado | null>;
-  /** Credencial activa de MasterShop para CO, descifrada; `null` si no hay o falla. */
-  credenciales(): Promise<MasterShopCredentials | null>;
+  /**
+   * Credencial activa de MasterShop del país del pedido, descifrada; `null` si no hay o falla. Cada país tiene
+   * su propia llave (D-052): nunca se usa la de otro país.
+   */
+  credenciales(pais: CountryCode): Promise<MasterShopCredentials | null>;
   envio(orderId: string): Promise<EnvioFila | null>;
   /** Upsert por `(order_id, provider)`; devuelve la fila resultante. */
   guardarEnvio(orderId: string, cambios: CambiosEnvio): Promise<EnvioFila>;

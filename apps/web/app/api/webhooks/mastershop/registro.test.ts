@@ -52,6 +52,18 @@ describe('registro de webhooks desde la web', () => {
     expect(mock.countRequests('POST', '/api/webhooks')).toBe(2);
   });
 
+  it('Ecuador se registra con su propia llave y queda guardado aparte de Colombia (D-052)', async () => {
+    const clock = new FakeClock();
+    const mockEC = new MasterShopMock({ apiKey: 'llave-ec-0001', clock, currency: 'USD' });
+    const client = new MasterShopClient({ apiKey: 'llave-ec-0001', fetch: mockEC.fetch, clock, currency: 'USD' });
+    const { db, filas, filtros } = dbFalsa();
+    filas.push({ provider: 'mastershop', country_code: 'CO', environment: 'production', event_id: 16 });
+    const r = await registrarWebhooksMasterShop('llave-ec-0001', 'production', { pais: 'EC', almacen: almacenWebhooksSupabase('production', db, 'EC'), client, env: ENV });
+    expect(r.registrados.map((w) => w.idWebhook)).toEqual([16, 17]);
+    expect(filtros[0]).toBe('mastershop/EC/production');
+    expect(filas.filter((f) => f.country_code === 'EC').map((f) => f.event_id)).toEqual([16, 17]);
+  });
+
   it('sin SITE_URL o secreto no llama a MasterShop', async () => {
     const { db } = dbFalsa();
     await expect(registrarWebhooksMasterShop(LLAVE, 'sandbox', { almacen: almacenWebhooksSupabase('sandbox', db), env: {} })).rejects.toThrow(/SITE_URL/);

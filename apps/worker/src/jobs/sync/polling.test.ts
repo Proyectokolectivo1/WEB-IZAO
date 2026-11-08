@@ -126,3 +126,37 @@ describe('polling de respaldo de MasterShop (jobs/sync)', () => {
     await expect(pollingMasterShop(deps)).rejects.toThrow();
   });
 });
+
+describe('polling por país (D-052)', () => {
+  it('cada país con su llave y sus envíos; uno sin llave no frena al otro', async () => {
+    const clock = new FakeClock();
+    const mockEC = new MasterShopMock({ apiKey: 'llave-ec', clock, currency: 'USD' });
+    const o = mockEC.seed({ externalOrderId: 'IZ-EC-000001', createdAt: new Date(clock.now() - DIA) });
+    mockEC.setStatus(o.idOrder, 6);
+    const pedidas: string[] = [];
+    const encolados: DatosJobSync[] = [];
+    const deps: DepsPolling = {
+      paises: ['CO', 'EC'],
+      fuente: {
+        credenciales: async (pais) => (pais === 'EC' ? { apiKey: 'llave-ec' } : null),
+        enviosAbiertos: async (pais) => {
+          pedidas.push(pais);
+          return pais === 'EC'
+            ? [{ order_id: 'ord-ec', external_order_id: 'IZ-EC-000001', provider_order_id: o.idOrder, provider_status_id: 2, has_novelty: false, tracking_code: null, last_synced_at: null }]
+            : [];
+        },
+      },
+      listar: (c, desde, pais) =>
+        new MasterShopClient({ apiKey: c.apiKey, fetch: mockEC.fetch, clock, currency: pais === 'EC' ? 'USD' : 'COP' }).listAllOrders({ startDate: desde }),
+      async encolarSync(datos) {
+        encolados.push(datos);
+        return 'encolado';
+      },
+      ahora: () => clock.date(),
+    };
+    const r = await pollingMasterShop(deps);
+    expect(pedidas).toEqual(['EC']);
+    expect(r).toMatchObject({ accion: 'revisado', encolados: 1, por_pais: { CO: 'sin_credenciales', EC: 'revisado' } });
+    expect(encolados[0]).toMatchObject({ external_order_id: 'IZ-EC-000001', origen: 'polling' });
+  });
+});

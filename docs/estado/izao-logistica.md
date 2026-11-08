@@ -1,16 +1,11 @@
 # Bitácora de izao-logistica
 
 ## Hecho
-- Paquete `@izao/mastershop` (líneas, pedido, estados, cliente, adaptador, mock con trampas), cola `carrier` (`1dc959b`, `20acdf2`), webhook (`607beec`), D-026/D-027.
-- `c611a9f` 23505 de etiqueta automática = ya existe. `97c4dd5` billetera. `76aa22d` jobs `mastershop.polling`/`billetera`. `e29de8c` reintento de envío.
-- `942d1ad` contrato `docs/integraciones/agente-api.md` v1; `242e6f1` API `/api/agent/*`. `9643c4d`/`6513e22` registro de webhooks (16/17) en `integration_webhooks`.
-- `6d77b62` D-042 (`hasNovelty` 0/1, listados 45 s). `e18c20a` D-043 (modo B; `guide` opcional en el detalle).
-- `f8903ed` D-044: la transportadora no se elige por API. 3076033 cancelado por el dueño.
-- Prueba real 3084317 (`IZ-CO-PRUEBA-0002`, la ejecutó el líder): Coordinadora (favorita de la cuenta) respetada, guía 75070781750; MasterShop la **autoconfirmó a 3**; `PUT 9` → 409; cancelada a mano por el dueño (9). Scripts de `/tmp/izao` borrados por el líder.
-- Etiqueta 403: CDN sin `User-Agent` → arreglado en `almacen-etiquetas.ts` (D-044).
+- Paquete, cola `carrier`, webhook, billetera, polling, API del agente, registro de webhooks: `1dc959b` `20acdf2` `607beec` `97c4dd5` `76aa22d` `242e6f1` `9643c4d`; D-026/027/042/043/044.
+- Prueba real 3084317 (Coordinadora, autoconfirmada a 3, cancelada a mano). Etiqueta 403 → `User-Agent` (D-044).
 - `ef2ae16` Vinculación por SKU (D-050): `products.ts` (emparejar, `sqlVinculacion`), cliente `listAllProducts`/`getProduct`, *mock* de productos, CLI de vista previa `jobs/sync/vinculacion-productos.cli.ts` (solo lectura). Real: 2 productos MS vs 1030 variantes del *seed* → 0 emparejan.
-
 - `46e1fd9`+`a4968ab` D-051: respaldo de etiqueta por el agente cuando el CDN bloquea la IP del VPS (403): `print_job` igual, `label_url` en `claim` (contrato 1.1), `urlEtiquetaSegura` anti-SSRF; polling encola sync si hay `label_url` sin copia local.
+- D-052 MasterShop por país (EC con llave propia, USD): credencial CO+EC, jobs con la llave del país del pedido, polling/billetera por país, webhooks por país, mock con moneda. Hash: ver `git log -1 -- docs/estado/izao-logistica.md`.
 
 ## Para izao-infra
 - Redesplegar el worker: el contenedor actual **no** tiene D-043 ni el arreglo del 403 (D-044); revisar también D-042.
@@ -25,6 +20,11 @@
 - Registro de webhooks: `registrarWebhooksMasterShop(apiKey, ambiente)`.
 - Vinculación en el panel: `MasterShopClient.listAllProductsWithVariants()` + `emparejarPorSku()` (vista previa) + `sqlVinculacion()` o UPDATE equivalente con confirmación y auditoría.
 
+- D-052: `sondas.ts` → `new MasterShopClient({ apiKey, currency: currencyForCountry(pais) })` (detecta llave de otro país); `registrarWebhooksBd`/`listarWebhooksMasterShop`/página: permitir EC y pasar `registrar(apiKey, ambiente, { pais })`; `llaveMasterShopActiva(cliente, pais)` y cancelar con el país del pedido; ajustes por país `carrier_provider`, `carrier_auto_confirm`, `carrier_discount_mode`, `carrier_wallet_low_balance` (hoy no editables); regla de vínculo por país (tras izao-db).
+
+## Para izao-db (D-052)
+- Vínculo por país: `variant_countries.mastershop_product_id/mastershop_variant_id` (backfill CO desde `product_variants`), `admin_guardar_producto` exige vínculo en todo país con `carrier_provider='mastershop'`, checkout copia el vínculo del país del pedido (izao-pagos).
+
 ## Pendiente
 - Vista previa 2 (catálogo real, 188 `IZAO-*`): MasterShop sigue con 2 productos → solo MEN-034/035 emparejan; SQL de 2 filas entregado al líder, sin aplicar. Dueño: subir los otros 186 a MasterShop (la API de esta llave lista 2). IZ-CO-000042/43: no se corrigen.
 - Canal de alertas al admin (saldo bajo, impresión fallida, agente sin heartbeat > 5 min). Lista de empaque.
@@ -33,6 +33,8 @@
 
 ## Datos de prueba
 - Ninguno abierto: 3076033 y 3084317 cancelados (9). No hay etiquetas de prueba guardadas en el VPS.
+
+- EC: no activar `carrier_provider` en EC hasta el vínculo por país. Primer pedido real de EC (aprobación del usuario): verificar provincia/cantón, celular `09…`, CEDULA→CC, total con decimales.
 
 ## Siguiente paso exacto
 Cuando el dueño cargue catálogo/SKU: `pnpm exec tsx --env-file=../web/.env.local src/jobs/sync/vinculacion-productos.cli.ts --salida <dir>` (desde `apps/worker`) y entregar el SQL. Además: esperar el redespliegue del worker (izao-infra) y verificar la primera descarga real de etiqueta; luego los pendientes de alertas y lista de empaque.

@@ -189,8 +189,8 @@ describe('MasterShopCarrier implementa CarrierProvider (§14.1)', () => {
 });
 
 describe('credenciales de MasterShop', () => {
-  it('declara una sola llave secreta para Colombia', () => {
-    expect(MASTERSHOP_CREDENTIALS.countries).toEqual(['CO']);
+  it('declara una llave secreta independiente por país (CO y EC, D-052)', () => {
+    expect(MASTERSHOP_CREDENTIALS.countries).toEqual(['CO', 'EC']);
     expect(MASTERSHOP_CREDENTIALS.fields).toEqual([
       expect.objectContaining({ key: 'api_key', secret: true, required: true }),
     ]);

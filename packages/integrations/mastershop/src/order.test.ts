@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildCarrierOrder, CarrierOrderError, MasterShopOrderBodySchema } from './order';
 import type { CarrierOrderIssueCode, CarrierOrderOptions } from './order';
 import { serializeMasterShopJson } from './json';
-import { makeItem, makeOrder } from './test-utils/orders';
+import { makeItem, makeOrder, makeOrderEC } from './test-utils/orders';
 
 const opts: CarrierOrderOptions = {
   mode: 'prorate',
@@ -262,12 +262,65 @@ describe('buildCarrierOrder — país y moneda', () => {
     ).toContain('moneda_no_legal');
   });
 
-  it('MasterShop solo opera en Colombia', () => {
+  it('rechaza un país donde MasterShop no está configurado', () => {
     expect(
       issueCodes(() =>
-        buildCarrierOrder(makeOrder({ country_code: 'EC', currency_code: 'USD' }), opts),
+        buildCarrierOrder(makeOrder({ country_code: 'PE' as never, currency_code: 'USD' }), opts),
       ),
     ).toContain('pais_no_soportado');
+  });
+
+  it('rechaza COP en Ecuador', () => {
+    expect(issueCodes(() => buildCarrierOrder(makeOrderEC({ currency_code: 'COP' }), opts))).toContain(
+      'moneda_no_legal',
+    );
+  });
+});
+
+describe('buildCarrierOrder — Ecuador (D-052)', () => {
+  it('contra entrega en USD: recaudo exacto en centavos y JSON con dos decimales', () => {
+    const { body, lines } = buildCarrierOrder(makeOrderEC(), opts);
+    expect(body.order_transaction).toMatchObject({ currency: 'USD', payment_method: 'cod', total: 9_480n });
+    expect(lines.total).toBe(9_480n);
+    const sum = body.order_items.reduce((a, i) => a + i.price * BigInt(i.quantity), 0n);
+    expect(sum).toBe(9_480n);
+    expect(body.shipping_address).toMatchObject({ country: 'EC', state: 'Pichincha', city: 'Quito', phone: '0991234567' });
+    expect(body.customer).toMatchObject({ phone: '0991234567', documentType: 'CC', documentNumber: '1712345678' });
+    const json = serializeMasterShopJson(body, 'USD');
+    expect(json).toContain('"total":94.80');
+    expect(json).not.toMatch(/\d\.\d{3,}/);
+    expect(body.notes[1]).toMatch(/^Abono recibido .*5,00/);
+  });
+
+  it('pago completo en USD (pia) manda lo pagado', () => {
+    const { body } = buildCarrierOrder(makeOrderEC({ payment_method: 'wompi' }), opts);
+    expect(body.order_transaction).toMatchObject({ payment_method: 'pia', total: 9_980n });
+    expect(serializeMasterShopJson(body, 'USD')).toContain('"total":99.80');
+  });
+
+  it('mapea los documentos de Ecuador al enum de MasterShop', () => {
+    const tipo = (t: string) => buildCarrierOrder(makeOrderEC({ document_type: t }), opts).body.customer.documentType;
+    expect(tipo('CEDULA')).toBe('CC');
+    expect(tipo('RUC')).toBe('NIT');
+    expect(tipo('PASAPORTE')).toBe('PAS');
+    expect(issueCodes(() => buildCarrierOrder(makeOrderEC({ document_type: 'DNI' }), opts))).toEqual([
+      'documento_tipo_invalido',
+    ]);
+  });
+
+  it('celular de Ecuador: acepta 09…, rechaza uno de Colombia', () => {
+    expect(issueCodes(() => buildCarrierOrder(makeOrderEC({ contact_phone_e164: '+573001234567' }), opts))).toEqual([
+      'telefono_invalido',
+    ]);
+  });
+
+  it('pide la provincia (no el departamento)', () => {
+    try {
+      buildCarrierOrder(makeOrderEC({ shipping_region_name: ' ' }), opts);
+      expect.unreachable();
+    } catch (e) {
+      expect((e as CarrierOrderError).issues.map((i) => i.message)).toEqual(['Falta la provincia.']);
+    }
   });
 
   it('rechaza pedidos manuales', () => {

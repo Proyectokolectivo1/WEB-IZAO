@@ -10,7 +10,7 @@ import {
   MasterShopClient,
 } from '@izao/mastershop';
 import { FakeClock, MasterShopMock, MOCK_LABEL_HOST, MS_ERRORS } from '@izao/mastershop/mock';
-import { makeItem, makeOrder } from '@izao/mastershop/test-utils';
+import { makeItem, makeOrder, makeOrderEC } from '@izao/mastershop/test-utils';
 import { crearAlmacenEtiquetas } from './almacen-etiquetas.js';
 import type { DepsCarrier } from './comun.js';
 import { procesarCrear } from './crear.js';
@@ -402,5 +402,42 @@ describe('carrier.sync (webhook o polling)', () => {
     await expect(
       procesarSync({ event_id: 'e2', provider_order_id: 1001, external_order_id: null, origen: 'webhook' }, deps),
     ).rejects.toMatchObject({ name: 'MasterShopError' });
+  });
+});
+
+describe('carrier por país (D-052)', () => {
+  it('un pedido de Ecuador usa la llave de EC, envía USD exacto y nunca la llave de CO', async () => {
+    const clock = new FakeClock();
+    const mockEC = new MasterShopMock({ apiKey: 'llave-ec', clock, currency: 'USD' });
+    const fuente = new FuenteMemoria();
+    const pedidas: string[] = [];
+    fuente.credenciales = async (pais: string) => {
+      pedidas.push(pais);
+      return pais === 'EC' ? { apiKey: 'llave-ec' } : { apiKey: KEY };
+    };
+    const monedas: string[] = [];
+    const deps: DepsCarrier = {
+      fuente,
+      programar: new ProgramadorMemoria(),
+      etiquetas: crearAlmacenEtiquetas({ mediaRoot: dir, fetchImpl: mockEC.fetch, hostsPermitidos: [MOCK_LABEL_HOST] }),
+      transportadora: (creds, opciones, pais) => {
+        monedas.push(pais);
+        return new MasterShopCarrier({
+          client: new MasterShopClient({ apiKey: creds.apiKey, fetch: mockEC.fetch, clock, currency: pais === 'EC' ? 'USD' : 'COP' }),
+          clock,
+          resolveOrderOptions: () => opciones!,
+        });
+      },
+      ahora: () => new Date(clock.now()),
+    };
+    fuente.agregar(makeOrderEC({ id: ID }));
+    const r = await procesarCrear({ order_id: ID, intento: 0 }, deps);
+    expect(r).toMatchObject({ accion: 'confirmado', order_id: ID });
+    expect(pedidas).toEqual(['EC']);
+    expect(monedas).toEqual(['EC']);
+    const enviado = mockEC.findByExternalId('IZ-EC-000045')!;
+    expect(enviado.rawBody).toContain('"currency":"USD"');
+    expect(enviado.rawBody).toContain('"total":94.80');
+    expect(mockEC.requests.every((q) => q.headers['ms-api-key'] === 'llave-ec')).toBe(true);
   });
 });
