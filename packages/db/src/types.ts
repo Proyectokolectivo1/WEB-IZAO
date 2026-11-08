@@ -3511,6 +3511,8 @@ export type Database = {
           created_at: string
           is_active: boolean
           low_stock_threshold: number | null
+          mastershop_product_id: number | null
+          mastershop_variant_id: number | null
           price: number
           stock: number
           stock_reserved: number
@@ -3524,6 +3526,8 @@ export type Database = {
           created_at?: string
           is_active?: boolean
           low_stock_threshold?: number | null
+          mastershop_product_id?: number | null
+          mastershop_variant_id?: number | null
           price: number
           stock?: number
           stock_reserved?: number
@@ -3537,6 +3541,8 @@ export type Database = {
           created_at?: string
           is_active?: boolean
           low_stock_threshold?: number | null
+          mastershop_product_id?: number | null
+          mastershop_variant_id?: number | null
           price?: number
           stock?: number
           stock_reserved?: number

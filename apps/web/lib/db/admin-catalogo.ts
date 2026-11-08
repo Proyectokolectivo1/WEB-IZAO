@@ -64,6 +64,12 @@ const paisVarianteSchema = z.object({
   cost: entero.nullable().optional(),
   stock: z.number().int().nonnegative().optional(),
   low_stock_threshold: z.number().int().nonnegative().nullable().optional(),
+  /**
+   * Vínculo con la cuenta de MasterShop DE ESTE PAÍS (D-052, `variant_countries.mastershop_*`). Solo se toca si la
+   * clave viene; `null` lo borra. El de CO se refleja en `product_variants.mastershop_*` (deprecado).
+   */
+  mastershop_product_id: z.number().int().positive().nullable().optional(),
+  mastershop_variant_id: z.number().int().positive().nullable().optional(),
 });
 
 const imagenSchema = z.object({
@@ -76,6 +82,7 @@ const comunVariante = {
   sku: z.string().trim().min(1).max(80),
   weight_kg: z.number().positive().optional(),
   is_default: z.boolean().optional(),
+  /** DEPRECADO (D-052): vínculo de CO a nivel de variante. Usa `countries[].mastershop_*`; si vienen ambos, gana el del país. */
   mastershop_product_id: z.number().int().nullable().optional(),
   mastershop_variant_id: z.number().int().nullable().optional(),
   image_id: uuid.nullable().optional(),
@@ -105,7 +112,13 @@ export type GuardarProductoEntrada = z.infer<typeof guardarProductoSchema>;
 
 const resultadoGuardarSchema = z.discriminatedUnion('ok', [
   z.object({ ok: z.literal(true), product_id: uuid, creado: z.boolean() }),
-  z.object({ ok: z.literal(false), motivo: z.enum(motivosAdminCatalogo), detalle: z.string().nullable().optional() }),
+  z.object({
+    ok: z.literal(false),
+    motivo: z.enum(motivosAdminCatalogo),
+    detalle: z.string().nullable().optional(),
+    /** Solo con `sin_vinculo_mastershop`: países (carrier_provider = mastershop) donde falta el vínculo. */
+    paises: z.array(pais).optional(),
+  }),
 ]);
 export type ResultadoGuardarProducto = z.infer<typeof resultadoGuardarSchema>;
 
@@ -157,6 +170,7 @@ const resultadoImportarSchema = z.discriminatedUnion('ok', [
         sku: z.string().nullable().optional(),
         motivo: z.enum(motivosAdminCatalogo),
         detalle: z.string().nullable().optional(),
+        paises: z.array(pais).optional(),
       }),
     ),
     cambios: z.array(
