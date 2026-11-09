@@ -53,6 +53,25 @@ Horas en UTC (sin depender de `CRON_TZ`; `.env` se carga con `run-with-env.sh`, 
 
 `alertar()` escribe `/srv/izao/backups/ALERTA.txt`, envía correo a `ADMIN_ALERT_EMAIL` si el host tiene `mail`, y avisa al monitor push de Uptime Kuma si `UPTIME_PUSH_URL` está definida.
 
+### Prueba de restauración en producción (2026-11-09) — PENDIENTE de la llave del dueño
+
+Estado verificado en el VPS (solo lectura): `db/2026-11-03..08.sql.gz.age` existen (450-550 KB, permisos 600, cabecera `age-encryption.org/v1`; el cron diario corre). La llave privada no está en el VPS (correcto) y el Docker local de la sesión del agente no arranca, así que **no se pudo restaurar el último backup real**. Lo único probado de extremo a extremo es el ciclo con migraciones y fixture (`test-backup-restore.sh`). Para cerrar la prueba, en el PC del dueño (con Docker y la llave `izao-backup.key`):
+
+1. Traer el último archivo: `scp`/SFTP de `/srv/izao/backups/db/2026-11-08.sql.gz.age` (o el más reciente) a una carpeta local.
+2. `BACKUP_AGE_IDENTITY=/ruta/izao-backup.key bash infra/scripts/restore.sh 2026-11-08.sql.gz.age --counts conteos.txt` (contenedor postgres:17 desechable; nunca toca Supabase).
+3. Comparar `conteos.txt` con la base viva (`select count(*)` de products, orders, media, profiles...); deben coincidir salvo lo creado después del backup.
+4. Anotar aquí fecha, archivo y resultado. Tras restaurar, los usuarios deben iniciar sesión de nuevo (sesiones excluidas).
+
+Media: el árbol `/srv/izao/media` pasó a uid 100 / grupo www-data 2750 el 2026-11-06 y el usuario `izao` del host dejó de poder leerlo: **los backups de media del 06, 07 y 08 fallaron** (`*.tar.gz.tmp` de 45 bytes; los anteriores están vacíos porque aún no había imágenes). `backup.sh` ahora empaqueta vía `docker exec izao-worker-1 tar` (completo diario, probado a mano en el VPS: 364 KB con las imágenes actuales). Aplica tras el próximo `git pull` en el VPS; entonces `bash infra/scripts/backup.sh --media-only` y verificar con `tar -tzf`. Restaurar media: `tar -xzf AAAA-MM-DD-full.tar.gz -C <carpeta_vacía>` (nunca sobre `/srv/izao/media` en uso). Los `.tmp` fallidos se pueden borrar (están en `/srv/izao/backups/media`, requiere aprobación).
+
+## Media huérfana (archivos sin fila en la base)
+
+Solo lectura, no borra: `bash infra/scripts/media-huerfanos.sh` (ejecuta `media-huerfanos.mjs` dentro de `izao-worker-1`, que lee `media` y `media_file_deletions` por REST y recorre `/srv/izao/media`). Informa HUERFANOS, TEMPORALES (>1 h), y EN BASE SIN ARCHIVO (informativo). Excluye `warranty/`, `labels/`, `agent-screenshots/` (otros módulos). Procedimiento: 1) ejecutar y guardar la salida; 2) el dueño revisa la lista; 3) solo con su aprobación se borra lo aprobado (con `rm` dirigido por una lista revisada, tras un backup de media fresco). Ejecución 2026-11-09 (copia en `/srv/izao/tmp`): 13 archivos públicos en disco, 0 huérfanos, 0 temporales; 170 rutas de la base sin archivo (casi todas `product/prueba/*` del seed y algunas de pruebas de 2026/11).
+
+## HSTS
+
+`Strict-Transport-Security: max-age=15768000` (6 meses) solo en HTTPS, sin `includeSubDomains` ni `preload` (`infra/nginx/izao-zones.conf`, mapa `$izao_hsts`). Aplicado en el VPS 2026-11-09 (copia previa `/srv/izao/tmp/izao-zones.conf.bak-hsts-20261109`, `sudo nginx -t`, reload). Antes estaba en 1 año. Activar `includeSubDomains` solo cuando `web.izaoperfumeria.com` tenga HTTPS válido; `preload` solo con decisión explícita (es casi irreversible).
+
 ## Despliegue
 
 `infra/scripts/deploy.sh [--dry-run]`. Si falla la actualización o el healthcheck, revierte a las imágenes `izao-web:<sha anterior>` e `izao-worker:<sha anterior>` con `up -d --no-build --no-deps --wait`. Si esas imágenes no existen avisa y no revierte. Prueba: `bash infra/scripts/test-deploy-rollback.sh`.

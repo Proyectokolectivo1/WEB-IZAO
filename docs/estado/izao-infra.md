@@ -53,3 +53,6 @@ RESUELTO (tras copia del dueño + reload): izao-locations.conf e izao-zones.conf
 ## Siguiente paso exacto
 Dueño ejecuta la limpieza Nginx; luego `uptime`, `crear-admin`, restore real contra `auth`, snapshot (API Contabo).
 Nota: el build de web puede fallar por WIP de la tienda; verificar en copia limpia de HEAD.
+
+## Salida CO (2026-11-09)
+HSTS 6 meses aplicado en VPS y repo (sin includeSubDomains/preload). media-huerfanos.{sh,mjs}: 0 huérfanos. HALLAZGO: backups de media 06-08/11 fallaron (permisos 2750 de media); backup.sh corregido vía docker exec, aplica tras pull. Restauración real de backup pendiente: falta llave age del dueño y Docker local. Detalle en RUNBOOK.

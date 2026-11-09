@@ -59,7 +59,7 @@ if [ "$DO_DB" -eq 1 ]; then
 fi
 
 if [ "$DO_MEDIA" -eq 1 ]; then
-  if [ -d "$MEDIA_ROOT" ]; then
+  if [ -d "$MEDIA_ROOT" ] && [ -r "$MEDIA_ROOT" ] && [ -x "$MEDIA_ROOT" ]; then
     SNAR="$BACKUP_DIR/media/media.snar"
     # Nivel 0 (completo) los domingos o si no hay estado; el resto de días, incremental.
     if [ "$(date +%u)" = "7" ] || [ ! -f "$SNAR" ] || ! ls "$BACKUP_DIR"/media/*-full.tar.gz >/dev/null 2>&1; then
@@ -71,8 +71,21 @@ if [ "$DO_MEDIA" -eq 1 ]; then
     log "tar $TIPO de media -> $DESTINO_M"
     tar --listed-incremental="$SNAR" -czf "$DESTINO_M.tmp" -C "$MEDIA_ROOT" .
     mv "$DESTINO_M.tmp" "$DESTINO_M"
+  elif [ -d "$MEDIA_ROOT" ] && command -v docker >/dev/null 2>&1 && docker exec "${WORKER_CONTAINER:-izao-worker-1}" true >/dev/null 2>&1; then
+    # Media con permisos 2750 (uid del contenedor, grupo www-data): el usuario del host no la lee.
+    # Se empaqueta desde el worker, que sí tiene acceso; siempre completo (la media es pequeña; el
+    # tar incremental necesita leer el árbol en el host). Incluye también las carpetas privadas (warranty, labels, agent-screenshots); el destino es 700/600 como el resto.
+    DESTINO_M="$BACKUP_DIR/media/$HOY-full.tar.gz"
+    log "tar full de media vía contenedor -> $DESTINO_M"
+    rm -f "$BACKUP_DIR"/media/media.snar
+    docker exec "${WORKER_CONTAINER:-izao-worker-1}" tar -czf - -C /srv/izao/media . > "$DESTINO_M.tmp"
+    [ -s "$DESTINO_M.tmp" ] || { rm -f "$DESTINO_M.tmp"; alertar "Backup de media vacío"; exit 1; }
+    gzip -t "$DESTINO_M.tmp"
+    chmod 600 "$DESTINO_M.tmp"
+    mv "$DESTINO_M.tmp" "$DESTINO_M"
   else
-    log "MEDIA_ROOT ($MEDIA_ROOT) no existe: se omite media"
+    alertar "MEDIA_ROOT ($MEDIA_ROOT) ilegible y sin contenedor worker: media NO respaldada"
+    exit 1
   fi
 fi
 
