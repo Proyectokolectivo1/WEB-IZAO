@@ -45,14 +45,15 @@ export function crearFuenteBilleteraPostgrest(o: OpcionesPostgrest): FuenteBille
       const cred = await c.credencial('mastershop', pais, 'billetera');
       return cred ? parseMasterShopCredentials(cred.valores) : null;
     },
-    async pedidosPorIdProveedor(ids) {
+    async pedidosPorIdProveedor(ids, pais) {
       const r: PedidoBilletera[] = [];
       for (let i = 0; i < ids.length; i += 100) {
         const lote = ids.slice(i, i + 100).filter((x) => Number.isSafeInteger(x) && x > 0);
         if (lote.length === 0) continue;
         const rows = await c.filas(
           'shipments',
-          `shipments?provider=eq.mastershop&provider_order_id=in.(${lote.join(',')})&select=order_id,provider_order_id,orders!inner(carrier_fees)`,
+          `shipments?provider=eq.mastershop&provider_order_id=in.(${lote.join(',')})` +
+            `&select=order_id,provider_order_id,orders!inner(carrier_fees,country_code)&orders.country_code=${eq(pais)}`,
         );
         for (const f of rows) {
           const pid = num(f.provider_order_id);
@@ -74,6 +75,16 @@ export function crearFuenteBilleteraPostgrest(o: OpcionesPostgrest): FuenteBille
         const rows = await c.filas('expense_categories', 'expense_categories?slug=eq.mastershop&select=id');
         if (!rows[0]) throw new Error('expense_categories: falta la categoría "mastershop" del seed');
         categoria = String(rows[0].id);
+      }
+      // Compatibilidad (D-052): el gasto ya guardado con la referencia anterior (id sin país) no se duplica.
+      const previas = (g.refs_previas ?? []).filter((r) => /^\d{1,18}$/.test(r));
+      if (previas.length > 0) {
+        const refs = previas.join(',');
+        const previos = await c.filas(
+          'expenses',
+          `expenses?source=eq.mastershop_wallet&country_code=${eq(pais)}&external_ref=in.(${refs})&select=id&limit=1`,
+        );
+        if (previos.length > 0) return false;
       }
       try {
         await c.pedir('expenses', 'expenses', {

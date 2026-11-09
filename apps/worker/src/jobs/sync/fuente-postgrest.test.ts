@@ -51,11 +51,40 @@ describe('fuente PostgREST de la billetera', () => {
     expect(await crearFuenteBilleteraPostgrest({ ...OPC, fetchImpl: f }).estadoSaldo('CO')).toEqual({ umbral: 100000n, alertaActiva: true });
   });
 
-  it('pedidos por id de MasterShop en lotes con in.()', async () => {
+  it('pedidos por id de MasterShop en lotes con in.(), solo del país', async () => {
     const { f, llamadas } = fetchFalso(() => ({ status: 200, cuerpo: [{ order_id: 'o1', provider_order_id: 1001, orders: { carrier_fees: { envio: 1 } } }] }));
-    const r = await crearFuenteBilleteraPostgrest({ ...OPC, fetchImpl: f }).pedidosPorIdProveedor([1001, 1002]);
+    const r = await crearFuenteBilleteraPostgrest({ ...OPC, fetchImpl: f }).pedidosPorIdProveedor([1001, 1002], 'CO');
     expect(r).toEqual([{ order_id: 'o1', provider_order_id: 1001, carrier_fees: { envio: 1 } }]);
     expect(llamadas[0]!.url).toContain('provider_order_id=in.(1001,1002)');
+    expect(llamadas[0]!.url).toContain('orders!inner(carrier_fees,country_code)&orders.country_code=eq.CO');
+  });
+
+  it('dos cuentas con el mismo idOrder no se mezclan: cada país ve solo sus pedidos (D-052)', async () => {
+    const filas = [
+      { order_id: 'o-co', provider_order_id: 1001, orders: { carrier_fees: {}, country_code: 'CO' } },
+      { order_id: 'o-ec', provider_order_id: 1001, orders: { carrier_fees: {}, country_code: 'EC' } },
+    ];
+    const { f } = fetchFalso((l) => {
+      const pais = /orders\.country_code=eq\.(\w+)/.exec(l.url)?.[1];
+      return { status: 200, cuerpo: filas.filter((x) => x.orders.country_code === pais) };
+    });
+    const fuente = crearFuenteBilleteraPostgrest({ ...OPC, fetchImpl: f });
+    expect((await fuente.pedidosPorIdProveedor([1001], 'EC')).map((p) => p.order_id)).toEqual(['o-ec']);
+    expect((await fuente.pedidosPorIdProveedor([1001], 'CO')).map((p) => p.order_id)).toEqual(['o-co']);
+  });
+
+  it('gasto de CO ya guardado con la referencia anterior (sin país) no se duplica', async () => {
+    const { f, llamadas } = fetchFalso((l) => {
+      if (l.url.includes('expense_categories')) return { status: 200, cuerpo: [{ id: 'cat-ms' }] };
+      if (l.metodo === 'GET') return { status: 200, cuerpo: l.url.includes('external_ref=in.(90001)') ? [{ id: 'g-viejo' }] : [] };
+      return { status: 201 };
+    });
+    const fuente = crearFuenteBilleteraPostgrest({ ...OPC, fetchImpl: f });
+    expect(await fuente.registrarGasto({ ...gasto, external_ref: 'CO:90001', refs_previas: ['90001'] }, 'CO')).toBe(false);
+    expect(llamadas.some((l) => l.metodo === 'POST')).toBe(false);
+    expect(llamadas.find((l) => l.url.includes('/expenses?'))!.url).toContain('source=eq.mastershop_wallet&country_code=eq.CO&external_ref=in.(90001)');
+    expect(await fuente.registrarGasto({ ...gasto, external_ref: 'CO:90002', refs_previas: ['90002'] }, 'CO')).toBe(true);
+    expect(llamadas.find((l) => l.metodo === 'POST')!.cuerpo).toMatchObject({ external_ref: 'CO:90002', country_code: 'CO' });
   });
 });
 

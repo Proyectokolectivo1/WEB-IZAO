@@ -611,6 +611,14 @@ describe('Ecuador: llave propia en USD (D-052)', () => {
     expect(w.movimientos[0]).toMatchObject({ moneda: 'USD', valor: -475n, saldoNuevo: 9_525n });
   });
 
+  it('billetera: un monto con más de 2 decimales queda fuera con aviso (no se redondea)', async () => {
+    const { mock, clock, client } = setupEC();
+    const raro = mock.seedMovement({ movementType: 'Cobro por Envío', movementValue: -4.751, balanceMovementDate: new Date(clock.now() - 1_000), idOrder: 1 });
+    const w = await client.listWalletMovements({ startDate: new Date(clock.now() - DAY), page: 1 });
+    expect(w.movimientos).toEqual([]);
+    expect(w.avisos).toEqual([{ idBalanceMovement: raro.idBalanceMovement, motivo: 'monto_invalido' }]);
+  });
+
   it('Probar conexión detecta una llave de otro país por la moneda del negocio', async () => {
     const clock = new FakeClock();
     const mockCO = new MasterShopMock({ apiKey: 'llave-co', clock });

@@ -777,7 +777,7 @@ Reglas (de la documentación de MasterShop):
 - `documentType` y `documentNumber` van los dos o ninguno.
 - `payment_method`: `cod` para contra entrega; `pia` para pedidos ya pagados (Wompi completo, Addi, Sistecrédito).
 - `phone` nacional (10 dígitos en Colombia). Nombres solo letras y espacios.
-- `id_product` / `id_variant` son los IDs de MasterShop vinculados a la variante. **Una variante sin vínculo no puede publicarse en Colombia** (validación en el panel).
+- `id_product` / `id_variant` son los IDs de MasterShop vinculados a la variante **en el país del pedido** (`variant_countries.mastershop_product_id/_variant_id`; cada país tiene su propia cuenta y su propia llave de MasterShop, D-052). **Una variante sin vínculo no puede publicarse en ningún país con `country_settings.carrier_provider = 'mastershop'`** (validación en el panel y en la base).
 - `weight` sale de `product_variants.weight_kg`.
 
 ### 14.4 Valor del pedido en MasterShop

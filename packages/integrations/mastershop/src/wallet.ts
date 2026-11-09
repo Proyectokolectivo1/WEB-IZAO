@@ -3,8 +3,9 @@
  * pedido (`orders.shipping_cost_real`, `orders.carrier_fees`), gastos sin pedido (`expenses`, categoría
  * "MasterShop") y saldo.
  *
- * Montos: la colección muestra decimales (`85000.5`) en COP. Se leen como texto decimal y se redondean a la
- * unidad menor con medio hacia arriba (`roundHalfUpDiv`), sin `float`. `[VERIFICAR]` el signo real de los
+ * Montos: la colección muestra decimales (`85000.5`) en COP. Se leen como texto decimal, sin `float`: hasta 2
+ * decimales se llevan a la unidad menor (en COP, medio hacia arriba con `roundHalfUpDiv`); más de 2 decimales
+ * significativos no es un monto de dinero válido → `null` y aviso, como el listado (D-052). `[VERIFICAR]` el signo real de los
  * cobros: se toma la magnitud de cada movimiento de costo (D-027).
  */
 import { CURRENCY_EXPONENT, roundHalfUpDiv, toSafeNumber, type CurrencyCode } from '@izao/core/money';
@@ -48,9 +49,13 @@ export interface MovimientoBilletera {
 
 const DECIMAL = /^(-?)(\d+)(?:\.(\d+))?$/;
 
+/** Decimales máximos que se aceptan en un monto de la API (centavos); los ceros sobrantes no cuentan. */
+const DECIMALES_MAXIMOS = 2;
+
 /**
- * Monto de la API (número JSON o texto decimal, unidad mayor) → unidad menor, redondeo medio hacia arriba
- * (alejándose de cero). `null` si no es un decimal simple (p. ej. notación científica).
+ * Monto de la API (número JSON o texto decimal, unidad mayor) → unidad menor. Hasta 2 decimales: exacto en USD;
+ * en COP se redondea a peso medio hacia arriba (alejándose de cero). `null` si no es un decimal simple (p. ej.
+ * notación científica) o si trae más de 2 decimales significativos (`10.005`): no se redondea, se avisa.
  */
 export function montoBilletera(v: unknown, moneda: CurrencyCode): bigint | null {
   if (typeof v === 'bigint') return v * 10n ** BigInt(CURRENCY_EXPONENT[moneda]);
@@ -58,7 +63,9 @@ export function montoBilletera(v: unknown, moneda: CurrencyCode): bigint | null 
   if (typeof v === 'number' && !Number.isFinite(v)) return null;
   const m = DECIMAL.exec(String(v).trim());
   if (!m) return null;
-  const [, signo, entero, frac = ''] = m;
+  const [, signo, entero, fracCruda = ''] = m;
+  const frac = fracCruda.replace(/0+$/, '');
+  if (frac.length > DECIMALES_MAXIMOS) return null;
   const exp = CURRENCY_EXPONENT[moneda];
   const digitos = BigInt(entero! + frac);
   const escala = frac.length - exp;

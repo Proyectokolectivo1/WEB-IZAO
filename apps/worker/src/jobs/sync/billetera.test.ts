@@ -65,7 +65,12 @@ describe('job de billetera de MasterShop', () => {
     expect(r).toMatchObject({ movimientos: 7, pedidos_actualizados: 2, gastos_creados: 2, alerta_saldo: 'ok' });
     expect(pedidos.get(1001)).toMatchObject({ shipping_cost_real: 12000n, carrier_fees: { envio: 12000, plataforma: 1501 } });
     expect(pedidos.get(1002)).toMatchObject({ shipping_cost_real: 9000n, carrier_fees: { devolucion: 9000 } });
-    expect(gastos.get(String(sinPedido.idBalanceMovement))).toMatchObject({ amount: 300n, description: 'Cobro por envío mensaje de WhatsApp' });
+    // D-052: referencia con país; en CO se reconoce también la anterior sin prefijo.
+    expect(gastos.get(`CO:${sinPedido.idBalanceMovement}`)).toMatchObject({
+      amount: 300n,
+      description: 'Cobro por envío mensaje de WhatsApp',
+      refs_previas: [String(sinPedido.idBalanceMovement)],
+    });
     expect([...gastos.values()].some((g) => g.description.includes('pedido MasterShop 7777'))).toBe(true);
     expect(saldos.at(-1)).toEqual({ valor: 408200n, activa: false });
   });
@@ -154,11 +159,15 @@ describe('billetera por país (D-052)', () => {
     const mockEC = new MasterShopMock({ apiKey: 'llave-ec', clock, currency: 'USD' });
     mockEC.seedMovement({ movementType: 'Cobro por envío mensaje de WhatsApp', movementValue: -0.35, balanceMovementDate: new Date(clock.now() - 60_000) });
     const gastos: { g: GastoBilletera; pais: string }[] = [];
+    const paisesPedidos: string[] = [];
     const deps: DepsBilletera = {
       paises: ['CO', 'EC'],
       fuente: {
         credenciales: async (pais) => (pais === 'EC' ? { apiKey: 'llave-ec' } : null),
-        pedidosPorIdProveedor: async () => [],
+        pedidosPorIdProveedor: async (_ids, pais) => {
+          paisesPedidos.push(pais);
+          return [];
+        },
         guardarCostos: async () => undefined,
         registrarGasto: async (g, pais) => {
           gastos.push({ g, pais });
@@ -175,5 +184,7 @@ describe('billetera por país (D-052)', () => {
     const r = await billeteraMasterShop(deps);
     expect(r).toMatchObject({ accion: 'procesado', gastos_creados: 1, por_pais: { CO: { accion: 'sin_credenciales' }, EC: { accion: 'procesado' } } });
     expect(gastos).toEqual([{ g: expect.objectContaining({ amount: 35n }), pais: 'EC' }]);
+    expect(gastos[0]!.g.external_ref).toMatch(/^EC:\d+$/);
+    expect(gastos[0]!.g.refs_previas).toBeUndefined();
   });
 });

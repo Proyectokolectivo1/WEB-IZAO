@@ -6,7 +6,7 @@
  *   "Cobro por Devolución", "Comisión de plataforma" y "Cobro por envío mensaje de WhatsApp"
  *   → `orders.shipping_cost_real` (envío + devolución) y `orders.carrier_fees` (desglose + movimientos por id);
  * - registra en `expenses` (categoría "MasterShop", `source = mastershop_wallet`, `external_ref =
- *   idBalanceMovement`) los cobros sin pedido de la tienda;
+ *   {PAIS}:{idBalanceMovement}`) los cobros sin pedido de la tienda (el país evita que dos cuentas choquen, D-052);
  * - encola el recálculo de `daily_sales_stats` de los días de cada pedido cuyos costos cambiaron (§21.4);
  * - guarda el saldo (`newBalance` más reciente) y evalúa la alerta de saldo bajo con el umbral configurable.
  *
@@ -39,7 +39,13 @@ export interface PedidoBilletera {
 }
 
 export interface GastoBilletera {
+  /** `{PAIS}:{idBalanceMovement}` (D-052). */
   external_ref: string;
+  /**
+   * Referencias anteriores del mismo movimiento que cuentan como "ya registrado": en CO, el id sin prefijo con que
+   * se guardaron los gastos antes de D-052 (no se migran datos).
+   */
+  refs_previas?: readonly string[];
   /** Fecha del movimiento en America/Bogota (`YYYY-MM-DD`). */
   date: string;
   amount: bigint;
@@ -58,8 +64,11 @@ export interface EstadoSaldo {
  */
 export interface FuenteBilletera {
   credenciales(pais: CountryCode): Promise<MasterShopCredentials | null>;
-  /** Pedidos de la tienda por `provider_order_id`. */
-  pedidosPorIdProveedor(ids: readonly number[]): Promise<PedidoBilletera[]>;
+  /**
+   * Pedidos de la tienda del país por `provider_order_id`. Los ids son de la cuenta de ese país: dos cuentas pueden
+   * repetir un `idOrder`, así que se filtra por `orders.country_code`.
+   */
+  pedidosPorIdProveedor(ids: readonly number[], pais: CountryCode): Promise<PedidoBilletera[]>;
   guardarCostos(orderId: string, shipping_cost_real: bigint, carrier_fees: CarrierFees): Promise<void>;
   /** `true` si lo creó; `false` si ya existía (índice único). Gasto del país, en su moneda. */
   registrarGasto(g: GastoBilletera, pais: CountryCode): Promise<boolean>;
@@ -97,6 +106,11 @@ export interface ResultadoBilletera {
 }
 
 const FECHA_BOGOTA = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' });
+
+/** `external_ref` del gasto de un movimiento de billetera: con país, porque cada país tiene su cuenta (D-052). */
+export function refGastoBilletera(pais: CountryCode, idMovimiento: number): string {
+  return `${pais}:${idMovimiento}`;
+}
 
 export function fechaBogota(iso: string): string {
   return FECHA_BOGOTA.format(new Date(iso));
@@ -152,7 +166,7 @@ async function billeteraPais(deps: DepsBilletera, pais: CountryCode): Promise<Re
   r.avisos = avisos.length;
 
   const ids = [...new Set(movimientos.flatMap((m) => (m.idOrder === null ? [] : [m.idOrder])))];
-  const pedidos = ids.length === 0 ? [] : await deps.fuente.pedidosPorIdProveedor(ids);
+  const pedidos = ids.length === 0 ? [] : await deps.fuente.pedidosPorIdProveedor(ids, pais);
   const porId = new Map(pedidos.map((p) => [p.provider_order_id, p]));
 
   const porPedido = new Map<string, { pedido: PedidoBilletera; movs: MovimientoBilletera[] }>();
@@ -166,7 +180,8 @@ async function billeteraPais(deps: DepsBilletera, pais: CountryCode): Promise<Re
     }
     if (!esGastoSinPedido(m)) continue;
     const creado = await deps.fuente.registrarGasto({
-      external_ref: String(m.id),
+      external_ref: refGastoBilletera(pais, m.id),
+      ...(pais === 'CO' ? { refs_previas: [String(m.id)] } : {}),
       date: fechaBogota(m.fecha),
       amount: montoGasto(m),
       description: [m.concepto, m.idOrder !== null ? `pedido MasterShop ${m.idOrder}` : null, m.guia ? `guía ${m.guia}` : null]

@@ -25,9 +25,15 @@ describe('montoBilletera: decimales sin float', () => {
     expect(montoBilletera(-12000.5, 'COP')).toBe(-12001n);
     expect(montoBilletera(12000, 'COP')).toBe(12000n);
   });
-  it('USD: a centavos', () => {
-    expect(montoBilletera('10.005', 'USD')).toBe(1001n);
+  it('USD: a centavos exactos', () => {
+    expect(montoBilletera('10.05', 'USD')).toBe(1005n);
+    expect(montoBilletera('10.500', 'USD')).toBe(1050n);
     expect(montoBilletera(3, 'USD')).toBe(300n);
+  });
+  it('más de 2 decimales significativos: null (aviso en el cliente), no se redondea', () => {
+    expect(montoBilletera('10.005', 'USD')).toBeNull();
+    expect(montoBilletera(-4.751, 'USD')).toBeNull();
+    expect(montoBilletera('85000.001', 'COP')).toBeNull();
   });
   it('rechaza notación científica y no números', () => {
     expect(montoBilletera(1e21, 'COP')).toBeNull();
