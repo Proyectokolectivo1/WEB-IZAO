@@ -41,7 +41,7 @@ export default async function Destacados({
         <p className="adm-vacio">Aún no hay destacados en {NOMBRE_PAIS[pais]}. Busca un producto abajo para destacarlo.</p>
       ) : (
         <div className="adm-tabla-caja">
-          <table className="adm-tabla">
+          <table className="adm-tabla adm-tabla-apilada">
             <caption className="adm-suave">Destacados de {NOMBRE_PAIS[pais]}, de primero a último</caption>
             <thead>
               <tr>
@@ -55,15 +55,15 @@ export default async function Destacados({
               {destacados.map((d, n) => (
                 <tr key={d.product_id}>
                   <td className="adm-num">{n + 1}</td>
-                  <td>{d.name}</td>
-                  <td>
+                  <td data-etiqueta="Producto">{d.name}</td>
+                  <td data-etiqueta="En la tienda">
                     {d.is_visible ? (
                       <span className="adm-insignia adm-insignia-ok">Visible</span>
                     ) : (
                       <span className="adm-insignia adm-insignia-aviso">Oculto</span>
                     )}
                   </td>
-                  <td>
+                  <td data-etiqueta="Acciones">
                     <div className="adm-acciones">
                       <form action={moverDestacado.bind(null, pais, d.product_id, 'arriba')}>
                         <button type="submit" className="adm-boton adm-boton-secundario" disabled={n === 0} aria-label={`Subir ${d.name}`}>

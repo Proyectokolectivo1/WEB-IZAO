@@ -41,7 +41,7 @@ export default async function ListaColecciones({
         </p>
       ) : (
         <div className="adm-tabla-caja">
-          <table className="adm-tabla">
+          <table className="adm-tabla adm-tabla-apilada">
             <caption className="adm-suave">Colecciones de {NOMBRE_PAIS[pais]}</caption>
             <thead>
               <tr>
@@ -60,18 +60,18 @@ export default async function ListaColecciones({
                     <td>
                       <Link href={`/admin/colecciones/${f.id}`}>{f.name}</Link>
                     </td>
-                    <td className="adm-suave">
+                    <td data-etiqueta="Tipo" className="adm-suave">
                       {f.type === 'manual' ? 'Manual' : regla.tipo ? ETIQUETA_REGLA[regla.tipo] : 'Por regla'}
                     </td>
-                    <td>{f.show_in_home_tabs ? 'Pestaña' : '—'}</td>
-                    <td>
+                    <td data-etiqueta="Inicio">{f.show_in_home_tabs ? 'Pestaña' : '—'}</td>
+                    <td data-etiqueta="Estado">
                       {f.is_active ? (
                         <span className="adm-insignia adm-insignia-ok">Activa</span>
                       ) : (
                         <span className="adm-insignia">Inactiva</span>
                       )}
                     </td>
-                    <td className="adm-num">{f.sort_order}</td>
+                    <td data-etiqueta="Orden" className="adm-num">{f.sort_order}</td>
                   </tr>
                 );
               })}

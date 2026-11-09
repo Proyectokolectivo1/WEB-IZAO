@@ -77,7 +77,7 @@ export function ImportadorCatalogo() {
           {fase === 'simulado' && aplicables === 0 ? <p className="adm-alerta">No hay nada para importar. Corrige los errores y vuelve a simular.</p> : null}
           {reporte.errores.length > 0 ? (
             <div className="adm-tabla-caja">
-              <table className="adm-tabla">
+              <table className="adm-tabla adm-tabla-apilada">
                 <caption>Errores ({reporte.errores.length}). Los productos con error no se importan.</caption>
                 <thead>
                   <tr>
@@ -91,9 +91,9 @@ export function ImportadorCatalogo() {
                   {reporte.errores.slice(0, 300).map((e, i) => (
                     <tr key={i}>
                       <td>{e.fila ?? '-'}</td>
-                      <td>{e.sku ?? '-'}</td>
-                      <td>{e.columna ?? '-'}</td>
-                      <td>{e.mensaje}</td>
+                      <td data-etiqueta="SKU">{e.sku ?? '-'}</td>
+                      <td data-etiqueta="Columna">{e.columna ?? '-'}</td>
+                      <td data-etiqueta="Problema">{e.mensaje}</td>
                     </tr>
                   ))}
                 </tbody>

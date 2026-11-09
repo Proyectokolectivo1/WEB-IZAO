@@ -16,7 +16,9 @@ export type PaginaPanel =
   | 'metricas'
   | 'clientes'
   | 'gastos'
-  | 'garantias';
+  | 'garantias'
+  | 'listas'
+  | 'tablas-cortas';
 export const PAGINAS_PANEL: readonly PaginaPanel[] = [
   'inicio',
   'pedidos',
@@ -27,6 +29,8 @@ export const PAGINAS_PANEL: readonly PaginaPanel[] = [
   'clientes',
   'gastos',
   'garantias',
+  'listas',
+  'tablas-cortas',
 ];
 
 const PEDIDOS = [
@@ -276,6 +280,96 @@ function garantias(): string {
       .join('')}</tbody></table></div>`;
 }
 
+/** Una tabla apilada de ejemplo. `tituloFila`: la primera celda va como `<th scope="row">` (título de la tarjeta). */
+function tablaApilada(titulo: string, cabeceras: readonly string[], filas: readonly (readonly string[])[], tituloFila = false): string {
+  const etiquetas = tituloFila ? cabeceras.slice(1) : cabeceras;
+  return `<div class="adm-tabla-caja"><table class="adm-tabla adm-tabla-apilada"><caption class="adm-suave">${titulo}</caption>
+    <thead><tr>${cabeceras.map((c) => `<th scope="col">${c}</th>`).join('')}</tr></thead>
+    <tbody>${filas
+      .map(
+        (f) =>
+          `<tr>${f
+            .map((celda, i) => {
+              if (tituloFila && i === 0) return `<th scope="row">${celda}</th>`;
+              const n = tituloFila ? i - 1 : i;
+              return `<td${i > 0 ? ` data-etiqueta="${etiquetas[n]}"` : ''}>${celda}</td>`;
+            })
+            .join('')}</tr>`,
+      )
+      .join('')}</tbody></table></div>`;
+}
+
+const ACCIONES_ORDEN =
+  '<div class="adm-acciones"><button type="button" class="adm-boton adm-boton-secundario">Subir</button><button type="button" class="adm-boton adm-boton-secundario">Bajar</button><button type="button" class="adm-boton adm-boton-secundario">Quitar</button></div>';
+
+/** Listas del panel que pasan a tarjetas en celular (mismo marcado que las páginas reales). */
+function listas(): string {
+  return `<h1>Listas del panel</h1>
+  ${tablaApilada(
+    'Leads más recientes primero',
+    ['Contacto', 'País', 'Pop-up', 'Código', 'Mercadeo', 'Compró', 'Fecha'],
+    [
+      ['laura.gomez.hernandez@correo-ejemplo.com <span class="adm-suave adm-chico"> · +573157654321 · instagram / bio</span>', 'CO', 'Bienvenida 10 %', 'BIENVENIDA10', 'Sí', '<a href="#">Ver pedido</a>', '8 nov 2026, 10:42'],
+      ['—', 'EC', '—', '—', 'No', '<span class="adm-suave">No</span>', '7 nov 2026, 17:03'],
+    ],
+  )}
+  ${tablaApilada('Códigos de descuento', ['Código', 'Descuento', 'Estado', 'Usos', 'Origen', 'Iza'], [
+    ['<a href="#">VERANO2026</a>', '15 %', '<span class="adm-insignia adm-insignia-ok">Vigente</span>', '12 / 100', 'Manual', 'Sí'],
+  ])}
+  ${tablaApilada('Usuarios del panel', ['Nombre', 'Correo', 'Rol', 'Estado', 'Verificación en 2 pasos', 'Último ingreso'], [
+    ['<a href="#">Operadora de bodega</a>', 'operadora.bodega@correo-ejemplo.com', 'Operador', '<span class="adm-insignia adm-insignia-ok">Activo</span>', '<span class="adm-insignia adm-insignia-aviso">Pendiente</span>', '8 nov 2026, 7:58'],
+  ])}
+  ${tablaApilada('Eventos más recientes primero', ['Cuándo', 'Quién', 'Acción', 'Sobre', 'Detalle'], [
+    ['8 nov 2026, 10:42', 'Dueña de Izao <span class="adm-suave adm-chico"> · 190.25.10.44</span>', '<code>discount_code.update</code>', 'discount_codes · 3f9a2c1d-77b0', 'usage_limit_total: 100 → 150; is_active: true → false; valid_until: 2026-12-31 → 2027-01-15'],
+  ])}
+  ${tablaApilada(
+    'Ventas por influencer',
+    ['Influencer', 'Pedidos', 'Ventas brutas', 'Entregados', 'Devueltos', 'Ingresos confirmados', 'Ticket promedio', 'Comisión'],
+    [['<a href="#">Camila Ortega</a><span class="adm-suave"> @camilaortega.perfumes</span>', '14<span class="adm-suave"> (12 pagados)</span>', '$ 2.184.000', '10', '1', '$ 1.920.500', '$ 182.000', '$ 192.050<span class="adm-suave"> (10 %)</span>']],
+  )}
+  ${tablaApilada(
+    'Credenciales de Wompi en Colombia',
+    ['Ambiente', 'Guardado', 'Estado', 'Última prueba', 'Acciones'],
+    [
+      [
+        'Producción',
+        '<ul style="list-style:none;padding:0;margin:0"><li><span class="adm-suave">Llave pública: </span><code>pub_prod_••••••••8f2a</code></li><li><span class="adm-suave">Secreto de eventos: </span><code>••••••••c91d</code></li></ul>',
+        '<span class="adm-insignia adm-insignia-ok">Activa</span>',
+        'Hace 2 h · correcta',
+        '<div class="adm-acciones"><a class="adm-enlace-boton" href="#">Editar</a><button type="button" class="adm-boton adm-boton-secundario">Probar conexión</button><button type="button" class="adm-boton adm-boton-secundario">Desactivar</button></div>',
+      ],
+    ],
+    true,
+  )}
+  ${tablaApilada('Destacados de Colombia, de primero a último', ['#', 'Producto', 'En la tienda', 'Acciones'], [
+    ['1', 'Perfume árabe de ejemplo con nombre largo 100 ml', '<span class="adm-insignia adm-insignia-ok">Visible</span>', ACCIONES_ORDEN],
+  ])}
+  ${tablaApilada('Códigos de la influencer', ['Código', 'Usos', 'Enlace de referido'], [
+    ['<a href="#">CAMILA10</a>', '31', '<code class="adm-copiable">https://izaoperfumeria.com/co?ref=CAMILA10&amp;utm_source=influencer</code>'],
+  ])}
+  ${tablaApilada('Ventas por día', ['Día', 'Pedidos pagados', 'Ventas brutas', 'Ingresos confirmados'], [
+    ['2026-11-07', '9', '$ 1.482.900', '$ 1.390.000'],
+    ['2026-11-06', '7', '$ 1.104.000', '$ 1.020.400'],
+  ], true)}
+  ${tablaApilada('Pedidos del cliente', ['Pedido', 'Estado', 'Total', 'Fecha'], [
+    ['<a href="#">IZ-10482</a>', '<span class="adm-insignia">Pendiente de pago</span>', '$ 389.900', '8 nov 2026, 10:42'],
+  ])}`;
+}
+
+/** Tablas de 2 o 3 columnas que se quedan como tabla porque caben en 375 px (ver `tablasApiladas.test.ts`). */
+function tablasCortas(): string {
+  return `<h1>Tablas cortas</h1>
+  <div class="adm-tabla-caja"><table class="adm-tabla"><caption class="adm-suave">Aromas</caption>
+    <thead><tr><th scope="col">Nombre</th><th scope="col">URL</th><th scope="col" class="adm-num">Orden</th></tr></thead>
+    <tbody><tr><td><a href="#">Oriental amaderada</a></td><td class="adm-suave">oriental-amaderada-intensa</td><td class="adm-num">12</td></tr></tbody></table></div>
+  <div class="adm-tabla-caja"><table class="adm-tabla"><caption class="adm-suave">Meses anteriores</caption>
+    <thead><tr><th scope="col">Mes</th><th scope="col">Costo</th><th scope="col">Respuestas</th></tr></thead>
+    <tbody><tr><th scope="row">2026-10</th><td>US$ 3,421</td><td>1.284</td></tr></tbody></table></div>
+  <div class="adm-tabla-caja"><table class="adm-tabla"><caption class="adm-suave">Filas por tabla</caption>
+    <thead><tr><th scope="col">Tabla</th><th scope="col">Filas</th></tr></thead>
+    <tbody><tr><th scope="row">Pedidos</th><td>12.480</td></tr></tbody></table></div>`;
+}
+
 export function htmlPaginaPanel(pagina: PaginaPanel): string {
   switch (pagina) {
     case 'inicio':
@@ -300,5 +394,9 @@ export function htmlPaginaPanel(pagina: PaginaPanel): string {
       return gastos();
     case 'garantias':
       return garantias();
+    case 'listas':
+      return listas();
+    case 'tablas-cortas':
+      return tablasCortas();
   }
 }

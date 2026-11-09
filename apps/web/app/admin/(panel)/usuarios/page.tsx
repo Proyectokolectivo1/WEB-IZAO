@@ -24,7 +24,7 @@ export default async function PaginaUsuarios() {
         Administradores y operadores del panel. Todos entran con contraseña y verificación en dos pasos.
       </p>
       <div className="adm-tabla-caja">
-        <table className="adm-tabla">
+        <table className="adm-tabla adm-tabla-apilada">
           <caption className="adm-suave">Usuarios del panel</caption>
           <thead>
             <tr>
@@ -43,13 +43,13 @@ export default async function PaginaUsuarios() {
                   <Link href={`/admin/usuarios/${u.id}`}>{u.nombre}</Link>
                   {u.id === admin.userId ? <span className="adm-suave"> (tú)</span> : null}
                 </td>
-                <td>{u.correo ?? <span className="adm-suave">Sin cuenta de acceso</span>}</td>
-                <td>{ETIQUETA_ROL_USUARIO[u.rol]}</td>
-                <td>
+                <td data-etiqueta="Correo">{u.correo ?? <span className="adm-suave">Sin cuenta de acceso</span>}</td>
+                <td data-etiqueta="Rol">{ETIQUETA_ROL_USUARIO[u.rol]}</td>
+                <td data-etiqueta="Estado">
                   <span className={u.activo ? 'adm-insignia adm-insignia-ok' : 'adm-insignia'}>{u.activo ? 'Activo' : 'Desactivado'}</span>
                 </td>
-                <td>{u.mfaActivo ? 'Activa' : <span className="adm-insignia adm-insignia-aviso">Pendiente</span>}</td>
-                <td className="adm-suave">{fechaHoraBogota(u.ultimoIngreso)}</td>
+                <td data-etiqueta="Verificación en 2 pasos">{u.mfaActivo ? 'Activa' : <span className="adm-insignia adm-insignia-aviso">Pendiente</span>}</td>
+                <td data-etiqueta="Último ingreso" className="adm-suave">{fechaHoraBogota(u.ultimoIngreso)}</td>
               </tr>
             ))}
           </tbody>

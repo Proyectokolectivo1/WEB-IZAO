@@ -204,7 +204,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           <p className="adm-vacio">Aún no hay intentos de pago.</p>
         ) : (
           <div className="adm-tabla-caja">
-            <table className="adm-tabla">
+            <table className="adm-tabla adm-tabla-apilada">
               <caption className="adm-suave">Intentos de pago del pedido</caption>
               <thead>
                 <tr>
@@ -220,11 +220,11 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
                 {d.pagos.map((x) => (
                   <tr key={x.id}>
                     <td className="adm-suave">{x.provider_reference ?? '—'}</td>
-                    <td>{x.provider}</td>
-                    <td>{x.purpose === 'cod_deposit' ? 'Abono' : x.purpose === 'full' ? 'Completo' : 'Financiación'}</td>
-                    <td>{dinero(x.amount, p.currency_code)}</td>
-                    <td>{x.status}</td>
-                    <td className="adm-suave">{fecha.format(new Date(x.created_at))}</td>
+                    <td data-etiqueta="Proveedor">{x.provider}</td>
+                    <td data-etiqueta="Tipo">{x.purpose === 'cod_deposit' ? 'Abono' : x.purpose === 'full' ? 'Completo' : 'Financiación'}</td>
+                    <td data-etiqueta="Valor">{dinero(x.amount, p.currency_code)}</td>
+                    <td data-etiqueta="Estado">{x.status}</td>
+                    <td data-etiqueta="Fecha" className="adm-suave">{fecha.format(new Date(x.created_at))}</td>
                   </tr>
                 ))}
               </tbody>
@@ -239,7 +239,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           <p className="adm-vacio">No se han enviado mensajes de este pedido.</p>
         ) : (
           <div className="adm-tabla-caja">
-            <table className="adm-tabla">
+            <table className="adm-tabla adm-tabla-apilada">
               <caption className="adm-suave">Mensajes enviados por plantilla</caption>
               <thead>
                 <tr>
@@ -257,14 +257,14 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
                         ? `${ETIQUETA_CLAVE[m.whatsapp_templates.key as ClavePlantilla] ?? m.whatsapp_templates.key} (v${m.whatsapp_templates.version})`
                         : '—'}
                     </td>
-                    <td>
+                    <td data-etiqueta="Estado">
                       <span className={m.status === 'failed' ? 'adm-insignia adm-insignia-aviso' : 'adm-insignia'}>
                         {ETIQUETA_MENSAJE[m.status] ?? m.status}
                       </span>
                       {m.status === 'failed' && m.error_code ? <span className="adm-suave adm-chico"> código {m.error_code}</span> : null}
                     </td>
-                    <td className="adm-suave">{m.scheduled_for ? fecha.format(new Date(m.scheduled_for)) : '—'}</td>
-                    <td className="adm-suave">{m.sent_at ? fecha.format(new Date(m.sent_at)) : '—'}</td>
+                    <td data-etiqueta="Programado" className="adm-suave">{m.scheduled_for ? fecha.format(new Date(m.scheduled_for)) : '—'}</td>
+                    <td data-etiqueta="Enviado" className="adm-suave">{m.sent_at ? fecha.format(new Date(m.sent_at)) : '—'}</td>
                   </tr>
                 ))}
               </tbody>

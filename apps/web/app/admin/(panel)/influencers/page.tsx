@@ -60,7 +60,7 @@ export default async function ListaInfluencers({
         </p>
       ) : (
         <div className="adm-tabla-caja">
-          <table className="adm-tabla">
+          <table className="adm-tabla adm-tabla-apilada">
             <caption className="adm-suave">Influencers de {pais === 'CO' ? 'Colombia' : 'Ecuador'}</caption>
             <thead>
               <tr>
@@ -77,10 +77,10 @@ export default async function ListaInfluencers({
                   <td>
                     <Link href={`/admin/influencers/${i.id}`}>{i.name}</Link>
                   </td>
-                  <td className="adm-suave">{i.handle ? `@${i.handle}` : '—'}</td>
-                  <td>{i.commission_pct === null ? '—' : `${Number(i.commission_pct)} %`}</td>
-                  <td>{(codigos.get(i.id) ?? []).map((c) => c.code).join(', ') || '—'}</td>
-                  <td>
+                  <td data-etiqueta="Usuario" className="adm-suave">{i.handle ? `@${i.handle}` : '—'}</td>
+                  <td data-etiqueta="Comisión">{i.commission_pct === null ? '—' : `${Number(i.commission_pct)} %`}</td>
+                  <td data-etiqueta="Códigos">{(codigos.get(i.id) ?? []).map((c) => c.code).join(', ') || '—'}</td>
+                  <td data-etiqueta="Estado">
                     <span className={`adm-insignia ${i.is_active ? 'adm-insignia-ok' : ''}`.trim()}>{i.is_active ? 'Activo' : 'Inactivo'}</span>
                   </td>
                 </tr>

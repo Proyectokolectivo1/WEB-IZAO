@@ -37,7 +37,7 @@ export default async function PaginaSistema({
         {colas.disponible ? (
           <>
             <div className="adm-tabla-caja">
-              <table className="adm-tabla">
+              <table className="adm-tabla adm-tabla-apilada">
                 <caption className="adm-suave">Trabajos en segundo plano por cola</caption>
                 <thead>
                   <tr>
@@ -53,11 +53,11 @@ export default async function PaginaSistema({
                   {colas.colas.map((c) => (
                     <tr key={c.nombre}>
                       <th scope="row">{c.etiqueta}</th>
-                      <td>{c.conteos.waiting}</td>
-                      <td>{c.conteos.active}</td>
-                      <td>{c.conteos.delayed}</td>
-                      <td>{c.conteos.failed > 0 ? <span className="adm-insignia adm-insignia-aviso">{c.conteos.failed}</span> : 0}</td>
-                      <td className="adm-suave">{c.conteos.completed}</td>
+                      <td data-etiqueta="En espera">{c.conteos.waiting}</td>
+                      <td data-etiqueta="En proceso">{c.conteos.active}</td>
+                      <td data-etiqueta="Programados">{c.conteos.delayed}</td>
+                      <td data-etiqueta="Fallidos">{c.conteos.failed > 0 ? <span className="adm-insignia adm-insignia-aviso">{c.conteos.failed}</span> : 0}</td>
+                      <td data-etiqueta="Completados" className="adm-suave">{c.conteos.completed}</td>
                     </tr>
                   ))}
                 </tbody>

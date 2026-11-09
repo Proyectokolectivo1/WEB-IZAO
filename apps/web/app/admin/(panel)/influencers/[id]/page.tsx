@@ -70,7 +70,7 @@ export default async function EditarInfluencer({
               <p className="adm-vacio">Este influencer aún no tiene códigos.</p>
             ) : (
               <div className="adm-tabla-caja">
-                <table className="adm-tabla">
+                <table className="adm-tabla adm-tabla-apilada">
                   <caption className="adm-suave">Códigos de {ficha.name}</caption>
                   <thead>
                     <tr>
@@ -86,8 +86,8 @@ export default async function EditarInfluencer({
                           <Link href={`/admin/descuentos/${c.id}`}>{c.code}</Link>
                           {c.is_active ? null : <span className="adm-insignia"> Inactivo</span>}
                         </td>
-                        <td>{c.usage_count}</td>
-                        <td>
+                        <td data-etiqueta="Usos">{c.usage_count}</td>
+                        <td data-etiqueta="Enlace de referido">
                           <code className="adm-copiable">{enlaceReferido(ORIGEN, ficha.country_code, c.code)}</code>
                         </td>
                       </tr>

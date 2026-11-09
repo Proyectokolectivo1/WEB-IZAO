@@ -142,7 +142,7 @@ export function FormularioApariencia({
       <section aria-labelledby="h-contraste">
         <h3 id="h-contraste">Contraste de lectura</h3>
         <div className="adm-tabla-caja">
-          <table className="adm-tabla">
+          <table className="adm-tabla adm-tabla-apilada">
             <caption className="adm-visualmente-oculto">Contraste de cada combinación de texto</caption>
             <thead>
               <tr>
@@ -160,8 +160,8 @@ export function FormularioApariencia({
                     </span>{' '}
                     {c.descripcion}
                   </td>
-                  <td>{c.ratio.toFixed(2)}:1</td>
-                  <td>
+                  <td data-etiqueta="Contraste">{c.ratio.toFixed(2)}:1</td>
+                  <td data-etiqueta="Resultado">
                     {c.uso === 'decorativo' ? (
                       <span className="adm-insignia">Solo decorativo</span>
                     ) : c.cumple && !c.advertencia ? (

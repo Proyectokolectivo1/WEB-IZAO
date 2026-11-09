@@ -48,7 +48,7 @@ export default async function ReporteInfluencers({
             </a>
           </p>
           <div className="adm-tabla-caja">
-            <table className="adm-tabla">
+            <table className="adm-tabla adm-tabla-apilada">
               <caption className="adm-suave">Ventas por influencer</caption>
               <thead>
                 <tr>
@@ -69,16 +69,16 @@ export default async function ReporteInfluencers({
                       <Link href={`/admin/influencers/${f.influencerId}`}>{f.nombre}</Link>
                       {f.handle ? <span className="adm-suave"> @{f.handle}</span> : null}
                     </td>
-                    <td>
+                    <td data-etiqueta="Pedidos">
                       {f.pedidos}
                       <span className="adm-suave"> ({f.pedidosPagados} pagados)</span>
                     </td>
-                    <td>{dineroBig(f.ventasBrutas, f.moneda)}</td>
-                    <td>{f.entregados}</td>
-                    <td>{f.devueltos}</td>
-                    <td>{dineroBig(f.ingresosConfirmados, f.moneda)}</td>
-                    <td>{f.ticketPromedio === null ? '—' : dineroBig(f.ticketPromedio, f.moneda)}</td>
-                    <td>
+                    <td data-etiqueta="Ventas brutas">{dineroBig(f.ventasBrutas, f.moneda)}</td>
+                    <td data-etiqueta="Entregados">{f.entregados}</td>
+                    <td data-etiqueta="Devueltos">{f.devueltos}</td>
+                    <td data-etiqueta="Ingresos confirmados">{dineroBig(f.ingresosConfirmados, f.moneda)}</td>
+                    <td data-etiqueta="Ticket promedio">{f.ticketPromedio === null ? '—' : dineroBig(f.ticketPromedio, f.moneda)}</td>
+                    <td data-etiqueta="Comisión">
                       {f.comision === null ? (
                         <span className="adm-suave">Sin comisión</span>
                       ) : (

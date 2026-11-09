@@ -99,7 +99,7 @@ export default async function EditarCodigo({
               <p className="adm-vacio">Este código aún no se ha usado.</p>
             ) : (
               <div className="adm-tabla-caja">
-                <table className="adm-tabla">
+                <table className="adm-tabla adm-tabla-apilada">
                   <caption className="adm-suave">Últimos pedidos con este código</caption>
                   <thead>
                     <tr>
@@ -113,9 +113,9 @@ export default async function EditarCodigo({
                     {uso.recientes.map((r, i) => (
                       <tr key={`${r.numero ?? 'x'}-${i}`}>
                         <td>{r.numero ?? '—'}</td>
-                        <td>{ETIQUETA_CANJE[r.estado].split(' (')[0]}</td>
-                        <td>{dineroBig(r.monto, moneda)}</td>
-                        <td>{fechaHoraBogota(r.fecha)}</td>
+                        <td data-etiqueta="Canje">{ETIQUETA_CANJE[r.estado].split(' (')[0]}</td>
+                        <td data-etiqueta="Descuento">{dineroBig(r.monto, moneda)}</td>
+                        <td data-etiqueta="Fecha">{fechaHoraBogota(r.fecha)}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -201,8 +201,8 @@ test.describe('celular: tamaños y listas', () => {
     }
   });
 
-  test('clientes, gastos y garantías: ni la página ni la caja de la tabla se desplazan en horizontal', async ({ page }) => {
-    for (const pagina of ['clientes', 'gastos', 'garantias'] as const) {
+  test('listas del panel (clientes, gastos, garantías, leads, descuentos…) y tablas cortas: ni la página ni la caja de la tabla se desplazan en horizontal', async ({ page }) => {
+    for (const pagina of ['clientes', 'gastos', 'garantias', 'listas', 'tablas-cortas', 'metricas'] as const) {
       await abrir(page, pagina);
       const m = await sinDesborde(page);
       expect(m.ancho, `${pagina}: documento`).toBeLessThanOrEqual(m.visible);
@@ -211,7 +211,19 @@ test.describe('celular: tamaños y listas', () => {
         .evaluateAll((els) => els.map((e) => ({ ancho: e.scrollWidth, visible: e.clientWidth })));
       expect(cajas.length).toBeGreaterThan(0);
       for (const c of cajas) expect(c.ancho, `${pagina}: caja de la tabla`).toBeLessThanOrEqual(c.visible);
+      // Todas las tablas apiladas de la página se leen como tarjetas y cada celda (menos el título) trae su encabezado.
+      const tablas = await page.locator('table.adm-tabla-apilada').evaluateAll((ts) =>
+        ts.map((t) => ({
+          fila: getComputedStyle(t.querySelector('tbody tr') as Element).display,
+          sinEtiqueta: t.querySelectorAll('tbody tr > td:not(:first-child):not([data-etiqueta])').length,
+        })),
+      );
+      for (const t of tablas) {
+        expect(t.fila, `${pagina}: fila`).toBe('block');
+        expect(t.sinEtiqueta, `${pagina}: celdas sin encabezado`).toBe(0);
+      }
       // Cada tarjeta lleva el título arriba y los datos con su encabezado; el contenido largo no se sale.
+      if (tablas.length === 0) continue;
       const filas = page.locator('table.adm-tabla-apilada tbody tr');
       expect(await filas.count()).toBeGreaterThanOrEqual(2);
       const celdasFuera = await page.evaluate(() => {
@@ -237,8 +249,8 @@ test.describe('tablet: las listas siguen siendo tablas', () => {
     expect(m.ancho).toBeLessThanOrEqual(m.visible);
   });
 
-  test('clientes, gastos y garantías no desbordan la página a 768 px', async ({ page }) => {
-    for (const pagina of ['clientes', 'gastos', 'garantias'] as const) {
+  test('clientes, gastos, garantías y las demás listas no desbordan la página a 768 px', async ({ page }) => {
+    for (const pagina of ['clientes', 'gastos', 'garantias', 'listas'] as const) {
       await abrir(page, pagina);
       const m = await sinDesborde(page);
       expect(m.ancho, pagina).toBeLessThanOrEqual(m.visible);

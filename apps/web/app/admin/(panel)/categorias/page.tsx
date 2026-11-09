@@ -32,7 +32,7 @@ export default async function ListaCategorias({
         </p>
       ) : (
         <div className="adm-tabla-caja">
-          <table className="adm-tabla">
+          <table className="adm-tabla adm-tabla-apilada">
             <caption className="adm-suave">Categorías (máximo 2 niveles)</caption>
             <thead>
               <tr>
@@ -52,9 +52,9 @@ export default async function ListaCategorias({
                   <td style={{ paddingLeft: f.nivel ? '2.25rem' : undefined }}>
                     <Link href={`/admin/categorias/${f.id}`}>{f.name}</Link>
                   </td>
-                  <td className="adm-suave">{f.slug}</td>
+                  <td data-etiqueta="URL" className="adm-suave">{f.slug}</td>
                   {PAISES_CATALOGO.map((p) => (
-                    <td key={p}>
+                    <td key={p} data-etiqueta={NOMBRE_PAIS[p]}>
                       {f.paises[p]?.is_visible ? (
                         <span className="adm-insignia adm-insignia-ok">Visible</span>
                       ) : (
@@ -62,7 +62,7 @@ export default async function ListaCategorias({
                       )}
                     </td>
                   ))}
-                  <td>{f.show_in_menu ? 'Sí' : 'No'}</td>
+                  <td data-etiqueta="Menú">{f.show_in_menu ? 'Sí' : 'No'}</td>
                 </tr>
               ))}
             </tbody>

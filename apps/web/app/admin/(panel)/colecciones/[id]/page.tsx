@@ -76,7 +76,7 @@ export default async function EditarColeccion({
             <p className="adm-vacio">Aún no hay productos. Busca uno abajo para agregarlo.</p>
           ) : (
             <div className="adm-tabla-caja">
-              <table className="adm-tabla">
+              <table className="adm-tabla adm-tabla-apilada">
                 <caption className="adm-suave">En el orden en que se muestran</caption>
                 <thead>
                   <tr>
@@ -89,8 +89,8 @@ export default async function EditarColeccion({
                   {items.map((i, n) => (
                     <tr key={i.product_id}>
                       <td>{i.name}</td>
-                      <td className="adm-suave">{i.status === 'active' ? 'Activo' : i.status === 'draft' ? 'Borrador' : 'Archivado'}</td>
-                      <td>
+                      <td data-etiqueta="Estado" className="adm-suave">{i.status === 'active' ? 'Activo' : i.status === 'draft' ? 'Borrador' : 'Archivado'}</td>
+                      <td data-etiqueta="Acciones">
                         <div className="adm-acciones">
                           <form action={moverItem.bind(null, col.id, i.product_id, 'arriba')}>
                             <button type="submit" className="adm-boton adm-boton-secundario" disabled={n === 0} aria-label={`Subir ${i.name}`}>
