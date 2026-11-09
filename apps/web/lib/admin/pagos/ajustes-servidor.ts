@@ -120,18 +120,23 @@ export function aFormularioMetodo(f: Fila, pais: PaisAjustes): FormularioMetodo 
 }
 
 /**
- * Variantes activas en el país, de productos publicados, sin `mastershop_product_id` de ESE país (D-052). Es la misma
+ * Variantes activas en el país, de productos activos y visibles en ese país, sin `mastershop_product_id` de ESE país (D-052). Es la misma
  * condición con la que la base rechaza publicar (`sin_vinculo_mastershop`); aquí sirve para avisar y para no encender la
  * transportadora de un país que aún no tiene sus productos vinculados.
  */
 export async function contarSinVinculo(cliente: Cliente, pais: PaisAjustes): Promise<number> {
   const { count, error } = await cliente
     .from('variant_countries')
-    .select('variant_id, product_variants!inner(product_id, products!inner(status))', { count: 'exact', head: true })
+    .select('variant_id, product_variants!inner(product_id, products!inner(status, product_countries!inner(country_code, is_visible)))', {
+      count: 'exact',
+      head: true,
+    })
     .eq('country_code', pais)
     .eq('is_active', true)
     .is('mastershop_product_id', null)
-    .eq('product_variants.products.status', 'active');
+    .eq('product_variants.products.status', 'active')
+    .eq('product_variants.products.product_countries.country_code', pais)
+    .eq('product_variants.products.product_countries.is_visible', true);
   if (error) throw new Error(`No se pudo revisar el vínculo con MasterShop: ${error.message}`);
   return count ?? 0;
 }
@@ -198,6 +203,16 @@ export async function guardarAjustesPaisBd(args: Ctx & { pais: PaisAjustes; dato
   delete previoRecargo.addi;
   delete previoRecargo.sistecredito;
   const recargos = { ...previoRecargo, ...datos.surcharge };
+
+  // Colombia despacha siempre con MasterShop: apagarla dejaría sin envío los pedidos reales. Solo se puede apagar en
+  // países que aún no operan con MasterShop.
+  if (pais === 'CO' && datos.carrier_provider === null) {
+    return {
+      ok: false,
+      mensaje: 'Revisa los campos marcados.',
+      errores: { carrier_provider: 'Colombia envía siempre con MasterShop; no se puede quitar la transportadora de este país.' },
+    };
+  }
 
   // Encender MasterShop en un país exige que sus productos publicados ya tengan el vínculo de ESE país: si no, los
   // pedidos fallarían al crearse en la transportadora (D-052).

@@ -172,13 +172,19 @@ export function FormularioAjustesPais({
           id="carrier_provider"
           name="carrier_provider"
           etiqueta="Transportadora integrada"
-          defaultValue={inicial.carrier_provider === '' ? 'ninguna' : inicial.carrier_provider}
-          opciones={[
-            { valor: 'ninguna', etiqueta: 'Ninguna (los envíos se gestionan aparte)' },
-            { valor: 'mastershop', etiqueta: 'MasterShop' },
-          ]}
+          defaultValue={inicial.carrier_provider === '' ? (pais === 'CO' ? 'mastershop' : 'ninguna') : inicial.carrier_provider}
+          opciones={
+            pais === 'CO'
+              ? [{ valor: 'mastershop', etiqueta: 'MasterShop' }]
+              : [
+                  { valor: 'ninguna', etiqueta: 'Ninguna (los envíos se gestionan aparte)' },
+                  { valor: 'mastershop', etiqueta: 'MasterShop' },
+                ]
+          }
           ayuda={
-            inicial.sin_vinculo > 0 && inicial.carrier_provider !== 'mastershop'
+            pais === 'CO'
+              ? 'Colombia envía siempre con MasterShop; esta opción no se puede quitar.'
+              : inicial.sin_vinculo > 0 && inicial.carrier_provider !== 'mastershop'
               ? `Antes de activarla: ${inicial.sin_vinculo} ${inicial.sin_vinculo === 1 ? 'variante publicada no tiene' : 'variantes publicadas no tienen'} el vínculo con MasterShop de este país.`
               : inicial.sin_vinculo > 0
                 ? `Atención: ${inicial.sin_vinculo} ${inicial.sin_vinculo === 1 ? 'variante publicada no tiene' : 'variantes publicadas no tienen'} el vínculo con MasterShop de este país; esos pedidos no podrán crearse en la transportadora.`

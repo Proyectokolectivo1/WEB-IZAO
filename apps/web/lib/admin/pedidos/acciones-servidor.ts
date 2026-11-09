@@ -130,8 +130,13 @@ export async function cancelarPedidoBd(
           'El envío ya avanzó en MasterShop y no se puede cancelar desde aquí. Cancélalo en MasterShop: el pedido se actualizará solo cuando ellos lo confirmen.',
       };
     }
+    // Cada país tiene su llave de MasterShop: sin país del pedido no se adivina (fallar cerrado, no usar la de Colombia).
+    const paisPedido = pedido.country_code;
+    if (paisPedido !== 'CO' && paisPedido !== 'EC') {
+      return { ok: false, mensaje: 'No se pudo saber el país de este pedido, así que no se puede cancelar en MasterShop desde aquí. No se cambió nada; revisa el pedido o cancélalo directamente en MasterShop.' };
+    }
     try {
-      await args.cancelarEnMasterShop(envio.provider_order_id, pedido.country_code === 'EC' ? 'EC' : 'CO');
+      await args.cancelarEnMasterShop(envio.provider_order_id, paisPedido);
       canceladoEnMasterShop = true;
     } catch (e) {
       console.error('[panel] no se pudo cancelar en MasterShop:', e instanceof Error ? e.name : 'error');

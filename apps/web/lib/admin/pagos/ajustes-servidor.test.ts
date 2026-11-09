@@ -5,7 +5,7 @@ vi.mock('@/lib/admin/auditoria', () => ({ auditarCambio: auditar }));
 
 import { clienteFalso } from '../crud/cliente-falso';
 import { esquemaAjustesPais, esquemaMetodo } from './ajustes';
-import { aFormularioPais, guardarAjustesPaisBd, guardarMetodoBd, leerAjustes } from './ajustes-servidor';
+import { aFormularioPais, contarSinVinculo, guardarAjustesPaisBd, guardarMetodoBd, leerAjustes } from './ajustes-servidor';
 
 const comun = { actor: 'admin-1', ip: null };
 
@@ -194,6 +194,27 @@ describe('transportadora por país (D-052)', () => {
     expect(r.errores?.carrier_provider).toMatch(/3 variantes publicadas no tienen el vínculo con MasterShop de este país/);
     expect(r.errores?.carrier_provider).toMatch(/Ecuador/);
     expect(filtros).toContainEqual({ tabla: 'variant_countries', metodo: 'eq', args: ['country_code', 'EC'] });
+    expect(llamadas.some((l) => l.clave === 'country_settings.update')).toBe(false);
+    expect(auditar).not.toHaveBeenCalled();
+  });
+
+  it('el conteo exige producto activo y visible en el país (misma condición que la base)', async () => {
+    const { cliente, filtros } = clienteFalso({ 'variant_countries.select': { data: null, count: 1 } });
+    expect(await contarSinVinculo(cliente, 'EC')).toBe(1);
+    const f = filtros.map((x) => `${x.metodo}:${x.args.join('=')}`);
+    expect(f).toEqual(expect.arrayContaining([
+      'eq:is_active=true',
+      'eq:product_variants.products.status=active',
+      'eq:product_variants.products.product_countries.country_code=EC',
+      'eq:product_variants.products.product_countries.is_visible=true',
+    ]));
+  });
+
+  it('Colombia no se puede dejar sin transportadora (se bloquea en el servidor)', async () => {
+    const { cliente, llamadas } = clienteFalso({ 'country_settings.select': { data: FILA_CO } });
+    const r = await guardarAjustesPaisBd({ cliente, ...comun, pais: 'CO', datos: datosPais({ carrier_provider: 'ninguna' }) });
+    expect(r.ok).toBe(false);
+    expect(r.errores?.carrier_provider).toMatch(/Colombia envía siempre con MasterShop/);
     expect(llamadas.some((l) => l.clave === 'country_settings.update')).toBe(false);
     expect(auditar).not.toHaveBeenCalled();
   });

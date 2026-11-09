@@ -17,7 +17,7 @@ const ID = '11111111-1111-4111-8111-111111111111';
 const AHORA = new Date('2026-10-21T15:00:00Z');
 const comun = { actor: 'u1', ip: null, ahora: () => AHORA };
 
-const pedido = (status: string, extra: Record<string, unknown> = {}) => ({ number: 'IZ-CO-000123', status, payment_method: 'cod', ...extra });
+const pedido = (status: string, extra: Record<string, unknown> = {}) => ({ number: 'IZ-CO-000123', status, payment_method: 'cod', country_code: 'CO', ...extra });
 const envio = (extra: Record<string, unknown> = {}) => ({ id: 's1', provider_order_id: 777, provider_status_id: 1, label_local_path: null, label_url: null, ...extra });
 
 const okTransicion = () =>
@@ -58,6 +58,22 @@ describe('cancelarPedidoBd · llave de MasterShop del país del pedido (D-052)',
     const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Dirección imposible', cancelar: okCancelar(), cancelarEnMasterShop });
     expect(r.ok).toBe(true);
     expect(cancelarEnMasterShop).toHaveBeenCalledWith(777, 'EC');
+  });
+});
+
+describe('cancelarPedidoBd · sin país del pedido', () => {
+  it('falla cerrado: no cae a la llave de Colombia ni cancela en MasterShop ni en la base', async () => {
+    const { cliente } = clienteFalso({
+      'orders.select': { data: pedido('enviado_transportadora', { country_code: null }) },
+      'shipments.select': { data: envio({ provider_status_id: 1 }) },
+    });
+    const cancelarEnMasterShop = vi.fn(async () => undefined);
+    const cancelar = okCancelar();
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Dirección imposible', cancelar, cancelarEnMasterShop });
+    expect(r.ok).toBe(false);
+    expect(r.mensaje).toMatch(/país de este pedido/);
+    expect(cancelarEnMasterShop).not.toHaveBeenCalled();
+    expect(cancelar).not.toHaveBeenCalled();
   });
 });
 
