@@ -7,7 +7,7 @@
 - `46e1fd9`+`a4968ab` D-051: respaldo de etiqueta por el agente cuando el CDN bloquea la IP del VPS (403): `print_job` igual, `label_url` en `claim` (contrato 1.1), `urlEtiquetaSegura` anti-SSRF; polling encola sync si hay `label_url` sin copia local.
 - D-052 MasterShop por país (EC con llave propia, USD): credencial CO+EC, jobs con la llave del país del pedido, polling/billetera por país, webhooks por país, mock con moneda. `652a2cc`.
 - D-052 vinculación por país: lee/escribe `variant_countries` del país con su llave (`vinculacionPorPais`, CLI `--pais`/`--aplicar`), `sqlVinculacion(vista, fecha, pais)`; nunca `product_variants.mastershop_*`. `cb45db3`.
-- Revisión D-052: billetera filtra pedidos por país, `external_ref` `{PAIS}:{id}` (CO reconoce el id sin prefijo), montos con > 2 decimales → aviso y null; §14.3 actualizada. Hash: ver git log.
+- Revisión D-052: billetera filtra pedidos por país, `external_ref` `{PAIS}:{id}` (CO reconoce el id sin prefijo), montos con > 2 decimales → aviso y null; §14.3 actualizada. `d802e82`.
 
 ## Para izao-infra
 - Redesplegar el worker: el contenedor actual **no** tiene D-043 ni el arreglo del 403 (D-044); revisar también D-042.
