@@ -136,7 +136,7 @@ export function FormularioConfigAgente({
           etiqueta="Pasos (JSON)"
           rows={14}
           spellCheck={false}
-          style={{ fontFamily: 'ui-monospace, monospace' }}
+          className="adm-input adm-textarea adm-editor-html"
           defaultValue={inicial.panel_steps}
           ayuda="Operaciones permitidas: goto, click, fill, press, select_option, wait_for, wait_ms, expect_text, download. Sustituciones: {order_number}, {job_id}. Un goto solo puede ir al mismo sitio del panel."
           error={errores.panel_steps}

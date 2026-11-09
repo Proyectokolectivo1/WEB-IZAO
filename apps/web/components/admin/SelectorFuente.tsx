@@ -13,7 +13,10 @@ import {
   type UsoFuente,
 } from '@/lib/tipografia/catalogo';
 
-/** `font-family` de una fuente del catálogo usando la variable que declara `fuentes-previa.ts`. */
+/**
+ * `font-family` de una fuente del catálogo usando la variable que declara `fuentes-previa.ts`.
+ * Excepción documentada a «todo sigue las variables del tema»: es la MUESTRA de la fuente candidata (cada opción se ve en su propia cara).
+ */
 export function familiaCss(f: FuenteCatalogo): string {
   return `var(${variableCssFuente(f)}), ${pilaFuente(f)}`;
 }

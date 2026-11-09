@@ -199,9 +199,9 @@
   height: 1.25rem;
 }
 
-/* Editor de páginas y políticas (§9.5): HTML sencillo con vista previa depurada. */
+/* Campos de código real: editor de páginas y políticas (§9.5, HTML con vista previa depurada) y pasos JSON del agente. Única excepción monoespaciada (token --font-mono). */
 .adm-editor-html {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.9375rem;
   line-height: 1.5;
   min-height: 18rem;
