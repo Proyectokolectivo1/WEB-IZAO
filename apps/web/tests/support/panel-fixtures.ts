@@ -7,8 +7,27 @@
  */
 import { modulosVisibles } from '@/lib/auth/permissions';
 
-export type PaginaPanel = 'inicio' | 'pedidos' | 'productos' | 'producto-editar' | 'agente' | 'metricas';
-export const PAGINAS_PANEL: readonly PaginaPanel[] = ['inicio', 'pedidos', 'productos', 'producto-editar', 'agente', 'metricas'];
+export type PaginaPanel =
+  | 'inicio'
+  | 'pedidos'
+  | 'productos'
+  | 'producto-editar'
+  | 'agente'
+  | 'metricas'
+  | 'clientes'
+  | 'gastos'
+  | 'garantias';
+export const PAGINAS_PANEL: readonly PaginaPanel[] = [
+  'inicio',
+  'pedidos',
+  'productos',
+  'producto-editar',
+  'agente',
+  'metricas',
+  'clientes',
+  'gastos',
+  'garantias',
+];
 
 const PEDIDOS = [
   ['IZ-10482', 'CO', 'Pendiente de pago', 'Contra entrega', '$ 389.900', 'Medellín', '8 nov 2026, 10:42'],
@@ -185,6 +204,78 @@ function metricas(): string {
   </section>`;
 }
 
+function clientes(): string {
+  const filas = [
+    ['Mariana Restrepo Valencia', '', 'CO', 'mariana.restrepo.valencia.compras@correo-ejemplo-largo.com', '+573001234567', '8 nov 2026'],
+    ['Andrés Villacís', '', 'EC', 'andres@correo-ejemplo.com', '+593991234567', '7 nov 2026'],
+    ['Cliente anonimizado', ' Anonimizado', 'CO', '—', '—', '2 nov 2026'],
+  ];
+  return `<h1>Clientes</h1>
+  <form class="adm-busqueda adm-filtros" role="search">
+    <div class="adm-campo"><label for="c-q" class="adm-etiqueta">Nombre, correo o celular</label><input id="c-q" type="search" class="adm-input" /></div>
+    ${campoSelect('c-pais', 'País', 'Todos')}
+    <button type="submit" class="adm-boton">Buscar</button>
+  </form>
+  <div class="adm-tabla-caja"><table class="adm-tabla adm-tabla-apilada"><caption class="adm-suave">Clientes más recientes primero</caption>
+    <thead><tr><th scope="col">Cliente</th><th scope="col">País</th><th scope="col">Correo</th><th scope="col">Celular</th><th scope="col">Desde</th></tr></thead>
+    <tbody>${filas
+      .map(
+        (c) => `<tr><td><a href="#">${c[0]}</a>${c[1] ? `<span class="adm-insignia">${c[1]}</span>` : ''}</td>
+      <td data-etiqueta="País">${c[2]}</td><td data-etiqueta="Correo" class="adm-suave">${c[3]}</td>
+      <td data-etiqueta="Celular" class="adm-suave">${c[4]}</td><td data-etiqueta="Desde" class="adm-suave">${c[5]}</td></tr>`,
+      )
+      .join('')}</tbody></table></div>`;
+}
+
+function gastos(): string {
+  const filas = [
+    ['2026-11-07', 'Empaques', 'Cajas y papel de seda para el despacho de la semana, factura del proveedor de Medellín', 'Manual', '$ 184.000', true],
+    ['2026-11-06', 'Pasarela', 'Comisión Wompi', 'Automático', '$ 12.480', false],
+    ['2026-11-05', 'Publicidad', '—', 'Meta Ads', '$ 350.000', false],
+  ];
+  return `<h1>Gastos</h1>
+  <form class="adm-busqueda adm-filtros">
+    ${campoSelect('g-cat', 'Categoría', 'Todas')}
+    <div class="adm-campo"><label for="g-d" class="adm-etiqueta">Desde</label><input id="g-d" type="date" class="adm-input" /></div>
+    <div class="adm-campo"><label for="g-h" class="adm-etiqueta">Hasta</label><input id="g-h" type="date" class="adm-input" /></div>
+    <button type="submit" class="adm-boton">Filtrar</button>
+  </form>
+  <div class="adm-tabla-caja"><table class="adm-tabla adm-tabla-apilada"><caption class="adm-suave">Gastos más recientes primero</caption>
+    <thead><tr><th scope="col">Fecha</th><th scope="col">Categoría</th><th scope="col">Descripción</th><th scope="col">Origen</th><th scope="col">Valor</th></tr></thead>
+    <tbody>${filas
+      .map(
+        (g) => `<tr><td><a href="#">${g[0]}</a></td><td data-etiqueta="Categoría">${g[1]}</td>
+      <td data-etiqueta="Descripción" class="adm-suave">${g[2]}${g[5] ? '<span class="adm-insignia"> Comprobante</span>' : ''}</td>
+      <td data-etiqueta="Origen"><span class="adm-insignia">${g[3]}</span></td><td data-etiqueta="Valor">${g[4]}</td></tr>`,
+      )
+      .join('')}</tbody></table></div>`;
+}
+
+function garantias(): string {
+  const filas = [
+    ['GAR-0042', 'Laura Gómez Hernández', '+573157654321', 'Frasco llegó con la tapa rota y el producto derramado dentro de la caja', 'En revisión', true, '—', '$ 0'],
+    ['GAR-0041', 'Juan Pérez', '+573001112233', 'Producto equivocado', 'Resuelta', false, 'Reenvío', '$ 18.900'],
+  ];
+  return `<h1>Garantías</h1>
+  <form class="adm-busqueda adm-filtros">
+    ${campoSelect('ga-estado', 'Estado', 'Todos')}
+    ${campoSelect('ga-pais', 'País', 'Todos')}
+    <button type="submit" class="adm-boton">Filtrar</button>
+  </form>
+  <div class="adm-tabla-caja"><table class="adm-tabla adm-tabla-apilada"><caption class="adm-suave">Solicitudes más recientes primero</caption>
+    <thead><tr><th scope="col">Caso</th><th scope="col">Cliente</th><th scope="col">Motivo</th><th scope="col">Estado</th><th scope="col">Solución</th><th scope="col">Costo asumido</th><th scope="col">Recibida</th></tr></thead>
+    <tbody>${filas
+      .map(
+        (g) => `<tr><td><a href="#">${g[0]}</a></td>
+      <td data-etiqueta="Cliente">${g[1]}<span class="adm-suave adm-chico"> · ${g[2]}</span></td>
+      <td data-etiqueta="Motivo">${g[3]}</td>
+      <td data-etiqueta="Estado"><span class="adm-insignia">${g[4]}</span>${g[5] ? '<span class="adm-insignia adm-insignia-aviso"> Respuesta vencida</span>' : ''}</td>
+      <td data-etiqueta="Solución" class="adm-suave">${g[6]}</td><td data-etiqueta="Costo asumido">${g[7]}</td>
+      <td data-etiqueta="Recibida" class="adm-suave">7 nov 2026, 9:30</td></tr>`,
+      )
+      .join('')}</tbody></table></div>`;
+}
+
 export function htmlPaginaPanel(pagina: PaginaPanel): string {
   switch (pagina) {
     case 'inicio':
@@ -203,5 +294,11 @@ export function htmlPaginaPanel(pagina: PaginaPanel): string {
       return agente();
     case 'metricas':
       return metricas();
+    case 'clientes':
+      return clientes();
+    case 'gastos':
+      return gastos();
+    case 'garantias':
+      return garantias();
   }
 }

@@ -285,7 +285,7 @@
 }
 
 /*
- * Celular (< 640 px). Las listas más usadas (`adm-tabla-apilada`: pedidos, productos, agente) pasan de tabla a una
+ * Celular (< 640 px). Las listas más usadas (`adm-tabla-apilada`: pedidos, productos, agente, clientes, gastos, garantías) pasan de tabla a una
  * tarjeta por fila: la primera celda es el título y cada una de las demás lleva su encabezado en `data-etiqueta`.
  * Las demás tablas siguen dentro de su caja con desplazamiento horizontal propio.
  */
@@ -323,6 +323,10 @@
     font-weight: 600;
     text-align: left;
     color: var(--adm-texto-suave);
+  }
+  .adm-tabla-apilada td {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   .adm-tabla-apilada td:first-child {
     display: block;
