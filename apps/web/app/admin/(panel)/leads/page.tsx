@@ -107,7 +107,7 @@ export default async function PaginaLeads({
         <p className="adm-vacio">{Object.keys(parametros).length > 0 ? 'Ningún lead coincide con esos filtros.' : 'Aún no hay leads.'}</p>
       ) : (
         <div className="adm-tabla-caja">
-          <table className="adm-tabla">
+          <table className="adm-tabla adm-tabla-apilada">
             <caption className="adm-suave">Leads más recientes primero</caption>
             <thead>
               <tr>
@@ -128,14 +128,14 @@ export default async function PaginaLeads({
                     {l.phone_e164 ? <span className="adm-suave adm-chico"> · {l.phone_e164}</span> : null}
                     {fuenteDeLead(l.utm) ? <span className="adm-suave adm-chico"> · {fuenteDeLead(l.utm)}</span> : null}
                   </td>
-                  <td>{l.country_code}</td>
-                  <td className="adm-suave">{l.popups?.name ?? '—'}</td>
-                  <td className="adm-suave">{l.discount_codes?.code ?? '—'}</td>
-                  <td>{l.marketing_opt_in ? 'Sí' : 'No'}</td>
-                  <td>
+                  <td data-etiqueta="País">{l.country_code}</td>
+                  <td data-etiqueta="Pop-up" className="adm-suave">{l.popups?.name ?? '—'}</td>
+                  <td data-etiqueta="Código" className="adm-suave">{l.discount_codes?.code ?? '—'}</td>
+                  <td data-etiqueta="Mercadeo">{l.marketing_opt_in ? 'Sí' : 'No'}</td>
+                  <td data-etiqueta="Compró">
                     {l.converted_order_id ? <Link href={`/admin/pedidos/${l.converted_order_id}`}>Ver pedido</Link> : <span className="adm-suave">No</span>}
                   </td>
-                  <td className="adm-suave">{fechaHoraBogota(l.created_at)}</td>
+                  <td data-etiqueta="Fecha" className="adm-suave">{fechaHoraBogota(l.created_at)}</td>
                 </tr>
               ))}
             </tbody>

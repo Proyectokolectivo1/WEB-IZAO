@@ -21,7 +21,9 @@
   --adm-pendiente: #92400e;
   --adm-radio: 6px;
   --adm-alto-toque: 44px;
-  --adm-fuente: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Una sola fuente de verdad: la pareja que se elige en Apariencia (variables del tema inyectadas en <html>). */
+  --adm-fuente: var(--font-body);
+  --adm-fuente-titulos: var(--font-display);
   --adm-velo: rgb(28 25 23 / 0.5);
   --adm-ancho-lateral: 15rem;
 
@@ -41,6 +43,22 @@
   box-sizing: border-box;
 }
 
+/* Los campos y botones heredan siempre la fuente del panel (que es la del tema); no dependen de ningún reinicio global. */
+.adm button,
+.adm input,
+.adm select,
+.adm textarea,
+.adm optgroup {
+  font-family: inherit;
+}
+/* Código real: la única pila monoespaciada, tokenizada (--font-mono, packages/ui/src/tokens.css). */
+.adm code,
+.adm kbd,
+.adm samp,
+.adm pre {
+  font-family: var(--font-mono);
+}
+
 .adm :focus-visible {
   outline: 3px solid var(--adm-foco);
   outline-offset: 2px;
@@ -49,7 +67,8 @@
 .adm h1,
 .adm h2 {
   margin: 0;
-  font-weight: 600;
+  font-family: var(--adm-fuente-titulos);
+  font-weight: var(--tema-peso-titulos);
   line-height: 1.25;
 }
 .adm h1 {
@@ -209,7 +228,7 @@
   padding: 0.5rem;
 }
 .adm-secreto {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   word-break: break-all;
   background: var(--adm-aviso-fondo);
   border: 1px solid var(--adm-borde);

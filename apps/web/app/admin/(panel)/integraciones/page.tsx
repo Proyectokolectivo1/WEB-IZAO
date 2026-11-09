@@ -81,7 +81,7 @@ export default async function PaginaIntegraciones() {
               <div key={pais} className="adm-tarjeta">
                 <h3>{nombreAmbito}</h3>
                 <div className="adm-tabla-caja">
-                  <table className="adm-tabla">
+                  <table className="adm-tabla adm-tabla-apilada">
                     <caption className="adm-suave">
                       Credenciales de {p.nombre} en {nombreAmbito}
                     </caption>
@@ -101,7 +101,7 @@ export default async function PaginaIntegraciones() {
                         return (
                           <tr key={amb}>
                             <th scope="row">{ETIQUETA_AMBIENTE[amb]}</th>
-                            <td className="adm-chico">
+                            <td data-etiqueta="Guardado" className="adm-chico">
                               {f ? (
                                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                                   {p.esquema.fields
@@ -117,7 +117,7 @@ export default async function PaginaIntegraciones() {
                                 <span className="adm-suave">Sin credenciales</span>
                               )}
                             </td>
-                            <td>
+                            <td data-etiqueta="Estado">
                               {f ? (
                                 f.is_active ? (
                                   <span className="adm-insignia adm-insignia-ok">Activa</span>
@@ -128,8 +128,8 @@ export default async function PaginaIntegraciones() {
                                 '—'
                               )}
                             </td>
-                            <td>{f ? <EstadoPrueba f={f} /> : '—'}</td>
-                            <td>
+                            <td data-etiqueta="Última prueba">{f ? <EstadoPrueba f={f} /> : '—'}</td>
+                            <td data-etiqueta="Acciones">
                               <div className="adm-acciones" style={{ flexWrap: 'wrap' }}>
                                 <Link href={href} className="adm-enlace-boton">
                                   {f ? 'Editar' : 'Agregar'}
@@ -185,7 +185,7 @@ export default async function PaginaIntegraciones() {
             {activa ? (
               <>
                 <div className="adm-tabla-caja">
-                  <table className="adm-tabla">
+                  <table className="adm-tabla adm-tabla-apilada">
                     <caption className="adm-suave">
                       Webhooks registrados en {NOMBRE_PAIS[pais]} ({ETIQUETA_AMBIENTE[activa.environment]})
                     </caption>
@@ -207,14 +207,14 @@ export default async function PaginaIntegraciones() {
                         webhooks.map((w) => (
                           <tr key={w.event_id}>
                             <td>{w.event_name}</td>
-                            <td>
+                            <td data-etiqueta="Estado">
                               {w.is_enabled ? (
                                 <span className="adm-insignia adm-insignia-ok">Habilitado</span>
                               ) : (
                                 <span className="adm-insignia">Deshabilitado</span>
                               )}
                             </td>
-                            <td className="adm-suave">{fecha.format(new Date(w.registered_at))}</td>
+                            <td data-etiqueta="Registrado" className="adm-suave">{fecha.format(new Date(w.registered_at))}</td>
                           </tr>
                         ))
                       )}

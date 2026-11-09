@@ -107,7 +107,7 @@ export default async function PaginaGarantias({
         <p className="adm-vacio">{Object.keys(parametros).length > 0 ? 'Ninguna garantía coincide con esos filtros.' : 'Aún no hay solicitudes de garantía.'}</p>
       ) : (
         <div className="adm-tabla-caja">
-          <table className="adm-tabla">
+          <table className="adm-tabla adm-tabla-apilada">
             <caption className="adm-suave">Solicitudes más recientes primero</caption>
             <thead>
               <tr>
@@ -126,18 +126,18 @@ export default async function PaginaGarantias({
                   <td>
                     <Link href={`/admin/garantias/${g.id}`}>{g.number}</Link>
                   </td>
-                  <td>
+                  <td data-etiqueta="Cliente">
                     {g.customer_name}
                     <span className="adm-suave adm-chico"> · {g.phone}</span>
                   </td>
-                  <td>{g.reason}</td>
-                  <td>
+                  <td data-etiqueta="Motivo">{g.reason}</td>
+                  <td data-etiqueta="Estado">
                     <span className="adm-insignia">{ETIQUETA_ESTADO_GARANTIA[g.status]}</span>
                     {g.vencida ? <span className="adm-insignia adm-insignia-aviso"> Respuesta vencida</span> : null}
                   </td>
-                  <td className="adm-suave">{g.resolution ? (ETIQUETA_RESOLUCION[g.resolution as Resolucion] ?? g.resolution) : '—'}</td>
-                  <td>{dineroBig(fromDbAmount(g.cost_amount), MONEDA_PAIS[g.country_code])}</td>
-                  <td className="adm-suave">{fecha.format(new Date(g.created_at))}</td>
+                  <td data-etiqueta="Solución" className="adm-suave">{g.resolution ? (ETIQUETA_RESOLUCION[g.resolution as Resolucion] ?? g.resolution) : '—'}</td>
+                  <td data-etiqueta="Costo asumido">{dineroBig(fromDbAmount(g.cost_amount), MONEDA_PAIS[g.country_code])}</td>
+                  <td data-etiqueta="Recibida" className="adm-suave">{fecha.format(new Date(g.created_at))}</td>
                 </tr>
               ))}
             </tbody>

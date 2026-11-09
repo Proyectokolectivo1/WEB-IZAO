@@ -310,9 +310,20 @@ function bannersEjemplo(pais: CodigoPais, destacado: ItemCatalogo | null): Banne
   ];
 }
 
+function tipografiaDeEjemplo(): Record<string, unknown> {
+  try {
+    const crudo = process.env['EJEMPLO_TIPOGRAFIA'];
+    const v: unknown = crudo ? JSON.parse(crudo) : {};
+    return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
 export const repoEjemplo: TiendaRepo = {
   async tema() {
-    return { colorTokens: {}, tipografia: {}, overridePais: null };
+    // Solo pruebas y revisión local: `EJEMPLO_TIPOGRAFIA='{"heading_font":"Lora","body_font":"Inter"}'` simula lo que se guarda en Apariencia.
+    return { colorTokens: {}, tipografia: tipografiaDeEjemplo(), overridePais: null };
   },
   async ajustes(pais): Promise<AjustesTienda> {
     return {

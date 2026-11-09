@@ -67,7 +67,7 @@ export function GraficaDiaria({ serie, moneda, titulo }: { serie: readonly Punto
       <details>
         <summary>Ver los datos por día</summary>
         <div className="adm-tabla-caja">
-          <table className="adm-tabla">
+          <table className="adm-tabla adm-tabla-apilada">
             <caption className="adm-suave">{titulo}</caption>
             <thead>
               <tr>
@@ -81,9 +81,9 @@ export function GraficaDiaria({ serie, moneda, titulo }: { serie: readonly Punto
               {serie.map((p) => (
                 <tr key={p.fecha}>
                   <th scope="row">{p.fecha}</th>
-                  <td>{p.pedidosPagados}</td>
-                  <td>{dineroBig(p.ventasBrutas, moneda)}</td>
-                  <td>{dineroBig(p.ingresosConfirmados, moneda)}</td>
+                  <td data-etiqueta="Pedidos pagados">{p.pedidosPagados}</td>
+                  <td data-etiqueta="Ventas brutas">{dineroBig(p.ventasBrutas, moneda)}</td>
+                  <td data-etiqueta="Ingresos confirmados">{dineroBig(p.ingresosConfirmados, moneda)}</td>
                 </tr>
               ))}
             </tbody>

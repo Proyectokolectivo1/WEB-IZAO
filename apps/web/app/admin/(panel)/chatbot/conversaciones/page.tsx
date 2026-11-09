@@ -80,7 +80,7 @@ export default async function PaginaConversaciones({
         <p className="adm-vacio">{Object.keys(parametros).length > 0 ? 'Ninguna conversación coincide con esos filtros.' : 'Aún no hay conversaciones.'}</p>
       ) : (
         <div className="adm-tabla-caja">
-          <table className="adm-tabla">
+          <table className="adm-tabla adm-tabla-apilada">
             <caption className="adm-suave">Conversaciones más recientes primero</caption>
             <thead>
               <tr>
@@ -97,10 +97,10 @@ export default async function PaginaConversaciones({
                   <td>
                     <Link href={`/admin/chatbot/conversaciones/${s.id}`}>{fechaHoraBogota(s.started_at)}</Link>
                   </td>
-                  <td>{s.country_code}</td>
-                  <td>{s.messages_count}</td>
-                  <td className="adm-suave">{s.customer_id ? <Link href={`/admin/clientes/${s.customer_id}`}>Con cuenta</Link> : 'Visitante'}</td>
-                  <td>{s.converted_order_id ? <Link href={`/admin/pedidos/${s.converted_order_id}`}>Ver pedido</Link> : <span className="adm-suave">No</span>}</td>
+                  <td data-etiqueta="País">{s.country_code}</td>
+                  <td data-etiqueta="Mensajes">{s.messages_count}</td>
+                  <td data-etiqueta="Cliente" className="adm-suave">{s.customer_id ? <Link href={`/admin/clientes/${s.customer_id}`}>Con cuenta</Link> : 'Visitante'}</td>
+                  <td data-etiqueta="Pedido">{s.converted_order_id ? <Link href={`/admin/pedidos/${s.converted_order_id}`}>Ver pedido</Link> : <span className="adm-suave">No</span>}</td>
                 </tr>
               ))}
             </tbody>

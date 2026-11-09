@@ -188,8 +188,8 @@ test.describe('celular: tamaños y listas', () => {
     expect(Math.min(...campos)).toBeGreaterThanOrEqual(15);
   });
 
-  test('pedidos, productos y agente se leen como tarjetas apiladas, no como tabla ancha', async ({ page }) => {
-    for (const pagina of ['pedidos', 'productos', 'agente'] as const) {
+  test('pedidos, productos, agente, clientes, gastos y garantías se leen como tarjetas apiladas, no como tabla ancha', async ({ page }) => {
+    for (const pagina of ['pedidos', 'productos', 'agente', 'clientes', 'gastos', 'garantias'] as const) {
       await abrir(page, pagina);
       const tabla = page.locator('table.adm-tabla-apilada').first();
       await expect(tabla.locator('thead')).not.toBeInViewport();
@@ -198,6 +198,39 @@ test.describe('celular: tamaños y listas', () => {
       // Cada celda (menos la primera) trae su encabezado.
       const sinEtiqueta = await tabla.locator('tbody tr:first-child td:not(:first-child):not([data-etiqueta])').count();
       expect(sinEtiqueta).toBe(0);
+    }
+  });
+
+  test('listas del panel (clientes, gastos, garantías, leads, descuentos…) y tablas cortas: ni la página ni la caja de la tabla se desplazan en horizontal', async ({ page }) => {
+    for (const pagina of ['clientes', 'gastos', 'garantias', 'listas', 'tablas-cortas', 'metricas'] as const) {
+      await abrir(page, pagina);
+      const m = await sinDesborde(page);
+      expect(m.ancho, `${pagina}: documento`).toBeLessThanOrEqual(m.visible);
+      const cajas = await page
+        .locator('.adm-tabla-caja')
+        .evaluateAll((els) => els.map((e) => ({ ancho: e.scrollWidth, visible: e.clientWidth })));
+      expect(cajas.length).toBeGreaterThan(0);
+      for (const c of cajas) expect(c.ancho, `${pagina}: caja de la tabla`).toBeLessThanOrEqual(c.visible);
+      // Todas las tablas apiladas de la página se leen como tarjetas y cada celda (menos el título) trae su encabezado.
+      const tablas = await page.locator('table.adm-tabla-apilada').evaluateAll((ts) =>
+        ts.map((t) => ({
+          fila: getComputedStyle(t.querySelector('tbody tr') as Element).display,
+          sinEtiqueta: t.querySelectorAll('tbody tr > td:not(:first-child):not([data-etiqueta])').length,
+        })),
+      );
+      for (const t of tablas) {
+        expect(t.fila, `${pagina}: fila`).toBe('block');
+        expect(t.sinEtiqueta, `${pagina}: celdas sin encabezado`).toBe(0);
+      }
+      // Cada tarjeta lleva el título arriba y los datos con su encabezado; el contenido largo no se sale.
+      if (tablas.length === 0) continue;
+      const filas = page.locator('table.adm-tabla-apilada tbody tr');
+      expect(await filas.count()).toBeGreaterThanOrEqual(2);
+      const celdasFuera = await page.evaluate(() => {
+        const limite = document.documentElement.clientWidth;
+        return [...document.querySelectorAll('table.adm-tabla-apilada td')].filter((td) => td.getBoundingClientRect().right > limite + 1).length;
+      });
+      expect(celdasFuera).toBe(0);
     }
   });
 });
@@ -214,5 +247,15 @@ test.describe('tablet: las listas siguen siendo tablas', () => {
     expect(fila).toBe('table-row');
     const m = await sinDesborde(page);
     expect(m.ancho).toBeLessThanOrEqual(m.visible);
+  });
+
+  test('clientes, gastos, garantías y las demás listas no desbordan la página a 768 px', async ({ page }) => {
+    for (const pagina of ['clientes', 'gastos', 'garantias', 'listas'] as const) {
+      await abrir(page, pagina);
+      const m = await sinDesborde(page);
+      expect(m.ancho, pagina).toBeLessThanOrEqual(m.visible);
+      const fila = await page.locator('table.adm-tabla-apilada tbody tr').first().evaluate((tr) => getComputedStyle(tr).display);
+      expect(fila).toBe('table-row');
+    }
   });
 });

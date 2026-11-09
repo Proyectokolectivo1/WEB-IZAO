@@ -86,8 +86,8 @@ export function FormularioApariencia({
     '--color-ink-hover': efectivos['ink-hover'],
     '--color-success': efectivos.success,
     '--color-danger': efectivos.danger,
-    '--prev-display': fuenteTitulos ? familiaCss(fuenteTitulos) : 'Georgia, serif',
-    '--prev-body': fuenteTexto ? familiaCss(fuenteTexto) : 'system-ui, sans-serif',
+    '--prev-display': fuenteTitulos ? familiaCss(fuenteTitulos) : 'var(--font-display)',
+    '--prev-body': fuenteTexto ? familiaCss(fuenteTexto) : 'var(--font-body)',
     '--prev-base': `${Math.min(18, Math.max(15, baseNum))}px`,
     '--prev-peso': String(pesoReal),
     '--prev-esp-t': /^-?\d{1,2}(\.\d{1,3})?em$/.test(espT) ? espT : heredados.espTitulos,
@@ -142,7 +142,7 @@ export function FormularioApariencia({
       <section aria-labelledby="h-contraste">
         <h3 id="h-contraste">Contraste de lectura</h3>
         <div className="adm-tabla-caja">
-          <table className="adm-tabla">
+          <table className="adm-tabla adm-tabla-apilada">
             <caption className="adm-visualmente-oculto">Contraste de cada combinación de texto</caption>
             <thead>
               <tr>
@@ -160,8 +160,8 @@ export function FormularioApariencia({
                     </span>{' '}
                     {c.descripcion}
                   </td>
-                  <td>{c.ratio.toFixed(2)}:1</td>
-                  <td>
+                  <td data-etiqueta="Contraste">{c.ratio.toFixed(2)}:1</td>
+                  <td data-etiqueta="Resultado">
                     {c.uso === 'decorativo' ? (
                       <span className="adm-insignia">Solo decorativo</span>
                     ) : c.cumple && !c.advertencia ? (

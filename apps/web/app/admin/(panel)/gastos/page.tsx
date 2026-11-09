@@ -125,7 +125,7 @@ export default async function PaginaGastos({
             </a>
           </p>
           <div className="adm-tabla-caja">
-            <table className="adm-tabla">
+            <table className="adm-tabla adm-tabla-apilada">
               <caption className="adm-suave">Gastos más recientes primero</caption>
               <thead>
                 <tr>
@@ -142,15 +142,15 @@ export default async function PaginaGastos({
                     <td>
                       {g.source === 'manual' ? <Link href={`/admin/gastos/${g.id}`}>{g.date}</Link> : g.date}
                     </td>
-                    <td>{g.expense_categories?.name ?? '—'}</td>
-                    <td className="adm-suave">
+                    <td data-etiqueta="Categoría">{g.expense_categories?.name ?? '—'}</td>
+                    <td data-etiqueta="Descripción" className="adm-suave">
                       {g.description ?? '—'}
                       {g.attachment_media_id ? <span className="adm-insignia"> Comprobante</span> : null}
                     </td>
-                    <td>
+                    <td data-etiqueta="Origen">
                       <span className="adm-insignia">{ETIQUETA_ORIGEN_GASTO[g.source] ?? g.source}</span>
                     </td>
-                    <td>{dineroBig(fromDbAmount(g.amount), g.currency_code)}</td>
+                    <td data-etiqueta="Valor">{dineroBig(fromDbAmount(g.amount), g.currency_code)}</td>
                   </tr>
                 ))}
               </tbody>

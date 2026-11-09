@@ -76,7 +76,7 @@ export default async function PaginaAuditoria({
         <p className="adm-vacio">Ningún evento coincide con esos filtros.</p>
       ) : (
         <div className="adm-tabla-caja">
-          <table className="adm-tabla">
+          <table className="adm-tabla adm-tabla-apilada">
             <caption className="adm-suave">Eventos más recientes primero</caption>
             <thead>
               <tr>
@@ -91,18 +91,18 @@ export default async function PaginaAuditoria({
               {filas.map((e) => (
                 <tr key={e.id}>
                   <td className="adm-suave">{fechaHoraBogota(e.created_at)}</td>
-                  <td>
+                  <td data-etiqueta="Quién">
                     {e.actorNombre ?? <code>{e.actor.slice(0, 24)}</code>}
                     {e.ip ? <span className="adm-suave adm-chico"> · {e.ip}</span> : null}
                   </td>
-                  <td>
+                  <td data-etiqueta="Acción">
                     <code>{e.action}</code>
                   </td>
-                  <td className="adm-suave">
+                  <td data-etiqueta="Sobre" className="adm-suave">
                     {e.entity}
                     {e.entity_id ? ` · ${e.entity_id.slice(0, 12)}` : ''}
                   </td>
-                  <td className="adm-suave adm-chico" style={{ overflowWrap: 'anywhere' }}>
+                  <td data-etiqueta="Detalle" className="adm-suave adm-chico" style={{ overflowWrap: 'anywhere' }}>
                     {resumenDiff(e.diff)}
                   </td>
                 </tr>

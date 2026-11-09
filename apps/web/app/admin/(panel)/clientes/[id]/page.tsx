@@ -90,7 +90,7 @@ export default async function DetalleCliente({
               <p className="adm-vacio">Sin pedidos.</p>
             ) : (
               <div className="adm-tabla-caja">
-                <table className="adm-tabla">
+                <table className="adm-tabla adm-tabla-apilada">
                   <caption className="adm-suave">Pedidos del cliente (incluye compras como invitado con el mismo celular o correo)</caption>
                   <thead>
                     <tr>
@@ -106,11 +106,11 @@ export default async function DetalleCliente({
                         <td>
                           <Link href={`/admin/pedidos/${p.id}`}>{p.number}</Link>
                         </td>
-                        <td>
+                        <td data-etiqueta="Estado">
                           <span className="adm-insignia">{ETIQUETA_ESTADO_PEDIDO[p.status] ?? p.status}</span>
                         </td>
-                        <td>{dinero(Number(p.total_customer), p.currency_code)}</td>
-                        <td className="adm-suave">{fechaHoraBogota(p.created_at)}</td>
+                        <td data-etiqueta="Total">{dinero(Number(p.total_customer), p.currency_code)}</td>
+                        <td data-etiqueta="Fecha" className="adm-suave">{fechaHoraBogota(p.created_at)}</td>
                       </tr>
                     ))}
                   </tbody>

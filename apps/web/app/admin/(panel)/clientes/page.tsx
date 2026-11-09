@@ -66,7 +66,7 @@ export default async function PaginaClientes({
         <p className="adm-vacio">{Object.keys(parametros).length > 0 ? 'Ningún cliente coincide con esos filtros.' : 'Aún no hay clientes.'}</p>
       ) : (
         <div className="adm-tabla-caja">
-          <table className="adm-tabla">
+          <table className="adm-tabla adm-tabla-apilada">
             <caption className="adm-suave">Clientes más recientes primero</caption>
             <thead>
               <tr>
@@ -84,10 +84,10 @@ export default async function PaginaClientes({
                     <Link href={`/admin/clientes/${c.id}`}>{nombreDeCliente(c)}</Link>
                     {c.anonymized_at ? <span className="adm-insignia"> Anonimizado</span> : null}
                   </td>
-                  <td>{c.country_code}</td>
-                  <td className="adm-suave">{c.email ?? '—'}</td>
-                  <td className="adm-suave">{c.phone_e164 ?? '—'}</td>
-                  <td className="adm-suave">{fecha.format(new Date(c.created_at))}</td>
+                  <td data-etiqueta="País">{c.country_code}</td>
+                  <td data-etiqueta="Correo" className="adm-suave">{c.email ?? '—'}</td>
+                  <td data-etiqueta="Celular" className="adm-suave">{c.phone_e164 ?? '—'}</td>
+                  <td data-etiqueta="Desde" className="adm-suave">{fecha.format(new Date(c.created_at))}</td>
                 </tr>
               ))}
             </tbody>

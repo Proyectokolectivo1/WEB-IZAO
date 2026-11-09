@@ -125,7 +125,7 @@ export default async function ListaDescuentos({
         </p>
       ) : (
         <div className="adm-tabla-caja">
-          <table className="adm-tabla">
+          <table className="adm-tabla adm-tabla-apilada">
             <caption className="adm-suave">Códigos de descuento</caption>
             <thead>
               <tr>
@@ -145,18 +145,18 @@ export default async function ListaDescuentos({
                     <td>
                       <Link href={`/admin/descuentos/${f.id}`}>{f.code}</Link>
                     </td>
-                    <td>{describirValor(f)}</td>
-                    <td>
+                    <td data-etiqueta="Descuento">{describirValor(f)}</td>
+                    <td data-etiqueta="Estado">
                       <span className={`adm-insignia ${estado === 'vigente' ? 'adm-insignia-ok' : estado === 'programado' ? 'adm-insignia-aviso' : ''}`.trim()}>
                         {ETIQUETA_ESTADO[estado]}
                       </span>
                     </td>
-                    <td>
+                    <td data-etiqueta="Usos">
                       {f.usage_count}
                       {f.usage_limit_total !== null ? ` / ${f.usage_limit_total}` : ''}
                     </td>
-                    <td>{ETIQUETA_ORIGEN[f.origin]}</td>
-                    <td>{f.iza_can_offer ? 'Sí' : 'No'}</td>
+                    <td data-etiqueta="Origen">{ETIQUETA_ORIGEN[f.origin]}</td>
+                    <td data-etiqueta="Iza">{f.iza_can_offer ? 'Sí' : 'No'}</td>
                   </tr>
                 );
               })}

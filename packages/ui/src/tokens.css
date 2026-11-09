@@ -16,6 +16,8 @@
 
   --font-display: 'Cormorant Garamond', Georgia, serif;
   --font-body: 'Manrope', system-ui, sans-serif;
+  /* Única excepción a la tipografía del tema: código real (identificadores, JSON, HTML del editor). Pila del sistema, sin descarga. */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* Escala de radios suaves. Los componentes usan los semánticos, nunca un valor suelto:
      control = campos, botones y chips; card = tarjetas, imágenes y cajas; panel = hero, banners, hojas y bloques grandes. */
@@ -78,6 +80,14 @@
     letter-spacing: var(--tema-espaciado-titulos);
     line-height: 1.12;
     text-wrap: balance;
+  }
+
+  /* Texto de código (code, pre, kbd, samp): la pila monoespaciada tokenizada; cualquier otra cosa hereda --font-body / --font-display. */
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--font-mono);
   }
 
   /* Foco visible: anillo de tinta de 2 px (§8.8). */

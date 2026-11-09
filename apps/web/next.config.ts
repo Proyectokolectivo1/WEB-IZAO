@@ -17,6 +17,10 @@ const config: NextConfig = {
   experimental: { middlewareClientMaxBodySize: '16mb' },
   // Paquetes del workspace que se publican como TypeScript.
   transpilePackages: ['@izao/ui', '@izao/core', '@izao/wompi', '@izao/whatsapp', '@izao/addi'],
+  // BullMQ se carga desde node_modules en tiempo de ejecución en vez de empaquetarse: su cliente opcional de Valkey GLIDE
+  // hace `require('@valkey/valkey-glide')` dentro de un try/catch perezoso que webpack no puede resolver y avisaba en cada
+  // build. Usamos ioredis, así que ese require nunca corre; el trazado de `standalone` copia bullmq igual que a `sharp`.
+  serverExternalPackages: ['bullmq'],
   // Archivos de `public/` (sin hash en el nombre): se sirven de caché y se revalidan en segundo plano. Las imágenes del
   // catálogo (`/media/{tipo}/{año}/{mes}/{uuid}-{ancho}.webp`) las sirve Nginx con `immutable`; los estáticos con hash de
   // `/_next/static` ya salen `immutable` de Next.

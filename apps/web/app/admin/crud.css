@@ -199,9 +199,9 @@
   height: 1.25rem;
 }
 
-/* Editor de páginas y políticas (§9.5): HTML sencillo con vista previa depurada. */
+/* Campos de código real: editor de páginas y políticas (§9.5, HTML con vista previa depurada) y pasos JSON del agente. Única excepción monoespaciada (token --font-mono). */
 .adm-editor-html {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.9375rem;
   line-height: 1.5;
   min-height: 18rem;
@@ -285,9 +285,9 @@
 }
 
 /*
- * Celular (< 640 px). Las listas más usadas (`adm-tabla-apilada`: pedidos, productos, agente) pasan de tabla a una
- * tarjeta por fila: la primera celda es el título y cada una de las demás lleva su encabezado en `data-etiqueta`.
- * Las demás tablas siguen dentro de su caja con desplazamiento horizontal propio.
+ * Celular (< 640 px). Las listas del panel (`adm-tabla-apilada`) pasan de tabla a una tarjeta por fila: la primera celda
+ * (o el `<th scope="row">`) es el título y cada una de las demás lleva su encabezado en `data-etiqueta`. Solo quedan con
+ * desplazamiento horizontal propio dentro de su caja las tablas muy cortas (2 o 3 columnas) que caben en 375 px.
  */
 @media (max-width: 39.99rem) {
   .adm-tabla-apilada,
@@ -323,6 +323,21 @@
     font-weight: 600;
     text-align: left;
     color: var(--adm-texto-suave);
+  }
+  .adm-tabla-apilada td {
+    flex-wrap: wrap;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .adm-tabla-apilada td > .adm-acciones {
+    justify-content: flex-end;
+  }
+  /* Filas con encabezado de fila (`<th scope="row">`): hace de título de la tarjeta. */
+  .adm-tabla-apilada tbody th[scope='row'] {
+    display: block;
+    padding: 0 0 0.5rem;
+    border: 0;
+    font-size: 1.0625rem;
   }
   .adm-tabla-apilada td:first-child {
     display: block;

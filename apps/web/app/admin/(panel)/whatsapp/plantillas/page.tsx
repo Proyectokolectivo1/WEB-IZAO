@@ -57,7 +57,7 @@ export default async function ListaPlantillas({
               </form>
             ) : (
               <div className="adm-tabla-caja">
-                <table className="adm-tabla">
+                <table className="adm-tabla adm-tabla-apilada">
                   <caption className="adm-suave">Versiones de {ETIQUETA_CLAVE[clave]}</caption>
                   <thead>
                     <tr>
@@ -74,8 +74,8 @@ export default async function ListaPlantillas({
                         <td>
                           <Link href={`/admin/whatsapp/plantillas/${f.id}`}>Versión {f.version}</Link>
                         </td>
-                        <td className="adm-suave">{f.meta_template_name}</td>
-                        <td>
+                        <td data-etiqueta="Nombre en Meta" className="adm-suave">{f.meta_template_name}</td>
+                        <td data-etiqueta="Estado">
                           <span className={claseEstado(f.meta_status)}>
                             {ETIQUETA_ESTADO_META[f.meta_status as EstadoMeta] ?? f.meta_status}
                           </span>
@@ -83,8 +83,8 @@ export default async function ListaPlantillas({
                             <p className="adm-chico adm-suave">Motivo: {f.meta_rejection_reason}</p>
                           ) : null}
                         </td>
-                        <td>{f.is_active ? <span className="adm-insignia adm-insignia-ok">Sí</span> : 'No'}</td>
-                        <td className="adm-suave">{fecha.format(new Date(f.updated_at))}</td>
+                        <td data-etiqueta="En uso">{f.is_active ? <span className="adm-insignia adm-insignia-ok">Sí</span> : 'No'}</td>
+                        <td data-etiqueta="Actualizada" className="adm-suave">{fecha.format(new Date(f.updated_at))}</td>
                       </tr>
                     ))}
                   </tbody>

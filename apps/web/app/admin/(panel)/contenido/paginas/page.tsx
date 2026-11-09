@@ -91,7 +91,7 @@ export default async function ListaPaginas({
         <p className="adm-vacio">No hay páginas con estos filtros.</p>
       ) : (
         <div className="adm-tabla-caja">
-          <table className="adm-tabla">
+          <table className="adm-tabla adm-tabla-apilada">
             <caption className="adm-suave">Páginas del país elegido</caption>
             <thead>
               <tr>
@@ -109,15 +109,15 @@ export default async function ListaPaginas({
                   <td>
                     <Link href={`/admin/contenido/paginas/${f.id}`}>{f.title}</Link>
                   </td>
-                  <td>{ETIQUETA_TIPO[f.kind as TipoPagina] ?? f.kind}</td>
-                  <td className="adm-suave">{f.slug}</td>
-                  <td>
+                  <td data-etiqueta="Tipo">{ETIQUETA_TIPO[f.kind as TipoPagina] ?? f.kind}</td>
+                  <td data-etiqueta="URL" className="adm-suave">{f.slug}</td>
+                  <td data-etiqueta="Estado">
                     <span className={f.status === 'published' ? 'adm-insignia adm-insignia-ok' : 'adm-insignia'}>
                       {ETIQUETA_ESTADO[f.status as EstadoPagina] ?? f.status}
                     </span>
                   </td>
-                  <td>{f.version}</td>
-                  <td className="adm-suave">{fecha.format(new Date(f.updated_at))}</td>
+                  <td data-etiqueta="Versión">{f.version}</td>
+                  <td data-etiqueta="Actualizada" className="adm-suave">{fecha.format(new Date(f.updated_at))}</td>
                 </tr>
               ))}
             </tbody>
