@@ -1,0 +1,12 @@
+== /co
+HTTP/1.1 200 OK
+Server: nginx
+== /co/catalogo
+HTTP/1.1 200 OK
+Server: nginx
+== /ec
+HTTP/1.1 200 OK
+Server: nginx
+== 404
+HTTP/1.1 404 Not Found
+Server: nginx

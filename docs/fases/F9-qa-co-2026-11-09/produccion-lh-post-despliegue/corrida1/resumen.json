@@ -1,0 +1,71 @@
+[
+ {
+  "ruta": "/co",
+  "modo": "mobile",
+  "rendimiento": 98,
+  "accesibilidad": 100,
+  "buenasPracticas": 100,
+  "seo": 100,
+  "lcp_s": 2.26,
+  "cls": 0,
+  "tbt_ms": 12,
+  "fcp_s": 1.21,
+  "ttfb_ms": 203,
+  "js_kb_transferido": 150,
+  "lcpElemento": "<img src=\"/media/banner/2026/11/b86e3b5f-7ee0-4515-9814-7be67cab15fc-800.webp\" srcset=\"/media/banner/2026/11/b86e3b5f-7e",
+  "fallan": [
+   "render-blocking-resources(0.5)",
+   "legacy-javascript(0.5)",
+   "bf-cache(0)",
+   "image-delivery-insight(0)",
+   "legacy-javascript-insight(0.5)",
+   "network-dependency-tree-insight(0)",
+   "render-blocking-insight(0)"
+  ]
+ },
+ {
+  "ruta": "/co/catalogo",
+  "modo": "mobile",
+  "rendimiento": 99,
+  "accesibilidad": 100,
+  "buenasPracticas": 100,
+  "seo": 100,
+  "lcp_s": 1.55,
+  "cls": 0,
+  "tbt_ms": 9,
+  "fcp_s": 1.16,
+  "ttfb_ms": 231,
+  "js_kb_transferido": 167,
+  "lcpElemento": "<img src=\"/media/banner/2026/11/b86e3b5f-7ee0-4515-9814-7be67cab15fc-800.webp\" srcset=\"/media/banner/2026/11/b86e3b5f-7e",
+  "fallan": [
+   "legacy-javascript(0.5)",
+   "bf-cache(0)",
+   "image-delivery-insight(0)",
+   "legacy-javascript-insight(0.5)",
+   "network-dependency-tree-insight(0)",
+   "render-blocking-insight(0.5)"
+  ]
+ },
+ {
+  "ruta": "/co/perfume/9pm-afnan-para-hombres",
+  "modo": "mobile",
+  "rendimiento": 100,
+  "accesibilidad": 100,
+  "buenasPracticas": 100,
+  "seo": 100,
+  "lcp_s": 1.65,
+  "cls": 0,
+  "tbt_ms": 8,
+  "fcp_s": 1.2,
+  "ttfb_ms": 163,
+  "js_kb_transferido": 157,
+  "lcpElemento": "<h1 class=\"text-4xl md:text-5xl\">",
+  "fallan": [
+   "render-blocking-resources(0.5)",
+   "legacy-javascript(0.5)",
+   "legacy-javascript-insight(0.5)",
+   "network-dependency-tree-insight(0)",
+   "render-blocking-insight(0)"
+  ]
+ }
+]
