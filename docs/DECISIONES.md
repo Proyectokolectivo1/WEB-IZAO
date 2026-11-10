@@ -259,7 +259,7 @@ Decisiones de `izao-admin` en T0.13:
 
 ## D-037 — CSP de la tienda sin `data:` y con Turnstile (2026-10-25, izao-infra)
 
-- La tienda (cualquier ruta distinta de `/admin`) usa `img-src 'self' blob: https:` y `font-src 'self'`: no hay `blurDataURL` ni imágenes o fuentes incrustadas en el código de la tienda. `/admin/**` conserva `data:` (QR del MFA). `challenges.cloudflare.com` (Turnstile) está en `script-src`, `frame-src` y `connect-src` de ambas. Si la tienda agrega placeholders incrustados, reabrir. Probado en `infra/scripts/test-nginx.sh`.
+- La tienda (cualquier ruta distinta de `/admin`) usa `img-src 'self' data: blob: https:` y `font-src 'self'` (D-Q1, 2026-11-09): el LQIP de las tarjetas son WebP de 16 px en base64 (`data:image/webp`, `lib/admin/media/procesar.ts`) y la CSP anterior los bloqueaba. `data:` va solo en `img-src`, nunca en `script-src`, `font-src`, `connect-src` ni `frame-src`. `/admin/**` además permite `font-src data:` (QR del MFA). `challenges.cloudflare.com` (Turnstile) está en `script-src`, `frame-src` y `connect-src` de ambas. Si la tienda agrega placeholders incrustados, reabrir. Probado en `infra/scripts/test-nginx.sh`.
 
 ## D-038 — Decisiones del dueño sobre Addi, reembolso y comprobantes (2026-10-25, líder)
 

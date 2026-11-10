@@ -11,16 +11,20 @@
 - 2026-11-07 Lighthouse móvil en producción tras a65978e (3 corridas, mediana; `docs/fases/F9-evidencia/lighthouse-post-rendimiento.json`): LCP 1,42-1,82 s en home, catálogo,
   ficha, bolso y checkout (antes hasta 2,59 s); rend. 98-100, CLS <= 0,003, TBT <= 10 ms, JS 144-166 KB; SEO 100 (carrito/checkout 66 por noindex intencional).
   Todo LCP es texto: producción sin fotos. Una corrida de checkout dio 3,56 s por TTFB. Scripts: `produccion.cjs` (env `MODOS`), `mediana.cjs`. En Git Bash usar `MSYS_NO_PATHCONV=1`.
+- 2026-11-09 QA de lanzamiento CO (rama `chore/qa-lanzamiento-co`, sobre 3efe7ef): k6 ejecutado contra el build de ejemplo + Supabase falso
+  (`k6/soporte/`; nuevos `checkout.js`, `paginas.js`; `DATOS`/`PAIS` en `lib/comun.js`): catálogo 100 req/s p95 2,26 ms, checkout 10/s p95 110,8 ms, 0 % errores.
+  Lighthouse local con bolso lleno (`tests/lighthouse/local.cjs`) y de producción (3 corridas); e2e 527/6/191; lista de salida en `docs/fases/LANZAMIENTO.md`; evidencia en `docs/fases/F9-qa-co-2026-11-09/`.
 
 ## Pendiente
 - Defectos abiertos (detalle y dueños en F9-lanzamiento.md): EC sin productos y CO con 2; políticas sin publicar y placeholders `[...]`; píxeles/feeds inexistentes
   y CSP; meta description en home/catálogo/EC; restauración real de backup; HSTS includeSubDomains y versión de nginx.
 - Abiertos en izao-tienda (de antes): #418 de hidratación, scroll al volver de la ficha, LCP con fotos reales sin medir (hoy ninguna ficha tiene fotos).
-- Con staging/llaves: k6 (catálogo 100 req/s, checkout 10 req/s con mocks; `k6/checkout.js` por escribir), Lighthouse con fotos, pgTAP RLS,
+- Defectos nuevos D-Q1..D-Q10 (LANZAMIENTO.md): CSP bloquea LQIP `data:`, LCP de /co/catalogo 3,0 s con foto real, contraste en placeholder, prueba Iza §20.2.
+- Con staging/llaves: k6 con la base real (`DATOS=seed`), Lighthouse de carrito/checkout en producción, pgTAP RLS,
   Iza contra OpenRouter, e2e de abandono con reloj simulado (F4), pruebas manuales en iPhone/Android y teclado.
 
 ## Siguiente paso exacto
-Cuando el dueño cargue catálogo, fotos y políticas: repetir `cd apps/web && pnpm exec playwright test -c tests/playwright.produccion.config.ts` y
+Tras corregir D-Q1/D-Q2 y cargar catálogo, EC y políticas: repetir LANZAMIENTO.md (k6 en staging, produccion.cjs x3) y marcar §31.3. Antes: repetir `cd apps/web && pnpm exec playwright test -c tests/playwright.produccion.config.ts` y
 `CHROME_PATH=<chromium> node tests/lighthouse/produccion.cjs ../../docs/fases/F9-evidencia/lighthouse`; luego marcar §31.3 con fecha y responsable.
 
 ## Decisiones que necesitan al líder

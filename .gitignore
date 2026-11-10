@@ -43,3 +43,4 @@ infra/data/
 
 # Resultados de Lighthouse
 apps/web/.lighthouseci/
+apps/web/public/media/lab/

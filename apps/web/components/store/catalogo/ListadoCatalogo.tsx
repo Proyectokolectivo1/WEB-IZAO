@@ -35,6 +35,8 @@ interface Props {
   opciones: OpcionesFiltros;
   /** Mensaje cuando la búsqueda no trae nada (usa el de la tienda por defecto). */
   esBusqueda?: boolean;
+  /** Hay un banner arriba: su foto es la imagen LCP y las tarjetas esperan (carga normal, sin `fetchpriority=high`). */
+  bannerArriba?: boolean;
 }
 
 const ORDENES_ELEGIBLES: OrdenCatalogo[] = ['featured', 'sales', 'newest', 'price_asc', 'price_desc', 'discount'];
@@ -48,7 +50,7 @@ function nombreDe(lista: { slug: string; name: string }[], slug: string): string
   return lista.find((o) => o.slug === slug)?.name ?? slug;
 }
 
-export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consulta: consultaInicial, pagina, inicial, opciones, esBusqueda = false }: Props) {
+export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consulta: consultaInicial, pagina, inicial, opciones, esBusqueda = false, bannerArriba = false }: Props) {
   const uid = useId();
   const { lote, consulta, estado, cargarMas, aplicar, reintentar, restaurar } = useLote(pais, fijos, inicial, consultaInicial);
   const [paginaActual, setPaginaActual] = useState(pagina);
@@ -345,8 +347,8 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
                   key={item.product_id}
                   item={item}
                   pais={pais}
-                  prioritaria={i === 0}
-                  ansiosa={i > 0 && i < 4}
+                  prioritaria={!bannerArriba && i === 0}
+                  ansiosa={!bannerArriba && i > 0 && i < 4}
                   nivelTitulo="h2"
                   diferir
                   concentracion={item.concentration_slug ? nombreDe(opciones.concentraciones, item.concentration_slug) : null}

@@ -61,7 +61,7 @@ export function PiramideOlfativa({ ficha }: { ficha: FichaProducto }) {
           <ol className="grid min-w-0 flex-1 grid-rows-3 overflow-hidden rounded-card">
             {TODAS.map((f, k) => (
               <li key={f.clave} className={`tono-${k} fondo-tono flex min-h-24 flex-col justify-center gap-1 px-5 py-3`}>
-                <p className="etiqueta text-ink/70">{f.titulo}</p>
+                <p className="etiqueta text-ink/80">{f.titulo}</p>
                 <p className="font-display text-xl leading-snug sm:text-2xl">{f.notas.length ? f.notas.join(' · ') : '—'}</p>
               </li>
             ))}

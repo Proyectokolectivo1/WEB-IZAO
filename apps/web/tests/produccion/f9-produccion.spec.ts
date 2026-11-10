@@ -25,6 +25,8 @@ async function esperarAnimaciones(page: Page) {
     const finitas = document.getAnimations().filter((a) => a.effect?.getComputedTiming().iterations !== Infinity);
     await Promise.race([Promise.all(finitas.map((a) => a.finished.catch(() => undefined))), new Promise((r) => setTimeout(r, 3_000))]);
   });
+  // Animaciones de entrada que arrancan al cargar las imágenes: axe medió contraste a mitad del fundido (intermitente en /co/catalogo).
+  await page.waitForTimeout(700);
 }
 
 /** Agrega el primer producto al bolso por la interfaz (localStorage; no toca el servidor de pedidos). */
@@ -89,8 +91,10 @@ test.describe('§26 / §27 seguridad de cabeceras, TLS, exposición', () => {
     const r = await request.get('/co');
     const h = r.headers();
     const faltan: string[] = [];
-    if (!/max-age=\d{7,}/.test(h['strict-transport-security'] ?? '')) faltan.push('HSTS max-age >= 1 año');
-    if (!/includeSubDomains/i.test(h['strict-transport-security'] ?? '')) faltan.push('HSTS includeSubDomains');
+    // Decisión de izao-infra (2026-11-09, RUNBOOK «HSTS»): 6 meses, sin includeSubDomains ni preload (el VPS aloja otros subdominios).
+    const maxAge = Number(/max-age=(\d+)/.exec(h['strict-transport-security'] ?? '')?.[1] ?? 0);
+    if (maxAge < 15_552_000) faltan.push('HSTS max-age >= 6 meses');
+    if (/preload/i.test(h['strict-transport-security'] ?? '')) faltan.push('HSTS sin preload');
     if (!/frame-ancestors/.test(h['content-security-policy'] ?? '')) faltan.push('CSP frame-ancestors');
     if (h['x-content-type-options'] !== 'nosniff') faltan.push('nosniff');
     if (!h['x-frame-options']) faltan.push('X-Frame-Options');

@@ -71,7 +71,9 @@ probar() { # etiqueta
   csp="$(curl -sk -D - -o /dev/null -H 'Host: izaoperfumeria.com' "https://127.0.0.1/admin/mfa/enroll" | grep -i '^content-security-policy:' || true)"
   if echo "$csp" | grep -q "img-src[^;]* data:"; then echo "OK   [$1] CSP de /admin/mfa permite img-src data:"; else echo "FALLA [$1] CSP de /admin sin data:"; fallos=$((fallos+1)); fi
   csp="$(curl -sk -D - -o /dev/null -H 'Host: izaoperfumeria.com' "https://127.0.0.1/co" | grep -i '^content-security-policy:' || true)"
-  if echo "$csp" | grep -q "data:"; then echo "FALLA [$1] la CSP de la tienda no debe permitir data:"; fallos=$((fallos+1)); else echo "OK   [$1] CSP de la tienda sin data:"; fi
+  if echo "$csp" | grep -q "img-src[^;]* data:"; then echo "OK   [$1] CSP de la tienda permite img-src data: (LQIP, D-Q1)"; else echo "FALLA [$1] la CSP de la tienda debe permitir img-src data: (LQIP)"; fallos=$((fallos+1)); fi
+  if echo "$csp" | grep -Eq "(script-src|font-src|connect-src|frame-src)[^;]* data:"; then echo "FALLA [$1] data: solo se permite en img-src de la tienda"; fallos=$((fallos+1)); else echo "OK   [$1] data: no está en script/font/connect/frame-src de la tienda"; fi
+  if curl -sk -D - -o /dev/null -H 'Host: izaoperfumeria.com' "https://127.0.0.1/co" | grep -i '^server:' | grep -Eq '[0-9]+\.[0-9]+'; then echo "FALLA [$1] la cabecera Server expone la versión de Nginx (D-Q7)"; fallos=$((fallos+1)); else echo "OK   [$1] Server sin versión (D-Q7)"; fi
   if echo "$csp" | grep -q "challenges.cloudflare.com"; then echo "OK   [$1] CSP de la tienda permite Turnstile"; else echo "FALLA [$1] CSP de la tienda sin challenges.cloudflare.com"; fallos=$((fallos+1)); fi
   c="$(curl -sk -o /dev/null -w '%{http_code}' -H 'Host: izaoperfumeria.com' "https://127.0.0.1/media/warranty/2026/10/x-640.webp")"
   if [ "$c" = 404 ]; then echo "OK   [$1] /media/warranty/ bloqueado (404)"; else echo "FALLA [$1] /media/warranty/ responde $c"; fallos=$((fallos+1)); fi

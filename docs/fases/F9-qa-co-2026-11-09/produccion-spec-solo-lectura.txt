@@ -1,0 +1,355 @@
+
+Running 35 tests using 1 worker
+
+  x   1 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › home-co @375px: sin violaciones axe, sin desborde horizontal, sin errores de consola (5.7s)
+  x   2 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › home-co @768px: sin violaciones axe, sin desborde horizontal, sin errores de consola (6.9s)
+  x   3 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › catalogo-co @375px: sin violaciones axe, sin desborde horizontal, sin errores de consola (5.8s)
+  x   4 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › catalogo-co @768px: sin violaciones axe, sin desborde horizontal, sin errores de consola (6.1s)
+  ok  5 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › ficha-co @375px: sin violaciones axe, sin desborde horizontal, sin errores de consola (2.4s)
+  ok  6 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › ficha-co @768px: sin violaciones axe, sin desborde horizontal, sin errores de consola (2.3s)
+  ok  7 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › carrito-co @375px: sin violaciones axe, sin desborde horizontal, sin errores de consola (3.7s)
+  ok  8 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › carrito-co @768px: sin violaciones axe, sin desborde horizontal, sin errores de consola (3.5s)
+  ok  9 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › checkout-co @375px: sin violaciones axe, sin desborde horizontal, sin errores de consola (3.4s)
+  ok 10 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › checkout-co @768px: sin violaciones axe, sin desborde horizontal, sin errores de consola (3.3s)
+  ok 11 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › pagar-token-invalido @375px: sin violaciones axe, sin desborde horizontal, sin errores de consola (2.6s)
+  ok 12 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › pagar-token-invalido @768px: sin violaciones axe, sin desborde horizontal, sin errores de consola (2.6s)
+  ok 13 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › admin-login @375px: sin violaciones axe, sin desborde horizontal, sin errores de consola (5.6s)
+  ok 14 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › admin-login @768px: sin violaciones axe, sin desborde horizontal, sin errores de consola (5.6s)
+  x  15 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › home-ec @375px: sin violaciones axe, sin desborde horizontal, sin errores de consola (5.8s)
+  x  16 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › home-ec @768px: sin violaciones axe, sin desborde horizontal, sin errores de consola (5.8s)
+  ok 17 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › catalogo-ec @375px: sin violaciones axe, sin desborde horizontal, sin errores de consola (2.6s)
+  ok 18 tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › catalogo-ec @768px: sin violaciones axe, sin desborde horizontal, sin errores de consola (2.5s)
+  x  19 tests\produccion\f9-produccion.spec.ts:88:7 › §26 / §27 seguridad de cabeceras, TLS, exposición › §26 cabeceras de seguridad en la tienda (876ms)
+  ok 20 tests\produccion\f9-produccion.spec.ts:104:7 › §26 / §27 seguridad de cabeceras, TLS, exposición › §26 /admin y /api/admin no son accesibles sin sesión (2.5s)
+  ok 21 tests\produccion\f9-produccion.spec.ts:128:7 › §26 / §27 seguridad de cabeceras, TLS, exposición › §26 /media no sirve html/svg/listados y labels/warranty/agent-screenshots dan 404 (2.5s)
+  ok 22 tests\produccion\f9-produccion.spec.ts:148:7 › §26 / §27 seguridad de cabeceras, TLS, exposición › §26 archivos sensibles no se exponen (1.5s)
+  ok 23 tests\produccion\f9-produccion.spec.ts:155:7 › §26 / §27 seguridad de cabeceras, TLS, exposición › §26 la tienda pública no pone cookies a un visitante anónimo (690ms)
+  ok 24 tests\produccion\f9-produccion.spec.ts:160:7 › §26 / §27 seguridad de cabeceras, TLS, exposición › §26 cookies de /admin/login con HttpOnly/Secure/SameSite si existen (586ms)
+  ok 25 tests\produccion\f9-produccion.spec.ts:170:7 › §26 / §27 seguridad de cabeceras, TLS, exposición › §26 HTTP redirige a HTTPS y www al dominio canónico (975ms)
+  ok 26 tests\produccion\f9-produccion.spec.ts:179:7 › §26 / §27 seguridad de cabeceras, TLS, exposición › §26 webhooks y API de pedidos rechazan GET y /api/health no filtra detalles (2.0s)
+  ok 27 tests\produccion\f9-produccion.spec.ts:190:7 › §27 SEO: robots, sitemaps, canonical, hreflang › robots.txt permite rastreo y bloquea lo privado; sitemaps por país (1.3s)
+  ok 28 tests\produccion\f9-produccion.spec.ts:208:7 › §27 SEO: robots, sitemaps, canonical, hreflang › canonical y hreflang recíprocos entre /co y /ec (home y catálogo) (1.4s)
+  ok 29 tests\produccion\f9-produccion.spec.ts:220:7 › §27 SEO: robots, sitemaps, canonical, hreflang › home, catálogo y ficha tienen meta description (2.5s)
+  ok 30 tests\produccion\f9-produccion.spec.ts:233:7 › regla 7: sin afirmaciones de originalidad, certificados ni afiliación; sin logos de marcas › HTML público, políticas y garantías (13.2s)
+  x  31 tests\produccion\f9-produccion.spec.ts:252:7 › regla 7: sin afirmaciones de originalidad, certificados ni afiliación; sin logos de marcas › placeholders sin completar visibles al público ([COMPLETAR], [5], corchetes en datos legales) (2.9s)
+  ok 32 tests\produccion\f9-produccion.spec.ts:266:7 › humo de lectura: navegación, filtros, búsqueda, ficha, bolso en memoria › home -> catálogo -> categoría -> ficha -> bolso (localStorage) sin pedidos (4.6s)
+  ok 33 tests\produccion\f9-produccion.spec.ts:289:7 › humo de lectura: navegación, filtros, búsqueda, ficha, bolso en memoria › búsqueda: sugerencias y página de resultados (2.1s)
+  x  34 tests\produccion\f9-produccion.spec.ts:296:7 › humo de lectura: navegación, filtros, búsqueda, ficha, bolso en memoria › catálogo de Ecuador responde y muestra dólares (1.9s)
+  ok 35 tests\produccion\f9-produccion.spec.ts:304:7 › humo de lectura: navegación, filtros, búsqueda, ficha, bolso en memoria › ficha inexistente da 404 y no filtra pila (638ms)
+
+
+  1) tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › home-co @375px: sin violaciones axe, sin desborde horizontal, sin errores de consola 
+
+    Error: errores de consola o de red
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 18
+
+    - Array []
+    + Array [
+    +   "console: Loading the image 'data:image/webp;base64,UklGRlwAAABXRUJQVlA4IFAAAADwAQCdASoQAAYAA4BaJZACdAERHkyLQVgA/u2x4haN+uNldkhtF9oC3JTs3SHoPHpP1JA/QnhKBQeUgckD2GkIQdnszbZHEgBgnpufCwIAAA==' violates the followi",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRrYAAABXRUJQVlA4IKoAAADQBACdASoQABIAPu1iqU2ppaOiMAgBMB2JbACsLwGUBRgHqAHYAL3XrFQDlVrFYAD+4AQR5PlgICzcrGHwpm/d2fn7CELE4Xvhi3/pEcF/s01qD6GV6owNpWykNVdAL9yoo4",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpoAAABXRUJQVlA4II4AAAAwBACdASoQABQAPu1iqU2ppaOiMAgBMB2JbACdMoRwABmcLBnvuT81fQAA/rxHgsrX3+wfcXkm5SgbPlBr5vFc8BK/XI0tMcAUwadPMmhkF4+7XGdbZScJhkA8rmkj+PP8kW",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpoAAABXRUJQVlA4II4AAAAwBACdASoQABQAPu1iqU2ppaOiMAgBMB2JbACdMoRwABmcLBnvuT81fQAA/rxHgsrX3+wfcXkm5SgbPlBr5vFc8BK/XI0tMcAUwadPMmhkF4+7XGdbZScJhkA8rmkj+PP8kW",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAACQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZwAAWuSBHen4Y0kAAP7sTyV2qzktO05/LF1/t0dhsLBtCRWyKJMa2G6rv5IMWgVbH4ve+tgwE1o5I3PUNEwdD+tfrk8RWzzifc",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAACQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZwAAWuSBHen4Y0kAAP7sTyV2qzktO05/LF1/t0dhsLBtCRWyKJMa2G6rv5IMWgVbH4ve+tgwE1o5I3PUNEwdD+tfrk8RWzzifc",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRm4AAABXRUJQVlA4IGIAAACwAwCdASoQABQAPu1iqU2ppaQiMAgBMB2JYwCsABwm1CWnPBS5AADwMWc4nvBNaV/U4xPi7pFzrJ0pWKodXq2Hay+ZdDaoeXV1tJXx81hqcFTjny6IU4X5ooKuYXXJKi8oAA",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRm4AAABXRUJQVlA4IGIAAACwAwCdASoQABQAPu1iqU2ppaQiMAgBMB2JYwCsABwm1CWnPBS5AADwMWc4nvBNaV/U4xPi7pFzrJ0pWKodXq2Hay+ZdDaoeXV1tJXx81hqcFTjny6IU4X5ooKuYXXJKi8oAA",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZACdL1AAtcEYLN+lYMgA9q04zSizDu4kljDV0UdF1WcVKapM5GQ7DF2rwBASD+PCr/c9CWSJ2bL4i+e0c+wn0MkEs9SHNjypUE",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZACdL1AAtcEYLN+lYMgA9q04zSizDu4kljDV0UdF1WcVKapM5GQ7DF2rwBASD+PCr/c9CWSJ2bL4i+e0c+wn0MkEs9SHNjypUE",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZACdL1AAtcEYLN+lYMgA9q04zSizDu4kljDV0UdF1WcVKapM5GQ7DF2rwBASD+PCr/c9CWSJ2bL4i+e0c+wn0MkEs9SHNjypUE",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpgAAABXRUJQVlA4IIwAAADQBACdASoQABQAPu1iqU2ppaOiMAgBMB2JagCdMoRwADAGD5kza/Xfg17qsSomAAD9dvHLkK77839ydHZOd2iXoatr9QfJX9uTB60sHbBHY0TvDtg+wW1Xkn1cHOjgfHdlbj",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpgAAABXRUJQVlA4IIwAAADQBACdASoQABQAPu1iqU2ppaOiMAgBMB2JagCdMoRwADAGD5kza/Xfg17qsSomAAD9dvHLkK77839ydHZOd2iXoatr9QfJX9uTB60sHbBHY0TvDtg+wW1Xkn1cHOjgfHdlbj",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpoAAABXRUJQVlA4II4AAADwAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JagCdACPpIPcS8mDOjzcwAM3vrHiq/VOv2cnsYGohFtMfHneQtBa9mRCaZQ/4SITZiRR1J+BPGXnl7yARfGFYpXQshjnFQ9pvyX",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpoAAABXRUJQVlA4II4AAADwAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JagCdACPpIPcS8mDOjzcwAM3vrHiq/VOv2cnsYGohFtMfHneQtBa9mRCaZQ/4SITZiRR1J+BPGXnl7yARfGFYpXQshjnFQ9pvyX",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZACdL1AAtcEYLN+lYMgA9q04zSizDu4kljDV0UdF1WcVKapM5GQ7DF2rwBASD+PCr/c9CWSJ2bL4i+e0c+wn0MkEs9SHNjypUE",
+    + ]
+
+      79 |         const deTerceros = (e: string) => ruta.espera === 'load' && /cdn-cgi|challenges\.cloudflare|data:,|font-size:0/.test(e);
+      80 |         const inesperados = errores.filter((e) => !(ruta.espera404 && /404/.test(e)) && !deTerceros(e));
+    > 81 |         expect.soft(inesperados, 'errores de consola o de red').toEqual([]);
+         |                                                                 ^
+      82 |       });
+      83 |     }
+      84 |   }
+        at C:\Proyectos\WEB-IZAO\apps\web\tests\produccion\f9-produccion.spec.ts:81:65
+
+    Error Context: tests\.resultados\produccion\f9-produccion-§8-8-§30-F9--4e127-ntal-sin-errores-de-consola\error-context.md
+
+  2) tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › home-co @768px: sin violaciones axe, sin desborde horizontal, sin errores de consola 
+
+    Error: errores de consola o de red
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 18
+
+    - Array []
+    + Array [
+    +   "console: Loading the image 'data:image/webp;base64,UklGRlwAAABXRUJQVlA4IFAAAADwAQCdASoQAAYAA4BaJZACdAERHkyLQVgA/u2x4haN+uNldkhtF9oC3JTs3SHoPHpP1JA/QnhKBQeUgckD2GkIQdnszbZHEgBgnpufCwIAAA==' violates the followi",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRrYAAABXRUJQVlA4IKoAAADQBACdASoQABIAPu1iqU2ppaOiMAgBMB2JbACsLwGUBRgHqAHYAL3XrFQDlVrFYAD+4AQR5PlgICzcrGHwpm/d2fn7CELE4Xvhi3/pEcF/s01qD6GV6owNpWykNVdAL9yoo4",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpoAAABXRUJQVlA4II4AAAAwBACdASoQABQAPu1iqU2ppaOiMAgBMB2JbACdMoRwABmcLBnvuT81fQAA/rxHgsrX3+wfcXkm5SgbPlBr5vFc8BK/XI0tMcAUwadPMmhkF4+7XGdbZScJhkA8rmkj+PP8kW",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpoAAABXRUJQVlA4II4AAAAwBACdASoQABQAPu1iqU2ppaOiMAgBMB2JbACdMoRwABmcLBnvuT81fQAA/rxHgsrX3+wfcXkm5SgbPlBr5vFc8BK/XI0tMcAUwadPMmhkF4+7XGdbZScJhkA8rmkj+PP8kW",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAACQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZwAAWuSBHen4Y0kAAP7sTyV2qzktO05/LF1/t0dhsLBtCRWyKJMa2G6rv5IMWgVbH4ve+tgwE1o5I3PUNEwdD+tfrk8RWzzifc",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAACQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZwAAWuSBHen4Y0kAAP7sTyV2qzktO05/LF1/t0dhsLBtCRWyKJMa2G6rv5IMWgVbH4ve+tgwE1o5I3PUNEwdD+tfrk8RWzzifc",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRm4AAABXRUJQVlA4IGIAAACwAwCdASoQABQAPu1iqU2ppaQiMAgBMB2JYwCsABwm1CWnPBS5AADwMWc4nvBNaV/U4xPi7pFzrJ0pWKodXq2Hay+ZdDaoeXV1tJXx81hqcFTjny6IU4X5ooKuYXXJKi8oAA",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRm4AAABXRUJQVlA4IGIAAACwAwCdASoQABQAPu1iqU2ppaQiMAgBMB2JYwCsABwm1CWnPBS5AADwMWc4nvBNaV/U4xPi7pFzrJ0pWKodXq2Hay+ZdDaoeXV1tJXx81hqcFTjny6IU4X5ooKuYXXJKi8oAA",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZACdL1AAtcEYLN+lYMgA9q04zSizDu4kljDV0UdF1WcVKapM5GQ7DF2rwBASD+PCr/c9CWSJ2bL4i+e0c+wn0MkEs9SHNjypUE",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZACdL1AAtcEYLN+lYMgA9q04zSizDu4kljDV0UdF1WcVKapM5GQ7DF2rwBASD+PCr/c9CWSJ2bL4i+e0c+wn0MkEs9SHNjypUE",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZACdL1AAtcEYLN+lYMgA9q04zSizDu4kljDV0UdF1WcVKapM5GQ7DF2rwBASD+PCr/c9CWSJ2bL4i+e0c+wn0MkEs9SHNjypUE",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpgAAABXRUJQVlA4IIwAAADQBACdASoQABQAPu1iqU2ppaOiMAgBMB2JagCdMoRwADAGD5kza/Xfg17qsSomAAD9dvHLkK77839ydHZOd2iXoatr9QfJX9uTB60sHbBHY0TvDtg+wW1Xkn1cHOjgfHdlbj",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpgAAABXRUJQVlA4IIwAAADQBACdASoQABQAPu1iqU2ppaOiMAgBMB2JagCdMoRwADAGD5kza/Xfg17qsSomAAD9dvHLkK77839ydHZOd2iXoatr9QfJX9uTB60sHbBHY0TvDtg+wW1Xkn1cHOjgfHdlbj",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpoAAABXRUJQVlA4II4AAADwAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JagCdACPpIPcS8mDOjzcwAM3vrHiq/VOv2cnsYGohFtMfHneQtBa9mRCaZQ/4SITZiRR1J+BPGXnl7yARfGFYpXQshjnFQ9pvyX",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpoAAABXRUJQVlA4II4AAADwAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JagCdACPpIPcS8mDOjzcwAM3vrHiq/VOv2cnsYGohFtMfHneQtBa9mRCaZQ/4SITZiRR1J+BPGXnl7yARfGFYpXQshjnFQ9pvyX",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZACdL1AAtcEYLN+lYMgA9q04zSizDu4kljDV0UdF1WcVKapM5GQ7DF2rwBASD+PCr/c9CWSJ2bL4i+e0c+wn0MkEs9SHNjypUE",
+    + ]
+
+      79 |         const deTerceros = (e: string) => ruta.espera === 'load' && /cdn-cgi|challenges\.cloudflare|data:,|font-size:0/.test(e);
+      80 |         const inesperados = errores.filter((e) => !(ruta.espera404 && /404/.test(e)) && !deTerceros(e));
+    > 81 |         expect.soft(inesperados, 'errores de consola o de red').toEqual([]);
+         |                                                                 ^
+      82 |       });
+      83 |     }
+      84 |   }
+        at C:\Proyectos\WEB-IZAO\apps\web\tests\produccion\f9-produccion.spec.ts:81:65
+
+    Error Context: tests\.resultados\produccion\f9-produccion-§8-8-§30-F9--91092-ntal-sin-errores-de-consola\error-context.md
+
+  3) tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › catalogo-co @375px: sin violaciones axe, sin desborde horizontal, sin errores de consola 
+
+    Error: errores de consola o de red
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 17
+
+    - Array []
+    + Array [
+    +   "console: Loading the image 'data:image/webp;base64,UklGRlwAAABXRUJQVlA4IFAAAADwAQCdASoQAAYAA4BaJZACdAERHkyLQVgA/u2x4haN+uNldkhtF9oC3JTs3SHoPHpP1JA/QnhKBQeUgckD2GkIQdnszbZHEgBgnpufCwIAAA==' violates the followi",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpoAAABXRUJQVlA4II4AAAAwBACdASoQABQAPu1iqU2ppaOiMAgBMB2JbACdMoRwABmcLBnvuT81fQAA/rxHgsrX3+wfcXkm5SgbPlBr5vFc8BK/XI0tMcAUwadPMmhkF4+7XGdbZScJhkA8rmkj+PP8kW",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpoAAABXRUJQVlA4II4AAAAwBACdASoQABQAPu1iqU2ppaOiMAgBMB2JbACdMoRwABmcLBnvuT81fQAA/rxHgsrX3+wfcXkm5SgbPlBr5vFc8BK/XI0tMcAUwadPMmhkF4+7XGdbZScJhkA8rmkj+PP8kW",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAACQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZwAAWuSBHen4Y0kAAP7sTyV2qzktO05/LF1/t0dhsLBtCRWyKJMa2G6rv5IMWgVbH4ve+tgwE1o5I3PUNEwdD+tfrk8RWzzifc",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAACQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZwAAWuSBHen4Y0kAAP7sTyV2qzktO05/LF1/t0dhsLBtCRWyKJMa2G6rv5IMWgVbH4ve+tgwE1o5I3PUNEwdD+tfrk8RWzzifc",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRm4AAABXRUJQVlA4IGIAAACwAwCdASoQABQAPu1iqU2ppaQiMAgBMB2JYwCsABwm1CWnPBS5AADwMWc4nvBNaV/U4xPi7pFzrJ0pWKodXq2Hay+ZdDaoeXV1tJXx81hqcFTjny6IU4X5ooKuYXXJKi8oAA",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRm4AAABXRUJQVlA4IGIAAACwAwCdASoQABQAPu1iqU2ppaQiMAgBMB2JYwCsABwm1CWnPBS5AADwMWc4nvBNaV/U4xPi7pFzrJ0pWKodXq2Hay+ZdDaoeXV1tJXx81hqcFTjny6IU4X5ooKuYXXJKi8oAA",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZACdL1AAtcEYLN+lYMgA9q04zSizDu4kljDV0UdF1WcVKapM5GQ7DF2rwBASD+PCr/c9CWSJ2bL4i+e0c+wn0MkEs9SHNjypUE",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZACdL1AAtcEYLN+lYMgA9q04zSizDu4kljDV0UdF1WcVKapM5GQ7DF2rwBASD+PCr/c9CWSJ2bL4i+e0c+wn0MkEs9SHNjypUE",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZACdL1AAtcEYLN+lYMgA9q04zSizDu4kljDV0UdF1WcVKapM5GQ7DF2rwBASD+PCr/c9CWSJ2bL4i+e0c+wn0MkEs9SHNjypUE",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpgAAABXRUJQVlA4IIwAAADQBACdASoQABQAPu1iqU2ppaOiMAgBMB2JagCdMoRwADAGD5kza/Xfg17qsSomAAD9dvHLkK77839ydHZOd2iXoatr9QfJX9uTB60sHbBHY0TvDtg+wW1Xkn1cHOjgfHdlbj",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpgAAABXRUJQVlA4IIwAAADQBACdASoQABQAPu1iqU2ppaOiMAgBMB2JagCdMoRwADAGD5kza/Xfg17qsSomAAD9dvHLkK77839ydHZOd2iXoatr9QfJX9uTB60sHbBHY0TvDtg+wW1Xkn1cHOjgfHdlbj",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpoAAABXRUJQVlA4II4AAADwAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JagCdACPpIPcS8mDOjzcwAM3vrHiq/VOv2cnsYGohFtMfHneQtBa9mRCaZQ/4SITZiRR1J+BPGXnl7yARfGFYpXQshjnFQ9pvyX",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpoAAABXRUJQVlA4II4AAADwAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JagCdACPpIPcS8mDOjzcwAM3vrHiq/VOv2cnsYGohFtMfHneQtBa9mRCaZQ/4SITZiRR1J+BPGXnl7yARfGFYpXQshjnFQ9pvyX",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZACdL1AAtcEYLN+lYMgA9q04zSizDu4kljDV0UdF1WcVKapM5GQ7DF2rwBASD+PCr/c9CWSJ2bL4i+e0c+wn0MkEs9SHNjypUE",
+    + ]
+
+      79 |         const deTerceros = (e: string) => ruta.espera === 'load' && /cdn-cgi|challenges\.cloudflare|data:,|font-size:0/.test(e);
+      80 |         const inesperados = errores.filter((e) => !(ruta.espera404 && /404/.test(e)) && !deTerceros(e));
+    > 81 |         expect.soft(inesperados, 'errores de consola o de red').toEqual([]);
+         |                                                                 ^
+      82 |       });
+      83 |     }
+      84 |   }
+        at C:\Proyectos\WEB-IZAO\apps\web\tests\produccion\f9-produccion.spec.ts:81:65
+
+    Error Context: tests\.resultados\produccion\f9-produccion-§8-8-§30-F9--79e68-ntal-sin-errores-de-consola\error-context.md
+
+  4) tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › catalogo-co @768px: sin violaciones axe, sin desborde horizontal, sin errores de consola 
+
+    Error: axe: [{"regla":"color-contrast","impacto":"serious","nodos":[".animate-\\[aparecer_450ms_ease-out\\]"]}]
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 9
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "impacto": "serious",
+    +     "nodos": Array [
+    +       ".animate-\\[aparecer_450ms_ease-out\\]",
+    +     ],
+    +     "regla": "color-contrast",
+    +   },
+    + ]
+
+      74 |         anotar(`${ruta.nombre}@${v.ancho}`, { violaciones, desborde, errores });
+      75 |
+    > 76 |         expect.soft(violaciones, `axe: ${JSON.stringify(violaciones)}`).toEqual([]);
+         |                                                                         ^
+      77 |         expect.soft(desborde.scroll, `desborde horizontal ${JSON.stringify(desborde)}`).toBeLessThanOrEqual(desborde.ventana);
+      78 |         // El widget de Turnstile (terceros, iframe propio) emite 401/CSP internos que no son de la tienda.
+      79 |         const deTerceros = (e: string) => ruta.espera === 'load' && /cdn-cgi|challenges\.cloudflare|data:,|font-size:0/.test(e);
+        at C:\Proyectos\WEB-IZAO\apps\web\tests\produccion\f9-produccion.spec.ts:76:73
+
+    Error: errores de consola o de red
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 17
+
+    - Array []
+    + Array [
+    +   "console: Loading the image 'data:image/webp;base64,UklGRlwAAABXRUJQVlA4IFAAAADwAQCdASoQAAYAA4BaJZACdAERHkyLQVgA/u2x4haN+uNldkhtF9oC3JTs3SHoPHpP1JA/QnhKBQeUgckD2GkIQdnszbZHEgBgnpufCwIAAA==' violates the followi",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpoAAABXRUJQVlA4II4AAAAwBACdASoQABQAPu1iqU2ppaOiMAgBMB2JbACdMoRwABmcLBnvuT81fQAA/rxHgsrX3+wfcXkm5SgbPlBr5vFc8BK/XI0tMcAUwadPMmhkF4+7XGdbZScJhkA8rmkj+PP8kW",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpoAAABXRUJQVlA4II4AAAAwBACdASoQABQAPu1iqU2ppaOiMAgBMB2JbACdMoRwABmcLBnvuT81fQAA/rxHgsrX3+wfcXkm5SgbPlBr5vFc8BK/XI0tMcAUwadPMmhkF4+7XGdbZScJhkA8rmkj+PP8kW",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAACQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZwAAWuSBHen4Y0kAAP7sTyV2qzktO05/LF1/t0dhsLBtCRWyKJMa2G6rv5IMWgVbH4ve+tgwE1o5I3PUNEwdD+tfrk8RWzzifc",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAACQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZwAAWuSBHen4Y0kAAP7sTyV2qzktO05/LF1/t0dhsLBtCRWyKJMa2G6rv5IMWgVbH4ve+tgwE1o5I3PUNEwdD+tfrk8RWzzifc",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRm4AAABXRUJQVlA4IGIAAACwAwCdASoQABQAPu1iqU2ppaQiMAgBMB2JYwCsABwm1CWnPBS5AADwMWc4nvBNaV/U4xPi7pFzrJ0pWKodXq2Hay+ZdDaoeXV1tJXx81hqcFTjny6IU4X5ooKuYXXJKi8oAA",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRm4AAABXRUJQVlA4IGIAAACwAwCdASoQABQAPu1iqU2ppaQiMAgBMB2JYwCsABwm1CWnPBS5AADwMWc4nvBNaV/U4xPi7pFzrJ0pWKodXq2Hay+ZdDaoeXV1tJXx81hqcFTjny6IU4X5ooKuYXXJKi8oAA",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZACdL1AAtcEYLN+lYMgA9q04zSizDu4kljDV0UdF1WcVKapM5GQ7DF2rwBASD+PCr/c9CWSJ2bL4i+e0c+wn0MkEs9SHNjypUE",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZACdL1AAtcEYLN+lYMgA9q04zSizDu4kljDV0UdF1WcVKapM5GQ7DF2rwBASD+PCr/c9CWSJ2bL4i+e0c+wn0MkEs9SHNjypUE",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZACdL1AAtcEYLN+lYMgA9q04zSizDu4kljDV0UdF1WcVKapM5GQ7DF2rwBASD+PCr/c9CWSJ2bL4i+e0c+wn0MkEs9SHNjypUE",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpgAAABXRUJQVlA4IIwAAADQBACdASoQABQAPu1iqU2ppaOiMAgBMB2JagCdMoRwADAGD5kza/Xfg17qsSomAAD9dvHLkK77839ydHZOd2iXoatr9QfJX9uTB60sHbBHY0TvDtg+wW1Xkn1cHOjgfHdlbj",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpgAAABXRUJQVlA4IIwAAADQBACdASoQABQAPu1iqU2ppaOiMAgBMB2JagCdMoRwADAGD5kza/Xfg17qsSomAAD9dvHLkK77839ydHZOd2iXoatr9QfJX9uTB60sHbBHY0TvDtg+wW1Xkn1cHOjgfHdlbj",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpoAAABXRUJQVlA4II4AAADwAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JagCdACPpIPcS8mDOjzcwAM3vrHiq/VOv2cnsYGohFtMfHneQtBa9mRCaZQ/4SITZiRR1J+BPGXnl7yARfGFYpXQshjnFQ9pvyX",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRpoAAABXRUJQVlA4II4AAADwAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JagCdACPpIPcS8mDOjzcwAM3vrHiq/VOv2cnsYGohFtMfHneQtBa9mRCaZQ/4SITZiRR1J+BPGXnl7yARfGFYpXQshjnFQ9pvyX",
+    +   "console: Loading the image 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JZACdL1AAtcEYLN+lYMgA9q04zSizDu4kljDV0UdF1WcVKapM5GQ7DF2rwBASD+PCr/c9CWSJ2bL4i+e0c+wn0MkEs9SHNjypUE",
+    + ]
+
+      79 |         const deTerceros = (e: string) => ruta.espera === 'load' && /cdn-cgi|challenges\.cloudflare|data:,|font-size:0/.test(e);
+      80 |         const inesperados = errores.filter((e) => !(ruta.espera404 && /404/.test(e)) && !deTerceros(e));
+    > 81 |         expect.soft(inesperados, 'errores de consola o de red').toEqual([]);
+         |                                                                 ^
+      82 |       });
+      83 |     }
+      84 |   }
+        at C:\Proyectos\WEB-IZAO\apps\web\tests\produccion\f9-produccion.spec.ts:81:65
+
+    Error Context: tests\.resultados\produccion\f9-produccion-§8-8-§30-F9--417e7-ntal-sin-errores-de-consola\error-context.md
+
+  5) tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › home-ec @375px: sin violaciones axe, sin desborde horizontal, sin errores de consola 
+
+    Error: errores de consola o de red
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "console: Loading the image 'data:image/webp;base64,UklGRrYAAABXRUJQVlA4IKoAAADQBACdASoQABIAPu1iqU2ppaOiMAgBMB2JbACsLwGUBRgHqAHYAL3XrFQDlVrFYAD+4AQR5PlgICzcrGHwpm/d2fn7CELE4Xvhi3/pEcF/s01qD6GV6owNpWykNVdAL9yoo4",
+    + ]
+
+      79 |         const deTerceros = (e: string) => ruta.espera === 'load' && /cdn-cgi|challenges\.cloudflare|data:,|font-size:0/.test(e);
+      80 |         const inesperados = errores.filter((e) => !(ruta.espera404 && /404/.test(e)) && !deTerceros(e));
+    > 81 |         expect.soft(inesperados, 'errores de consola o de red').toEqual([]);
+         |                                                                 ^
+      82 |       });
+      83 |     }
+      84 |   }
+        at C:\Proyectos\WEB-IZAO\apps\web\tests\produccion\f9-produccion.spec.ts:81:65
+
+    Error Context: tests\.resultados\produccion\f9-produccion-§8-8-§30-F9--0da03-ntal-sin-errores-de-consola\error-context.md
+
+  6) tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › home-ec @768px: sin violaciones axe, sin desborde horizontal, sin errores de consola 
+
+    Error: errores de consola o de red
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "console: Loading the image 'data:image/webp;base64,UklGRrYAAABXRUJQVlA4IKoAAADQBACdASoQABIAPu1iqU2ppaOiMAgBMB2JbACsLwGUBRgHqAHYAL3XrFQDlVrFYAD+4AQR5PlgICzcrGHwpm/d2fn7CELE4Xvhi3/pEcF/s01qD6GV6owNpWykNVdAL9yoo4",
+    + ]
+
+      79 |         const deTerceros = (e: string) => ruta.espera === 'load' && /cdn-cgi|challenges\.cloudflare|data:,|font-size:0/.test(e);
+      80 |         const inesperados = errores.filter((e) => !(ruta.espera404 && /404/.test(e)) && !deTerceros(e));
+    > 81 |         expect.soft(inesperados, 'errores de consola o de red').toEqual([]);
+         |                                                                 ^
+      82 |       });
+      83 |     }
+      84 |   }
+        at C:\Proyectos\WEB-IZAO\apps\web\tests\produccion\f9-produccion.spec.ts:81:65
+
+    Error Context: tests\.resultados\produccion\f9-produccion-§8-8-§30-F9--71fba-ntal-sin-errores-de-consola\error-context.md
+
+  7) tests\produccion\f9-produccion.spec.ts:88:7 › §26 / §27 seguridad de cabeceras, TLS, exposición › §26 cabeceras de seguridad en la tienda 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "HSTS includeSubDomains",
+    +   "Server sin versión",
+    + ]
+
+       99 |     if (/nginx\/\d/.test(h['server'] ?? '')) faltan.push('Server sin versión');
+      100 |     anotar('cabeceras', { faltan, csp: h['content-security-policy'], hsts: h['strict-transport-security'], server: h['server'] });
+    > 101 |     expect.soft(faltan).toEqual([]);
+          |                         ^
+      102 |   });
+      103 |
+      104 |   test('§26 /admin y /api/admin no son accesibles sin sesión', async ({ request }) => {
+        at C:\Proyectos\WEB-IZAO\apps\web\tests\produccion\f9-produccion.spec.ts:101:25
+
+    Error Context: tests\.resultados\produccion\f9-produccion-§26-§27-segu-5c907-s-de-seguridad-en-la-tienda\error-context.md
+
+  8) tests\produccion\f9-produccion.spec.ts:252:7 › regla 7: sin afirmaciones de originalidad, certificados ni afiliación; sin logos de marcas › placeholders sin completar visibles al público ([COMPLETAR], [5], corchetes en datos legales) 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "/co/pagina/tratamiento-de-datos: [Centro de Medellin, Medellin]",
+    +   "/ec/pagina/tratamiento-de-datos: [IZAOPERFUMERIAS.A.S] [901855564] [Centro de Medellin, Medellin] [izaoperfumeria21@gmail.com] [+57314665558] [1-11-2026]",
+    + ]
+
+      259 |     }
+      260 |     anotar('placeholders', hallazgos);
+    > 261 |     expect(hallazgos).toEqual([]);
+          |                       ^
+      262 |   });
+      263 | });
+      264 |
+        at C:\Proyectos\WEB-IZAO\apps\web\tests\produccion\f9-produccion.spec.ts:261:23
+
+    Error Context: tests\.resultados\produccion\f9-produccion-regla-7-sin--4c469-corchetes-en-datos-legales-\error-context.md
+
+  9) tests\produccion\f9-produccion.spec.ts:296:7 › humo de lectura: navegación, filtros, búsqueda, ficha, bolso en memoria › catálogo de Ecuador responde y muestra dólares 
+
+    Error: EC sin productos visibles
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+      299 |     const api = await page.request.get('/api/catalog?country=ec&limit=25');
+      300 |     expect(api.status()).toBe(200);
+    > 301 |     expect((await api.json()).items.length, 'EC sin productos visibles').toBeGreaterThan(0);
+          |                                                                          ^
+      302 |   });
+      303 |
+      304 |   test('ficha inexistente da 404 y no filtra pila', async ({ request }) => {
+        at C:\Proyectos\WEB-IZAO\apps\web\tests\produccion\f9-produccion.spec.ts:301:74
+
+    Error Context: tests\.resultados\produccion\f9-produccion-humo-de-lect-aaf5f--responde-y-muestra-dólares\error-context.md
+
+  9 failed
+    tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › home-co @375px: sin violaciones axe, sin desborde horizontal, sin errores de consola 
+    tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › home-co @768px: sin violaciones axe, sin desborde horizontal, sin errores de consola 
+    tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › catalogo-co @375px: sin violaciones axe, sin desborde horizontal, sin errores de consola 
+    tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › catalogo-co @768px: sin violaciones axe, sin desborde horizontal, sin errores de consola 
+    tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › home-ec @375px: sin violaciones axe, sin desborde horizontal, sin errores de consola 
+    tests\produccion\f9-produccion.spec.ts:59:11 › §8.8 / §30 F9 accesibilidad (axe WCAG 2.2 AA) y responsive › home-ec @768px: sin violaciones axe, sin desborde horizontal, sin errores de consola 
+    tests\produccion\f9-produccion.spec.ts:88:7 › §26 / §27 seguridad de cabeceras, TLS, exposición › §26 cabeceras de seguridad en la tienda 
+    tests\produccion\f9-produccion.spec.ts:252:7 › regla 7: sin afirmaciones de originalidad, certificados ni afiliación; sin logos de marcas › placeholders sin completar visibles al público ([COMPLETAR], [5], corchetes en datos legales) 
+    tests\produccion\f9-produccion.spec.ts:296:7 › humo de lectura: navegación, filtros, búsqueda, ficha, bolso en memoria › catálogo de Ecuador responde y muestra dólares 
+  26 passed (2.1m)
+FIN 1
