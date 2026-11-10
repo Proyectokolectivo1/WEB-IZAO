@@ -19,10 +19,12 @@ interface Props {
   fijos?: FiltrosCatalogo;
   searchParams: ParamsBusqueda;
   esBusqueda?: boolean;
+  /** Hay un banner arriba del listado: su foto es la imagen LCP y las tarjetas no piden la suya con prioridad. */
+  bannerArriba?: boolean;
 }
 
 /** Listado de producto compartido por catálogo, búsqueda y las páginas por categoría, marca, familia y colección. */
-export async function PaginaListado({ pais, titulo, descripcion, base, fijos = {}, searchParams, esBusqueda = false }: Props) {
+export async function PaginaListado({ pais, titulo, descripcion, base, fijos = {}, searchParams, esBusqueda = false, bannerArriba = false }: Props) {
   const estado = parsearEstado(searchParams);
   const consulta = { q: esBusqueda ? estado.q : '', filtros: estado.filtros, orden: estado.orden };
   const repo = tienda();
@@ -60,6 +62,7 @@ export async function PaginaListado({ pais, titulo, descripcion, base, fijos = {
         inicial={{ items: inicial.items, nextCursor: inicial.nextCursor, total: inicial.total }}
         opciones={opciones}
         esBusqueda={esBusqueda}
+        bannerArriba={bannerArriba}
       />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(lista) }} />
     </>
