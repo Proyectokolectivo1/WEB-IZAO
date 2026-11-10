@@ -56,3 +56,6 @@ Nota: el build de web puede fallar por WIP de la tienda; verificar en copia limp
 
 ## Salida CO (2026-11-09)
 HSTS 6 meses aplicado en VPS y repo (sin includeSubDomains/preload). media-huerfanos.{sh,mjs}: 0 huérfanos. HALLAZGO: backups de media 06-08/11 fallaron (permisos 2750 de media); backup.sh corregido vía docker exec, aplica tras pull. Restauración real de backup pendiente: falta llave age del dueño y Docker local. Detalle en RUNBOOK.
+
+## D-Q1 y D-Q7 (2026-11-09, solo repo)
+`img-src 'self' data: blob: https:` en el default de `izao-zones.conf`; `server_tokens off;` en los 3 server de `izao.conf`; test-nginx ampliado (data: solo en img-src, Server sin versión). test-nginx NO ejecutado (Docker no responde). Aplicar en VPS: ver RUNBOOK (copiar 2 archivos, `nginx -t`, reload, snapshot antes).
