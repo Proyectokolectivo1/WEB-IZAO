@@ -181,6 +181,8 @@ test.describe('F8 widget de Iza (§20.1)', () => {
   }
 
   test('§20.2 un corte de red o un evento de error no deja "Iza está escribiendo…" y permite reintentar', async ({ page }) => {
+    // D-Q9: el asesor solo aparece si hay número configurado; en los datos de ejemplo no lo hay, así que el estado se simula con uno.
+    await simularEstado(page);
     await simularChat(page, (n) => (n === 1 ? { sse: sse(['sesion', { id: '7f1b1e0e-4f55-4c4b-9c3c-1c1e3a0a0a03' }], ['error', { codigo: 'proveedor' }]) } : { sse: sse(['texto', { t: 'Aquí estoy.' }], ['fin', { restantes: 5 }]) }));
     await page.goto(RUTAS.home('co'));
     await abrir(page);
