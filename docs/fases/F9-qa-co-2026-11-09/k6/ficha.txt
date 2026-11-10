@@ -1,0 +1,24 @@
+     ✓ estado 200
+     ✓ es HTML
+     ✓ trae JSON-LD Product
+
+   ✓ checks.........................: 100.00% ✓ 18003     ✗ 0    
+     data_received..................: 502 MB  4.2 MB/s
+     data_sent......................: 659 kB  5.5 kB/s
+   ✓ dropped_iterations.............: 0       0/s
+     http_req_blocked...............: avg=7.59µs   min=0s      med=0s     max=1.05ms   p(90)=0s      p(95)=0s     
+     http_req_connecting............: avg=7.38µs   min=0s      med=0s     max=1.05ms   p(90)=0s      p(95)=0s     
+     http_req_duration..............: avg=2.51ms   min=502.2µs med=1.87ms max=232.51ms p(90)=2.35ms  p(95)=2.54ms 
+     ✓ { endpoint:ficha }...........: avg=2.51ms   min=502.2µs med=1.87ms max=232.51ms p(90)=2.35ms  p(95)=2.54ms 
+       { expected_response:true }...: avg=2.51ms   min=502.2µs med=1.87ms max=232.51ms p(90)=2.35ms  p(95)=2.54ms 
+     http_req_failed................: 0.00%   ✓ 0         ✗ 6001 
+     ✓ { endpoint:ficha }...........: 0.00%   ✓ 0         ✗ 6001 
+     http_req_receiving.............: avg=337.81µs min=0s      med=323µs  max=15.9ms   p(90)=895.9µs p(95)=979.1µs
+     http_req_sending...............: avg=685ns    min=0s      med=0s     max=551.79µs p(90)=0s      p(95)=0s     
+     http_req_tls_handshaking.......: avg=0s       min=0s      med=0s     max=0s       p(90)=0s      p(95)=0s     
+     http_req_waiting...............: avg=2.17ms   min=502.2µs med=1.52ms max=230.94ms p(90)=2.02ms  p(95)=2.27ms 
+     http_reqs......................: 6001    50.005762/s
+     iteration_duration.............: avg=2.6ms    min=502.2µs med=1.95ms max=233.02ms p(90)=2.43ms  p(95)=2.64ms 
+     iterations.....................: 6001    50.005762/s
+     vus............................: 0       min=0       max=1  
+     vus_max........................: 100     min=100     max=100

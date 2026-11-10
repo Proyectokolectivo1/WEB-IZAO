@@ -7,7 +7,7 @@
 import http from 'k6/http';
 import { check } from 'k6';
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.4/index.js';
-import { baseUrlSegura, elegir, perfil, resumenA, visiblesEn } from './lib/comun.js';
+import { baseUrlSegura, elegir, pais as paisCarga, perfil, resumenA, visiblesEn } from './lib/comun.js';
 
 const P95_MS = Number(__ENV.P95_MS || 300);
 const EN = { co: visiblesEn('co'), ec: visiblesEn('ec') };
@@ -30,7 +30,7 @@ export function setup() {
 
 export function ficha() {
   const base = baseUrlSegura();
-  const pais = Math.random() < 0.7 ? 'co' : 'ec';
+  const pais = paisCarga();
   const p = elegir(EN[pais]);
   const r = http.get(base + '/' + pais + '/perfume/' + p.slug, { tags: { endpoint: 'ficha' } });
   check(r, {

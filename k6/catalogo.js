@@ -16,6 +16,7 @@ import {
   CONCENTRACIONES,
   ORDENES,
   PARAMS,
+  pais as paisCarga,
   perfil,
   resumenA,
 } from './lib/comun.js';
@@ -43,7 +44,7 @@ export const options = {
 
 // Combinación de consulta: país, orden y entre 0 y 4 filtros. Pesos: la mayoría navega con pocos filtros.
 function consulta() {
-  const pais = Math.random() < 0.7 ? 'co' : 'ec';
+  const pais = paisCarga();
   const q = { [PARAMS.pais]: pais, [PARAMS.orden]: elegir(ORDENES) };
   const filtros = Math.random();
   if (filtros > 0.35) q[PARAMS.genero] = elegir(GENEROS);

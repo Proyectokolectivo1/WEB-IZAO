@@ -1,0 +1,11 @@
+    tests\.resultados\artefactos\a11y-paginas-accesibilidad-96b25-ene-violaciones-WCAG-2-2-AA-escritorio\test-failed-1.png
+    tests\.resultados\artefactos\a11y-paginas-accesibilidad-3d7ff-ene-violaciones-WCAG-2-2-AA-escritorio\test-failed-1.png
+    Error: expect(locator).toBeVisible() failed
+    tests\.resultados\artefactos\e2e-f8-iza-F8-widget-de-Iz-60022-iendo…-y-permite-reintentar-escritorio\test-failed-1.png
+    tests\.resultados\artefactos\e2e-f1-catalogo-F1-visibil-d9bcb--perfume-slug-pero-sí-en-co-movil\test-failed-1.png
+    tests\.resultados\artefactos\e2e-f1-catalogo-F1-visibil-e46b9--sin-decimales-USD-con-dos--movil\test-failed-1.png
+    Error: expect(locator).toBeVisible() failed
+    tests\.resultados\artefactos\e2e-f8-iza-F8-widget-de-Iz-60022-iendo…-y-permite-reintentar-movil\test-failed-1.png
+  6 failed
+  191 skipped
+  527 passed (7.6m)

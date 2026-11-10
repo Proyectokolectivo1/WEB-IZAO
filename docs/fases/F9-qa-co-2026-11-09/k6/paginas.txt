@@ -1,0 +1,25 @@
+     ✓ estado 200
+     ✓ es HTML
+
+   ✓ checks.........................: 100.00% ✓ 14400     ✗ 0    
+     data_received..................: 687 MB  5.7 MB/s
+     data_sent......................: 565 kB  4.7 kB/s
+   ✓ dropped_iterations.............: 0       0/s
+     http_req_blocked...............: avg=7.31µs  min=0s     med=0s      max=1.1ms   p(90)=0s      p(95)=0s     
+     http_req_connecting............: avg=6.33µs  min=0s     med=0s      max=1.03ms  p(90)=0s      p(95)=0s     
+     http_req_duration..............: avg=7.85ms  min=3.14ms med=8.08ms  max=41.42ms p(90)=11.03ms p(95)=12.03ms
+     ✓ { endpoint:carrito }.........: avg=5.54ms  min=3.14ms med=5.26ms  max=14.9ms  p(90)=6.62ms  p(95)=7.18ms 
+     ✓ { endpoint:catalogo }........: avg=10.63ms min=8.03ms med=10.15ms max=32.49ms p(90)=12.57ms p(95)=14.18ms
+     ✓ { endpoint:checkout }........: avg=5.69ms  min=3.51ms med=5.43ms  max=16.53ms p(90)=6.78ms  p(95)=7.3ms  
+     ✓ { endpoint:home }............: avg=9.33ms  min=6.04ms med=8.9ms   max=41.42ms p(90)=10.72ms p(95)=12.11ms
+       { expected_response:true }...: avg=7.85ms  min=3.14ms med=8.08ms  max=41.42ms p(90)=11.03ms p(95)=12.03ms
+   ✓ http_req_failed................: 0.00%   ✓ 0         ✗ 7200 
+     http_req_receiving.............: avg=1.31ms  min=0s     med=1.28ms  max=18.66ms p(90)=2.02ms  p(95)=2.23ms 
+     http_req_sending...............: avg=323ns   min=0s     med=0s      max=776.9µs p(90)=0s      p(95)=0s     
+     http_req_tls_handshaking.......: avg=0s      min=0s     med=0s      max=0s      p(90)=0s      p(95)=0s     
+     http_req_waiting...............: avg=6.53ms  min=2.61ms med=6.5ms   max=25.71ms p(90)=9.58ms  p(95)=10.5ms 
+     http_reqs......................: 7200    59.997639/s
+     iteration_duration.............: avg=7.91ms  min=3.14ms med=8.1ms   max=42.21ms p(90)=11.19ms p(95)=12.18ms
+     iterations.....................: 7200    59.997639/s
+     vus............................: 0       min=0       max=1  
+     vus_max........................: 100     min=100     max=100
