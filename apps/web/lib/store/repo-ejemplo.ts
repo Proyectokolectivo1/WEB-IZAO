@@ -103,7 +103,7 @@ function generar(pais: CodigoPais): Interno[] {
       discount_pct: conDescuento ? pct : null,
       in_stock: enStock,
       variant_count: 2,
-      img_primary: null,
+      img_primary: process.env['EJEMPLO_FOTOS'] ? { media_id: `lab-${i}`, base_path: 'lab/prod', variants: { '300': 'lab/prod-300.webp', '400': 'lab/prod-400.webp' }, lqip: null, alt: nombre, width: 400, height: 500 } : null,
       img_hover: null,
       badges,
       rating_avg: r() < 0.6 ? Math.round((4 + r()) * 10) / 10 : null,
@@ -298,16 +298,18 @@ function bannersEjemplo(pais: CodigoPais, destacado: ItemCatalogo | null): Banne
     width: ancho,
     height: alto,
   });
-  const u1 = unica('banner-unica-1', 2400, 1000);
+  const lab = process.env['EJEMPLO_FOTOS'];
+  const u1: MediaRef = lab ? { variants: { '480': 'lab/banner-480.webp', '800': 'lab/banner-800.webp', '1200': 'lab/banner-1200.webp' }, lqip: null, width: 1218, height: 481 } : unica('banner-unica-1', 2400, 1000);
   const u2 = unica('banner-unica-2', 2400, 750);
   const aFicha = destacado ? `/${pais}/perfume/${destacado.slug}?variante=${destacado.product_id.slice(0, -2)}v1` : `/${pais}/catalogo`;
-  return [
+  const todos: Banner[] = [
     { id: 'b1', placement: 'hero', imagen_unica: true, focal_x: 80, focal_y: 50, desktop: u1, mobile: u1, alt: 'Frascos de perfume sobre fondo arena', title: 'Tu aroma, tu sello', subtitle: 'Nuevos ingresos', cta_label: 'Descubrir', link_url: `/${pais}/catalogo`, text_position: 'left', text_color: '#382E2B' },
     { id: 'b2', placement: 'hero', desktop: medio(2, 'd', dd), mobile: medio(2, 'm', mm), alt: 'Perfume para regalar', title: 'Para regalar con cariño', subtitle: null, cta_label: 'Ver el aroma', link_url: aFicha, text_position: 'right', text_color: '#382E2B' },
     { id: 'b3', placement: 'hero', desktop: medio(3, 'd', dd), mobile: medio(3, 'm', mm), alt: 'Todo el catálogo de fragancias', title: null, subtitle: null, cta_label: null, link_url: `/${pais}/catalogo`, text_position: 'center', text_color: null },
     { id: 'b4', placement: 'mid', imagen_unica: true, desktop: u2, mobile: u2, alt: 'Descuento de temporada', title: 'Temporada de descuentos', subtitle: 'Por tiempo limitado', cta_label: 'Aprovechar', link_url: `/${pais}/catalogo?sort=discount`, text_position: 'left', text_color: '#382E2B' },
     { id: 'b5', placement: 'category', desktop: medio(2, 'd', dd), mobile: medio(2, 'm', mm), alt: 'Elige tu aroma por categoría', title: 'Encuentra tu aroma', subtitle: null, cta_label: null, link_url: `/${pais}/catalogo`, text_position: 'left', text_color: '#382E2B' },
   ];
+  return lab ? todos.filter((b) => b.id !== 'b2' && b.id !== 'b3') : todos;
 }
 
 function tipografiaDeEjemplo(): Record<string, unknown> {
@@ -369,6 +371,7 @@ export const repoEjemplo: TiendaRepo = {
     };
   },
   async catalogo(pais, c): Promise<PaginaCatalogo> {
+    if (process.env['EJEMPLO_LATENCIA_MS']) await new Promise((r) => setTimeout(r, Number(process.env['EJEMPLO_LATENCIA_MS'])));
     const todos = seleccionar(pais, c);
     const cur = c.cursor ? String(c.cursor.id) : null;
     const desde = cur ? todos.findIndex((x) => x.item.product_id === cur) + 1 : 0;

@@ -2,7 +2,7 @@
  * Lighthouse contra la tienda LOCAL (build de ejemplo, `STORE_DATOS=ejemplo`) con el bolso lleno en carrito y checkout.
  * Móvil (4G simulada) y escritorio; varias corridas por URL y mediana. Zona de izao-qa.
  *
- *   BASE=http://127.0.0.1:3110 CORRIDAS_MOVIL=3 CORRIDAS_ESCRITORIO=1 node tests/lighthouse/local.cjs <carpeta-salida>
+ *   BASE=http://127.0.0.1:3110 CORRIDAS_MOVIL=3 RUTAS=/co/catalogo (opcional: solo esas rutas) CORRIDAS_ESCRITORIO=1 node tests/lighthouse/local.cjs <carpeta-salida>
  *
  * Por qué no `lhci`: el carrito vive en `localStorage` y Lighthouse borra el almacenamiento antes de cada corrida; aquí se
  * abre Chromium (el de Playwright) con un perfil propio, se agrega un producto por la interfaz y se mide con
@@ -54,7 +54,9 @@ const mediana = (xs) => {
   await page.close();
 
   const resumen = [];
+  const SOLO = process.env.RUTAS ? process.env.RUTAS.split(',') : null;
   for (const { ruta, bolso } of RUTAS) {
+    if (SOLO && !SOLO.includes(ruta)) continue;
     for (const modo of ['mobile', 'desktop']) {
       const n = modo === 'mobile' ? N_MOVIL : N_ESCRITORIO;
       const corridas = [];
