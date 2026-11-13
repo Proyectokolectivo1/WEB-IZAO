@@ -140,6 +140,10 @@ export interface AjustesTienda {
   /** `country_settings` público del país. */
   rotacionAnunciosSegundos: number;
   whatsappAsesor: string | null;
+  /** Mensaje prellenado del botón flotante de WhatsApp; `null` = el texto por defecto de la tienda. */
+  whatsappMensaje: string | null;
+  /** Interruptor del botón flotante del país (el botón además exige `whatsappAsesor`). */
+  whatsappBoton: boolean;
   ocultarAgotados: boolean;
   /** Código de moneda del país (`COP`, `USD`). */
   moneda: 'COP' | 'USD';

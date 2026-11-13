@@ -4,6 +4,11 @@
  * Las líneas de envío y de pago de cada país se editan en el panel (espacios `sede_envio` y `sede_pago`, campo cuerpo).
  */
 export const TP = {
+  /** Botón flotante «Hablar con un asesor». El mensaje inicial real sale de `country_settings.advisor_whatsapp_message`. */
+  asesor: {
+    etiqueta: 'Hablar con un asesor por WhatsApp (se abre en una pestaña nueva)',
+    mensajeDefecto: 'Hola, quiero que me ayuden a elegir una fragancia.',
+  },
   sede: {
     rotulo: 'Tu sede',
     titulo: '¿Desde dónde nos visitas?',

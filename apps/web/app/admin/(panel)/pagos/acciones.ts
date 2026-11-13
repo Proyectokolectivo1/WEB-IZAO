@@ -11,6 +11,8 @@ import {
   type MetodoPago,
 } from '@/lib/admin/pagos/ajustes';
 import { guardarAjustesPaisBd, guardarMetodoBd } from '@/lib/admin/pagos/ajustes-servidor';
+import { esquemaWhatsappAsesor } from '@/lib/admin/pagos/whatsapp-asesor';
+import { guardarWhatsappAsesorBd } from '@/lib/admin/pagos/whatsapp-asesor-servidor';
 import { ipDelCliente } from '@/lib/auth/cabeceras';
 import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
 
@@ -66,6 +68,29 @@ export async function guardarMetodo(_previo: ResultadoAccion, formData: FormData
     ip: await ipDelCliente(),
     pais,
     metodo,
+    datos: analizado.data,
+  });
+  if (r.ok) refrescar(pais);
+  return r;
+}
+
+/** WhatsApp del asesor del país (botón flotante de la tienda, Iza y pie): número, mensaje inicial e interruptor. */
+export async function guardarWhatsappAsesor(_previo: ResultadoAccion, formData: FormData): Promise<ResultadoAccion> {
+  const entrada = await adminDeAccion('pagos', 'pagos.gestionar');
+  if ('error' in entrada) return entrada.error;
+  const crudo = texto(formData);
+  if (!esPaisAjustes(crudo.pais)) return { ok: false, mensaje: 'País no válido.' };
+  const pais = crudo.pais;
+
+  const analizado = esquemaWhatsappAsesor.safeParse(crudo);
+  if (!analizado.success) {
+    return { ok: false, mensaje: 'Revisa los campos marcados.', errores: erroresPorCampo(analizado.error) };
+  }
+  const r = await guardarWhatsappAsesorBd({
+    cliente: crearClienteServicio(),
+    actor: entrada.admin.userId,
+    ip: await ipDelCliente(),
+    pais,
     datos: analizado.data,
   });
   if (r.ok) refrescar(pais);

@@ -80,6 +80,16 @@ Verás `login_exitoso`, `login_fallido`, `login_denegado`, `login_bloqueado`, `m
 
 Mientras no exista el módulo Usuarios: en SQL Editor, `update admin_users set is_active = false where auth_user_id = '<id>';`. El usuario pierde el acceso en su siguiente clic.
 
+## WhatsApp del asesor (botón flotante de la tienda)
+
+En **Pagos y países**, elige la pestaña del país (Colombia o Ecuador) y busca la sección **WhatsApp del asesor**. Cada país tiene el suyo:
+
+- **WhatsApp del asesor:** el número con el código del país (por ejemplo `+57 300 123 4567` para Colombia o `+593 99 123 4567` para Ecuador). Se guarda solo con números. Es el mismo número que usan Iza y el pie de la tienda; no hay que cargarlo dos veces.
+- **Mensaje inicial:** lo que ya viene escrito cuando la persona abre el chat. Si lo dejas vacío, se usa el mensaje por defecto de la tienda. No escribas que los productos son originales ni que hay relación con marcas.
+- **Mostrar el botón flotante:** lo enciende o lo apaga en ese país sin borrar el número. Sin número, el botón no aparece aunque esté encendido.
+
+Al guardar, el botón se actualiza en la tienda en pocos segundos, sin desplegar. Pide el permiso de Pagos (`pagos.gestionar`) y queda en la auditoría (`pagos.whatsapp_asesor_actualizado`). El botón no se muestra en el pago ni en la confirmación del pedido.
+
 ## Límites de ingreso que debe configurar el dueño en Supabase
 
 El panel bloquea 15 minutos después de 5 contraseñas incorrectas por correo (15 por IP) y de 5 códigos incorrectos por usuario. Ese bloqueo falla cerrado: si no se puede registrar o contar el intento, el ingreso se niega con "No pudimos verificar tu ingreso".

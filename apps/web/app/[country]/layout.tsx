@@ -8,7 +8,9 @@ import { Header } from '@/components/store/header/Header';
 import { LanzadorIza } from '@/components/store/iza/LanzadorIza';
 import { SelectorSede } from '@/components/store/sede/SelectorSede';
 import { NavegacionPendiente } from '@/components/store/skeletons/NavegacionPendiente';
+import { BotonWhatsapp } from '@/components/store/whatsapp/BotonWhatsapp';
 import { chatHabilitado } from '@/lib/store/chat/fuente-supabase';
+import { enlaceBotonAsesor } from '@/lib/store/contacto';
 import { tienda } from '@/lib/store/datos';
 import { esPais } from '@/lib/store/pais';
 import { opcionesSede } from '@/lib/store/sede-opciones';
@@ -16,6 +18,7 @@ import { alternos } from '@/lib/store/seo';
 import { textosSeo } from '@/lib/store/seo-textos';
 import { textosEnvio } from '@/lib/store/envio';
 import { temaDePais } from '@/lib/store/tema';
+import { TP } from '@/lib/store/textos-pais';
 
 // Sin prerender en la compilación (no depende de la base); cada ruta se genera al pedirla y se cachea.
 export const revalidate = 300;
@@ -57,6 +60,9 @@ export default async function LayoutPais({ children, params }: { children: React
   // Nota y valor del envío editables en el panel (espacios `nota_envio` y `valor_envio`); sin ellos, los del seed.
   const envio = textosEnvio(espacios);
 
+  // Botón flotante de WhatsApp: número y mensaje del país (panel › Pagos y países); sin número o apagado, no se muestra.
+  const enlaceAsesor = enlaceBotonAsesor(ajustes, TP.asesor.mensajeDefecto);
+
   return (
     <div id="tema-pais" className={override ? `tema-pais bg-bg text-ink ${override.clasesFuentes}` : undefined}>
       {override ? <style dangerouslySetInnerHTML={{ __html: override.css }} /> : null}
@@ -72,6 +78,7 @@ export default async function LayoutPais({ children, params }: { children: React
         </Suspense>
         <Footer pais={pais} ajustes={ajustes} paginas={paginas} espacios={espacios} />
         {iza ? <LanzadorIza pais={pais} /> : null}
+        {enlaceAsesor ? <BotonWhatsapp href={enlaceAsesor} etiqueta={TP.asesor.etiqueta} /> : null}
         <SelectorSede pais={pais} opciones={sede} />
       </CarritoProvider>
       {/* Los diálogos se montan aquí para heredar el tema del país. */}

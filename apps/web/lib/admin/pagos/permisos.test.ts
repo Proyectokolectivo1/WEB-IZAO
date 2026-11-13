@@ -19,8 +19,8 @@ describe('permisos de pagos y países', () => {
     expect(puede(null, 'pagos.gestionar')).toBe(false);
   });
 
-  it('las dos acciones de servidor exigen el permiso', () => {
+  it('las tres acciones de servidor (ajustes, método y WhatsApp del asesor) exigen el permiso', () => {
     const texto = readFileSync(path.resolve(__dirname, '../../../app/admin/(panel)/pagos/acciones.ts'), 'utf8');
-    expect((texto.match(/adminDeAccion\('pagos', 'pagos\.gestionar'\)/g) ?? []).length).toBe(2);
+    expect((texto.match(/adminDeAccion\('pagos', 'pagos\.gestionar'\)/g) ?? []).length).toBe(3);
   });
 });
