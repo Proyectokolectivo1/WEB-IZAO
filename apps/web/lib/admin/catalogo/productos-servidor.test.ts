@@ -1,18 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { auditar, revalidar } = vi.hoisted(() => ({ auditar: vi.fn(async (_e: unknown) => true), revalidar: vi.fn() }));
+const { auditar, revalidar, revalidarRuta } = vi.hoisted(() => ({
+  auditar: vi.fn(async (_e: unknown) => true),
+  revalidar: vi.fn(),
+  revalidarRuta: vi.fn(),
+}));
 vi.mock('@/lib/admin/auditoria', () => ({ auditarCambio: auditar }));
-vi.mock('next/cache', () => ({ revalidateTag: revalidar }));
+vi.mock('next/cache', () => ({ revalidateTag: revalidar, revalidatePath: revalidarRuta }));
 
-import type { GuardarProductoEntrada, ResultadoGuardarProducto } from '@/lib/db/admin-catalogo';
+import type { GuardarProductoEntrada, ResultadoEliminarProducto, ResultadoGuardarProducto } from '@/lib/db/admin-catalogo';
 import { clienteFalso } from '../crud/cliente-falso';
 import { productoNuevo, type ProductoForm } from './productos';
 import {
   archivarProductoBd,
   duplicarProductoBd,
+  eliminarProductoBd,
   guardarProductoPanel,
   listarProductos,
   obtenerProductoForm,
+  restaurarProductoBd,
 } from './productos-servidor';
 
 const comun = { actor: 'u1', ip: null };
@@ -34,6 +40,7 @@ function formValido(): ProductoForm {
 beforeEach(() => {
   auditar.mockClear();
   revalidar.mockClear();
+  revalidarRuta.mockClear();
 });
 
 describe('guardarProductoPanel', () => {
@@ -216,5 +223,85 @@ describe('listarProductos / obtenerProductoForm', () => {
   it('un producto que no existe devuelve null', async () => {
     const { cliente } = clienteFalso({});
     expect(await obtenerProductoForm(cliente, '00000000-0000-4000-8000-0000000000ee')).toBeNull();
+  });
+});
+
+describe('eliminarProductoBd (D-055)', () => {
+  const id = '00000000-0000-4000-8000-0000000000ee';
+  const base = { ok: true as const, name: 'Rosa', slug: 'rosa', skus: ['ROSA-50'] };
+  const rpc = (r: ResultadoEliminarProducto) => vi.fn(async (_id: string) => r);
+  const { cliente } = clienteFalso({});
+
+  it('sin pedidos: elimina, audita quién y qué, e invalida ficha, listados y sitemap', async () => {
+    const eliminar = rpc({ ...base, accion: 'eliminado', pedidos: 0, variantes: 2, imagenes_borradas: 3 });
+    const r = await eliminarProductoBd({ id, cliente, eliminar, ...comun });
+    expect(r).toEqual({ ok: true, id, accion: 'eliminado', pedidos: 0 });
+    expect(eliminar).toHaveBeenCalledWith(id);
+    expect(auditar).toHaveBeenCalledTimes(1);
+    expect(auditar.mock.calls[0]![0]).toMatchObject({
+      actor: 'u1',
+      accion: 'productos.eliminado',
+      entidad: 'products',
+      entidadId: id,
+      diff: { antes: { name: 'Rosa', slug: 'rosa', skus: ['ROSA-50'] }, resumen: { resultado: 'eliminado', pedidos: 0, variantes: 2, imagenes_borradas: 3 } },
+    });
+    expect(revalidar).toHaveBeenCalledWith(`product:${id}`);
+    expect(revalidar).toHaveBeenCalledWith('catalog:CO');
+    expect(revalidar).toHaveBeenCalledWith('catalog:EC');
+    expect(revalidarRuta).toHaveBeenCalledWith('/co/sitemap.xml');
+    expect(revalidarRuta).toHaveBeenCalledWith('/ec/sitemap.xml');
+  });
+
+  it('con pedidos: la base lo archiva, se audita como archivado y se informa cuántos pedidos', async () => {
+    const r = await eliminarProductoBd({ id, cliente, eliminar: rpc({ ...base, accion: 'archivado', pedidos: 3 }), ...comun });
+    expect(r).toEqual({ ok: true, id, accion: 'archivado', pedidos: 3 });
+    expect(auditar.mock.calls[0]![0]).toMatchObject({ accion: 'productos.archivado_por_pedidos', diff: { resumen: { resultado: 'archivado', pedidos: 3 } } });
+    expect(revalidar).toHaveBeenCalledWith('catalog:CO');
+  });
+
+  it('ya archivado con pedidos: no vuelve a auditar', async () => {
+    const r = await eliminarProductoBd({ id, cliente, eliminar: rpc({ ...base, accion: 'ya_archivado', pedidos: 1 }), ...comun });
+    expect(r).toMatchObject({ ok: true, accion: 'ya_archivado' });
+    expect(auditar).not.toHaveBeenCalled();
+  });
+
+  it('producto inexistente y fallo de la base se informan sin invalidar ni auditar', async () => {
+    expect(await eliminarProductoBd({ id, cliente, eliminar: rpc({ ok: false, motivo: 'no_existe' }), ...comun })).toEqual({ ok: false, mensaje: 'Ese producto ya no existe.' });
+    const falla = vi.fn(async (_id: string): Promise<ResultadoEliminarProducto> => {
+      throw new Error('boom');
+    });
+    expect(await eliminarProductoBd({ id, cliente, eliminar: falla, ...comun })).toMatchObject({ ok: false });
+    expect(auditar).not.toHaveBeenCalled();
+    expect(revalidar).not.toHaveBeenCalled();
+  });
+});
+
+describe('restaurarProductoBd', () => {
+  const id = '00000000-0000-4000-8000-0000000000ef';
+  it('un archivado vuelve como borrador y se invalida el sitemap', async () => {
+    const { cliente } = clienteFalso({ 'products.select': { data: { id, name: 'Rosa', slug: 'rosa', status: 'archived' } } });
+    const guardar = vi.fn(async (_e: GuardarProductoEntrada): Promise<ResultadoGuardarProducto> => ({ ok: true, product_id: id, creado: false }));
+    expect((await restaurarProductoBd({ id, cliente, guardar, ...comun })).ok).toBe(true);
+    expect(guardar.mock.calls[0]![0]).toEqual({ product: { id, name: 'Rosa', slug: 'rosa', status: 'draft' } });
+    expect(revalidarRuta).toHaveBeenCalledWith('/co/sitemap.xml');
+  });
+
+  it('si no estaba archivado no hace nada', async () => {
+    const { cliente } = clienteFalso({ 'products.select': { data: { id, name: 'Rosa', slug: 'rosa', status: 'active' } } });
+    const guardar = vi.fn();
+    expect((await restaurarProductoBd({ id, cliente, guardar, ...comun })).ok).toBe(true);
+    expect(guardar).not.toHaveBeenCalled();
+  });
+});
+
+describe('listarProductos: archivados', () => {
+  it('por defecto excluye los archivados; con el filtro «Archivados» solo esos', async () => {
+    const a = clienteFalso({ 'products.select': { data: [], count: 0 } });
+    await listarProductos(a.cliente, { q: '', estado: '', marca: '', pais: '', pagina: 1 });
+    expect(a.filtros).toContainEqual({ tabla: 'products', metodo: 'neq', args: ['status', 'archived'] });
+    const b = clienteFalso({ 'products.select': { data: [], count: 0 } });
+    await listarProductos(b.cliente, { q: '', estado: 'archived', marca: '', pais: '', pagina: 1 });
+    expect(b.filtros).toContainEqual({ tabla: 'products', metodo: 'eq', args: ['status', 'archived'] });
+    expect(b.filtros.some((f) => f.metodo === 'neq')).toBe(false);
   });
 });

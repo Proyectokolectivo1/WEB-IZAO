@@ -1,6 +1,6 @@
 import 'server-only';
 /** Ayudas de servidor compartidas por los módulos CRUD del panel. */
-import { revalidateTag } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { NextResponse } from 'next/server';
 import { ErrorSinPermiso, requerirAdmin, type ContextoAdmin } from '@/lib/auth/guard';
 import type { AccionId, ModuloId } from '@/lib/auth/permissions';
@@ -18,6 +18,14 @@ export function invalidarCatalogo(paises: readonly Pais[] = PAISES): void {
 export function invalidarProducto(productId: string, paises: readonly Pais[] = PAISES): void {
   revalidateTag(`product:${productId}`);
   invalidarCatalogo(paises);
+}
+
+/**
+ * Invalida el sitemap de los países (la ruta lo regenera cada hora; al eliminar, archivar o restaurar un producto
+ * no debe seguir listando una URL que ya no existe). Aparte de `invalidarProducto` porque esta usa `revalidatePath`.
+ */
+export function invalidarSitemap(paises: readonly Pais[] = PAISES): void {
+  for (const p of paises) revalidatePath(`/${p.toLowerCase()}/sitemap.xml`);
 }
 
 /**

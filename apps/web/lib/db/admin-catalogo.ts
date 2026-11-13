@@ -189,3 +189,28 @@ export async function importarCatalogo(
   const p = { modo, filas: z.array(filaImportacionSchema).max(1000).parse(filas) };
   return llamarRpc('admin_importar_catalogo', { p }, resultadoImportarSchema);
 }
+
+const resultadoEliminarSchema = z.discriminatedUnion('ok', [
+  z.object({
+    ok: z.literal(true),
+    accion: z.enum(['eliminado', 'archivado', 'ya_archivado']),
+    pedidos: z.number().int().nonnegative(),
+    name: z.string(),
+    slug: z.string(),
+    skus: z.array(z.string()),
+    variantes: z.number().int().nonnegative().optional(),
+    imagenes_borradas: z.number().int().nonnegative().optional(),
+    imagenes_compartidas: z.number().int().nonnegative().optional(),
+    codigos_actualizados: z.number().int().nonnegative().optional(),
+  }),
+  z.object({ ok: z.literal(false), motivo: z.enum(['no_existe', 'datos_invalidos']) }),
+]);
+export type ResultadoEliminarProducto = z.infer<typeof resultadoEliminarSchema>;
+
+/**
+ * Elimina un producto (D-055, `admin_eliminar_producto`): con pedidos lo ARCHIVA (conserva el historial); sin pedidos lo
+ * borra en cascada y deja en cola los archivos de imagen sin otro uso. Nunca llama a MasterShop.
+ */
+export async function eliminarProducto(productId: string): Promise<ResultadoEliminarProducto> {
+  return llamarRpc('admin_eliminar_producto', { p: { product_id: uuid.parse(productId) } }, resultadoEliminarSchema);
+}

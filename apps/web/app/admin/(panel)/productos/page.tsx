@@ -1,18 +1,22 @@
 import { COUNTRY_CURRENCY, formatMoney, money } from '@izao/core/money';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { BotonConfirmar } from '@/components/admin/BotonConfirmar';
 import { Paginacion } from '@/components/admin/Paginacion';
 import { NOMBRE_PAIS } from '@/lib/admin/catalogo/categorias';
 import {
   ESTADOS_PRODUCTO,
   ETIQUETA_ESTADO,
+  MENSAJE_ELIMINAR,
   PAISES_PRODUCTO,
   leerFiltrosProductos,
   parametrosFiltros,
 } from '@/lib/admin/catalogo/productos';
 import { listarProductos, opcionesFormulario } from '@/lib/admin/catalogo/productos-servidor';
 import { requerirAdmin } from '@/lib/auth/guard';
+import { puede } from '@/lib/auth/permissions';
 import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
+import { eliminarProductoAccion, restaurarProductoAccion } from './acciones';
 
 export const metadata: Metadata = { title: 'Productos' };
 
@@ -21,7 +25,8 @@ export default async function ListaProductos({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requerirAdmin({ modulo: 'productos' });
+  const admin = await requerirAdmin({ modulo: 'productos' });
+  const puedeGestionar = puede(admin.rol, 'catalogo.gestionar');
   const sp = await searchParams;
   const filtros = leerFiltrosProductos(sp);
   const cliente = crearClienteServicio();
@@ -43,6 +48,13 @@ export default async function ListaProductos({
       </div>
       {sp.guardado ? <p className="adm-ok" role="status">Cambios guardados.</p> : null}
       {sp.archivado ? <p className="adm-ok" role="status">Producto archivado.</p> : null}
+      {sp.eliminado ? <p className="adm-ok" role="status">Producto eliminado.</p> : null}
+      {sp.conservado ? (
+        <p className="adm-ok" role="status">
+          El producto tiene pedidos, así que no se borró: quedó archivado y ya no se muestra en la tienda. Su historial se conserva y lo
+          encuentras con el filtro «Archivados».
+        </p>
+      ) : null}
 
       <form className="adm-filtros" role="search" method="get">
         <div className="adm-campo">
@@ -56,7 +68,7 @@ export default async function ListaProductos({
             Estado
           </label>
           <select id="f-estado" name="estado" className="adm-input" defaultValue={filtros.estado}>
-            <option value="">Todos</option>
+            <option value="">Todos (sin archivados)</option>
             {ESTADOS_PRODUCTO.map((e) => (
               <option key={e} value={e}>
                 {ETIQUETA_ESTADO[e]}
@@ -120,6 +132,7 @@ export default async function ListaProductos({
                       {NOMBRE_PAIS[p]}
                     </th>
                   ))}
+                  {puedeGestionar ? <th scope="col">Acciones</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -166,6 +179,27 @@ export default async function ListaProductos({
                         </td>
                       );
                     })}
+                    {puedeGestionar ? (
+                      <td data-etiqueta="Acciones">
+                        <div className="adm-acciones">
+                          {f.status === 'archived' ? (
+                            <BotonConfirmar
+                              etiqueta="Restaurar"
+                              mensaje={`«${f.name}» vuelve como borrador, oculto en todos los países. Revísalo y publícalo cuando esté listo.`}
+                              etiquetaConfirmar="Sí, restaurar"
+                              peligro={false}
+                              accion={restaurarProductoAccion.bind(null, f.id)}
+                            />
+                          ) : null}
+                          <BotonConfirmar
+                            etiqueta="Eliminar"
+                            mensaje={MENSAJE_ELIMINAR(f.name)}
+                            etiquetaConfirmar="Sí, eliminar"
+                            accion={eliminarProductoAccion.bind(null, f.id)}
+                          />
+                        </div>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>

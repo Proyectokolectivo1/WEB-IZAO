@@ -117,7 +117,9 @@ export function crearFuenteVinculacionPostgrest(o: OpcionesPostgrest): FuenteVin
         const rows = await c.filas(
           'variant_countries',
           `variant_countries?country_code=${eq(pais)}` +
-            '&select=variant_id,mastershop_product_id,mastershop_variant_id,product_variants!inner(sku,products(name))' +
+            '&select=variant_id,mastershop_product_id,mastershop_variant_id,product_variants!inner(sku,products!inner(name,status))' +
+            // Los productos archivados (o «eliminados» con pedidos, D-055) no se vinculan ni se proponen.
+            '&product_variants.products.status=neq.archived' +
             `&order=variant_id.asc&limit=${LOTE}&offset=${offset}`,
         );
         out.push(...rows.map(aVarianteIzao).filter((v) => v.sku !== ''));

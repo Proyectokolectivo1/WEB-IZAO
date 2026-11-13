@@ -8,7 +8,7 @@ vi.mock('@/lib/admin/media/registrar', () => ({ subirImagen: vi.fn() }));
 import type { FilaImportacion, ResultadoImportarCatalogo } from '@/lib/db/admin-catalogo';
 import { clienteFalso } from '../crud/cliente-falso';
 import { COLUMNAS } from './importacion';
-import { adjuntarImagenesPorSku, exportarCatalogo, procesarImportacion } from './importacion-servidor';
+import { adjuntarImagenesPorSku, exportarCatalogo, MENSAJE_ARCHIVADO, procesarImportacion } from './importacion-servidor';
 
 const comun = { actor: 'u1', ip: null };
 const fila = (o: Record<string, string>) => COLUMNAS.map((c) => o[c] ?? '');
@@ -71,6 +71,41 @@ describe('procesarImportacion', () => {
     expect(revalidar).toHaveBeenCalledWith('product:p1');
   });
 
+  it('ignora los productos archivados: no los envía a la base y los reporta (D-055)', async () => {
+    const { cliente } = clienteFalso({
+      ...catalogoBase,
+      // El único producto archivado del archivo es «uno» (por URL).
+      'products.select': { data: [{ slug: 'uno' }] },
+    });
+    const importar = vi.fn(async (_m: 'simular' | 'aplicar', _f: FilaImportacion[]) => ok({ creados: 1 }));
+    const r = await procesarImportacion({
+      modo: 'aplicar',
+      cliente,
+      importar,
+      tabla: tabla({ sku: 'A1', producto_slug: 'uno', nombre: 'Uno' }, { sku: 'B1', producto_slug: 'dos', nombre: 'Dos' }),
+      ...comun,
+    });
+    expect('error' in r).toBe(false);
+    if ('error' in r) return;
+    expect(importar.mock.calls[0]![1]).toHaveLength(1);
+    expect(r.omitidos).toBe(1);
+    expect(r.errores).toEqual([{ fila: 2, sku: 'A1', mensaje: MENSAJE_ARCHIVADO }]);
+  });
+
+  it('un SKU que pertenece a un producto archivado también se ignora', async () => {
+    const { cliente } = clienteFalso({ ...catalogoBase, 'product_variants.select': { data: [{ sku: 'B1' }] } });
+    const importar = vi.fn(async (_m: 'simular' | 'aplicar', _f: FilaImportacion[]) => ok());
+    const r = await procesarImportacion({
+      modo: 'simular',
+      cliente,
+      importar,
+      tabla: tabla({ sku: 'B1', producto_slug: 'dos', nombre: 'Dos' }),
+      ...comun,
+    });
+    expect('error' in r).toBe(false);
+    expect(importar).not.toHaveBeenCalled();
+  });
+
   it('procesa en lotes de 200 productos', async () => {
     const { cliente } = clienteFalso(catalogoBase);
     const importar = vi.fn(async () => ok());
@@ -104,8 +139,8 @@ describe('procesarImportacion', () => {
 });
 
 describe('exportarCatalogo', () => {
-  it('devuelve el encabezado y una fila por variante', async () => {
-    const { cliente } = clienteFalso({
+  it('devuelve el encabezado y una fila por variante, sin los productos archivados', async () => {
+    const { cliente, filtros } = clienteFalso({
       'brands.select': { data: [{ id: 'b1', name: 'Izao' }] },
       'products.select': {
         data: [{
@@ -123,6 +158,7 @@ describe('exportarCatalogo', () => {
       },
     });
     const filas = await exportarCatalogo(cliente);
+    expect(filtros).toContainEqual({ tabla: 'products', metodo: 'neq', args: ['status', 'archived'] });
     expect(filas).toHaveLength(2);
     expect(filas[1]![COLUMNAS.indexOf('sku')]).toBe('ROSA-1');
     expect(filas[1]![COLUMNAS.indexOf('marca')]).toBe('Izao');
