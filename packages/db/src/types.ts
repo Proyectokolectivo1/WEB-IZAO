@@ -1004,6 +1004,8 @@ export type Database = {
       country_settings: {
         Row: {
           advisor_whatsapp: string | null
+          advisor_whatsapp_button_enabled: boolean
+          advisor_whatsapp_message: string | null
           announcement_rotation_seconds: number
           carrier_auto_confirm: boolean
           carrier_discount_mode: string
@@ -1033,6 +1035,8 @@ export type Database = {
         }
         Insert: {
           advisor_whatsapp?: string | null
+          advisor_whatsapp_button_enabled?: boolean
+          advisor_whatsapp_message?: string | null
           announcement_rotation_seconds?: number
           carrier_auto_confirm?: boolean
           carrier_discount_mode?: string
@@ -1062,6 +1066,8 @@ export type Database = {
         }
         Update: {
           advisor_whatsapp?: string | null
+          advisor_whatsapp_button_enabled?: boolean
+          advisor_whatsapp_message?: string | null
           announcement_rotation_seconds?: number
           carrier_auto_confirm?: boolean
           carrier_discount_mode?: string
