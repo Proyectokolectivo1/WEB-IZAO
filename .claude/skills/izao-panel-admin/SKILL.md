@@ -10,7 +10,7 @@ Referencia: `docs/ESPECIFICACION.md` §24 (módulos y permisos), §9 (contenido)
 ## Estructura
 
 - Rutas en `apps/web/app/admin/(modulos)/…`. Layout con barra lateral, selector de país arriba (afecta todo lo que es por país) y buscador global (pedido, cliente, SKU).
-- Acceso: Supabase Auth + fila en `admin_users`. Middleware verifica rol en cada ruta y cada Server Action. MFA TOTP obligatoria para `admin`.
+- Acceso: Supabase Auth + fila en `admin_users`. Middleware verifica rol en cada ruta y cada Server Action. Sin MFA: entra con correo y contraseña (D-054, decisión del dueño; ver cómo reactivarla en `docs/DECISIONES.md`).
 - Roles: `admin` (todo) y `operator` (pedidos operativos, garantías, agente). Matriz exacta en §24.3; implementar como mapa `permissions.ts` en `packages/core` y probarlo.
 
 ## Patrón de cada módulo
