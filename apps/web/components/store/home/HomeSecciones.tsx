@@ -130,9 +130,9 @@ function Seccion({ s, contenido, pais, bannersMid }: { s: SeccionHome; contenido
       return (
         <Plana id={ID_SECCION.categories}>
           <Encabezado kicker={kicker} titulo={titulo ?? T.home.categorias} bajada={bajada} />
-          <ul className="grid grid-cols-2 items-start gap-x-4 gap-y-9 pb-8 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4 2xl:grid-cols-6">
+          <ul className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-8 [scrollbar-width:none] sm:-mx-8 sm:px-8 md:mx-0 md:grid md:snap-none md:grid-cols-3 md:items-start md:gap-x-6 md:gap-y-9 md:overflow-visible md:px-0 lg:grid-cols-4 2xl:grid-cols-6">
             {contenido.categorias.map((c, k) => (
-              <li key={c.id} className="even:mt-8">
+              <li key={c.id} className="w-[44%] shrink-0 snap-start sm:w-[30%] md:w-auto md:shrink md:even:mt-8">
                 <Revelar indice={k}>
                   <Link href={`/${pais}/categoria/${c.slug}`} className="group block">
                     {/* Arco: la silueta de un frasco. Con foto, la foto; sin ella, un fondo cálido con textura, ondas y la inicial. */}
@@ -152,15 +152,15 @@ function Seccion({ s, contenido, pais, bannersMid }: { s: SeccionHome; contenido
                           <span aria-hidden="true" className="textura-calida absolute inset-0" />
                           <span
                             aria-hidden="true"
-                            className="absolute inset-x-0 top-[34%] -translate-y-1/2 text-center font-display text-[7rem] leading-none text-ink/15 transition-transform duration-500 ease-izao motion-reduce:transform-none group-hover:scale-105 md:text-[8rem]"
+                            className="absolute inset-x-0 top-[34%] -translate-y-1/2 text-center font-display text-[5.5rem] leading-none text-ink/15 transition-transform duration-500 ease-izao motion-reduce:transform-none group-hover:scale-105 md:text-[8rem]"
                           >
                             {c.name.trim().charAt(0).toUpperCase()}
                           </span>
                         </>
                       )}
                     </div>
-                    <span className="mt-4 block font-display text-[1.625rem] leading-tight md:text-3xl">{c.name}</span>
-                    <span className="mt-1 inline-flex items-center gap-1.5 text-[0.875rem] text-ink/75">
+                    <span className="mt-3 block font-display text-[1.25rem] leading-tight md:mt-4 md:text-3xl">{c.name}</span>
+                    <span className="mt-1 inline-flex items-center gap-1.5 text-[0.8125rem] text-ink/75 md:text-[0.875rem]">
                       {T.home.verCategoria}
                       <span aria-hidden="true" className="transition-transform duration-300 ease-izao motion-reduce:transform-none group-hover:translate-x-1">
                         →
