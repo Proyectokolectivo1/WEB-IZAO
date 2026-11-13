@@ -8,7 +8,7 @@ import { contarEventos, contarNetos, huellaDeCorreo, registrarAuditoria, registr
 import { evaluarIntento, registrarUnaVez } from '@/lib/auth/bloqueo';
 import { ipDelCliente } from '@/lib/auth/cabeceras';
 import { esErrorCaptcha, opcionesCaptcha } from '@/lib/auth/captcha';
-import { RUTA_MFA_INSCRIBIR, RUTA_MFA_VERIFICAR, rutaSiguienteSegura } from '@/lib/auth/decision';
+import { rutaSiguienteSegura } from '@/lib/auth/decision';
 import { esProduccion, secretoSesion } from '@/lib/auth/env';
 import { esquemaLogin, type EstadoFormulario } from '@/lib/auth/esquemas';
 import { crearMarca, NOMBRE_COOKIE_MARCA, opcionesCookieMarca } from '@/lib/auth/marca-sesion';
@@ -140,7 +140,6 @@ export async function iniciarSesion(
     ip,
   });
 
-  const { data: nivel } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  const destino = nivel?.nextLevel === 'aal2' ? RUTA_MFA_VERIFICAR : RUTA_MFA_INSCRIBIR;
-  redirect(siguiente === '/admin' ? destino : `${destino}?siguiente=${encodeURIComponent(siguiente)}`);
+  // Solo correo y contraseña (D-054): se entra directo al destino pedido o al inicio.
+  redirect(siguiente);
 }

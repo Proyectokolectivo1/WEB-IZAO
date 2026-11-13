@@ -37,7 +37,7 @@ export function FormularioNuevoUsuario({ accion }: { accion: Accion }) {
         type="password"
         autoComplete="new-password"
         required
-        ayuda={`Mínimo ${MIN_CONTRASENA} caracteres. Entrégasela a la persona por un canal seguro; la verificación en dos pasos la activa ella al entrar (tiene 24 horas).`}
+        ayuda={`Mínimo ${MIN_CONTRASENA} caracteres. Entrégasela a la persona por un canal seguro.`}
         error={errores.contrasena}
       />
       <CampoTexto id="confirmar" name="confirmar" etiqueta="Repite la contraseña" type="password" autoComplete="new-password" required error={errores.confirmar} />

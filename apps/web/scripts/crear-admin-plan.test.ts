@@ -4,15 +4,13 @@ import { planearAdmin } from './crear-admin-plan';
 const base = { nombre: 'Dueña', confirmarExistente: false };
 
 describe('planearAdmin: usuario nuevo', () => {
-  it('crea el usuario y la fila como administrador activo con MFA', () => {
+  it('crea el usuario y la fila como administrador activo, sin segundo factor', () => {
     const p = planearAdmin({ ...base, existeEnAuth: false, filaActual: null });
     expect(p).toEqual({
       tipo: 'ok',
       crearUsuario: true,
       fijarContrasena: false,
-      fila: { accion: 'insertar', valores: { role: 'admin', name: 'Dueña', is_active: true, mfa_required: true } },
-      habilitarEnrolamiento: true,
-      reiniciarMfa: false,
+      fila: { accion: 'insertar', valores: { role: 'admin', name: 'Dueña', is_active: true, mfa_required: false } },
       avisos: [],
     });
   });
@@ -20,35 +18,6 @@ describe('planearAdmin: usuario nuevo', () => {
   it('respeta --rol operator al crear', () => {
     const p = planearAdmin({ ...base, existeEnAuth: false, filaActual: null, rol: 'operator' });
     expect(p.tipo === 'ok' && p.fila.accion === 'insertar' && p.fila.valores.role).toBe('operator');
-  });
-});
-
-describe('planearAdmin: ventana de enrolamiento MFA', () => {
-  it('se abre al crear el usuario', () => {
-    const nuevo = planearAdmin({ ...base, existeEnAuth: false, filaActual: null });
-    expect(nuevo.tipo === 'ok' && nuevo.habilitarEnrolamiento).toBe(true);
-  });
-
-  it('NO se reabre al reemplazar solo la contraseña de un usuario existente', () => {
-    const existente = planearAdmin({ ...base, existeEnAuth: true, confirmarExistente: true, filaActual: null });
-    expect(existente.tipo === 'ok' && existente.habilitarEnrolamiento).toBe(false);
-  });
-
-  it('se reabre en un usuario existente solo con --reiniciar-mfa', () => {
-    const existente = planearAdmin({
-      ...base,
-      existeEnAuth: true,
-      confirmarExistente: true,
-      reiniciarMfa: true,
-      filaActual: null,
-    });
-    expect(existente.tipo === 'ok' && existente.habilitarEnrolamiento).toBe(true);
-    expect(existente.tipo === 'ok' && existente.reiniciarMfa).toBe(true);
-  });
-
-  it('--reiniciar-mfa no aplica a un usuario nuevo (no hay nada que reiniciar)', () => {
-    const nuevo = planearAdmin({ ...base, existeEnAuth: false, filaActual: null, reiniciarMfa: true });
-    expect(nuevo.tipo === 'ok' && nuevo.reiniciarMfa).toBe(false);
   });
 });
 

@@ -1,12 +1,11 @@
 import 'server-only';
 /**
  * Usuarios del panel (§24.1) con el cliente de servicio: alta, edición de nombre/rol/estado, restablecer contraseña y
- * reiniciar la verificación en dos pasos (misma lógica que `pnpm crear-admin`, D-020 y D-021). Nada de lo que se
+ * (el panel entra solo con correo y contraseña, D-054). Nada de lo que se
  * escribe aquí lleva contraseñas a la auditoría ni al navegador. Una cuenta que ya existe en Auth no se "adopta" desde
  * el panel: eso queda para el script del dueño, que pide confirmación explícita.
  */
 import { auditarCambio } from '@/lib/admin/auditoria';
-import { metadataHabilitarEnrolamiento } from '@/lib/auth/enrolamiento';
 import { esRol, type Rol } from '@/lib/auth/permissions';
 import type { Cliente } from '../catalogo/taxonomias-servidor';
 import { diffCampos, type ResultadoAccion } from '../crud/comun';
@@ -27,8 +26,6 @@ export type FilaUsuario = {
   activo: boolean;
   /** `null` si la cuenta de Auth ya no existe (fila huérfana). */
   correo: string | null;
-  /** Tiene un autenticador aprobado por el servidor (D-021). */
-  mfaActivo: boolean;
   ultimoIngreso: string | null;
   creado: string;
 };
@@ -38,14 +35,12 @@ type AdminFila = { auth_user_id: string; role: string; name: string; is_active: 
 async function completar(cliente: Cliente, f: AdminFila): Promise<FilaUsuario> {
   const { data } = await cliente.auth.admin.getUserById(f.auth_user_id);
   const u = data?.user ?? null;
-  const aprobado = (u?.app_metadata as Record<string, unknown> | undefined)?.mfa_factor_aprobado;
   return {
     id: f.auth_user_id,
     nombre: f.name,
     rol: esRol(f.role) ? f.role : 'operator',
     activo: f.is_active,
     correo: u?.email ?? null,
-    mfaActivo: typeof aprobado === 'string' && aprobado !== '',
     ultimoIngreso: u?.last_sign_in_at ?? null,
     creado: f.created_at,
   };
@@ -81,15 +76,14 @@ async function contarAdminsActivos(cliente: Cliente): Promise<number> {
   return count ?? 0;
 }
 
-/** Crea la cuenta en Auth (correo confirmado, ventana de MFA de 24 h) y su fila en `admin_users`. */
-export async function crearUsuarioBd(args: Ctx & { datos: DatosNuevoUsuario; ahoraMs?: number }): Promise<ResultadoAccion> {
+/** Crea la cuenta en Auth (correo confirmado) y su fila en `admin_users`. */
+export async function crearUsuarioBd(args: Ctx & { datos: DatosNuevoUsuario }): Promise<ResultadoAccion> {
   const { cliente, datos, actor, ip } = args;
   const creado = await cliente.auth.admin.createUser({
     email: datos.correo,
     password: datos.contrasena,
     email_confirm: true,
     user_metadata: { nombre: datos.nombre },
-    app_metadata: metadataHabilitarEnrolamiento(args.ahoraMs ?? Date.now()),
   });
   if (creado.error || !creado.data.user) {
     const code = (creado.error as { code?: string } | null)?.code;
@@ -105,7 +99,7 @@ export async function crearUsuarioBd(args: Ctx & { datos: DatosNuevoUsuario; aho
     return { ok: false, mensaje: 'No se pudo crear la cuenta. Inténtalo de nuevo.' };
   }
   const id = creado.data.user.id;
-  const fila = { auth_user_id: id, role: datos.rol, name: datos.nombre, is_active: true, mfa_required: true };
+  const fila = { auth_user_id: id, role: datos.rol, name: datos.nombre, is_active: true, mfa_required: false };
   const { error } = await cliente.from('admin_users').insert(fila);
   if (error) {
     // Sin fila en admin_users la cuenta no sirve: se deshace el alta para no dejar cuentas sueltas.
@@ -156,30 +150,4 @@ export async function restablecerContrasenaBd(args: Ctx & { datos: DatosContrase
   }
   await auditarCambio({ actor, accion: 'usuarios.contrasena_restablecida', entidad: 'admin_users', entidadId: datos.id, ip });
   return { ok: true, id: datos.id };
-}
-
-/** Borra los autenticadores y la aprobación, y reabre la ventana de 24 h para inscribir uno nuevo (recuperación). */
-export async function reiniciarMfaBd(args: Ctx & { id: string; ahoraMs?: number }): Promise<ResultadoAccion> {
-  const { cliente, id, actor, ip } = args;
-  const { data: fila } = await cliente.from('admin_users').select('auth_user_id').eq('auth_user_id', id).maybeSingle();
-  if (!fila) return { ok: false, mensaje: 'Ese usuario ya no existe.' };
-  const factores = await cliente.auth.admin.mfa.listFactors({ userId: id });
-  if (factores.error) return { ok: false, mensaje: 'No se pudieron leer los autenticadores. Inténtalo de nuevo.' };
-  for (const factor of factores.data.factors) {
-    const { error } = await cliente.auth.admin.mfa.deleteFactor({ id: factor.id, userId: id });
-    if (error) return { ok: false, mensaje: 'No se pudo borrar un autenticador. Inténtalo de nuevo.' };
-  }
-  const { error } = await cliente.auth.admin.updateUserById(id, {
-    app_metadata: { mfa_factor_aprobado: null, ...metadataHabilitarEnrolamiento(args.ahoraMs ?? Date.now()) },
-  });
-  if (error) return { ok: false, mensaje: 'No se pudo reabrir la activación. Inténtalo de nuevo.' };
-  await auditarCambio({
-    actor,
-    accion: 'usuarios.mfa_reiniciado',
-    entidad: 'admin_users',
-    entidadId: id,
-    diff: { despues: { factores_borrados: factores.data.factors.length } },
-    ip,
-  });
-  return { ok: true, id };
 }

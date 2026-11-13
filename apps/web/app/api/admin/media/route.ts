@@ -1,7 +1,7 @@
 /**
  * POST /api/admin/media: sube una imagen (multipart: `file`, `kind`, `alt`, `recorte45`, `variante` solo en banners)
  * Toda imagen se re-codifica a WebP en el servidor antes de guardarse (nunca se conserva el formato original).
- * Solo administradores (el middleware ya exige sesión aal2; aquí se repite el rol).
+ * Solo administradores (el middleware ya exige la sesión; aquí se repite el rol).
  */
 import { NextResponse } from 'next/server';
 import { esquemaSubida } from '@/lib/admin/media/esquema';
