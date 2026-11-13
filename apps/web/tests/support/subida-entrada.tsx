@@ -1,6 +1,6 @@
 /**
  * Entrada que esbuild empaqueta para `e2e/admin-subida-mensaje.spec.ts` y `e2e/admin-subida-alt.spec.ts`: monta en el
- * navegador los subidores REALES (`SelectorImagen`, `ProductoImagenes`). El panel completo exige sesión con MFA, que el
+ * navegador los subidores REALES (`SelectorImagen`, `ProductoImagenes`). El panel completo exige sesión de administrador, que el
  * Supabase falso no simula.
  *
  * `window.__SUBIDA__.modo`: `categoria` (por defecto, alt propio), `banner` (alt en otro campo, como FormularioBanner) o

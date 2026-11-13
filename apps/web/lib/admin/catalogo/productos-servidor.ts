@@ -6,9 +6,15 @@ import 'server-only';
  * guardado se inyectan para poder probar sin base de datos.
  */
 import { auditarCambio } from '@/lib/admin/auditoria';
-import { guardarProducto, type GuardarProductoEntrada, type ResultadoGuardarProducto } from '@/lib/db/admin-catalogo';
+import {
+  eliminarProducto,
+  guardarProducto,
+  type GuardarProductoEntrada,
+  type ResultadoEliminarProducto,
+  type ResultadoGuardarProducto,
+} from '@/lib/db/admin-catalogo';
 import { diffCampos, escaparBusqueda, rangoPagina, type ResultadoAccion } from '../crud/comun';
-import { invalidarProducto } from '../crud/servidor';
+import { invalidarProducto, invalidarSitemap } from '../crud/servidor';
 import type { Cliente } from './taxonomias-servidor';
 import {
   aFormulario,
@@ -73,7 +79,8 @@ export async function listarProductos(
         : 'id, name, slug, status, updated_at, brands(name)',
       { count: 'exact' },
     );
-  if (filtros.estado) consulta = consulta.eq('status', filtros.estado);
+  // Los archivados (incluidos los «eliminados» que tenían pedidos) solo salen con el filtro «Archivados».
+  consulta = filtros.estado ? consulta.eq('status', filtros.estado) : consulta.neq('status', 'archived');
   if (filtros.marca) consulta = consulta.eq('brand_id', filtros.marca);
   if (filtros.pais) {
     consulta = consulta.eq('product_countries.country_code', filtros.pais).eq('product_countries.is_visible', true);
@@ -293,6 +300,7 @@ export async function archivarProductoBd(args: { id: string } & Contexto): Promi
     entrada,
     form: { variants: [] },
   });
+  if (resultado.ok) invalidarSitemap();
   return resultado;
 }
 
@@ -309,4 +317,65 @@ export async function duplicarProductoBd(args: { id: string; nuevoId: () => stri
     if (!choque) return ultimo;
   }
   return ultimo;
+}
+
+export type ResultadoEliminar =
+  | { ok: true; id: string; accion: 'eliminado' | 'archivado' | 'ya_archivado'; pedidos: number }
+  | { ok: false; mensaje: string };
+
+/**
+ * Elimina un producto (D-055). La base decide en una transacción: con pedidos lo ARCHIVA (conserva el historial y
+ * desaparece de tienda, búsqueda, sitemap, chatbot y listas); sin pedidos lo borra en cascada. No toca MasterShop.
+ * Audita quién, qué y cuándo (la fecha la pone `audit_log`) e invalida la ficha, los listados y el sitemap.
+ */
+export async function eliminarProductoBd(
+  args: { id: string; eliminar?: (id: string) => Promise<ResultadoEliminarProducto> } & Omit<Contexto, 'guardar'>,
+): Promise<ResultadoEliminar> {
+  const { id, actor, ip } = args;
+  const eliminar = args.eliminar ?? eliminarProducto;
+  let r: ResultadoEliminarProducto;
+  try {
+    r = await eliminar(id);
+  } catch (e) {
+    console.error('[panel] admin_eliminar_producto falló:', e instanceof Error ? e.message : 'error');
+    return { ok: false, mensaje: 'No se pudo eliminar el producto. Inténtalo de nuevo.' };
+  }
+  if (!r.ok) {
+    return { ok: false, mensaje: r.motivo === 'no_existe' ? 'Ese producto ya no existe.' : 'Identificador no válido.' };
+  }
+  if (r.accion !== 'ya_archivado') {
+    await auditarCambio({
+      actor,
+      accion: r.accion === 'eliminado' ? 'productos.eliminado' : 'productos.archivado_por_pedidos',
+      entidad: 'products',
+      entidadId: id,
+      diff: {
+        antes: { name: r.name, slug: r.slug, skus: r.skus },
+        resumen: {
+          resultado: r.accion,
+          pedidos: r.pedidos,
+          ...(r.variantes !== undefined ? { variantes: r.variantes } : {}),
+          ...(r.imagenes_borradas !== undefined ? { imagenes_borradas: r.imagenes_borradas } : {}),
+          ...(r.codigos_actualizados ? { codigos_actualizados: r.codigos_actualizados } : {}),
+        },
+      },
+      ip,
+    });
+  }
+  invalidarProducto(id);
+  invalidarSitemap();
+  return { ok: true, id, accion: r.accion, pedidos: r.pedidos };
+}
+
+/** Saca un producto del archivo: vuelve como borrador (oculto) para revisarlo y publicarlo de nuevo. */
+export async function restaurarProductoBd(args: { id: string } & Contexto): Promise<ResultadoAccion> {
+  const { cliente, id } = args;
+  const { data } = await cliente.from('products').select('id, name, slug, status').eq('id', id).maybeSingle();
+  if (!data) return { ok: false, mensaje: 'Ese producto ya no existe.' };
+  const fila = data as { name: string; slug: string; status: EstadoProducto };
+  if (fila.status !== 'archived') return { ok: true, id };
+  const entrada: GuardarProductoEntrada = { product: { id, name: fila.name, slug: fila.slug, status: 'draft' } };
+  const resultado = await guardarYAuditar({ ...args, entrada, form: { variants: [] } });
+  if (resultado.ok) invalidarSitemap();
+  return resultado;
 }

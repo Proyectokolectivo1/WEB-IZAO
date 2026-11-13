@@ -14,7 +14,7 @@ Lo mantiene el líder. Leer esto y `CLAUDE.md` antes que cualquier otra cosa; la
 | Monorepo, Docker local, Nginx, deploy, backups cifrados | Hecho y revisado | `infra/`, `apps/web`, `apps/worker` |
 | Esquema (65 tablas, RLS), seed, 520 productos de prueba, geografía CO/EC | Hecho; pgTAP 15 suites | `packages/db/` |
 | Funciones de stock, canje y expiración | Hecho; concurrencia probada en local | `packages/db/supabase/migrations/` |
-| Login admin con MFA, roles, bloqueo de intentos | Hecho; sin prueba real (faltan llaves) | `apps/web/lib/auth`, `apps/web/app/admin` |
+| Login admin con correo y contraseña (MFA retirada, D-054), roles, bloqueo de intentos | Hecho; sin prueba real (faltan llaves) | `apps/web/lib/auth`, `apps/web/app/admin` |
 | `@izao/core`: money, pricing (10 casos), order-state, schemas, contracts | Hecho | `packages/core/src/*` (import por subruta, p. ej. `@izao/core/pricing`) |
 | MasterShop sin red: líneas, pedido, estados, mock, cliente | Hecho; sin API real | `packages/integrations/mastershop/` |
 | Tienda: home, listado infinito, filtros, ficha, carrito, checkout, pedido | Hecho; sin probar con llaves reales | `apps/web/app/[country]`, `components/store`, `lib/store` |

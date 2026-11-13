@@ -15,7 +15,6 @@ export const RUTA_ENTRADA_PANEL = '/admin/login';
 export const TEXTOS_SUBIDA = {
   sesionVencida: 'Tu sesión venció. Vuelve a entrar al panel y sube la imagen de nuevo.',
   sesionVencidaArchivo: 'Tu sesión venció. Vuelve a entrar al panel y sube el archivo de nuevo.',
-  verificacionPendiente: 'Falta confirmar tu verificación en dos pasos. Vuelve a entrar al panel y sube la imagen de nuevo.',
   sinAcceso: 'Tu usuario ya no tiene acceso al panel. Pídele ayuda al administrador.',
   sinPermiso: 'No tienes permiso para hacer esto. Pídele ayuda al administrador.',
   pesado: 'El archivo pesa demasiado. Reduce su tamaño e inténtalo de nuevo.',
@@ -63,8 +62,6 @@ type Traduccion = { texto: string; requiereLogin: boolean };
 const POR_CODIGO: Record<string, Traduccion> = {
   'sin-sesion': { texto: TEXTOS_SUBIDA.sesionVencida, requiereLogin: true },
   'sesion-expirada': { texto: TEXTOS_SUBIDA.sesionVencida, requiereLogin: true },
-  'mfa-pendiente': { texto: TEXTOS_SUBIDA.verificacionPendiente, requiereLogin: true },
-  'mfa-no-aprobado': { texto: TEXTOS_SUBIDA.verificacionPendiente, requiereLogin: true },
   'sin-acceso': { texto: TEXTOS_SUBIDA.sinAcceso, requiereLogin: false },
   'sin-permiso': { texto: TEXTOS_SUBIDA.sinPermiso, requiereLogin: false },
 };

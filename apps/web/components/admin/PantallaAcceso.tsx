@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-/** Marco común de las pantallas de acceso: login y MFA. */
+/** Marco común de las pantallas de acceso: login. */
 export function PantallaAcceso({
   titulo,
   descripcion,

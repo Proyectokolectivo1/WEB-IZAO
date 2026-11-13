@@ -57,7 +57,7 @@ for (const caso of CASOS) {
 
     const aviso = page.getByRole('alert');
     await expect(aviso).toContainText(caso.texto);
-    await expect(aviso).not.toContainText(/sin-sesion|sin-permiso|sin-acceso|mfa-/);
+    await expect(aviso).not.toContainText(/sin-sesion|sin-permiso|sin-acceso/);
     if (caso.enlace) {
       const enlace = aviso.getByRole('link', { name: /Entrar al panel/ });
       await expect(enlace).toHaveAttribute('href', '/admin/login');

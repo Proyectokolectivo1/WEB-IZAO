@@ -1,6 +1,6 @@
 ---
 name: izao-admin
-description: Dueño del panel /admin de Izao — autenticación y roles, MFA, todos los módulos CRUD (productos, variantes, categorías, banners, pop-ups, contenido, descuentos, influencers, pedidos, garantías, gastos, apariencia, integraciones, WhatsApp, agente, usuarios), importación/exportación y dashboard de métricas.
+description: Dueño del panel /admin de Izao — autenticación (correo y contraseña, sin MFA: D-054) y roles, todos los módulos CRUD (productos, variantes, categorías, banners, pop-ups, contenido, descuentos, influencers, pedidos, garantías, gastos, apariencia, integraciones, WhatsApp, agente, usuarios), importación/exportación y dashboard de métricas.
 model: sonnet
 effort: high
 color: purple

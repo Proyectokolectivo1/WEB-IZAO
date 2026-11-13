@@ -198,7 +198,7 @@ export const ACCIONES = {
   'sistema.reintentar_job': SOLO_ADMIN,
   /** Colores, tipografía, logo y favicon, globales o por país (§8, §24.1). */
   'apariencia.gestionar': SOLO_ADMIN,
-  /** Crear usuarios del panel, cambiar rol/estado, restablecer contraseña y reiniciar el MFA (§24.1). */
+  /** Crear usuarios del panel, cambiar rol/estado, restablecer contraseña (§24.1). */
   'usuarios.gestionar': SOLO_ADMIN,
   /** Registrar, editar y borrar gastos manuales y sus categorías; exportarlos (§22, §24.1). */
   'gastos.gestionar': SOLO_ADMIN,

@@ -21,7 +21,7 @@ export default async function PaginaUsuarios() {
         </Link>
       </div>
       <p className="adm-suave">
-        Administradores y operadores del panel. Todos entran con contraseña y verificación en dos pasos.
+        Administradores y operadores del panel. Todos entran con correo y contraseña.
       </p>
       <div className="adm-tabla-caja">
         <table className="adm-tabla adm-tabla-apilada">
@@ -32,7 +32,6 @@ export default async function PaginaUsuarios() {
               <th scope="col">Correo</th>
               <th scope="col">Rol</th>
               <th scope="col">Estado</th>
-              <th scope="col">Verificación en 2 pasos</th>
               <th scope="col">Último ingreso</th>
             </tr>
           </thead>
@@ -48,7 +47,6 @@ export default async function PaginaUsuarios() {
                 <td data-etiqueta="Estado">
                   <span className={u.activo ? 'adm-insignia adm-insignia-ok' : 'adm-insignia'}>{u.activo ? 'Activo' : 'Desactivado'}</span>
                 </td>
-                <td data-etiqueta="Verificación en 2 pasos">{u.mfaActivo ? 'Activa' : <span className="adm-insignia adm-insignia-aviso">Pendiente</span>}</td>
                 <td data-etiqueta="Último ingreso" className="adm-suave">{fechaHoraBogota(u.ultimoIngreso)}</td>
               </tr>
             ))}

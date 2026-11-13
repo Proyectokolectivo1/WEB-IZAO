@@ -2,7 +2,7 @@
  * Registro en `audit_log` de los eventos de acceso (§26.1: "Auditoría de toda
  * acción del panel"). Se escribe desde el servidor con el rol de servicio.
  *
- * Nunca se guardan contraseñas, códigos TOTP ni secretos: el correo se guarda
+ * Nunca se guardan contraseñas ni secretos: el correo se guarda
  * solo como huella HMAC, para poder contar intentos fallidos sin exponerlo.
  */
 import { netosDe } from './bloqueo';
@@ -17,14 +17,7 @@ export type AccionAcceso =
   | 'login_fallido'
   | 'login_denegado'
   | 'login_bloqueado'
-  | 'logout'
-  | 'mfa_intento'
-  | 'mfa_inscripcion_iniciada'
-  | 'mfa_inscrito'
-  | 'mfa_verificado'
-  | 'mfa_no_aprobado'
-  | 'mfa_fallido'
-  | 'mfa_bloqueado';
+  | 'logout';
 
 export type EventoAuditoria = {
   /** Id del usuario de Auth, o `anonimo` si aún no se sabe quién es. */

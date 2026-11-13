@@ -25,8 +25,8 @@ describe('permisos de usuarios', () => {
   it('cada Server Action y página exige su permiso en el servidor', () => {
     const leer = (p: string) => readFileSync(path.join(RAIZ, p), 'utf8');
     const a = leer('admin/(panel)/usuarios/acciones.ts');
-    // crear, editar, restablecer contraseña y reiniciar MFA
-    expect((a.match(/adminDeAccion\('usuarios', 'usuarios\.gestionar'\)/g) ?? []).length).toBe(4);
+    // crear, editar y restablecer contraseña
+    expect((a.match(/adminDeAccion\('usuarios', 'usuarios\.gestionar'\)/g) ?? []).length).toBe(3);
     for (const p of ['page.tsx', '[id]/page.tsx']) {
       expect(leer(`admin/(panel)/usuarios/${p}`), p).toContain("requerirAdmin({ modulo: 'usuarios', accion: 'usuarios.gestionar' })");
     }

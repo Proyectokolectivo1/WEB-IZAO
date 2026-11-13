@@ -17,12 +17,10 @@ export type EntradaPlan = {
   rol?: Rol;
   /** `--activar`. */
   activar?: boolean;
-  /** `--reiniciar-mfa`: borra los factores y reabre la ventana (solo usuario existente). */
-  reiniciarMfa?: boolean;
 };
 
 export type CambioFila =
-  | { accion: 'insertar'; valores: { role: Rol; name: string; is_active: true; mfa_required: true } }
+  | { accion: 'insertar'; valores: { role: Rol; name: string; is_active: true; mfa_required: false } }
   | { accion: 'actualizar'; valores: { role?: Rol; is_active?: true } }
   | { accion: 'ninguna' };
 
@@ -33,12 +31,6 @@ export type Plan =
       crearUsuario: boolean;
       /** Usuario existente: se fija la contraseña escrita con `updateUserById`. */
       fijarContrasena: boolean;
-      /**
-       * Abre la ventana para inscribir el TOTP (ver `lib/auth/enrolamiento.ts`):
-       * solo al crear el usuario o con `--reiniciar-mfa`, no al cambiar la contraseña.
-       */
-      habilitarEnrolamiento: boolean;
-      reiniciarMfa: boolean;
       fila: CambioFila;
       avisos: string[];
     };
@@ -49,11 +41,9 @@ export function planearAdmin(e: EntradaPlan): Plan {
       tipo: 'ok',
       crearUsuario: true,
       fijarContrasena: false,
-      habilitarEnrolamiento: true,
-      reiniciarMfa: false,
       fila: {
         accion: 'insertar',
-        valores: { role: e.rol ?? 'admin', name: e.nombre, is_active: true, mfa_required: true },
+        valores: { role: e.rol ?? 'admin', name: e.nombre, is_active: true, mfa_required: false },
       },
       avisos: [],
     };
@@ -69,18 +59,15 @@ export function planearAdmin(e: EntradaPlan): Plan {
   }
 
   const avisos: string[] = [];
-  const reiniciar = e.reiniciarMfa === true;
   const actual = e.filaActual;
   if (!actual) {
     return {
       tipo: 'ok',
       crearUsuario: false,
       fijarContrasena: true,
-      habilitarEnrolamiento: reiniciar,
-      reiniciarMfa: reiniciar,
       fila: {
         accion: 'insertar',
-        valores: { role: e.rol ?? 'admin', name: e.nombre, is_active: true, mfa_required: true },
+        valores: { role: e.rol ?? 'admin', name: e.nombre, is_active: true, mfa_required: false },
       },
       avisos,
     };
@@ -100,8 +87,6 @@ export function planearAdmin(e: EntradaPlan): Plan {
     tipo: 'ok',
     crearUsuario: false,
     fijarContrasena: true,
-    habilitarEnrolamiento: reiniciar,
-    reiniciarMfa: reiniciar,
     fila: Object.keys(valores).length ? { accion: 'actualizar', valores } : { accion: 'ninguna' },
     avisos,
   };

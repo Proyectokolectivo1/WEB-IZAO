@@ -1,7 +1,7 @@
 /**
  * Protege `/admin/**` y `/api/admin/**` (§24.3, §26.1).
  *
- * Exige sesión de Supabase Auth con MFA verificado (aal2), fila activa en
+ * Exige sesión de Supabase Auth (correo y contraseña; sin segundo factor, D-053), fila activa en
  * `admin_users`, marca de sesión de 12 h vigente y un rol con acceso al módulo.
  * No toca `/api/health` ni ninguna ruta pública: el `matcher` solo cubre el panel.
  *
@@ -13,8 +13,7 @@ import { cargarContexto } from '@/lib/auth/contexto';
 import { buscarAdminPorId } from '@/lib/auth/admin-users';
 import { decidirAcceso, type Decision } from '@/lib/auth/decision';
 import { secretoSesion } from '@/lib/auth/env';
-import { NOMBRE_COOKIE_MARCA, NOMBRE_COOKIE_MARCA_MFA } from '@/lib/auth/marca-sesion';
-import { auditarMfaNoAprobada } from '@/lib/auth/mfa-no-aprobada';
+import { NOMBRE_COOKIE_MARCA } from '@/lib/auth/marca-sesion';
 import { tieneCookiesDeSesion } from '@/lib/auth/supabase/cookies';
 import { crearClienteMiddleware } from '@/lib/auth/supabase/middleware';
 import { aplicarAtribucion } from '@/lib/store/atribucion/middleware';
@@ -45,24 +44,12 @@ export async function middleware(request: NextRequest) {
         supabase,
         buscarAdmin: buscarAdminPorId,
         marca: request.cookies.get(NOMBRE_COOKIE_MARCA)?.value,
-        marcaMfa: request.cookies.get(NOMBRE_COOKIE_MARCA_MFA)?.value,
         ahoraMs: Date.now(),
         secreto: secretoSesion(),
       })
-    : { sesion: null, admin: null, sesionVigente: false, email: null, mfaNoAprobada: false, userId: undefined };
+    : { sesion: null, admin: null, sesionVigente: false, email: null, userId: undefined };
 
-  // A-3: aal2 con un factor que el servidor no aprobó. Se cierra la sesión local y se audita.
-  if (contexto.mfaNoAprobada) {
-    if (contexto.userId) {
-      await auditarMfaNoAprobada(contexto.userId, request.headers.get('x-real-ip')?.trim() ?? null);
-    }
-  }
-
-  const decision: Decision = contexto.mfaNoAprobada
-    ? esApi
-      ? { tipo: 'rechazar', status: 403, motivo: 'mfa-no-aprobado' }
-      : { tipo: 'redirigir', destino: '/admin/login?error=sin-acceso', cerrarSesion: true }
-    : decidirAcceso({
+  const decision: Decision = decidirAcceso({
     pathname: pathname + search,
     esApi,
     sesion: contexto.sesion,
@@ -81,11 +68,12 @@ export async function middleware(request: NextRequest) {
   // Conserva las cookies renovadas por Supabase durante esta petición.
   for (const cookie of obtenerRespuesta().cookies.getAll()) respuesta.cookies.set(cookie);
 
-  if (contexto.mfaNoAprobada || (decision.tipo === 'redirigir' && decision.cerrarSesion)) {
+  if (decision.tipo === 'redirigir' && decision.cerrarSesion) {
     await cerrarSesionLocal(supabase);
     for (const cookie of obtenerRespuesta().cookies.getAll()) respuesta.cookies.set(cookie);
     respuesta.cookies.delete(NOMBRE_COOKIE_MARCA);
-    respuesta.cookies.delete(NOMBRE_COOKIE_MARCA_MFA);
+    // Cookie de la MFA retirada (D-053): se limpia si quedó de una sesión anterior.
+    respuesta.cookies.delete('izao_admin_mfa');
   }
 
   respuesta.headers.set('Cache-Control', 'no-store');

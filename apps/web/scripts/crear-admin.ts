@@ -1,6 +1,6 @@
 /**
  * Crea un usuario del panel: usuario en Supabase Auth + fila en `admin_users`
- * (por defecto rol `admin`, activo, MFA requerido). Lo ejecuta el dueño.
+ * (por defecto rol `admin`, activo; entra solo con correo y contraseña). Lo ejecuta el dueño.
  *
  * Uso (desde la carpeta apps/web, con el archivo .env.local ya creado):
  *
@@ -9,8 +9,6 @@
  * Indicadores opcionales:
  *   --rol admin|operator     Rol al crear; en un usuario existente, cambia el rol.
  *   --activar                Reactiva una fila de admin_users desactivada.
- *   --reiniciar-mfa          En un usuario existente, borra sus factores TOTP y la aprobación
- *                            guardada; abre la ventana para inscribir uno nuevo (recuperación).
  *   --confirmar-existente    Confirma sin preguntar que se reemplace la contraseña
  *                            de un correo que ya existe (para ejecuciones sin teclado).
  *
@@ -27,7 +25,6 @@ import { createClient } from '@supabase/supabase-js';
 import { createInterface } from 'node:readline';
 import { Writable } from 'node:stream';
 import { parseArgs } from 'node:util';
-import { metadataHabilitarEnrolamiento } from '../lib/auth/enrolamiento';
 import { esRol } from '../lib/auth/permissions';
 import { planearAdmin, type FilaActual } from './crear-admin-plan';
 
@@ -94,7 +91,6 @@ async function main() {
       nombre: { type: 'string' },
       rol: { type: 'string' },
       activar: { type: 'boolean', default: false },
-      'reiniciar-mfa': { type: 'boolean', default: false },
       'confirmar-existente': { type: 'boolean', default: false },
     },
   });
@@ -151,7 +147,6 @@ async function main() {
     confirmarExistente: confirmar,
     ...(rol ? { rol } : {}),
     ...(values.activar ? { activar: true } : {}),
-    ...(values['reiniciar-mfa'] ? { reiniciarMfa: true } : {}),
   });
   if (plan.tipo === 'error') fallar(plan.mensaje);
 
@@ -167,7 +162,6 @@ async function main() {
       password: contrasena,
       email_confirm: true,
       user_metadata: { nombre },
-      app_metadata: metadataHabilitarEnrolamiento(Date.now()),
     });
     if (!creado.data.user) {
       fallar(`No se pudo crear el usuario: ${creado.error?.message ?? 'error desconocido'}.`);
@@ -180,25 +174,6 @@ async function main() {
       const { error } = await supabase.auth.admin.updateUserById(userId, { password: contrasena });
       if (error) fallar(`No se pudo fijar la contraseña: ${error.message}.`);
       console.log('Contraseña reemplazada en Supabase Auth.');
-    }
-    if (plan.reiniciarMfa) {
-      const factores = await supabase.auth.admin.mfa.listFactors({ userId });
-      if (factores.error) fallar(`No se pudieron listar los factores: ${factores.error.message}.`);
-      for (const factor of factores.data.factors) {
-        const { error } = await supabase.auth.admin.mfa.deleteFactor({ id: factor.id, userId });
-        if (error) fallar(`No se pudo borrar un factor: ${error.message}.`);
-      }
-      const { error } = await supabase.auth.admin.updateUserById(userId, {
-        app_metadata: { mfa_factor_aprobado: null },
-      });
-      if (error) fallar(`No se pudo limpiar la aprobación del factor: ${error.message}.`);
-      console.log(`Verificación en dos pasos reiniciada (${factores.data.factors.length} factor(es) borrado(s)).`);
-    }
-    if (plan.habilitarEnrolamiento) {
-      const { error } = await supabase.auth.admin.updateUserById(userId, {
-        app_metadata: metadataHabilitarEnrolamiento(Date.now()),
-      });
-      if (error) fallar(`No se pudo habilitar la activación del MFA: ${error.message}.`);
     }
   }
 
@@ -227,8 +202,7 @@ async function main() {
   }
 
   console.log(`\nListo: ${nombre} (${correo}).`);
-  console.log('Entra a /admin/login; si aún no tiene verificación en dos pasos, podrá activarla durante las próximas 24 horas si se acaba de crear o reiniciar.');
-  console.log('Si esa ventana vence, vuelve a ejecutar este script con --reiniciar-mfa para reabrirla.');
+  console.log('Entra a /admin/login con su correo y contraseña.');
 }
 
 main().catch((e: unknown) => {

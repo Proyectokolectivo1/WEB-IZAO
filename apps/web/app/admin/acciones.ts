@@ -6,10 +6,10 @@ import { redirect } from 'next/navigation';
 import { registrarAuditoria } from '@/lib/auth/auditoria';
 import { ipDelCliente } from '@/lib/auth/cabeceras';
 import { RUTA_TRAS_CIERRE } from '@/lib/auth/decision';
-import { NOMBRE_COOKIE_MARCA, NOMBRE_COOKIE_MARCA_MFA } from '@/lib/auth/marca-sesion';
+import { NOMBRE_COOKIE_MARCA } from '@/lib/auth/marca-sesion';
 import { crearClienteServidor } from '@/lib/auth/supabase/servidor';
 
-/** Cierra la sesión del panel (Supabase, cookies de marca y MFA, auditoría) y lleva a la home pública. */
+/** Cierra la sesión del panel (Supabase, cookie de marca, auditoría) y lleva a la home pública. */
 export async function cerrarSesion(): Promise<void> {
   const supabase = await crearClienteServidor();
   const { data } = await supabase.auth.getUser();
@@ -24,6 +24,6 @@ export async function cerrarSesion(): Promise<void> {
   await cerrarSesionLocal(supabase);
   const almacen = await cookies();
   almacen.delete(NOMBRE_COOKIE_MARCA);
-  almacen.delete(NOMBRE_COOKIE_MARCA_MFA);
+  almacen.delete('izao_admin_mfa'); // cookie de la MFA retirada (D-054), por si quedó de antes
   redirect(RUTA_TRAS_CIERRE);
 }

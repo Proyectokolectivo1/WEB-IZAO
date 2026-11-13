@@ -878,6 +878,11 @@ type Buscables = Record<string, string | string[] | undefined>;
 const primero = (v: string | string[] | undefined): string => (Array.isArray(v) ? v[0] : v) ?? '';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Texto de la confirmación de «Eliminar» (lista y edición): explica las dos salidas posibles antes de actuar. */
+export const MENSAJE_ELIMINAR = (nombre: string): string =>
+  `Vas a eliminar «${nombre}». Si ya tiene pedidos no se borra: se archiva, desaparece de la tienda, el catálogo, el buscador, el mapa del sitio y el chatbot, y su historial queda intacto (puedes restaurarlo desde el filtro «Archivados»). ` +
+  'Si no tiene pedidos, se borra para siempre con sus variantes, precios, imágenes y enlaces, y no se puede deshacer. El producto en MasterShop no se modifica.';
+
 /** Lee `?q&estado&marca&pais&page` con valores seguros. */
 export function leerFiltrosProductos(sp: Buscables): FiltrosProductos {
   const estado = primero(sp.estado);

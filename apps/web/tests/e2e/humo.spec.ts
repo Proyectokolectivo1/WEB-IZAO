@@ -45,7 +45,7 @@ test.describe('humo', () => {
 
     const alerta = page.locator('form [role="alert"]');
     await expect(alerta).toHaveText('El correo o la contraseña no son correctos.');
-    // No se avanza al panel ni a MFA, y los datos no quedan en la URL.
+    // No se avanza al panel ni a otra pantalla, y los datos no quedan en la URL.
     await expect(page).toHaveURL(/\/admin\/login/);
     expect(page.url()).not.toContain(clave);
     expect(page.url()).not.toContain('ejemplo.test');
