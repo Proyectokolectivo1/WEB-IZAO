@@ -3,8 +3,8 @@
 import { redirect } from 'next/navigation';
 import { erroresPorCampo, type ResultadoAccion } from '@/lib/admin/crud/comun';
 import { adminDeAccion } from '@/lib/admin/crud/servidor';
-import { esIdUsuario, esquemaContrasena, esquemaEdicionUsuario, esquemaNuevoUsuario } from '@/lib/admin/usuarios/usuarios';
-import { crearUsuarioBd, editarUsuarioBd, reiniciarMfaBd, restablecerContrasenaBd } from '@/lib/admin/usuarios/servidor';
+import { esquemaContrasena, esquemaEdicionUsuario, esquemaNuevoUsuario } from '@/lib/admin/usuarios/usuarios';
+import { crearUsuarioBd, editarUsuarioBd, restablecerContrasenaBd } from '@/lib/admin/usuarios/servidor';
 import { ipDelCliente } from '@/lib/auth/cabeceras';
 import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
 
@@ -56,18 +56,4 @@ export async function restablecerContrasena(_previo: ResultadoAccion, formData: 
   });
   if (!resultado.ok) return resultado;
   redirect(`/admin/usuarios/${analizado.data.id}?contrasena=1`);
-}
-
-export async function reiniciarMfa(id: string): Promise<ResultadoAccion> {
-  const entrada = await adminDeAccion('usuarios', 'usuarios.gestionar');
-  if ('error' in entrada) return entrada.error;
-  if (!esIdUsuario(id)) return { ok: false, mensaje: 'Identificador no válido.' };
-  const resultado = await reiniciarMfaBd({
-    cliente: crearClienteServicio(),
-    id,
-    actor: entrada.admin.userId,
-    ip: await ipDelCliente(),
-  });
-  if (!resultado.ok) return resultado;
-  redirect(`/admin/usuarios/${id}?mfa=1`);
 }

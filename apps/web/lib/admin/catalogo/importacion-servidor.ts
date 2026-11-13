@@ -43,6 +43,32 @@ export type ReporteImportacion = {
   ignoradas: string[];
 };
 
+export const MENSAJE_ARCHIVADO =
+  'Este producto está archivado, así que se ignora. Restáuralo desde Productos (filtro «Archivados») o elimínalo antes de importarlo.';
+
+/** Slugs (`slug`) y SKU (`sku:XXX`) del archivo que pertenecen a productos archivados. */
+async function productosArchivados(
+  cliente: Cliente,
+  productos: readonly { slug: string; skus: readonly string[] }[],
+): Promise<Map<string, true>> {
+  const marcados = new Map<string, true>();
+  const slugs = [...new Set(productos.map((p) => p.slug))];
+  const skus = [...new Set(productos.flatMap((p) => p.skus))];
+  for (let i = 0; i < slugs.length; i += LOTE) {
+    const { data } = await cliente.from('products').select('slug').eq('status', 'archived').in('slug', slugs.slice(i, i + LOTE));
+    for (const f of (data ?? []) as { slug: string }[]) marcados.set(f.slug, true);
+  }
+  for (let i = 0; i < skus.length; i += LOTE) {
+    const { data } = await cliente
+      .from('product_variants')
+      .select('sku, products!inner(status)')
+      .eq('products.status', 'archived')
+      .in('sku', skus.slice(i, i + LOTE));
+    for (const f of (data ?? []) as { sku: string }[]) marcados.set(`sku:${f.sku}`, true);
+  }
+  return marcados;
+}
+
 export type Importar = (modo: 'simular' | 'aplicar', filas: FilaImportacion[]) => Promise<ResultadoImportarCatalogo>;
 
 export async function cargarCatalogos(cliente: Cliente): Promise<Catalogos> {
@@ -76,7 +102,18 @@ export async function procesarImportacion(args: {
   if (leida.error) return { error: leida.error };
   if (leida.filas.length === 0) return { error: 'El archivo no tiene filas de productos.' };
 
-  const { productos, errores, omitidos } = construirImportacion(leida.filas, await cargarCatalogos(cliente));
+  const construido = construirImportacion(leida.filas, await cargarCatalogos(cliente));
+  const errores = [...construido.errores];
+  let omitidos = construido.omitidos;
+  // Los productos archivados se ignoran (D-055): no se actualizan ni se reviven por accidente desde un archivo.
+  const archivados = await productosArchivados(cliente, construido.productos);
+  const productos = construido.productos.filter((p) => {
+    const motivo = archivados.get(p.slug) ?? p.skus.map((sku) => archivados.get(`sku:${sku}`)).find(Boolean);
+    if (!motivo) return true;
+    errores.push({ fila: p.filas[0] ?? null, sku: p.skus[0] ?? null, mensaje: MENSAJE_ARCHIVADO });
+    omitidos += 1;
+    return false;
+  });
   const reporte: ReporteImportacion = {
     modo, productos: productos.length, creados: 0, actualizados: 0, sin_cambios: 0, omitidos,
     errores: [...errores], cambios: [], ignoradas: leida.ignoradas,
@@ -156,7 +193,7 @@ export async function exportarCatalogo(cliente: Cliente): Promise<string[][]> {
   ]);
   const salida: ProductoExportable[] = [];
   for (let desde = 0; desde < MAX_EXPORTAR; desde += LOTE) {
-    const { data, error } = await cliente.from('products').select('*').order('created_at').order('id').range(desde, desde + LOTE - 1);
+    const { data, error } = await cliente.from('products').select('*').neq('status', 'archived').order('created_at').order('id').range(desde, desde + LOTE - 1);
     if (error) throw new Error(`No se pudo exportar: ${error.message}`);
     const productos = (data ?? []) as ProductoBd['product'][];
     if (productos.length === 0) break;
@@ -234,17 +271,21 @@ export async function adjuntarImagenesPorSku(args: {
   if (analizados.length === 0) return reporte;
 
   const skus = [...new Set(analizados.map((a) => a.sku))];
-  const { data } = await cliente.from('product_variants').select('sku, product_id, products(name, slug)').in('sku', skus);
+  const { data } = await cliente
+    .from('product_variants')
+    .select('sku, product_id, products!inner(name, slug, status)')
+    .neq('products.status', 'archived')
+    .in('sku', skus);
   const productoDe = new Map<string, { id: string; name: string; slug: string }>();
   for (const v of (data ?? []) as unknown as { sku: string; product_id: string; products: { name: string; slug: string } | null }[]) {
-    if (v.products) productoDe.set(v.sku, { id: v.product_id, ...v.products });
+    if (v.products) productoDe.set(v.sku, { id: v.product_id, name: v.products.name, slug: v.products.slug });
   }
 
   const porProducto = new Map<string, { producto: { id: string; name: string; slug: string }; items: typeof analizados }>();
   for (const a of analizados) {
     const producto = productoDe.get(a.sku);
     if (!producto) {
-      reporte.errores.push({ archivo: a.nombre, mensaje: `No existe ningún SKU "${a.sku}" (se respetan mayúsculas).` });
+      reporte.errores.push({ archivo: a.nombre, mensaje: `No existe ningún SKU "${a.sku}" (se respetan mayúsculas) entre los productos que no están archivados.` });
       continue;
     }
     const g = porProducto.get(producto.id) ?? { producto, items: [] };

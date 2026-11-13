@@ -1105,7 +1105,7 @@ Ruta `/admin`, independiente del país (selector de país arriba para todo lo qu
 |---|---|
 | Dashboard | Sección 21 |
 | Pedidos | Lista con filtros (estado, estado de guía, método, país, fecha, ciudad, código, influencer, novedad), búsqueda por número/celular/documento/guía, detalle con línea de tiempo, pagos, mensajes de WhatsApp, envío y etiqueta. Acciones: reenviar cobro, copiar link, reintentar envío a MasterShop, cancelar (también en MasterShop si está en 1–2), reimprimir guía, nota interna, marcar pagado (solo `pendiente_manual`) |
-| Productos | CRUD, variantes (opciones y valores definibles por el admin), precios/stock/costo/visibilidad por país, vínculo MasterShop por variante (buscador contra `GET /api/products`), imágenes (arrastrar y soltar, reordenar, elegir principal y hover, `alt` obligatorio), SEO, duplicar, archivar. **Importar/Exportar** CSV/Excel (24.2) y carga masiva de imágenes por SKU |
+| Productos | CRUD, variantes (opciones y valores definibles por el admin), precios/stock/costo/visibilidad por país, vínculo MasterShop por variante (buscador contra `GET /api/products`), imágenes (arrastrar y soltar, reordenar, elegir principal y hover, `alt` obligatorio), SEO, duplicar, archivar, restaurar y **eliminar** (D-055: con pedidos se archiva y se conserva el historial; sin pedidos se borra en cascada; ver D-055 en DECISIONES). **Importar/Exportar** CSV/Excel (24.2) y carga masiva de imágenes por SKU |
 | Categorías | Árbol de 2 niveles con arrastrar, imagen, banner, SEO, visibilidad por país, mostrar en menú |
 | Marcas, Familias, Géneros, Concentraciones | CRUD simples |
 | Colecciones y destacados | Manuales o por regla; tabs del home; orden de destacados por arrastrar |
@@ -1124,7 +1124,7 @@ Ruta `/admin`, independiente del país (selector de país arriba para todo lo qu
 | Integraciones | Credenciales cifradas por proveedor/país/ambiente con "Probar conexión": Wompi, Addi, Sistecrédito, WhatsApp, MasterShop, OpenRouter, Meta Ads, píxeles; registro de webhooks de MasterShop con un clic |
 | Apariencia | Colores (con verificación de contraste), tipografías, logo, favicon, vista previa en vivo |
 | Agente de impresión | Estado en línea, versión, impresora, cola, reimprimir, página de prueba, capturas de error, configuración del modo panel |
-| Usuarios | Admin y operadores, MFA |
+| Usuarios | Admin y operadores; entran con correo y contraseña (sin verificación en dos pasos, D-054) |
 | Sistema | Colas, errores, backups, tamaño de base, auditoría |
 
 ### 24.2 Importación de catálogo
@@ -1159,7 +1159,7 @@ Ruta `/admin`, independiente del país (selector de país arriba para todo lo qu
 
 ### 26.1 Aplicación
 
-- Admin con MFA TOTP obligatoria (Supabase MFA) y sesión de 12 h.
+- Admin con correo y contraseña, sin verificación en dos pasos (D-054: MFA retirada por decisión del dueño), y sesión de 12 h. Siguen vigentes los roles, los permisos de §24.3, la auditoría, el bloqueo por intentos (5 por correo / 15 por IP en 15 min) y el CAPTCHA de Turnstile cuando se active.
 - Validación de entrada con `zod` en toda ruta. Consultas parametrizadas.
 - Rate limiting con Redis en login, checkout, formularios, chat y API pública.
 - Cloudflare Turnstile en formularios públicos (pop-up, reseñas, garantías, chat).
@@ -1265,7 +1265,7 @@ pnpm workspaces + Turborepo. ESLint, Prettier, TypeScript estricto.
 
 | Fase | Alcance | Criterios de aceptación |
 |---|---|---|
-| **F0 Base** | Repo, Docker, Nginx/TLS, migraciones, seed (países, monedas, regiones, ciudades, taxonomías), login admin con MFA, backups | HTTPS activo en el dominio; admin entra con MFA; backup diario generado y **restaurado** en prueba |
+| **F0 Base** | Repo, Docker, Nginx/TLS, migraciones, seed (países, monedas, regiones, ciudades, taxonomías), login admin (correo y contraseña; la MFA se retiró en D-054), backups | HTTPS activo en el dominio; admin entra con correo y contraseña; backup diario generado y **restaurado** en prueba |
 | **F1 Catálogo** | Productos, variantes, imágenes WebP, categorías, colecciones, importación, `catalog_listing`, listado infinito, filtros, búsqueda, ficha, vista rápida, hover | Con 400 productos por país de prueba: lotes de 25 sin saltos; p95 API < 120 ms; Lighthouse móvil ≥ 90; CLS < 0,1; visibilidad por país correcta |
 | **F2 Contenido y diseño** | Tema, tipografías, home por secciones, banners, anuncios, pop-ups con leads, contenido del sitio, páginas con políticas, reseñas | Todo editable sin tocar código; vista previa; contraste verificado |
 | **F3 Checkout y Wompi** | Carrito, checkout, motor de precios, descuentos, influencers, Wompi completo, página de estado, correos | Los 10 casos de 11.3 pasan; pago sandbox aprobado/rechazado/expirado se refleja; sin pedidos duplicados por doble clic |

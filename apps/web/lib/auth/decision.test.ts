@@ -7,9 +7,7 @@ import {
   type SesionAuth,
 } from './decision';
 
-const completa: SesionAuth = { userId: 'u1', aal: 'aal2', siguienteNivel: 'aal2' };
-const sinMfaInscrito: SesionAuth = { userId: 'u1', aal: 'aal1', siguienteNivel: 'aal1' };
-const mfaPorVerificar: SesionAuth = { userId: 'u1', aal: 'aal1', siguienteNivel: 'aal2' };
+const completa: SesionAuth = { userId: 'u1' };
 
 const admin: AdminInfo = { role: 'admin', isActive: true };
 const operador: AdminInfo = { role: 'operator', isActive: true };
@@ -112,68 +110,38 @@ describe('usuario en admin_users', () => {
   });
 });
 
-describe('MFA (aal)', () => {
-  it('sin factor inscrito, todo el panel lleva a inscribirlo', () => {
-    expect(decidirAcceso(entrada({ sesion: sinMfaInscrito, pathname: '/admin/pedidos' }))).toEqual({
-      tipo: 'redirigir',
-      destino: '/admin/mfa/inscribir',
-    });
+describe('sin segundo factor (D-054)', () => {
+  it('con sesión, usuario activo y marca vigente, el panel se permite sin pantallas intermedias', () => {
+    expect(decidirAcceso(entrada({ pathname: '/admin/pedidos' }))).toEqual({ tipo: 'permitir' });
+    expect(decidirAcceso(entrada({ esApi: true, pathname: '/api/admin/x' }))).toEqual({ tipo: 'permitir' });
   });
 
-  it('sin factor inscrito, la pantalla de inscripción se permite', () => {
-    expect(decidirAcceso(entrada({ sesion: sinMfaInscrito, pathname: '/admin/mfa/inscribir' }))).toEqual({
-      tipo: 'permitir',
-    });
-  });
-
-  it('sin factor inscrito, no se puede ir a la verificación', () => {
-    expect(decidirAcceso(entrada({ sesion: sinMfaInscrito, pathname: '/admin/mfa/verificar' }))).toEqual({
-      tipo: 'redirigir',
-      destino: '/admin/mfa/inscribir',
-    });
-  });
-
-  it('con factor sin verificar en esta sesión, lleva a verificar', () => {
-    expect(decidirAcceso(entrada({ sesion: mfaPorVerificar, pathname: '/admin' }))).toEqual({
-      tipo: 'redirigir',
-      destino: '/admin/mfa/verificar',
-    });
-  });
-
-  it('con factor sin verificar, no se puede reinscribir otro', () => {
-    expect(decidirAcceso(entrada({ sesion: mfaPorVerificar, pathname: '/admin/mfa/inscribir' }))).toEqual({
-      tipo: 'redirigir',
-      destino: '/admin/mfa/verificar',
-    });
-  });
-
-  it('con factor sin verificar, la pantalla de verificación se permite', () => {
-    expect(decidirAcceso(entrada({ sesion: mfaPorVerificar, pathname: '/admin/mfa/verificar' }))).toEqual({
-      tipo: 'permitir',
-    });
-  });
-
-  it('la API exige aal2: con aal1 responde 403', () => {
-    expect(decidirAcceso(entrada({ sesion: mfaPorVerificar, esApi: true, pathname: '/api/admin/x' }))).toEqual({
-      tipo: 'rechazar',
-      status: 403,
-      motivo: 'mfa-pendiente',
-    });
-  });
-
-  it('con aal2, las pantallas de MFA y el login llevan al inicio', () => {
-    for (const pathname of ['/admin/mfa/verificar', '/admin/mfa/inscribir', '/admin/login']) {
-      expect(decidirAcceso(entrada({ pathname }))).toEqual({ tipo: 'redirigir', destino: '/admin' });
+  it('las rutas de MFA ya no existen: un marcador viejo lleva al inicio, y sin sesión al login', () => {
+    for (const pathname of ['/admin/mfa/verificar', '/admin/mfa/inscribir']) {
+      expect(decidirAcceso(entrada({ pathname })), pathname).toEqual({ tipo: 'redirigir', destino: '/admin' });
+      expect(decidirAcceso(entrada({ pathname, sesion: null, admin: null }))).toMatchObject({ tipo: 'redirigir' });
     }
   });
 
-  it('aal1 con el rol de operador tampoco pasa', () => {
-    expect(decidirAcceso(entrada({ sesion: mfaPorVerificar, admin: operador, pathname: '/admin/pedidos' })))
-      .toMatchObject({ tipo: 'redirigir', destino: '/admin/mfa/verificar' });
+  it('el login no vuelve a las pantallas de MFA retiradas', () => {
+    expect(rutaSiguienteSegura('/admin/mfa/verificar')).toBe('/admin');
+    expect(rutaSiguienteSegura('/admin/mfa/inscribir?x=1')).toBe('/admin');
+  });
+
+  it('con sesión, el login lleva al inicio', () => {
+    expect(decidirAcceso(entrada({ pathname: '/admin/login' }))).toEqual({ tipo: 'redirigir', destino: '/admin' });
+  });
+
+  it('el rol de operador sigue limitado por módulo', () => {
+    expect(decidirAcceso(entrada({ admin: operador, pathname: '/admin/pedidos' }))).toEqual({ tipo: 'permitir' });
+    expect(decidirAcceso(entrada({ admin: operador, pathname: '/admin/productos' }))).toEqual({
+      tipo: 'redirigir',
+      destino: '/admin/sin-permiso',
+    });
   });
 });
 
-describe('rol y módulo (aal2, activo, vigente)', () => {
+describe('rol y módulo (activo, vigente)', () => {
   it('el administrador entra a todo, incluidas rutas futuras', () => {
     for (const pathname of ['/admin', '/admin/pedidos', '/admin/productos', '/admin/usuarios', '/admin/modulo-futuro']) {
       expect(decidirAcceso(entrada({ pathname })), pathname).toEqual({ tipo: 'permitir' });
@@ -240,6 +208,5 @@ describe('rutaSiguienteSegura', () => {
 
   it('no vuelve a las pantallas de acceso', () => {
     expect(rutaSiguienteSegura('/admin/login')).toBe('/admin');
-    expect(rutaSiguienteSegura('/admin/mfa/verificar')).toBe('/admin');
   });
 });

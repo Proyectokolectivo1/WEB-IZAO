@@ -11,7 +11,7 @@ import {
   mensajeSinConexion,
 } from './mensaje-subida';
 
-const CODIGOS = ['sin-sesion', 'sin-acceso', 'sin-permiso', 'mfa-pendiente', 'mfa-no-aprobado', 'sesion-expirada'];
+const CODIGOS = ['sin-sesion', 'sin-acceso', 'sin-permiso', 'sesion-expirada'];
 
 describe('mensajeDeSubida', () => {
   it('401 y sin-sesion: sesión vencida con enlace al login, sin el código', () => {
@@ -26,11 +26,9 @@ describe('mensajeDeSubida', () => {
     }
   });
 
-  it('403: acceso, permiso y verificación en dos pasos', () => {
+  it('403: acceso y permiso', () => {
     expect(mensajeDeSubida({ status: 403, cuerpo: { error: 'sin-permiso' } })).toEqual({ texto: TEXTOS_SUBIDA.sinPermiso, requiereLogin: false });
     expect(mensajeDeSubida({ status: 403, cuerpo: { error: 'sin-acceso' } })).toEqual({ texto: TEXTOS_SUBIDA.sinAcceso, requiereLogin: false });
-    expect(mensajeDeSubida({ status: 403, cuerpo: { error: 'mfa-pendiente' } })).toEqual({ texto: TEXTOS_SUBIDA.verificacionPendiente, requiereLogin: true });
-    expect(mensajeDeSubida({ status: 403, cuerpo: { error: 'mfa-no-aprobado' } }).requiereLogin).toBe(true);
     expect(mensajeDeSubida({ status: 403, cuerpo: null }).texto).toBe(TEXTOS_SUBIDA.sinPermiso);
   });
 

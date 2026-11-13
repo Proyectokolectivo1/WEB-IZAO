@@ -4,11 +4,17 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { BotonConfirmar } from '@/components/admin/BotonConfirmar';
 import { FormularioProducto } from '@/components/admin/FormularioProducto';
-import { productoNuevo } from '@/lib/admin/catalogo/productos';
+import { MENSAJE_ELIMINAR, productoNuevo } from '@/lib/admin/catalogo/productos';
 import { obtenerProductoForm, opcionesFormulario } from '@/lib/admin/catalogo/productos-servidor';
 import { requerirAdmin } from '@/lib/auth/guard';
 import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
-import { archivarProductoAccion, duplicarProductoAccion, guardarProductoAccion } from '../acciones';
+import {
+  archivarProductoAccion,
+  duplicarProductoAccion,
+  eliminarProductoAccion,
+  guardarProductoAccion,
+  restaurarProductoAccion,
+} from '../acciones';
 
 export const metadata: Metadata = { title: 'Editar producto' };
 
@@ -39,6 +45,12 @@ export default async function EditarProducto({
       </p>
       <h1>{nuevo ? 'Nuevo producto' : 'Editar producto'}</h1>
       {sp.guardado ? <p className="adm-ok" role="status">Cambios guardados.</p> : null}
+      {sp.restaurado ? <p className="adm-ok" role="status">Producto restaurado como borrador. Revísalo y publícalo cuando esté listo.</p> : null}
+      {producto?.status === 'archived' ? (
+        <p className="adm-alerta" role="status">
+          Este producto está archivado: no se muestra en la tienda, el catálogo, el buscador ni el chatbot. Restáuralo para volver a trabajarlo.
+        </p>
+      ) : null}
       {sp.duplicado ? (
         <p className="adm-ok" role="status">
           Copia creada como borrador. Cambia el SKU y vincula las variantes antes de publicarla.
@@ -60,6 +72,15 @@ export default async function EditarProducto({
             peligro={false}
             accion={duplicarProductoAccion.bind(null, producto.id)}
           />
+          {producto.status === 'archived' ? (
+            <BotonConfirmar
+              etiqueta="Restaurar producto"
+              mensaje={`«${producto.name}» vuelve como borrador, oculto en todos los países. Revísalo y publícalo cuando esté listo.`}
+              etiquetaConfirmar="Sí, restaurar"
+              peligro={false}
+              accion={restaurarProductoAccion.bind(null, producto.id)}
+            />
+          ) : null}
           {producto.status !== 'archived' ? (
             <BotonConfirmar
               etiqueta="Archivar producto"
@@ -68,6 +89,12 @@ export default async function EditarProducto({
               accion={archivarProductoAccion.bind(null, producto.id)}
             />
           ) : null}
+          <BotonConfirmar
+            etiqueta="Eliminar producto"
+            mensaje={MENSAJE_ELIMINAR(producto.name)}
+            etiquetaConfirmar="Sí, eliminar"
+            accion={eliminarProductoAccion.bind(null, producto.id)}
+          />
         </section>
       ) : null}
     </>

@@ -1,7 +1,7 @@
 /**
  * Páginas de ejemplo del panel como HTML estático, con las mismas clases y la misma estructura que las páginas reales
  * (pedidos, productos, agente, inicio, métricas, edición de producto). Sirven para medir el diseño adaptable sin sesión
- * de administrador: el panel real exige Supabase Auth + MFA, y el Supabase falso de las pruebas no lo simula.
+ * de administrador: el panel real exige Supabase Auth, y el Supabase falso de las pruebas no lo simula.
  *
  * Si cambias el marcado de una de esas páginas, cambia también su ejemplo aquí.
  */

@@ -28,7 +28,7 @@ vi.mock('@/lib/auth/supabase/servidor', () => ({
 }));
 
 import { cerrarSesion } from './acciones';
-import { NOMBRE_COOKIE_MARCA, NOMBRE_COOKIE_MARCA_MFA } from '@/lib/auth/marca-sesion';
+import { NOMBRE_COOKIE_MARCA } from '@/lib/auth/marca-sesion';
 import { RUTA_LOGIN, RUTA_TRAS_CIERRE } from '@/lib/auth/decision';
 
 describe('cerrarSesion (cierre voluntario del panel)', () => {
@@ -44,10 +44,10 @@ describe('cerrarSesion (cierre voluntario del panel)', () => {
     expect(RUTA_TRAS_CIERRE).not.toBe(RUTA_LOGIN);
   });
 
-  it('audita, cierra la sesión local, borra las cookies de marca y MFA y redirige a la home', async () => {
+  it('audita, cierra la sesión local, borra la cookie de marca (y la de MFA que pudo quedar) y redirige a la home', async () => {
     await expect(cerrarSesion()).rejects.toThrow('NEXT_REDIRECT');
     expect(orden).toEqual(['auditoria:logout:usuario-1', 'signOut:{"scope":"local"}']);
-    expect(borradas.sort()).toEqual([NOMBRE_COOKIE_MARCA, NOMBRE_COOKIE_MARCA_MFA].sort());
+    expect(borradas.sort()).toEqual([NOMBRE_COOKIE_MARCA, 'izao_admin_mfa'].sort());
     expect(redirecciones).toEqual(['/']);
   });
 

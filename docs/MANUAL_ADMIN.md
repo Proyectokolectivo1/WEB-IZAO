@@ -30,16 +30,13 @@ Desde la carpeta `apps/web`:
 pnpm crear-admin -- --correo tu-correo@ejemplo.com --nombre "Tu Nombre"
 ```
 
-El script pide la contraseña dos veces sin mostrarla (mínimo 12 caracteres). Crea el usuario en Supabase Auth, lo registra en `admin_users` como administrador activo con MFA requerido y deja una entrada en la auditoría. Si el correo ya existe en Auth, el script lo avisa, muestra su rol y estado actuales y pide que escribas SI antes de reemplazar su contraseña por la que digitaste (sin interacción: `--confirmar-existente`). Nunca cambia el rol ni reactiva a un usuario desactivado por su cuenta: para eso hay que indicarlo con `--rol admin|operator` o `--activar`. Sin esos indicadores, `admin_users` queda como estaba.
+El script pide la contraseña dos veces sin mostrarla (mínimo 12 caracteres). Crea el usuario en Supabase Auth, lo registra en `admin_users` como administrador activo y deja una entrada en la auditoría. Si el correo ya existe en Auth, el script lo avisa, muestra su rol y estado actuales y pide que escribas SI antes de reemplazar su contraseña por la que digitaste (sin interacción: `--confirmar-existente`). Nunca cambia el rol ni reactiva a un usuario desactivado por su cuenta: para eso hay que indicarlo con `--rol admin|operator` o `--activar`. Sin esos indicadores, `admin_users` queda como estaba.
 
-### 3. Ingresar y activar la verificación en dos pasos
+### 3. Ingresar
 
 1. Desde la raíz del repositorio ejecuta `pnpm --filter @izao/web dev` y abre `http://localhost:3000/admin`.
 2. Te lleva a `/admin/login`. Escribe tu correo y tu contraseña.
-3. Como aún no tienes verificación en dos pasos, aparece "Activa la verificación en dos pasos". Pulsa "Generar código QR", escanéalo con una aplicación de autenticación (Google Authenticator, Microsoft Authenticator, Aegis) y escribe el código de 6 dígitos. Guarda la clave de texto que se muestra debajo del QR en un lugar seguro: sirve para recuperar el acceso si pierdes el teléfono.
-
-   La activación solo se puede hacer durante las 24 horas siguientes a que `crear-admin` creó la cuenta (o la reinició con `--reiniciar-mfa`): así, alguien que solo conozca la contraseña no puede registrar su propio autenticador. Además, el panel solo acepta el autenticador que él mismo registró y aprobó: un autenticador inscrito por otro camino (por ejemplo, llamando directo a Supabase con la contraseña) no abre el panel y deja la entrada `mfa_no_aprobado` en la auditoría. Si algún día hay que reiniciar la verificación de un usuario (perdió el teléfono, o aparece `mfa_no_aprobado` sin explicación), ejecuta `pnpm crear-admin -- --correo <correo> --nombre "<nombre>" --reiniciar-mfa` y confirma con SI: borra sus autenticadores y reabre la ventana. La ventana no se reabre al cambiar solo la contraseña de un usuario existente. Si vence, la pantalla dice "Activación no habilitada"; ejecuta `pnpm crear-admin -- --correo <correo> --nombre "<nombre>" --reiniciar-mfa` (confirmando con SI) para reabrirla. La ventana se cierra sola al terminar la activación.
-4. Entras al inicio del panel. Desde ese momento, cada ingreso pide la contraseña y un código nuevo.
+3. Entras al inicio del panel. El panel NO pide verificación en dos pasos (D-054: el dueño la retiró). La seguridad del acceso depende de la contraseña, así que usa una larga y única, activa el CAPTCHA de Turnstile (ver «Endurecer Supabase») y no compartas la cuenta. Si una persona tenía un autenticador inscrito de antes, entra igual con su contraseña.
 
 ### 4. Qué comprobar
 
@@ -63,7 +60,7 @@ Ahora mismo no existe aún el módulo Usuarios. Para probar al operador, con el 
 pnpm crear-admin -- --correo operador@ejemplo.com --nombre "Operador de prueba" --rol operator
 ```
 
-El script crea el usuario y abre una ventana de 24 horas para que active su verificación en dos pasos (ver el paso 3). Ingresa con ese usuario, actívala y comprueba que solo ve Pedidos, Garantías y Agente de impresión, y que `/admin/productos` o `/admin/usuarios` lo llevan a "No tienes permiso para esta sección".
+El script crea el usuario. Ingresa con ese usuario y comprueba que solo ve Pedidos, Garantías y Agente de impresión, y que `/admin/productos` o `/admin/usuarios` lo llevan a "No tienes permiso para esta sección".
 
 ### 6. Revisar la auditoría
 
@@ -99,7 +96,7 @@ El panel bloquea 15 minutos después de 5 contraseñas incorrectas por correo (1
 
 Pero la llave publicable de Supabase es pública por diseño, así que cualquiera puede llamar directamente a `/auth/v1/token` (contraseña) y a `/auth/v1/factors/.../verify` (código) sin pasar por el panel. El bloqueo de la aplicación no cubre ese camino. Por eso, en Supabase (proyecto `wyxjmlgrcjclelbrluvd`) revisa:
 
-1. **Authentication > Rate Limits**: baja al mínimo razonable los límites de inicio de sesión (sign-ups and sign-ins), de verificación de tokens y de verificación MFA, que Supabase aplica por IP.
+1. **Authentication > Rate Limits**: baja al mínimo razonable los límites de inicio de sesión (sign-ups and sign-ins), y de verificación de tokens, que Supabase aplica por IP.
 2. **Authentication > Attack Protection**: activa la protección con CAPTCHA (Cloudflare Turnstile) para el inicio de sesión. Cuando se active, el formulario del panel deberá enviar el token del CAPTCHA; avísale al equipo para que lo incorpore.
 3. **Authentication > Sign In / Providers > Email**: exige contraseñas de al menos 12 caracteres y activa la protección contra contraseñas filtradas si tu plan la ofrece.
 4. **Verifica que los límites por IP de Supabase Auth no se agoten:** todos los `signInWithPassword` del panel (y las verificaciones de código) salen desde la IP del VPS, no desde la de cada persona. Supabase aplica sus límites de inicio de sesión y de verificación por IP, así que una ráfaga de intentos contra el panel (o varias personas ingresando a la vez) podría agotar el límite y bloquear temporalmente a los usuarios legítimos. Al configurar los límites del punto 1, comprueba que el valor por IP sea suficiente para el uso normal del equipo y revisa en Authentication > Logs si aparecen errores `over_request_rate_limit`. El bloqueo propio del panel (5 intentos por correo, 15 por IP, 5 códigos por usuario) corta los intentos mucho antes de llegar a ese límite.
@@ -107,7 +104,7 @@ Pero la llave publicable de Supabase es pública por diseño, así que cualquier
 
 Pendientes de otros equipos (no los hace el dueño):
 
-- Regla `limit_req` de Nginx para `/admin/login` y `/admin/mfa/*` (la configura infraestructura).
+- Regla `limit_req` de Nginx para `/admin/login` (la configura infraestructura; la regla de `/admin/mfa/*` ya no aplica).
 - Límite de intentos con Redis en el login, el checkout y los formularios (§26.1): tarea futura. Cuando exista, se suma al bloqueo actual, que se queda como segunda barrera.
 
 ## Notas técnicas para el equipo
@@ -115,4 +112,4 @@ Pendientes de otros equipos (no los hace el dueño):
 - Todo el flujo de autenticación ocurre en el servidor (Server Actions); el navegador no recibe la llave secreta ni la de servicio.
 - El middleware protege `/admin/**` y `/api/admin/**`. No afecta a `/api/health` ni a la tienda.
 - La tabla de permisos está en `apps/web/lib/auth/permissions.ts`. Cada módulo nuevo se agrega ahí y sus páginas y Server Actions llaman a `requerirAdmin({ modulo, accion })` de `apps/web/lib/auth/guard.ts`.
-- La Política de seguridad de contenido (CSP) de Nginx debe permitir `img-src data:` en `/admin`: el código QR del MFA llega como imagen en `data:`.
+- La CSP de Nginx permite `img-src data:` en `/admin` por las miniaturas con marcador de baja resolución; ya no hace falta por el QR del MFA (retirado).

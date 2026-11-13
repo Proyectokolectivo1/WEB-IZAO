@@ -1,7 +1,7 @@
 /**
  * Panel /admin adaptable (celular 375 px, tablet 768 px y escritorio 1440 px).
  *
- * El panel real exige Supabase Auth + MFA y el Supabase falso de las pruebas no simula esa sesión, así que aquí se arma
+ * El panel real exige Supabase Auth y el Supabase falso de las pruebas no simula esa sesión, así que aquí se arma
  * cada pantalla en el navegador con: el CSS real del panel (los archivos fuente), el `CascaronAdmin` REAL (menú y barra,
  * empaquetado con esbuild con `next/link` y `next/navigation` sustituidos) y páginas de ejemplo con el marcado de las
  * páginas reales (`support/panel-fixtures.ts`). Se mide lo que se puede medir así: desborde horizontal, objetivos táctiles,

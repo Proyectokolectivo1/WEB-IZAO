@@ -1,7 +1,7 @@
 /**
  * Carrusel de banners y su formulario de ajustes, con datos que la tienda de ejemplo no trae: una sola imagen, tiempos
  * distintos y validación del tiempo. Se montan los componentes REALES (`CarruselBanners` → `Hero`/`BannerFijo` y
- * `FormularioCarrusel`) empaquetados con esbuild; el panel completo exige sesión con MFA.
+ * `FormularioCarrusel`) empaquetados con esbuild; el panel completo exige sesión de administrador.
  */
 import path from 'node:path';
 import { build } from 'esbuild';

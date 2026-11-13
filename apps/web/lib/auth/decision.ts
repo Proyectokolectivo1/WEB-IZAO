@@ -1,6 +1,6 @@
 /**
  * Lógica de decisión del acceso al panel (§24.3, §26.1). Función pura: recibe lo
- * que el middleware ya averiguó (sesión, nivel de MFA, fila de `admin_users`) y
+ * que el middleware ya averiguó (sesión, fila de `admin_users`) y
  * devuelve qué hacer. No toca red, cookies ni entorno, así que se prueba con
  * datos simulados.
  */
@@ -13,22 +13,14 @@ export const RUTA_LOGIN = '/admin/login';
  * La sesión expirada o sin acceso sigue yendo al login con su aviso.
  */
 export const RUTA_TRAS_CIERRE = '/';
-export const RUTA_MFA_INSCRIBIR = '/admin/mfa/inscribir';
-export const RUTA_MFA_VERIFICAR = '/admin/mfa/verificar';
 export const RUTA_INICIO = '/admin';
 export const RUTA_SIN_PERMISO = '/admin/sin-permiso';
 
 /** Duración máxima de la sesión del panel (§26.1). */
 export const DURACION_SESION_MS = 12 * 60 * 60 * 1000;
 
-export type Aal = 'aal1' | 'aal2';
-
 export type SesionAuth = {
   userId: string;
-  /** Nivel alcanzado en esta sesión. `aal2` = MFA verificado. */
-  aal: Aal;
-  /** Nivel posible: `aal2` si el usuario ya tiene un factor TOTP verificado. */
-  siguienteNivel: Aal;
 };
 
 export type AdminInfo = {
@@ -56,7 +48,9 @@ export type Decision =
 export type MotivoLogin = 'sin-acceso' | 'sesion-expirada';
 
 const PATRON_SIGUIENTE = /^\/admin(?:\/[\w\-.~%/]*)?(?:\?[\w\-.~%=&+,/]*)?$/;
-const RUTAS_DE_ACCESO = [RUTA_LOGIN, RUTA_MFA_INSCRIBIR, RUTA_MFA_VERIFICAR];
+const RUTAS_DE_ACCESO = [RUTA_LOGIN];
+/** Pantallas de la verificación en dos pasos, retiradas (D-054). Un marcador viejo cae en el inicio, no en un 404. */
+const PREFIJO_MFA_RETIRADA = '/admin/mfa';
 
 /**
  * Valida el destino al que volver tras iniciar sesión. Solo rutas internas de
@@ -68,8 +62,12 @@ export function rutaSiguienteSegura(valor: string | null | undefined): string {
   if (!PATRON_SIGUIENTE.test(valor)) return RUTA_INICIO;
   if (valor.includes('//') || valor.includes('..')) return RUTA_INICIO;
   const soloRuta = valor.split('?')[0] ?? '';
-  if (RUTAS_DE_ACCESO.includes(soloRuta)) return RUTA_INICIO;
+  if (RUTAS_DE_ACCESO.includes(soloRuta) || esRutaMfaRetirada(soloRuta)) return RUTA_INICIO;
   return valor;
+}
+
+function esRutaMfaRetirada(ruta: string): boolean {
+  return ruta === PREFIJO_MFA_RETIRADA || ruta.startsWith(`${PREFIJO_MFA_RETIRADA}/`);
 }
 
 function hacia(destino: string, cerrarSesion = false): Decision {
@@ -94,11 +92,10 @@ export function decidirAcceso(entrada: EntradaDecision): Decision {
   const ruta = soloRuta(entrada.pathname);
 
   const adminValido = admin !== null && admin.isActive && esRol(admin.role);
-  const mfaCompleta = sesion !== null && sesion.aal === 'aal2';
 
-  // 1. Pantalla de login: pública, salvo que ya haya una sesión completa.
+  // 1. Pantalla de login: pública, salvo que ya haya una sesión válida.
   if (!esApi && ruta === RUTA_LOGIN) {
-    if (sesion && sesionVigente && adminValido && mfaCompleta) return hacia(RUTA_INICIO);
+    if (sesion && sesionVigente && adminValido) return hacia(RUTA_INICIO);
     return { tipo: 'permitir' };
   }
 
@@ -117,19 +114,10 @@ export function decidirAcceso(entrada: EntradaDecision): Decision {
     return hacia(aLogin('sin-acceso'), true);
   }
 
-  // 4. MFA pendiente: solo se permite la pantalla que corresponde.
-  if (!mfaCompleta) {
-    if (esApi) return { tipo: 'rechazar', status: 403, motivo: 'mfa-pendiente' };
-    const pendiente = sesion.siguienteNivel === 'aal2' ? RUTA_MFA_VERIFICAR : RUTA_MFA_INSCRIBIR;
-    return ruta === pendiente ? { tipo: 'permitir' } : hacia(pendiente);
-  }
+  // 4. Las pantallas de MFA ya no existen: quien llegue por un marcador viejo va al inicio.
+  if (!esApi && esRutaMfaRetirada(ruta)) return hacia(RUTA_INICIO);
 
-  // 5. Sesión completa: las pantallas de MFA ya no aplican.
-  if (!esApi && (ruta === RUTA_MFA_INSCRIBIR || ruta === RUTA_MFA_VERIFICAR)) {
-    return hacia(RUTA_INICIO);
-  }
-
-  // 6. Rol y módulo (§24.3). Las rutas desconocidas exigen `admin`.
+  // 5. Rol y módulo (§24.3). Las rutas desconocidas exigen `admin`.
   if (!puedeVerRuta(admin.role as Rol, ruta)) {
     if (esApi) return { tipo: 'rechazar', status: 403, motivo: 'sin-permiso' };
     return hacia(RUTA_SIN_PERMISO);

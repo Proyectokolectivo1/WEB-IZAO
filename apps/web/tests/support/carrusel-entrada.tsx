@@ -1,7 +1,7 @@
 /**
  * Entrada que esbuild empaqueta para `e2e/carrusel-componentes.spec.ts`: monta en el navegador el `CarruselBanners` REAL de
  * la tienda (con su `Hero`) y el `FormularioCarrusel` REAL del panel, con datos que la tienda de ejemplo no trae (una sola
- * imagen, tiempos distintos). El panel completo exige sesión con MFA, que el Supabase falso no simula.
+ * imagen, tiempos distintos). El panel completo exige sesión de administrador, que el Supabase falso no simula.
  */
 import { createRoot } from 'react-dom/client';
 import { CarruselBanners } from '@/components/store/CarruselBanners';

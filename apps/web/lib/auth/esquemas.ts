@@ -1,5 +1,5 @@
 /**
- * Esquemas de entrada del login y del MFA. Se usan en el servidor (Server
+ * Esquemas de entrada del login. Se usan en el servidor (Server
  * Actions) y pueden importarse en el cliente para validar antes de enviar.
  */
 import { z } from 'zod';
@@ -21,17 +21,8 @@ export const esquemaLogin = z.object({
   captchaToken: z.string().max(2048).optional(),
 });
 
-export const esquemaCodigoTotp = z.object({
-  codigo: z
-    .string({ error: 'Escribe el código de 6 dígitos.' })
-    .trim()
-    .regex(/^\d{6}$/, 'El código tiene 6 dígitos.'),
-  factorId: z.uuid().optional(),
-  siguiente: z.string().max(300).optional(),
-});
-
 export type EstadoFormulario = {
   error?: string;
   /** Errores por campo. */
-  campos?: Partial<Record<'correo' | 'contrasena' | 'codigo', string>>;
+  campos?: Partial<Record<'correo' | 'contrasena', string>>;
 };

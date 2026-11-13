@@ -54,6 +54,14 @@ describe('crearFuenteVinculacionPostgrest (D-052)', () => {
     expect(llamadas.some((l) => l.url.includes('/product_variants?'))).toBe(false);
   });
 
+  it('ignora los productos archivados: la consulta los excluye (D-055)', async () => {
+    const { f, llamadas } = fetchFalso(() => ({ status: 200, cuerpo: [] }));
+    await crearFuenteVinculacionPostgrest({ ...OPC, fetchImpl: f }).variantes('CO');
+    const url = decodeURIComponent(llamadas[0]!.url);
+    expect(url).toContain('products!inner(name,status)');
+    expect(url).toContain('product_variants.products.status=neq.archived');
+  });
+
   it('la llave es la del país', async () => {
     const { f, llamadas } = fetchFalso(() => ({ status: 200, cuerpo: [] }));
     expect(await crearFuenteVinculacionPostgrest({ ...OPC, fetchImpl: f }).credenciales('EC')).toBeNull();

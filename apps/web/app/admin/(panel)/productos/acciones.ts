@@ -3,7 +3,7 @@
 import { randomUUID } from 'node:crypto';
 import { redirect } from 'next/navigation';
 import { esquemaProductoForm } from '@/lib/admin/catalogo/productos';
-import { archivarProductoBd, duplicarProductoBd, guardarProductoPanel } from '@/lib/admin/catalogo/productos-servidor';
+import { archivarProductoBd, duplicarProductoBd, eliminarProductoBd, guardarProductoPanel, restaurarProductoBd } from '@/lib/admin/catalogo/productos-servidor';
 import { erroresPorCampo, type ResultadoAccion } from '@/lib/admin/crud/comun';
 import { adminDeAccion } from '@/lib/admin/crud/servidor';
 import { ipDelCliente } from '@/lib/auth/cabeceras';
@@ -66,4 +66,33 @@ export async function archivarProductoAccion(id: string): Promise<ResultadoAccio
   });
   if (!resultado.ok) return resultado;
   redirect('/admin/productos?archivado=1');
+}
+
+/** Eliminar (D-055): con pedidos se archiva; sin pedidos se borra. La lista muestra qué pasó. */
+export async function eliminarProductoAccion(id: string): Promise<ResultadoAccion> {
+  const entrada = await adminDeAccion('productos', 'catalogo.gestionar');
+  if ('error' in entrada) return entrada.error;
+  if (!UUID.test(id)) return { ok: false, mensaje: 'Identificador no válido.' };
+  const resultado = await eliminarProductoBd({
+    id,
+    cliente: crearClienteServicio(),
+    actor: entrada.admin.userId,
+    ip: await ipDelCliente(),
+  });
+  if (!resultado.ok) return resultado;
+  redirect(resultado.accion === 'eliminado' ? '/admin/productos?eliminado=1' : `/admin/productos?conservado=${resultado.pedidos}`);
+}
+
+export async function restaurarProductoAccion(id: string): Promise<ResultadoAccion> {
+  const entrada = await adminDeAccion('productos', 'catalogo.gestionar');
+  if ('error' in entrada) return entrada.error;
+  if (!UUID.test(id)) return { ok: false, mensaje: 'Identificador no válido.' };
+  const resultado = await restaurarProductoBd({
+    id,
+    cliente: crearClienteServicio(),
+    actor: entrada.admin.userId,
+    ip: await ipDelCliente(),
+  });
+  if (!resultado.ok) return resultado;
+  redirect(`/admin/productos/${id}?restaurado=1`);
 }
