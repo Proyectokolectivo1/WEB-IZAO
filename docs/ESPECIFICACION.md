@@ -222,7 +222,7 @@ El plan gratuito no incluye respaldos automáticos útiles, tiene 500 MB de base
 
 - `countries` (`code` PK `'CO'|'EC'`, `name`, `currency_code`, `locale`, `timezone`, `is_active`, `phone_prefix`)
 - `currencies` (`code` PK, `exponent`, `symbol`, `format_pattern`)
-- `country_settings` (`country_code` PK/FK, `cod_enabled`, `cod_deposit_amount`, `cod_min_collect_amount`, `cod_link_ttl_hours` = 24, `cod_reminder_offsets_minutes` int[] = `{180, 720, 1260}`, `financing_surcharge_pct` jsonb por proveedor `{"addi":10,"sistecredito":10}`, `pending_payment_ttl_minutes` = 60, `advisor_whatsapp`, `support_email`, `announcement_rotation_seconds`, `fx_rate_to_cop` para consolidar métricas, `carrier_provider` `'mastershop'|null`)
+- `country_settings` (`country_code` PK/FK, `cod_enabled`, `cod_deposit_amount`, `cod_min_collect_amount`, `cod_link_ttl_hours` = 24, `cod_reminder_offsets_minutes` int[] = `{180, 720, 1260}`, `financing_surcharge_pct` jsonb por proveedor `{"addi":10,"sistecredito":10}`, `pending_payment_ttl_minutes` = 60, `advisor_whatsapp` (solo dígitos con código de país; lo usan el botón flotante, Iza y el pie), `advisor_whatsapp_message` (mensaje prellenado del botón; null = el de por defecto), `advisor_whatsapp_button_enabled` (enciende o apaga el botón flotante del país), `support_email`, `announcement_rotation_seconds`, `fx_rate_to_cop` para consolidar métricas, `carrier_provider` `'mastershop'|null`)
 - `site_settings` (fila única: nombre de tienda, logo, favicon, tokens de color, pareja tipográfica, redes sociales, textos legales base)
 - `theme_overrides` (`country_code`, tokens jsonb)
 - `regions` (`id`, `country_code`, `name`, `code`)
@@ -958,6 +958,7 @@ Cada transición escribe en `order_events`. El panel de pedidos muestra una lín
 - Respuestas en *streaming*.
 - Cuando recomienda productos, muestra **tarjetas dentro del chat**: imagen, nombre, presentación, precio del país, botón **"Comprar"** (agrega la variante por defecto o abre el selector de variante y lleva al checkout) y "Ver detalle".
 - Botón permanente "Hablar con un asesor" que abre WhatsApp con el número del asesor del país y un mensaje prellenado con el contexto de la conversación.
+- **Botón flotante de WhatsApp (toda la tienda):** enlace `wa.me/<número>?text=<mensaje>` con el número y el mensaje inicial de `country_settings` del país (editables en el panel › Pagos y países › WhatsApp del asesor). Abajo a la izquierda (la derecha es de Iza y del botón de subir; en la ficha, en móvil, sube sobre la barra fija de compra). Sin número o con el interruptor apagado no se muestra; no aparece en el pago, la confirmación ni el panel.
 
 ### 20.2 Arquitectura
 

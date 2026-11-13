@@ -85,7 +85,7 @@ const leerAjustes = conCache('ajustes', 300, contenido, async (p): Promise<Ajust
       .maybeSingle(),
     db()
       .from('countries')
-      .select('name,currency_code,country_settings(announcement_rotation_seconds,advisor_whatsapp,hide_out_of_stock)')
+      .select('name,currency_code,country_settings(announcement_rotation_seconds,advisor_whatsapp,advisor_whatsapp_message,advisor_whatsapp_button_enabled,hide_out_of_stock)')
       .eq('code', upper(p))
       .maybeSingle(),
   ]);
@@ -100,6 +100,8 @@ const leerAjustes = conCache('ajustes', 300, contenido, async (p): Promise<Ajust
     redes: (site?.social_links as Record<string, string>) ?? {},
     rotacionAnunciosSegundos: Number(cs?.announcement_rotation_seconds ?? 4),
     whatsappAsesor: texto(cs?.advisor_whatsapp),
+    whatsappMensaje: texto(cs?.advisor_whatsapp_message),
+    whatsappBoton: cs?.advisor_whatsapp_button_enabled !== false,
     ocultarAgotados: Boolean(cs?.hide_out_of_stock),
     moneda: pais?.currency_code === 'USD' ? 'USD' : 'COP',
     nombrePais: texto(pais?.name) ?? '',

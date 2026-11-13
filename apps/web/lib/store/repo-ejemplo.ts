@@ -322,6 +322,25 @@ function tipografiaDeEjemplo(): Record<string, unknown> {
   }
 }
 
+/**
+ * Solo pruebas y revisión local: `EJEMPLO_WHATSAPP='{"co":{"numero":"573001112233","mensaje":"Hola","activo":true},"ec":{"numero":"593991112233"}}'`
+ * simula el WhatsApp del asesor guardado en el panel (un número por país). Sin la variable no hay número y el botón no se muestra.
+ */
+function whatsappDeEjemplo(pais: CodigoPais): { numero: string | null; mensaje: string | null; activo: boolean } {
+  try {
+    const crudo = process.env['EJEMPLO_WHATSAPP'];
+    const v: unknown = crudo ? JSON.parse(crudo) : {};
+    const f = (v && typeof v === 'object' ? (v as Record<string, unknown>)[pais] : null) as Record<string, unknown> | null | undefined;
+    return {
+      numero: typeof f?.['numero'] === 'string' ? f['numero'] : null,
+      mensaje: typeof f?.['mensaje'] === 'string' ? f['mensaje'] : null,
+      activo: f?.['activo'] !== false,
+    };
+  } catch {
+    return { numero: null, mensaje: null, activo: true };
+  }
+}
+
 export const repoEjemplo: TiendaRepo = {
   async tema() {
     // Solo pruebas y revisión local: `EJEMPLO_TIPOGRAFIA='{"heading_font":"Lora","body_font":"Inter"}'` simula lo que se guarda en Apariencia.
@@ -335,7 +354,9 @@ export const repoEjemplo: TiendaRepo = {
       favicon: null,
       redes: {},
       rotacionAnunciosSegundos: 4,
-      whatsappAsesor: null,
+      whatsappAsesor: whatsappDeEjemplo(pais).numero,
+      whatsappMensaje: whatsappDeEjemplo(pais).mensaje,
+      whatsappBoton: whatsappDeEjemplo(pais).activo,
       ocultarAgotados: false,
       moneda: pais === 'co' ? 'COP' : 'USD',
       nombrePais: pais === 'co' ? 'Colombia' : 'Ecuador',
