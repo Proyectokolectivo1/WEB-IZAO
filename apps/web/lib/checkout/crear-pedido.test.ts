@@ -602,3 +602,48 @@ describe('atribución del pedido (influencer, UTM y click IDs desde las cookies)
     expect(f.pedidos.size).toBe(1);
   });
 });
+
+describe('consentimiento de marketing del pedido (habilita el Purchase de la API de Conversiones)', () => {
+  // AHORA = 2026-10-20T15:00:00Z; la decisión es vigente 12 meses (`lib/store/consentimiento.ts`).
+  const T_VIGENTE = Math.floor(AHORA.getTime() / 1000) - 3600;
+  const galleta = (valor: string) => `izao_utm=x; izao_consent=${valor}; otra=1`;
+
+  it.each([
+    ['wompi', 'pago completo'],
+    ['cod', 'contra entrega con abono'],
+    ['addi', 'financiación'],
+  ])('%s (%s): cookie con marketing aceptado → marketing_consent true', async (metodo) => {
+    const f = fuenteDePrueba();
+    exito(await crearPedidoCheckout(f, cuerpo({ payment_method: metodo }), AHORA, { cookie: galleta(`v1.a0.m1.t${T_VIGENTE}`) }));
+    expect(soloPedido(f).fila.marketing_consent).toBe(true);
+  });
+
+  it.each([
+    ['sin cabecera Cookie', undefined],
+    ['sin la cookie de consentimiento', 'izao_utm=x; otra=1'],
+    ['marketing rechazado', galleta(`v1.a1.m0.t${T_VIGENTE}`)],
+    ['valor manipulado', galleta('v1.a1.m1.tXXXXXXXXX')],
+    ['formato inventado', galleta('marketing=true')],
+    ['vencida (más de 12 meses)', galleta(`v1.a1.m1.t${T_VIGENTE - 60 * 60 * 24 * 366}`)],
+    ['fecha del futuro lejano', galleta(`v1.a1.m1.t${T_VIGENTE + 60 * 60 * 24 * 30}`)],
+  ])('%s → marketing_consent false (opt-in estricto)', async (_caso, cookie) => {
+    const f = fuenteDePrueba();
+    exito(await crearPedidoCheckout(f, cuerpo(), AHORA, { cookie }));
+    expect(soloPedido(f).fila.marketing_consent).toBe(false);
+  });
+
+  it('el navegador no puede declararlo en el cuerpo: lo decide la cookie leída en el servidor', async () => {
+    const f = fuenteDePrueba();
+    const r = await crearPedidoCheckout(f, { ...cuerpo(), marketing_consent: true }, AHORA);
+    if (r.ok) expect(soloPedido(f).fila.marketing_consent).toBe(false);
+    else expect(r.status).toBe(400);
+  });
+
+  it('el consentimiento no entra en la huella: misma clave con otra decisión → 200 repeated', async () => {
+    const f = fuenteDePrueba();
+    exito(await crearPedidoCheckout(f, cuerpo(), AHORA, { cookie: galleta(`v1.a0.m1.t${T_VIGENTE}`) }));
+    const r = await crearPedidoCheckout(f, cuerpo(), AHORA, { cookie: galleta(`v1.a0.m0.t${T_VIGENTE}`) });
+    expect(r.status).toBe(200);
+    expect(f.pedidos.size).toBe(1);
+  });
+});

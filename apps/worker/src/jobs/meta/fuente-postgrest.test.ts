@@ -37,4 +37,35 @@ describe('fuente PostgREST de conversiones', () => {
     const f = crearFuenteConversionesPostgrest({ supabaseUrl: 'https://x.supabase.co', secretKey: 's', claveCifrado: CLAVE, fetchImpl });
     expect(await f.credencial('CO')).toBeNull();
   });
+
+  describe('consentimiento de marketing del pedido', () => {
+    const ORDEN = '11111111-1111-4111-8111-111111111111';
+    function fuenteCon(fila: Record<string, unknown>) {
+      const urls: string[] = [];
+      const fetchImpl = (async (url: string) => {
+        urls.push(url);
+        const cuerpo = url.includes('/orders?')
+          ? [{ number: 'IZ-CO-000123', country_code: 'CO', paid_at: '2026-11-24T15:00:00Z', total_customer: 99000, ...fila }]
+          : [];
+        return new Response(JSON.stringify(cuerpo), { status: 200 });
+      }) as unknown as typeof fetch;
+      return { urls, f: crearFuenteConversionesPostgrest({ supabaseUrl: 'https://x.supabase.co', secretKey: 's', claveCifrado: CLAVE, fetchImpl }) };
+    }
+
+    it('pide marketing_consent y lo entrega cuando es true', async () => {
+      const { f, urls } = fuenteCon({ marketing_consent: true });
+      expect((await f.pedido(ORDEN))?.consentimientoMarketing).toBe(true);
+      expect(urls[0]).toContain('marketing_consent');
+    });
+
+    it.each([
+      ['false', { marketing_consent: false }],
+      ['null', { marketing_consent: null }],
+      ['ausente (fila sin la columna)', {}],
+      ['texto "true" (no booleano)', { marketing_consent: 'true' }],
+    ])('%s → false', async (_caso, fila) => {
+      const { f } = fuenteCon(fila);
+      expect((await f.pedido(ORDEN))?.consentimientoMarketing).toBe(false);
+    });
+  });
 });

@@ -6,6 +6,8 @@
  *   se vuelve a enviar) y el `event_id` determinista `purchase_{número}` que Meta usa para deduplicar, también contra el
  *   evento del navegador de la página `/pedido`.
  * - Un pedido sin pago (`paid_at` nulo) no envía nada. Sin credencial activa del país tampoco (y no falla).
+ * - Opt-in estricto: sin `orders.marketing_consent` (cookie `izao_consent` con marketing aceptado al comprar) no se envía
+ *   ni se lee la credencial; termina sin reintento (`sin_consentimiento`). Pedidos anteriores a la columna = `false`.
  * - Meta caído o límites (red, 5xx, 429): lanza para que BullMQ reintente con espera exponencial; el checkout y las
  *   transiciones del pedido nunca esperan este job. Rechazo definitivo (token inválido, datos): se anota en
  *   `order_events` (`meta_capi_error`) y no se reintenta.
@@ -42,6 +44,8 @@ export interface PedidoConversion {
   correo: string | null;
   telefono: string | null;
   lineas: LineaEvento[];
+  /** `orders.marketing_consent`; nulo o ausente = `false`. */
+  consentimientoMarketing: boolean;
 }
 
 export interface CredencialMeta {
@@ -65,7 +69,7 @@ export interface DepsConversiones {
   enviar?: (o: OpcionesEnvio) => Promise<ResultadoEnvio>;
 }
 
-export type ResultadoCapi = { ok: true; accion: 'enviado' | 'ya_enviado' | 'no_pagado' | 'sin_credencial' | 'sin_pedido' | 'rechazado'; order_id: string };
+export type ResultadoCapi = { ok: true; accion: 'enviado' | 'ya_enviado' | 'no_pagado' | 'sin_consentimiento' | 'sin_credencial' | 'sin_pedido' | 'rechazado'; order_id: string };
 
 export function parseDatosCapi(d: unknown): { order_id: string } | null {
   if (typeof d !== 'object' || d === null) return null;
@@ -79,6 +83,7 @@ export async function enviarCompraCapi(orderId: string, deps: DepsConversiones):
   const pedido = await fuente.pedido(orderId);
   if (!pedido) return hecho('sin_pedido');
   if (!pedido.pagadoEn) return hecho('no_pagado');
+  if (pedido.consentimientoMarketing !== true) return hecho('sin_consentimiento');
   if (await fuente.yaEnviado(orderId)) return hecho('ya_enviado');
   const cred = await fuente.credencial(pedido.pais);
   if (!cred) return hecho('sin_credencial');

@@ -30,6 +30,7 @@ function pedido(sobre: Partial<PedidoConversion> = {}): PedidoConversion {
     correo: 'Ana@Correo.com',
     telefono: '+573001234567',
     lineas: [{ id: 'SKU-1', cantidad: 1, precioUnitario: 90000n }],
+    consentimientoMarketing: true,
     ...sobre,
   };
 }
@@ -50,6 +51,23 @@ function montar(p: PedidoConversion | null, opciones: { enviado?: boolean; sinCr
 }
 
 describe('meta.capi_purchase', () => {
+  it('pedido pagado con consentimiento de marketing: envía el Purchase', async () => {
+    const m = montar(pedido());
+    expect((await enviarCompraCapi(ID, m.deps)).accion).toBe('enviado');
+    expect(m.enviar).toHaveBeenCalledTimes(1);
+  });
+
+  it('sin consentimiento de marketing (o pedido antiguo): no llama a Meta ni lee la credencial, sin reintento ni evento', async () => {
+    const m = montar(pedido({ consentimientoMarketing: false }));
+    const credencial = vi.spyOn(m.deps.fuente, 'credencial');
+    const yaEnviado = vi.spyOn(m.deps.fuente, 'yaEnviado');
+    await expect(enviarCompraCapi(ID, m.deps)).resolves.toEqual({ ok: true, accion: 'sin_consentimiento', order_id: ID });
+    expect(m.enviar).not.toHaveBeenCalled();
+    expect(credencial).not.toHaveBeenCalled();
+    expect(yaEnviado).not.toHaveBeenCalled();
+    expect(m.eventos).toEqual([]);
+  });
+
   it('no envía nada si el pedido no está pagado', async () => {
     const m = montar(pedido({ pagadoEn: null }));
     expect((await enviarCompraCapi(ID, m.deps)).accion).toBe('no_pagado');

@@ -106,6 +106,16 @@ describe('rutas HTTP del checkout', () => {
     expect([...d.fuenteMem.pedidos.values()][0]!.fila.utm).toEqual({ utm_source: 'tiktok' });
   });
 
+  it('checkout: el consentimiento de marketing sale de la cabecera Cookie de la petición', async () => {
+    const t = Math.floor(AHORA.getTime() / 1000) - 60;
+    const conSi = deps();
+    expect((await manejarCheckout(req(checkout, { cookie: `otra=1; izao_consent=v1.a0.m1.t${t}` }), conSi)).status).toBe(201);
+    expect([...conSi.fuenteMem.pedidos.values()][0]!.fila.marketing_consent).toBe(true);
+    const sinCookie = deps();
+    expect((await manejarCheckout(req(checkout), sinCookie)).status).toBe(201);
+    expect([...sinCookie.fuenteMem.pedidos.values()][0]!.fila.marketing_consent).toBe(false);
+  });
+
   it('checkout: si el encolado del recálculo falla, el pedido igual responde 201', async () => {
     const d = {
       ...deps(),
