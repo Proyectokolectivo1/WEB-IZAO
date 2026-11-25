@@ -26,6 +26,12 @@ import {
   JOB_METRICS_RECOMPUTE_RECENT,
 } from './jobs/metrics/recalcular-dia.js';
 import { recalculadorMetricasDesdeEnv } from './jobs/metrics/tras-transicion.js';
+import {
+  crearManejadorCapiCompra,
+  dependenciasConversionesDesdeEnv,
+  JOB_META_CAPI_PURCHASE,
+} from './jobs/meta/conversiones.js';
+import { combinarTrasTransicion, encolarCapiDesdeEnv } from './jobs/meta/tras-transicion.js';
 import { borrarArchivosPendientes, dependenciasBorradosDesdeEnv, JOB_MEDIA_BORRAR_ARCHIVOS } from './jobs/media/borrar-archivos.js';
 import { dependenciasChatDesdeEnv, JOB_CHAT_PURGAR, purgarConversacionesChat } from './jobs/chat/purgar-conversaciones.js';
 import { registrarCron } from './cron.js';
@@ -36,7 +42,8 @@ async function main(): Promise<void> {
   const cola = createQueue(QUEUE_NAMES.sistema, connection);
   const colaCod = createQueue(QUEUE_NAMES.contraentrega, connection);
   const colaCarrier = createQueue(QUEUE_NAMES.carrier, connection);
-  const recalcularMetricas = recalculadorMetricasDesdeEnv(cola);
+  // Enganche común tras cada transición aplicada: recálculo de métricas y, si el pedido ya está pagado, Purchase a Meta (§23.2).
+  const recalcularMetricas = combinarTrasTransicion(recalculadorMetricasDesdeEnv(cola), encolarCapiDesdeEnv(cola));
   const worker = createWorker(
     QUEUE_NAMES.sistema,
     crearProcesadorSistema({
@@ -45,6 +52,7 @@ async function main(): Promise<void> {
         billeteraMasterShop(dependenciasBilleteraDesdeEnv(process.env, recalcularMetricas)),
       [JOB_METRICS_RECOMPUTE_DAY]: crearManejadorRecalculoDia(dependenciasMetricasDesdeEnv()),
       [JOB_METRICS_RECOMPUTE_RECENT]: crearManejadorRecalculoReciente(cola),
+      [JOB_META_CAPI_PURCHASE]: crearManejadorCapiCompra(dependenciasConversionesDesdeEnv()),
       [JOB_MEDIA_BORRAR_ARCHIVOS]: async () => borrarArchivosPendientes(dependenciasBorradosDesdeEnv()),
       [JOB_CHAT_PURGAR]: async () => purgarConversacionesChat(dependenciasChatDesdeEnv()),
       [JOB_BARRIDO_PEDIDOS]: async () =>
