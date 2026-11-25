@@ -16,7 +16,7 @@ const config: NextConfig = {
   // El middleware (que cubre /api/admin/*) recorta el cuerpo a 10 MB por defecto; la subida de imágenes admite hasta 15 MB.
   experimental: { middlewareClientMaxBodySize: '16mb' },
   // Paquetes del workspace que se publican como TypeScript.
-  transpilePackages: ['@izao/ui', '@izao/core', '@izao/wompi', '@izao/whatsapp', '@izao/addi'],
+  transpilePackages: ['@izao/ui', '@izao/core', '@izao/wompi', '@izao/whatsapp', '@izao/addi', '@izao/meta-pixel'],
   // BullMQ se carga desde node_modules en tiempo de ejecución en vez de empaquetarse: su cliente opcional de Valkey GLIDE
   // hace `require('@valkey/valkey-glide')` dentro de un try/catch perezoso que webpack no puede resolver y avisaba en cada
   // build. Usamos ioredis, así que ese require nunca corre; el trazado de `standalone` copia bullmq igual que a `sharp`.

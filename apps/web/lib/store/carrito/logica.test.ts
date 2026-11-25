@@ -68,3 +68,11 @@ describe('carrito', () => {
     expect(vistaPrevia([], 'co', new Date())).toEqual({ subtotal: 0n, ahorro: 0n });
   });
 });
+
+describe('carrito: SKU para el Pixel de Meta', () => {
+  it('conserva el SKU al guardar y leer, y acepta bolsos antiguos sin SKU', () => {
+    expect(leer(serializar([linea({ sku: 'AFN-9PM-100' })]))[0]?.sku).toBe('AFN-9PM-100');
+    expect(leer(serializar([linea()]))[0]).not.toHaveProperty('sku');
+    expect(leer(serializar([linea({ sku: '' })]))[0]).not.toHaveProperty('sku');
+  });
+});

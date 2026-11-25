@@ -20,6 +20,7 @@
     "@izao/addi": "workspace:*",
     "@izao/core": "workspace:*",
     "@izao/mastershop": "workspace:*",
+    "@izao/meta-pixel": "workspace:*",
     "@izao/ui": "workspace:*",
     "@izao/whatsapp": "workspace:*",
     "@izao/wompi": "workspace:*",

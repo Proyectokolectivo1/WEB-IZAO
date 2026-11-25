@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { EventoInicioCheckout } from '@/components/store/analitica/EventosPixel';
 import { ScriptBolsoVacio } from '@/components/store/checkout/ScriptBolsoVacio';
 import { FormularioCheckout } from '@/components/store/checkout/FormularioCheckout';
 import { EsqueletoCheckoutLleno } from '@/components/store/skeletons/Esqueletos';
@@ -24,6 +25,7 @@ export default async function PaginaCheckout({ params }: Props) {
       <header className="pb-8">
         <h1 className="text-4xl md:text-5xl">{TC.checkout.titulo}</h1>
       </header>
+      <EventoInicioCheckout pais={pais} />
       <ScriptBolsoVacio />
       <FormularioCheckout config={config} esqueleto={<EsqueletoCheckoutLleno className="bolso-esqueleto" />} />
     </div>
