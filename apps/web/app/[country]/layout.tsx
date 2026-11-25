@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Suspense, type ReactNode } from 'react';
+import { MetaPixel } from '@/components/store/analitica/MetaPixel';
 import { CarritoProvider } from '@/components/store/carrito/CarritoProvider';
 import { Footer } from '@/components/store/footer/Footer';
 import { LimiteError } from '@/components/store/LimiteError';
@@ -9,6 +10,7 @@ import { LanzadorIza } from '@/components/store/iza/LanzadorIza';
 import { SelectorSede } from '@/components/store/sede/SelectorSede';
 import { NavegacionPendiente } from '@/components/store/skeletons/NavegacionPendiente';
 import { BotonWhatsapp } from '@/components/store/whatsapp/BotonWhatsapp';
+import { pixelIdDePais } from '@/lib/store/analitica/pixel-id';
 import { chatHabilitado } from '@/lib/store/chat/fuente-supabase';
 import { enlaceBotonAsesor } from '@/lib/store/contacto';
 import { tienda } from '@/lib/store/datos';
@@ -43,7 +45,7 @@ export default async function LayoutPais({ children, params }: { children: React
 
   const repo = tienda();
   const otro = pais === 'co' ? 'ec' : 'co';
-  const [ajustes, anuncios, menu, populares, paginas, espacios, override, iza, espaciosOtro] = await Promise.all([
+  const [ajustes, anuncios, menu, populares, paginas, espacios, override, iza, espaciosOtro, pixelId] = await Promise.all([
     repo.ajustes(pais),
     repo.anuncios(pais),
     repo.menu(pais),
@@ -54,6 +56,8 @@ export default async function LayoutPais({ children, params }: { children: React
     chatHabilitado(),
     // Líneas de envío y de pago del otro país para la ventana de sede; si falla, las del seed.
     repo.espacios(otro).catch(() => []),
+    // Pixel ID de Meta del país (solo el id público; null sin credencial activa).
+    pixelIdDePais(pais),
   ]);
   const sede = opcionesSede(pais === 'co' ? { co: espacios, ec: espaciosOtro } : { co: espaciosOtro, ec: espacios });
 
@@ -65,6 +69,7 @@ export default async function LayoutPais({ children, params }: { children: React
 
   return (
     <div id="tema-pais" className={override ? `tema-pais bg-bg text-ink ${override.clasesFuentes}` : undefined}>
+      <MetaPixel pixelId={pixelId} />
       {override ? <style dangerouslySetInnerHTML={{ __html: override.css }} /> : null}
       {override?.precarga.map((href) => <link key={href} rel="preload" as="font" type="font/woff2" href={href} crossOrigin="anonymous" />)}
       <CarritoProvider pais={pais} notaEnvio={envio.nota} valorEnvio={envio.valor}>

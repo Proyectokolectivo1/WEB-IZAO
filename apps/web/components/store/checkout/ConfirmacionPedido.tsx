@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Icono, clasesBoton } from '@izao/ui';
+import { EventoCompra } from '../analitica/EventosPixel';
 import type { PedidoPublico } from '@/lib/store/checkout-datos';
 import { enlaceWhatsapp } from '@/lib/store/contacto';
 import { formatearFecha, formatearPrecio } from '@/lib/store/pais';
@@ -58,6 +59,12 @@ export function ConfirmacionPedido({ pedido, whatsappAsesor, valorEnvio }: Props
   return (
     <article className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_26rem] lg:gap-16">
       <RefrescarEstado activo={ESTADOS_EN_ESPERA.has(pedido.estado)} />
+      {/* Purchase del Pixel de Meta: solo con el pago aprobado (pagado/abono), una vez por pedido (§23.2). */}
+      <EventoCompra
+        pais={pais}
+        pagado={Boolean(pedido.pagado) && !pedido.cancelado}
+        compra={{ numero: pedido.numero, total: pedido.total, lineas: pedido.lineas.map((l) => ({ contentId: l.contentId, cantidad: l.cantidad, precio: l.precio })) }}
+      />
       <div>
         <p className="etiqueta pb-3">{TC.pedido.numero(pedido.numero)}</p>
         <h1 className="text-4xl md:text-5xl">{titulo}</h1>

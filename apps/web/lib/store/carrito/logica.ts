@@ -8,6 +8,8 @@ import type { MediaRef } from '../types';
 export interface LineaCarrito {
   variantId: string;
   productId: string;
+  /** SKU de la variante (solo para el `content_id` del Pixel de Meta); bolsos guardados antes no lo traen. */
+  sku?: string | null;
   slug: string;
   nombre: string;
   /** Presentación de la variante (p. ej. «100 ml»). */
@@ -59,6 +61,7 @@ export function leer(texto: string | null): LineaCarrito[] {
       out.push({
         variantId: l.variantId,
         productId: l.productId,
+        ...(typeof l.sku === 'string' && l.sku ? { sku: l.sku } : {}),
         slug: l.slug,
         nombre: l.nombre,
         presentacion: typeof l.presentacion === 'string' ? l.presentacion : null,

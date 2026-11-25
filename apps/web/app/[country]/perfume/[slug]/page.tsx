@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Revelar } from '@izao/ui';
+import { EventoVistaProducto } from '@/components/store/analitica/EventosPixel';
 import { BloqueConfianza } from '@/components/store/ficha/BloqueConfianza';
 import { BotonIza } from '@/components/store/ficha/BotonIza';
 import { CompraFicha } from '@/components/store/ficha/CompraFicha';
@@ -13,6 +14,7 @@ import { EscribirResena } from '@/components/store/ficha/EscribirResena';
 import { Resenas } from '@/components/store/ficha/Resenas';
 import { leerBeneficios } from '@/components/store/home/HomeSecciones';
 import { tienda } from '@/lib/store/datos';
+import { varianteInicial } from '@/lib/store/ficha-util';
 import { descripcionCorta, imagenesDe, jsonLdMigas, jsonLdProducto, rutaDeMedio } from '@/lib/store/ficha-seo';
 import { depurarHtml } from '@/lib/store/html-seguro';
 import { esPais, formatearPromedio } from '@/lib/store/pais';
@@ -86,6 +88,7 @@ export default async function FichaPerfume({ params }: Props) {
     ...(ficha.family_slug && ficha.family_name ? [{ nombre: ficha.family_name, ruta: `/familia/${ficha.family_slug}` }] : []),
     { nombre: ficha.name, ruta: `/perfume/${ficha.slug}` },
   ];
+  const inicial = varianteInicial(ficha.variants);
   const detalles = [ficha.concentration_name, ficha.family_name, ficha.gender_name].filter(Boolean) as string[];
 
 
@@ -93,6 +96,8 @@ export default async function FichaPerfume({ params }: Props) {
     <article className={`${CONTENEDOR} pb-28 pt-6 lg:pb-24`} data-testid="ficha">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(jsonLdProducto(ficha, pais, { sitio: SITIO, nombreTienda: ajustes.nombreTienda })) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(jsonLdMigas(pais, SITIO, migas)) }} />
+
+      {inicial ? <EventoVistaProducto pais={pais} sku={inicial.sku} varianteId={inicial.id} precio={String(inicial.price)} nombre={ficha.name} /> : null}
 
       <nav aria-label={T.ficha.ruta} className="pb-6">
         <ol className="flex flex-wrap items-center gap-x-2 text-[0.875rem]">

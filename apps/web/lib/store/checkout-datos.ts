@@ -6,6 +6,7 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { DOCUMENT_TYPES, soloMetodosVendibles } from '@izao/core/contracts';
+import { idContenido } from '@izao/meta-pixel';
 import { crearClienteServicio } from '@/lib/auth/supabase/servicio';
 import { ejemploPermitido } from './modo-datos';
 import { TOKEN_EJEMPLO } from './checkout/adaptador';
@@ -213,7 +214,15 @@ export interface PedidoPublico {
   region: string | null;
   ciudad: string | null;
   direccion: string | null;
-  lineas: { nombre: string; presentacion: string | null; cantidad: number; precio: string; descuento: string }[];
+  lineas: {
+    nombre: string;
+    presentacion: string | null;
+    cantidad: number;
+    precio: string;
+    descuento: string;
+    /** SKU (o id de la variante): el `content_id` del Pixel de Meta. */
+    contentId: string;
+  }[];
   subtotal: string;
   descuento: string;
   recargo: string;
@@ -245,7 +254,7 @@ function ejemplo(pais: CodigoPais): PedidoPublico {
     region: pais === 'co' ? 'Antioquia' : 'Pichincha',
     ciudad: pais === 'co' ? 'Medellín' : 'Quito',
     direccion: 'Calle de ejemplo 10 # 20-30',
-    lineas: [{ nombre: 'Aroma de ejemplo', presentacion: '100 ml', cantidad: 1, precio: pais === 'co' ? '90000' : '4990', descuento: '0' }],
+    lineas: [{ nombre: 'Aroma de ejemplo', presentacion: '100 ml', cantidad: 1, precio: pais === 'co' ? '90000' : '4990', descuento: '0', contentId: 'EJEMPLO-100' }],
     subtotal: pais === 'co' ? '90000' : '4990',
     descuento: '0',
     recargo: '0',
@@ -284,7 +293,7 @@ export async function pedidoPublico(pais: CodigoPais, token: string): Promise<Pe
   const id = String(o.id);
   const esperaAbono = o.status === 'esperando_abono';
   const [items, pagos, links] = await Promise.all([
-    db.from('order_items').select('name_snapshot,variant_label,quantity,unit_price,line_discount').eq('order_id', id).order('created_at'),
+    db.from('order_items').select('name_snapshot,variant_label,quantity,unit_price,line_discount,sku,variant_id').eq('order_id', id).order('created_at'),
     db
       .from('payments')
       .select('purpose,status,checkout_url,expires_at')
@@ -335,6 +344,7 @@ export async function pedidoPublico(pais: CodigoPais, token: string): Promise<Pe
       cantidad: Number(i.quantity),
       precio: entero(i.unit_price),
       descuento: entero(i.line_discount),
+      contentId: idContenido(texto(i.sku), String(i.variant_id ?? i.sku ?? 'sin-id')),
     })),
     subtotal: entero(o.subtotal),
     descuento: entero(o.discount_amount),

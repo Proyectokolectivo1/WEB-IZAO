@@ -12,6 +12,7 @@ import {
   serializar,
   type LineaCarrito,
 } from '@/lib/store/carrito/logica';
+import { eventoAgregado, rastrear } from '@/lib/store/analitica/pixel-cliente';
 import { T } from '@/lib/store/textos';
 import type { CodigoPais } from '@/lib/store/types';
 
@@ -190,11 +191,17 @@ export function CarritoProvider({
   const agregar = useCallback<Acciones['agregar']>(
     (l, opciones) => {
       setLineas((prev) => agregarLinea(prev, { ...l, cantidad: l.cantidad ?? 1 }));
+      // Pixel de Meta (no-op si el país no tiene): un AddToCart por acción del cliente, con el SKU y el valor de lo agregado.
+      try {
+        rastrear('AddToCart', eventoAgregado({ ...l, cantidad: l.cantidad ?? 1 }, pais));
+      } catch {
+        /* la analítica nunca bloquea el bolso */
+      }
       setPulso((n) => n + 1);
       setAviso(T.carrito.agregado);
       if (opciones?.abrirBolso) abrir();
     },
-    [abrir],
+    [abrir, pais],
   );
   const cambiar = useCallback((id: string, c: number) => setLineas((p) => cambiarCantidad(p, id, c)), []);
   const quitar = useCallback((id: string) => {

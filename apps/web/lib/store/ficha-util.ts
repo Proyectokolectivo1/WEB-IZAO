@@ -30,6 +30,7 @@ export function lineaDe(ficha: FichaProducto, v: VarianteProducto, cantidad = 1)
   return {
     variantId: v.id,
     productId: ficha.product_id,
+    sku: v.sku,
     slug: ficha.slug,
     nombre: ficha.name,
     presentacion: presentacionDe(ficha, v),
