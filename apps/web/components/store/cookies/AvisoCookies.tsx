@@ -103,10 +103,10 @@ export function AvisoCookies({ textos, enlacePolitica }: Props) {
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:flex-nowrap">
-                <button type="button" className={clasesBoton({ variante: 'primario', tamano: 'sm', className: 'flex-1 lg:flex-none' })} onClick={() => decidirDesdeAviso({ analitica: true, marketing: true })}>
+                <button type="button" className={clasesBoton({ variante: 'primario', tamano: 'sm', className: 'flex-1 lg:w-32 lg:flex-none' })} onClick={() => decidirDesdeAviso({ analitica: true, marketing: true })}>
                   {TCK.ui.aceptar}
                 </button>
-                <button type="button" className={clasesBoton({ variante: 'primario', tamano: 'sm', className: 'flex-1 lg:flex-none' })} onClick={() => decidirDesdeAviso({ analitica: false, marketing: false })}>
+                <button type="button" className={clasesBoton({ variante: 'primario', tamano: 'sm', className: 'flex-1 lg:w-32 lg:flex-none' })} onClick={() => decidirDesdeAviso({ analitica: false, marketing: false })}>
                   {TCK.ui.rechazar}
                 </button>
                 <button

@@ -11,6 +11,7 @@ import { unstable_cache } from 'next/cache';
 import { byteaDesdePostgrest, descifrarCredenciales } from '@izao/core/credentials';
 import { esPixelId } from '@izao/meta-pixel';
 import { clienteDb } from '@/lib/db/cliente';
+import { ejemploPermitido } from '../modo-datos';
 import type { CodigoPais } from '../types';
 
 export interface FilaCredencial {
@@ -58,8 +59,9 @@ const cacheado = unstable_cache(async (pais: CodigoPais) => (await leerPixelId(p
  * Solo pruebas y revisión local con `STORE_DATOS=ejemplo` (sin base): `EJEMPLO_PIXEL='{"co":"111111111111111","ec":"222222222222222"}'`
  * hace de credencial activa de `meta_pixel` por país. Fuera del modo de ejemplo no tiene ningún efecto.
  */
-export function pixelIdDeEjemplo(pais: CodigoPais, env: Record<string, string | undefined> = process.env): string | null {
-  if (env['STORE_DATOS'] !== 'ejemplo') return null;
+export function pixelIdDeEjemplo(pais: CodigoPais, env: Record<string, string | undefined> = process.env, permitido: boolean = ejemploPermitido()): string | null {
+  // Mismo doble seguro que los datos de ejemplo: en producción real (`SITE_URL` oficial o sin permiso) nunca aplica.
+  if (env['STORE_DATOS'] !== 'ejemplo' || !permitido) return null;
   try {
     const id = (JSON.parse(env['EJEMPLO_PIXEL'] ?? '{}') as Record<string, unknown>)[pais];
     return typeof id === 'string' && esPixelId(id) ? id : null;
@@ -70,7 +72,7 @@ export function pixelIdDeEjemplo(pais: CodigoPais, env: Record<string, string | 
 
 /** Pixel ID del país o `null`. Nunca lanza: un fallo de la base apaga el píxel, no la tienda. */
 export async function pixelIdDePais(pais: CodigoPais): Promise<string | null> {
-  if (process.env['STORE_DATOS'] === 'ejemplo') return pixelIdDeEjemplo(pais);
+  if (process.env['STORE_DATOS'] === 'ejemplo' && ejemploPermitido()) return pixelIdDeEjemplo(pais);
   try {
     return (await cacheado(pais)) || null;
   } catch (e) {

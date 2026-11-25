@@ -52,14 +52,16 @@ describe('Pixel ID de ejemplo (solo pruebas locales)', () => {
   const env = { STORE_DATOS: 'ejemplo', EJEMPLO_PIXEL: '{"co":"111111111111111","ec":"222222222222222"}' };
 
   it('cada país lee el suyo', () => {
-    expect(pixelIdDeEjemplo('co', env)).toBe('111111111111111');
-    expect(pixelIdDeEjemplo('ec', env)).toBe('222222222222222');
+    expect(pixelIdDeEjemplo('co', env, true)).toBe('111111111111111');
+    expect(pixelIdDeEjemplo('ec', env, true)).toBe('222222222222222');
   });
 
   it('sin STORE_DATOS=ejemplo no tiene efecto, y valores inválidos se ignoran', () => {
-    expect(pixelIdDeEjemplo('co', { ...env, STORE_DATOS: 'supabase' })).toBeNull();
-    expect(pixelIdDeEjemplo('co', { STORE_DATOS: 'ejemplo', EJEMPLO_PIXEL: '{"co":"abc"}' })).toBeNull();
-    expect(pixelIdDeEjemplo('co', { STORE_DATOS: 'ejemplo', EJEMPLO_PIXEL: 'no es json' })).toBeNull();
-    expect(pixelIdDeEjemplo('co', { STORE_DATOS: 'ejemplo' })).toBeNull();
+    expect(pixelIdDeEjemplo('co', { ...env, STORE_DATOS: 'supabase' }, true)).toBeNull();
+    expect(pixelIdDeEjemplo('co', { STORE_DATOS: 'ejemplo', EJEMPLO_PIXEL: '{"co":"abc"}' }, true)).toBeNull();
+    expect(pixelIdDeEjemplo('co', { STORE_DATOS: 'ejemplo', EJEMPLO_PIXEL: 'no es json' }, true)).toBeNull();
+    expect(pixelIdDeEjemplo('co', { STORE_DATOS: 'ejemplo' }, true)).toBeNull();
+    // Producción real (sin permiso de ejemplo): nunca.
+    expect(pixelIdDeEjemplo('co', env, false)).toBeNull();
   });
 });

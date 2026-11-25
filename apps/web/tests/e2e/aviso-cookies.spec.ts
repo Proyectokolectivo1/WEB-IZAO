@@ -127,14 +127,12 @@ test('Aceptar: carga el Pixel del país sin recargar y envía el PageView de est
   const pedidos = await vigilarMeta(page);
   await page.goto(`${base}${RUTAS.home('co')}`);
   await page.waitForLoadState('load');
-  let navegaciones = 0;
-  page.on('framenavigated', (f) => {
-    if (f === page.mainFrame()) navegaciones++;
-  });
+  // Marca en la página: si hubiera una recarga, desaparecería.
+  await page.evaluate(() => ((window as unknown as { __sinRecarga?: boolean }).__sinRecarga = true));
   await aceptar(page).click();
   await expect(page.locator(AVISO)).toHaveCount(0);
   await expect.poll(() => pedidos.some((u) => u.includes('fbevents.js'))).toBe(true);
-  expect(navegaciones).toBe(0);
+  expect(await page.evaluate(() => (window as unknown as { __sinRecarga?: boolean }).__sinRecarga)).toBe(true);
   const q = (await cola(page))!;
   expect(q).toEqual(expect.arrayContaining([['init', PIXEL.co], ['trackSingle', PIXEL.co, 'PageView']]));
   expect(JSON.stringify(q)).not.toContain(PIXEL.ec);
@@ -216,28 +214,32 @@ for (const ancho of [360, 768, 1440]) {
     const aviso = await caja(page, AVISO);
     expect(aviso.x).toBeGreaterThanOrEqual(0);
     expect(aviso.x + aviso.width).toBeLessThanOrEqual(ancho);
-    expect(seSolapan(aviso, await caja(page, '[data-testid="boton-whatsapp"]'))).toBe(false);
-    expect(seSolapan(aviso, await caja(page, '[data-testid="lanzador-iza"]'))).toBe(false);
+    // Los botones suben con una transición corta: se espera a que terminen antes de medir.
+    await expect.poll(async () => seSolapan(aviso, await caja(page, '[data-testid="boton-whatsapp"]'))).toBe(false);
+    await expect.poll(async () => seSolapan(aviso, await caja(page, '[data-testid="lanzador-iza"]'))).toBe(false);
     await page.waitForTimeout(800);
     expect(await page.evaluate(() => (window as unknown as { __cls: number }).__cls)).toBeLessThan(0.1);
     // Al decidir, los botones vuelven a su sitio.
     const ySin = (await caja(page, '[data-testid="boton-whatsapp"]')).y;
     await rechazar(page).click();
     await expect(page.locator(AVISO)).toHaveCount(0);
-    expect((await caja(page, '[data-testid="boton-whatsapp"]')).y).toBeGreaterThan(ySin);
+    await expect.poll(async () => (await caja(page, '[data-testid="boton-whatsapp"]')).y).toBeGreaterThan(ySin);
   });
 }
 
 test('teclado: el aviso es lo primero en el orden de foco, con foco visible y sin atrapar', async ({ page }) => {
   await page.goto(`${base}${RUTAS.home('co')}`);
   await expect(page.locator(AVISO)).toBeVisible();
-  await page.keyboard.press('Tab');
-  await expect(aceptar(page)).toBeFocused();
-  expect(await aceptar(page).evaluate((el) => parseFloat(getComputedStyle(el).outlineWidth))).toBeGreaterThanOrEqual(2);
-  await page.keyboard.press('Tab');
-  await expect(rechazar(page)).toBeFocused();
-  await page.keyboard.press('Tab');
+  // Lo primero que alcanza el teclado es el aviso: [enlace a la política si existe] → Aceptar → Rechazar → Preferencias.
+  const visitados: string[] = [];
+  for (let i = 0; i < 4; i++) {
+    await page.keyboard.press('Tab');
+    visitados.push(await page.evaluate(() => (document.activeElement?.closest('[data-testid="aviso-cookies"]') ? (document.activeElement.textContent ?? '').trim() : 'FUERA')));
+  }
+  expect(visitados).not.toContain('FUERA');
+  expect(visitados.slice(-3)).toEqual(['Aceptar', 'Rechazar', 'Preferencias']);
   await expect(page.locator(AVISO).getByRole('button', { name: 'Preferencias' })).toBeFocused();
+  expect(await page.locator(AVISO).getByRole('button', { name: 'Preferencias' }).evaluate((el) => parseFloat(getComputedStyle(el).outlineWidth))).toBeGreaterThanOrEqual(2);
   // Preferencias: foco atrapado y Esc cierra devolviendo el foco.
   await page.keyboard.press('Enter');
   const d = page.getByRole('dialog', { name: 'Preferencias de cookies' });
