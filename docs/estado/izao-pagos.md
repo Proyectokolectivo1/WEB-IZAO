@@ -7,6 +7,7 @@
 - cea1725 Addi en el checkout (D-034). Revisión 2026-10-25: 0c72b49 Sistecrédito no vendible (`metodoVendible`, `soloMetodosVendibles`); 761747b productor de `metrics.recompute_day`; 05a94ea `Location` de Addi (D-036); ceb228e aprobado sobre `cancelado` (D-037).
 - 6fb63be atribución en `POST /api/checkout` (influencer revalidado). Barrido de solicitudes Addi de pedidos `expirado` (D-040).
 - 7c60d43 checkout lee el vínculo MasterShop de `variant_countries` del país (D-052); `product_variants.mastershop_*` ya no se lee. RPC y `crear-pedido.ts` sin cambios. `serverExternalPackages: ['bullmq']` quita el aviso de `@valkey/valkey-glide` del build (compilación sin avisos).
+- caebb15 (rama feat/aviso-cookies) Purchase de CAPI con opt-in estricto: checkout guarda `marketing_consent` desde `izao_consent`; job `sin_consentimiento` sin llamar a Meta (D-057). Desplegar la migración antes del worker.
 
 ## Contratos para compañeros
 - izao-admin: en `guardarMetodo` bloquear activar un método con `!metodoVendible(method)` (`@izao/core/contracts`).
