@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Icono, IzaoImage } from '@izao/ui';
 import { T } from '@/lib/store/textos';
+import { EnlaceCookies } from '../cookies/EnlaceCookies';
 import { SelectorPais } from './SelectorPais';
 import type { AjustesTienda, CodigoPais, EspacioContenido, PaginaListada } from '@/lib/store/types';
 
@@ -92,13 +93,15 @@ export function Footer({ pais, ajustes, paginas, espacios }: Props) {
       </div>
 
       <div className="border-t border-bg/20">
-        <div className="mx-auto flex max-w-[96rem] flex-col gap-4 px-4 py-6 text-[0.8125rem] sm:px-8 md:flex-row md:items-center md:justify-between">
+        {/* Más aire abajo en móvil: los botones flotantes (WhatsApp, Iza) no deben quedar sobre los enlaces del pie. */}
+        <div className="mx-auto flex max-w-[96rem] flex-col gap-4 px-4 pb-24 pt-6 text-[0.8125rem] sm:px-8 md:flex-row md:items-center md:justify-between lg:pb-6">
           <div className="flex flex-wrap items-center gap-x-6">
             <p>{T.footer.derechos(new Date().getFullYear(), razon ?? ajustes.nombreTienda)}</p>
             {/* Enlace del equipo: <a> simple (sin precarga del panel), no depende del país ni va a sitemaps. */}
             <a href="/admin" rel="nofollow" className={`${enlace} text-bg/80 hover:text-bg`}>
               {T.footer.accesoEquipo}
             </a>
+            <EnlaceCookies className={`${enlace} text-bg/80 hover:text-bg`} />
           </div>
           {medios?.media ? (
             <div className="w-56">

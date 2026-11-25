@@ -62,6 +62,8 @@ export const pedidoCheckoutSchema = z.object({
   /** Debe ser `politica_datos_vigente(country_code)`; si no, `politica_datos_desactualizada` (o `sin_politica_datos`). */
   data_policy_version: texto,
   whatsapp_opt_in: z.boolean().optional(),
+  /** Consentimiento de cookies de marketing al comprar (habilita el Purchase de la API de Conversiones). Falso si falta. */
+  marketing_consent: z.boolean().optional(),
 });
 
 export const lineaCheckoutSchema = z.object({

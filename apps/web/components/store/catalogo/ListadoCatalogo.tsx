@@ -417,7 +417,7 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
         data-testid="abrir-filtros"
         onClick={abrirHoja}
         aria-haspopup="dialog"
-        className="fixed bottom-4 left-1/2 z-30 inline-flex min-h-12 -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-control border border-ink bg-ink px-6 text-[0.9375rem] font-semibold text-bg shadow-elev lg:hidden"
+        className="sobre-aviso-cookies fixed bottom-4 left-1/2 z-30 inline-flex min-h-12 -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-control border border-ink bg-ink px-6 text-[0.9375rem] font-semibold text-bg shadow-elev lg:hidden"
       >
         <Icono nombre="filtro" />
         {T.listado.filtrarYOrdenarN(nFiltros)}
@@ -429,7 +429,7 @@ export function ListadoCatalogo({ pais, titulo, descripcion, base, fijos, consul
           onClick={() => window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}
           aria-label={T.listado.volverArriba}
           // Por encima del botón flotante de Iza (56 px, misma esquina): bottom-4 + 56 px + aire.
-          className="fixed bottom-[5.25rem] right-[1.25rem] z-30 inline-flex size-12 items-center justify-center rounded-control border border-ink bg-bg text-ink shadow-elev lg:bottom-[6.5rem] lg:right-[1.75rem]"
+          className="sobre-aviso-cookies fixed bottom-[5.25rem] right-[1.25rem] z-30 inline-flex size-12 items-center justify-center rounded-control border border-ink bg-bg text-ink shadow-elev lg:bottom-[6.5rem] lg:right-[1.75rem]"
         >
           <Icono nombre="flechaArriba" />
         </button>

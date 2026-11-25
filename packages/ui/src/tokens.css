@@ -126,6 +126,16 @@
     contain-intrinsic-size: auto var(--alto-tarjeta, 26rem);
   }
 
+  /*
+   * Botones flotantes (WhatsApp, Iza, subir, filtros): suben sobre el aviso de cookies mientras está visible. El aviso mide su
+   * alto y lo deja en `--alto-aviso-cookies` (con 12 px de aire); sin aviso vale 0 y no cambia nada. Se usa `transform` (no
+   * `margin` ni `bottom`): mover un elemento por `transform` no es un cambio de diseño (CLS 0) y no pelea con `translate`,
+   * `scale` ni `rotate` de Tailwind, que son propiedades aparte.
+   */
+  .sobre-aviso-cookies {
+    transform: translateY(calc(var(--alto-aviso-cookies, 0px) * -1));
+  }
+
   .solo-lectores {
     position: absolute;
     width: 1px;

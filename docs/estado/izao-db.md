@@ -1,11 +1,12 @@
 # Bitácora izao-db
 ## Hecho
-- Oleadas 0-1 (f63d558). T2.7 8da6bc2, 343bfbe. T2.8 8f33a8c. Colección 08d0a46. Admin catálogo 373d18d. T2.9 490cf03.
-- Checkout 34cfe1f, 0d237eb, cd24577; pgTAP 01–36 remoto en verde (D-041); concurrencia remota ab23cd3. Advisors solo INFO.
+- Oleadas 0-1 (f63d558). T2.7 8da6bc2, 343bfbe. T2.8 8f33a8c. Colección 08d0a46. Admin catálogo 373d18d. T2.9 490cf03. Checkout 34cfe1f, 0d237eb, cd24577; pgTAP 01–36 remoto en verde (D-041); concurrencia remota ab23cd3. Advisors solo INFO.
 - Aditivas: 20261102050729 chat; 20261105060857 media_settings; 20261106050343 focal (c134c53); 20261107195840 índices (a65978e, pgTAP 37 sin confirmar).
 - D-052 vínculo MasterShop por país: 20261108233306 + fix 20261108233516 (aplicadas; pgTAP 38 20/20 y 18 26/26 remoto).
+- 20261124120000 `orders.marketing_consent` (bool, default false; checkout lo guarda). SIN APLICAR (lo aplica el líder); pgTAP 40 10/10, 19, 20 en Docker local.
 ## Contratos vigentes (detalle en el commit de cada migración)
-- `crear_pedido_checkout(p jsonb)` → `{ok, estado:'creado'|'existente'|'rechazado', order|motivo}` (motivos en 20261020213954).
+- `crear_pedido_checkout(p jsonb)` → `{ok, estado:'creado'|'existente'|'rechazado', order|motivo}` (motivos en 20261020213954);
+  `order.marketing_consent` opcional (falso si falta; zod en `lib/db/checkout.ts`). Sin grant a anon/authenticated.
 - `pages.kind` (general, quienes_somos, envios, tratamiento_datos, terminos, devoluciones); única publicada por (país, kind) → 23505.
 - `aplicar_transicion_pedido(p jsonb)` atómica (web: `aplicarTransicionPedidoDb`; worker: `POST /rest/v1/rpc/...` con `{p}`).
 - `content_slots` por país: `nota_envio`, `valor_envio`, `medios_de_pago`, `asesoria`, `busquedas_populares` (on conflict do nothing).
@@ -34,6 +35,7 @@
 0. Líder (con autorización): `reindex table concurrently` de orders/order_items/shipments (~95 MB de índices hinchados).
 3. D-052: izao-pagos (fuente-supabase variantes por país), izao-admin (editor/importación/carga-real por país),
    izao-logistica (vinculacion-productos por país). Al terminar los tres: migración que retire product_variants.mastershop_*.
+4. Tras aplicar 20261124120000: advisors y regenerar `src/types.ts` (hoy editado a mano, +3 líneas).
 ## Siguiente paso exacto: cuando pagos/admin/logística lean variant_countries, retirar espejo y columnas deprecadas (Pendiente 3).
 ## Notas
 - pgTAP por el MCP: `python -I tests/remoto/tap2mcp.py <archivos>` → execute_sql; `RESUMEN %` deshace todo. Base con catálogo real.

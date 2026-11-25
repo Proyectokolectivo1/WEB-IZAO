@@ -12,6 +12,9 @@
  * lo encola. Sistecrédito no se acepta mientras su integración esté pendiente (`soloMetodosVendibles`, D-032).
  * Atribución (`influencer_id`, `utm`, `click_ids` → `orders.sale_source`): de las cookies con
  * `atribucionDelPedido`, validada en el servidor; nunca bloquea la venta ni entra en la huella.
+ * Consentimiento de marketing (`orders.marketing_consent`, habilita el Purchase de la API de Conversiones): de la cookie
+ * `izao_consent` de la petición con `marketingAceptadoEnCabecera`; sin cookie, vencida o manipulada = `false` (opt-in
+ * estricto). El cuerpo no lo declara y tampoco entra en la huella.
  * Pendiente: `customer_id` y `gateway_fee_estimated`.
  */
 import { z } from 'zod';
@@ -27,6 +30,7 @@ import { isFinancingMethod, soloMetodosVendibles, type RedemptionRejectReason } 
 import type { OrderStatus } from '@izao/core/order-state';
 import { checkoutInputSchemaFor, countryCodeSchema, orderSummarySchema, type CheckoutInput } from '@izao/core/schemas';
 import { atribucionDelPedido, type AtribucionPedido } from '@/lib/store/atribucion/pedido';
+import { marketingAceptadoEnCabecera } from '@/lib/store/consentimiento';
 import { cruzarCarrito } from './carrito';
 import type { FilaItem, FilaPedido, FuenteCheckout, PedidoCreado } from './fuente';
 import { huellaSolicitud, solicitudDeEntrada } from './huella';
@@ -209,6 +213,7 @@ function filaPedido(
   politicaVigente: string,
   huella: string,
   atribucion: AtribucionPedido,
+  consentimientoMarketing: boolean,
 ): FilaPedido {
   const metodo = entrada.payment_method;
   return {
@@ -248,11 +253,12 @@ function filaPedido(
     terms_accepted_at: ahora.toISOString(),
     data_policy_version: politicaVigente,
     whatsapp_opt_in: entrada.consents.whatsapp,
+    marketing_consent: consentimientoMarketing,
   };
 }
 
 export interface ContextoCheckout {
-  /** Cabecera `Cookie` de la petición (`izao_ref`, `izao_utm`, `izao_clk`). */
+  /** Cabecera `Cookie` de la petición (`izao_ref`, `izao_utm`, `izao_clk`, `izao_consent`). */
   cookie?: string | null;
 }
 
@@ -420,7 +426,8 @@ export async function crearPedidoCheckout(
 
     // 4. Guardar antes de cualquier pasarela (§10.2), en una sola transacción de la base
     const atrib = await atribucion(fuente, pais, dc?.status === 'applied' ? dc.code : null, contexto.cookie);
-    const fila = filaPedido(entrada, r, ubic, codigoId, costoTotal, ahora, politica, huella, atrib);
+    const marketing = marketingAceptadoEnCabecera(contexto.cookie, Math.floor(ahora.getTime() / 1000));
+    const fila = filaPedido(entrada, r, ubic, codigoId, costoTotal, ahora, politica, huella, atrib, marketing);
     const c = await fuente.crearPedido(fila, items);
     if (c.ok && !c.repetido) return respuesta(c.pedido, false, warnings);
     if (c.ok) {

@@ -1,7 +1,8 @@
 /**
- * Eventos del Meta Pixel desde el navegador (§23.2). El guion en línea (`guion-pixel.ts`) deja `window.fbq` y
- * `window.__izaoPixelId` listos antes de la hidratación; sin Pixel configurado para el país no existen y todo esto es un
- * no-op silencioso (la tienda no cambia de comportamiento). Nada lanza: la analítica nunca rompe una compra.
+ * Eventos del Meta Pixel desde el navegador (§23.2). Solo tras el consentimiento de marketing, `iniciarPixel`
+ * (`guion-pixel.ts`) deja `window.fbq` y `window.__izaoPixelId`; sin consentimiento, o sin Pixel configurado para el país,
+ * no existen y todo esto es un no-op silencioso (la tienda no cambia de comportamiento). Al retirar el consentimiento
+ * `detenerPixel` borra `__izaoPixelId` y los eventos dejan de salir. Nada lanza: la analítica nunca rompe una compra.
  */
 import { idContenido, idEventoCompra, monedaDePais, parametrosContenido, type EventoMeta, type LineaEvento } from '@izao/meta-pixel';
 import type { LineaCarrito } from '../carrito/logica';

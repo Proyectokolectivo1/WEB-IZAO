@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { byteaParaPostgrest, cifrarCredenciales } from '@izao/core/credentials';
-import { pixelIdDeFilas } from './pixel-id';
+import { pixelIdDeEjemplo, pixelIdDeFilas } from './pixel-id';
 
 const CLAVE = Buffer.alloc(32, 9).toString('base64');
 const TOKEN = 'EAAsecretoDelServidor1234567890';
@@ -45,5 +45,23 @@ describe('Pixel ID del país', () => {
     expect(await pixelIdDeFilas(CLAVE, 'co', [{ environment: 'production', data_encrypted: '\\x00', iv: '\\x00', key_version: 1 }])).toBeNull();
     expect(JSON.stringify(log.mock.calls)).not.toContain(TOKEN);
     log.mockRestore();
+  });
+});
+
+describe('Pixel ID de ejemplo (solo pruebas locales)', () => {
+  const env = { STORE_DATOS: 'ejemplo', EJEMPLO_PIXEL: '{"co":"111111111111111","ec":"222222222222222"}' };
+
+  it('cada país lee el suyo', () => {
+    expect(pixelIdDeEjemplo('co', env, true)).toBe('111111111111111');
+    expect(pixelIdDeEjemplo('ec', env, true)).toBe('222222222222222');
+  });
+
+  it('sin STORE_DATOS=ejemplo no tiene efecto, y valores inválidos se ignoran', () => {
+    expect(pixelIdDeEjemplo('co', { ...env, STORE_DATOS: 'supabase' }, true)).toBeNull();
+    expect(pixelIdDeEjemplo('co', { STORE_DATOS: 'ejemplo', EJEMPLO_PIXEL: '{"co":"abc"}' }, true)).toBeNull();
+    expect(pixelIdDeEjemplo('co', { STORE_DATOS: 'ejemplo', EJEMPLO_PIXEL: 'no es json' }, true)).toBeNull();
+    expect(pixelIdDeEjemplo('co', { STORE_DATOS: 'ejemplo' }, true)).toBeNull();
+    // Producción real (sin permiso de ejemplo): nunca.
+    expect(pixelIdDeEjemplo('co', env, false)).toBeNull();
   });
 });

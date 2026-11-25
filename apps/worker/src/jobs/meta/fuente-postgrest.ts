@@ -15,7 +15,7 @@ export function crearFuenteConversionesPostgrest(o: OpcionesPostgrest): FuenteCo
     async pedido(orderId) {
       const [f] = await c.filas(
         'orders',
-        `orders?id=${eq(orderId)}&select=number,country_code,paid_at,total_customer,contact_email,contact_phone_e164`,
+        `orders?id=${eq(orderId)}&select=number,country_code,paid_at,total_customer,contact_email,contact_phone_e164,marketing_consent`,
       );
       if (!f) return null;
       const pais = f.country_code === 'CO' || f.country_code === 'EC' ? (f.country_code as CountryCode) : null;
@@ -30,6 +30,8 @@ export function crearFuenteConversionesPostgrest(o: OpcionesPostgrest): FuenteCo
         total: fromDbAmount(f.total_customer as string | number),
         correo: txt(f.contact_email),
         telefono: txt(f.contact_phone_e164),
+        // Opt-in estricto: solo el booleano `true`; nulo, ausente o cualquier otro valor = sin consentimiento.
+        consentimientoMarketing: f.marketing_consent === true,
         lineas: items.map((i) => ({
           id: idContenido(txt(i.sku), String(i.variant_id ?? i.sku ?? 'sin-id')),
           cantidad: Number(i.quantity),

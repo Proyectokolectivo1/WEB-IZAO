@@ -46,7 +46,15 @@ export default defineConfig({
     baseURL: URL_WEB,
     // País ya elegido: la ventana de sede (primera visita) no tapa las demás pruebas. Su prueba (`sede-modal.spec.ts`)
     // parte de un contexto vacío con `test.use({ storageState: { cookies: [], origins: [] } })`.
-    storageState: { cookies: [{ name: 'country', value: 'co', domain: new URL(URL_WEB).hostname, path: '/', expires: -1, httpOnly: false, secure: false, sameSite: 'Lax' }], origins: [] },
+    // Cookies ya decidido (rechazado): el aviso de cookies tampoco tapa las demás pruebas. Su prueba (`aviso-cookies.spec.ts`) parte
+    // de un contexto sin esa cookie.
+    storageState: {
+      cookies: [
+        { name: 'country', value: 'co', domain: new URL(URL_WEB).hostname, path: '/', expires: -1, httpOnly: false, secure: false, sameSite: 'Lax' },
+        { name: 'izao_consent', value: `v1.a0.m0.t${Math.floor(Date.now() / 1000)}`, domain: new URL(URL_WEB).hostname, path: '/', expires: -1, httpOnly: false, secure: false, sameSite: 'Lax' },
+      ],
+      origins: [],
+    },
     locale: 'es-CO',
     timezoneId: 'America/Bogota',
     trace: 'retain-on-failure',

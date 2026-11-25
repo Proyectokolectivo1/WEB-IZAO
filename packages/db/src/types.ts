@@ -2216,6 +2216,7 @@ export type Database = {
           gateway_fee_estimated: number
           id: string
           influencer_id: string | null
+          marketing_consent: boolean
           notes_internal: string | null
           number: string
           paid_at: string | null
@@ -2274,6 +2275,7 @@ export type Database = {
           gateway_fee_estimated?: number
           id?: string
           influencer_id?: string | null
+          marketing_consent?: boolean
           notes_internal?: string | null
           number?: string
           paid_at?: string | null
@@ -2332,6 +2334,7 @@ export type Database = {
           gateway_fee_estimated?: number
           id?: string
           influencer_id?: string | null
+          marketing_consent?: boolean
           notes_internal?: string | null
           number?: string
           paid_at?: string | null

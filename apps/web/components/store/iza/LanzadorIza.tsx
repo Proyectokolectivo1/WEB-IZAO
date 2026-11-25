@@ -66,7 +66,7 @@ export function LanzadorIza({ pais }: { pais: CodigoPais }) {
 
   return (
     <>
-      <div className={`fixed right-4 z-40 flex flex-col items-end gap-2 lg:right-6 ${posicion}`}>
+      <div className={`sobre-aviso-cookies fixed right-4 z-40 flex flex-col items-end gap-2 lg:right-6 ${posicion}`}>
         {burbuja ? (
           <div role="status" className="relative max-w-[16rem] rounded-card border border-line bg-bg px-4 py-3 pr-10 text-[0.9375rem] shadow-elev">
             <button
