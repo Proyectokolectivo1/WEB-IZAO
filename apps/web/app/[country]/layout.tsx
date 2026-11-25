@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Suspense, type ReactNode } from 'react';
 import { MetaPixel } from '@/components/store/analitica/MetaPixel';
+import { AvisoCookies } from '@/components/store/cookies/AvisoCookies';
 import { CarritoProvider } from '@/components/store/carrito/CarritoProvider';
 import { Footer } from '@/components/store/footer/Footer';
 import { LimiteError } from '@/components/store/LimiteError';
@@ -20,6 +21,7 @@ import { alternos } from '@/lib/store/seo';
 import { textosSeo } from '@/lib/store/seo-textos';
 import { textosEnvio } from '@/lib/store/envio';
 import { temaDePais } from '@/lib/store/tema';
+import { enlacePoliticaDatos, textosCookies } from '@/lib/store/textos-cookies';
 import { TP } from '@/lib/store/textos-pais';
 
 // Sin prerender en la compilación (no depende de la base); cada ruta se genera al pedirla y se cachea.
@@ -69,6 +71,9 @@ export default async function LayoutPais({ children, params }: { children: React
 
   return (
     <div id="tema-pais" className={override ? `tema-pais bg-bg text-ink ${override.clasesFuentes}` : undefined}>
+      {/* Primero en el documento: quien navega con teclado lo encuentra antes que el resto. No bloquea ni tapa nada. */}
+      <AvisoCookies textos={textosCookies(espacios)} enlacePolitica={enlacePoliticaDatos(pais, paginas)} />
+      {/* Opt-in: el Pixel solo arranca si la persona acepta el marketing en el aviso. */}
       <MetaPixel pixelId={pixelId} />
       {override ? <style dangerouslySetInnerHTML={{ __html: override.css }} /> : null}
       {override?.precarga.map((href) => <link key={href} rel="preload" as="font" type="font/woff2" href={href} crossOrigin="anonymous" />)}

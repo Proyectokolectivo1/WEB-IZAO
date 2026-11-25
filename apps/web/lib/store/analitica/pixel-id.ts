@@ -54,8 +54,23 @@ const cacheado = unstable_cache(async (pais: CodigoPais) => (await leerPixelId(p
   tags: ['pixel-meta'],
 });
 
+/**
+ * Solo pruebas y revisión local con `STORE_DATOS=ejemplo` (sin base): `EJEMPLO_PIXEL='{"co":"111111111111111","ec":"222222222222222"}'`
+ * hace de credencial activa de `meta_pixel` por país. Fuera del modo de ejemplo no tiene ningún efecto.
+ */
+export function pixelIdDeEjemplo(pais: CodigoPais, env: Record<string, string | undefined> = process.env): string | null {
+  if (env['STORE_DATOS'] !== 'ejemplo') return null;
+  try {
+    const id = (JSON.parse(env['EJEMPLO_PIXEL'] ?? '{}') as Record<string, unknown>)[pais];
+    return typeof id === 'string' && esPixelId(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Pixel ID del país o `null`. Nunca lanza: un fallo de la base apaga el píxel, no la tienda. */
 export async function pixelIdDePais(pais: CodigoPais): Promise<string | null> {
+  if (process.env['STORE_DATOS'] === 'ejemplo') return pixelIdDeEjemplo(pais);
   try {
     return (await cacheado(pais)) || null;
   } catch (e) {

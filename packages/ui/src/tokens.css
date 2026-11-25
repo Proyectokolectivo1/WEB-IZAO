@@ -126,6 +126,15 @@
     contain-intrinsic-size: auto var(--alto-tarjeta, 26rem);
   }
 
+  /*
+   * Botones flotantes (WhatsApp, Iza, subir, filtros): suben sobre el aviso de cookies mientras está visible. El aviso mide su
+   * alto y lo deja en `--alto-aviso-cookies` (con 12 px de aire); sin aviso vale 0 y no cambia nada. `margin-bottom` empuja
+   * un elemento fijo con `bottom` definido sin pelear con sus `transform`.
+   */
+  .sobre-aviso-cookies {
+    margin-bottom: var(--alto-aviso-cookies, 0px);
+  }
+
   .solo-lectores {
     position: absolute;
     width: 1px;

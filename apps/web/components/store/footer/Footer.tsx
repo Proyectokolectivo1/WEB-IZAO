@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Icono, IzaoImage } from '@izao/ui';
 import { T } from '@/lib/store/textos';
+import { EnlaceCookies } from '../cookies/EnlaceCookies';
 import { SelectorPais } from './SelectorPais';
 import type { AjustesTienda, CodigoPais, EspacioContenido, PaginaListada } from '@/lib/store/types';
 
@@ -99,6 +100,7 @@ export function Footer({ pais, ajustes, paginas, espacios }: Props) {
             <a href="/admin" rel="nofollow" className={`${enlace} text-bg/80 hover:text-bg`}>
               {T.footer.accesoEquipo}
             </a>
+            <EnlaceCookies className={`${enlace} text-bg/80 hover:text-bg`} />
           </div>
           {medios?.media ? (
             <div className="w-56">

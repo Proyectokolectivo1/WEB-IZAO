@@ -46,8 +46,8 @@ export function BarraFijaMovil({ ficha, pais, varianteId }: Props) {
       role="region"
       aria-label={T.ficha.barraCompra}
       inert={!visible}
-      className={`fixed inset-x-0 bottom-0 z-30 rounded-t-panel bg-bg px-4 pt-3 shadow-elev transition-transform duration-300 ease-izao motion-reduce:transition-none lg:hidden ${
-        visible ? 'translate-y-0' : 'translate-y-full'
+      className={`sobre-aviso-cookies fixed inset-x-0 bottom-0 z-30 rounded-t-panel bg-bg px-4 pt-3 shadow-elev transition-transform duration-300 ease-izao motion-reduce:transition-none lg:hidden ${
+        visible ? 'translate-y-0' : 'translate-y-[calc(100%+var(--alto-aviso-cookies,0px))]'
       }`}
       style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
     >

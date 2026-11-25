@@ -37,7 +37,7 @@ export function BotonWhatsapp({ href, etiqueta }: Props) {
       rel="noopener noreferrer"
       aria-label={etiqueta}
       data-testid="boton-whatsapp"
-      className={`fixed left-4 z-40 grid size-14 place-items-center rounded-full bg-success text-bg shadow-elev transition-transform hover:scale-105 motion-reduce:transition-none motion-reduce:hover:scale-100 lg:bottom-6 lg:left-6 ${
+      className={`sobre-aviso-cookies fixed left-4 z-40 grid size-14 place-items-center rounded-full bg-success text-bg shadow-elev transition-transform hover:scale-105 motion-reduce:transition-none motion-reduce:hover:scale-100 lg:bottom-6 lg:left-6 ${
         sobreBarra ? 'bottom-[7.5rem]' : 'bottom-4'
       }`}
     >
