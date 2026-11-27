@@ -152,6 +152,7 @@ function depsHerr(over: Partial<DepsHerramientas> = {}): DepsHerramientas {
     buscar: vi.fn(async () => [item('aroma-uno'), item('aroma-dos', { in_stock: false })]),
     ficha: vi.fn(async () => null),
     politica: vi.fn(async () => ({ titulo: 'Envíos', texto: 'Enviamos a todo el país.' })),
+    envio: vi.fn(async () => ({ valor: 'Gratis', nota: 'El envío es gratis.' })),
     metodos: vi.fn(async () => ({ metodos: [{ nombre: 'Wompi', descripcion: null, tipo: 'wompi' }], contraEntrega: { habilitada: true, abono: '$ 10.000', minimoRecaudo: '$ 20.000' }, recargoFinanciacion: { addi: '10' } })),
     pedido: vi.fn(async (n, c) => (n === 'IZ-CO-000123' && c === '+573101234567' ? { estado: 'pagado', guia: null } : null)),
     codigosIza: vi.fn(async () => [{ codigo: 'BIENVENIDA', descripcion: '10% de descuento' }]),

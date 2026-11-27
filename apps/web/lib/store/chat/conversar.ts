@@ -7,12 +7,23 @@
  * si falta, la estimación por tokens (`estimarCostoMicros`), y se suma al total del turno.
  */
 import type { LineaCarrito } from '../carrito/logica';
-import { DEFINICIONES, MAX_ITERACIONES_HERRAMIENTAS, ejecutarHerramienta, type DepsHerramientas } from './herramientas';
+import { DatosPermitidos, pideDatoComercial } from './cifras';
+import { envolverResultado } from './datos-seguros';
+import { clasificarEntrada, type ClasificacionEntrada } from './entrada-segura';
+import { MENSAJE_CATALOGO, MENSAJE_RECHAZO, FiltroSalida } from './filtro-salida';
+import {
+  DEFINICIONES,
+  MAX_ITERACIONES_HERRAMIENTAS,
+  MAX_LLAMADAS_POR_TURNO,
+  MAX_PRODUCTOS_POR_TURNO,
+  ejecutarHerramienta,
+  type DepsHerramientas,
+  type ResultadoHerramienta,
+} from './herramientas';
 import { describirFallo, type FalloProveedor, type LLMProvider, type MensajeLLM, type TurnoGuardado } from './llm';
 import { FiltroMarcadores } from './marcadores';
 import { elegirModelo, estimarCostoMicros, type NivelPresupuesto, type PreciosModelo } from './presupuesto';
-import { construirPrompt, type ContextoPrompt } from './prompt';
-import { FiltroReglaSiete } from './regla7';
+import { construirPrompt, textoReservado, type ContextoPrompt } from './prompt';
 
 export const MAX_TARJETAS_POR_RESPUESTA = 3;
 
@@ -45,6 +56,10 @@ export interface ResultadoTurno {
   costoMicros: bigint;
   texto: string;
   herramientas: { nombre: string; argumentos: string }[];
+  /** El mensaje se rechazó antes de llamar al modelo (intento de manipulación o de scraping): tipo del intento. */
+  bloqueado?: string;
+  /** Avisos de seguridad del turno (salida reemplazada, inyección indirecta…), sin contenido de la conversación. */
+  motivos?: string[];
 }
 
 export interface DepsConversar {
@@ -57,6 +72,8 @@ export interface DepsConversar {
   registrar(r: ResultadoTurno): Promise<void>;
   /** Cada fallo del proveedor (estado HTTP, código y mensaje corto, sin secretos) para el registro del servidor. */
   fallo?(f: FalloProveedor & { modelo: string; reintenta: boolean }): void;
+  /** Avisos de seguridad del turno (códigos como `entrada_prompt`, `cifra_monto`, `inyeccion_indirecta`); sin PII. */
+  alerta?(motivos: string[]): void | Promise<void>;
 }
 
 /** Con una llave inválida o sin permiso el modelo de respaldo falla igual: no se gasta otra llamada. */
@@ -72,9 +89,35 @@ export interface EntradaTurno {
   historial: TurnoGuardado[];
   mensaje: string;
   senal?: AbortSignal;
+  /** Resultado de `clasificarEntrada` si el llamador ya la calculó (el endpoint la usa para limitar abusos). */
+  clasificacion?: ClasificacionEntrada;
+  /** Marca interna del prompt (detección de fugas). */
+  canario?: string;
+  /** Hosts propios permitidos en enlaces de la respuesta (el sitio y `wa.me`). */
+  hostsPropios?: string[];
 }
 
 export async function* conversar(deps: DepsConversar, e: EntradaTurno): AsyncGenerator<EventoChat> {
+  // Intentos de manipulación o de scraping: respuesta fija y cortés, sin gastar una llamada al modelo.
+  const clase = e.clasificacion ?? clasificarEntrada(e.mensaje);
+  if (clase.accion === 'rechazar') {
+    const texto = clase.tipo === 'scraping' ? MENSAJE_CATALOGO : MENSAJE_RECHAZO;
+    yield { tipo: 'texto', texto };
+    await deps.alerta?.([`entrada_${clase.tipo}`]);
+    await deps.registrar({
+      modelo: 'seguridad',
+      tokensIn: 0,
+      tokensOut: 0,
+      costoMicros: 0n,
+      texto,
+      herramientas: [{ nombre: 'seguridad', argumentos: JSON.stringify({ tipo: clase.tipo }) }],
+      bloqueado: clase.tipo,
+      motivos: [`entrada_${clase.tipo}`],
+    });
+    yield { tipo: 'fin' };
+    return;
+  }
+
   let modelo = elegirModelo(e.nivel, e.modeloPrimario, e.modeloRespaldo);
   if (!modelo) {
     yield { tipo: 'error', codigo: 'sin_modelo' };
@@ -83,7 +126,17 @@ export async function* conversar(deps: DepsConversar, e: EntradaTurno): AsyncGen
 
   const mensajes: MensajeLLM[] = [{ role: 'system', content: construirPrompt(e.contexto) }, ...e.historial, { role: 'user', content: e.mensaje }];
   const filtro = new FiltroMarcadores();
-  const regla7 = new FiltroReglaSiete();
+  // Datos que respaldan cada cifra: lo que devuelven las herramientas en ESTE turno y el mapa de la tienda del país.
+  const datos = new DatosPermitidos();
+  if (e.contexto.mapa) datos.agregarTexto(e.contexto.mapa);
+  for (const h of e.historial) if (h.role === 'user') datos.agregarMensajeUsuario(h.content);
+  datos.agregarMensajeUsuario(e.mensaje);
+  const salida = new FiltroSalida(datos, { reservado: textoReservado(e.contexto), canario: e.canario ?? '', hostsPropios: e.hostsPropios ?? [] });
+  const avisosHerramientas = new Set<string>();
+  const slugsConocidos: string[] = [];
+  let llamadasTurno = 0;
+  let productosTurno = 0;
+  let forzar = pideDatoComercial(e.mensaje);
   const tarjetasEnviadas = new Set<string>();
   const herramientasUsadas: ResultadoTurno['herramientas'] = [];
   let textoFinal = '';
@@ -93,15 +146,15 @@ export async function* conversar(deps: DepsConversar, e: EntradaTurno): AsyncGen
   let huboSalida = false;
   let fallido = false;
 
-  async function* emitir(salida: { texto: string; slugs: string[] }, cierre = false): AsyncGenerator<EventoChat> {
-    // Regla 7: lo que ve la persona pasa por el filtro determinista antes de salir (por oraciones completas).
-    const texto = regla7.empujar(salida.texto) + (cierre ? regla7.cerrar() : '');
+  async function* emitir(contenido: { texto: string; slugs: string[] }, cierre = false): AsyncGenerator<EventoChat> {
+    // Lo que ve la persona pasa por el filtro determinista (fuga, regla 7, cifras) antes de salir, por oraciones completas.
+    const texto = salida.empujar(contenido.texto) + (cierre ? salida.cerrar() : '');
     if (texto) {
       textoFinal += texto;
       huboSalida = true;
       yield { tipo: 'texto', texto };
     }
-    for (const slug of salida.slugs) {
+    for (const slug of contenido.slugs) {
       if (tarjetasEnviadas.has(slug) || tarjetasEnviadas.size >= MAX_TARJETAS_POR_RESPUESTA) continue;
       tarjetasEnviadas.add(slug);
       // Un slug que el catálogo del país no reconoce se elimina sin avisar.
@@ -124,6 +177,8 @@ export async function* conversar(deps: DepsConversar, e: EntradaTurno): AsyncGen
         mensajes,
         herramientas: permitirHerramientas ? DEFINICIONES : [],
         maxTokens: e.maxTokens,
+        // Preguntas de precio, envío, pago o existencias: la primera ronda debe consultar una herramienta.
+        ...(forzar && ronda === 0 && permitirHerramientas ? { herramientaObligatoria: true } : {}),
         ...(e.senal ? { senal: e.senal } : {}),
       })) {
         if (ev.tipo === 'texto') {
@@ -140,6 +195,12 @@ export async function* conversar(deps: DepsConversar, e: EntradaTurno): AsyncGen
       }
     } catch (err) {
       const info = describirFallo(err);
+      // Algunos modelos no aceptan `tool_choice: required`: se reintenta una vez sin forzarlo.
+      if (forzar && ronda === 0 && info.estado === 400) {
+        forzar = false;
+        ronda--;
+        continue;
+      }
       // OpenRouter solo informa el uso en el último chunk: si la llamada se corta o se aborta, el costo de lo que ya se
       // procesó se estima por caracteres (≈ 4 por token, redondeando hacia arriba) para que el presupuesto no lo pierda.
       const caracteresPrompt = JSON.stringify(mensajes).length + JSON.stringify(DEFINICIONES).length;
@@ -167,19 +228,40 @@ export async function* conversar(deps: DepsConversar, e: EntradaTurno): AsyncGen
     yield* emitir(filtro.cerrar());
     mensajes.push({ role: 'assistant', content: textoRonda || null, llamadas });
     for (const l of llamadas) {
-      herramientasUsadas.push({ nombre: l.nombre, argumentos: l.argumentos.slice(0, 500) });
-      const r = await ejecutarHerramienta(deps.herramientas, l.nombre, l.argumentos);
-      mensajes.push({ role: 'tool', llamadaId: l.id, content: JSON.stringify(r.resultado).slice(0, 6000) });
+      herramientasUsadas.push({ nombre: l.nombre.slice(0, 40), argumentos: l.argumentos.slice(0, 500) });
+      let r: ResultadoHerramienta;
+      if (llamadasTurno >= MAX_LLAMADAS_POR_TURNO || (l.nombre === 'buscar_productos' && productosTurno >= MAX_PRODUCTOS_POR_TURNO)) {
+        // Tope anti-scraping por turno: no se ejecuta, el modelo recibe un aviso.
+        r = { resultado: { error: 'Límite de consultas de esta respuesta alcanzado. Responde con lo que ya tienes u ofrece un asesor.' }, slugs: [] };
+        avisosHerramientas.add('tope_consultas');
+      } else {
+        llamadasTurno++;
+        r = await ejecutarHerramienta(deps.herramientas, l.nombre, l.argumentos);
+        if (l.nombre === 'buscar_productos') productosTurno += r.slugs.length;
+      }
+      datos.agregarResultado(r.resultado);
+      for (const a of r.alertas ?? []) avisosHerramientas.add(a);
+      slugsConocidos.push(...r.slugs);
+      mensajes.push({ role: 'tool', llamadaId: l.id, content: envolverResultado(l.nombre, r.resultado) });
     }
   }
 
   yield* emitir(filtro.cerrar(), true);
-  if (regla7.huboReemplazo) {
-    herramientasUsadas.push({ nombre: 'contactar_asesor', argumentos: '{"motivo":"regla 7: originalidad o marcas"}' });
-    const r = await ejecutarHerramienta(deps.herramientas, 'contactar_asesor', JSON.stringify({ motivo: 'consulta sobre originalidad, autenticidad o marcas' }));
+  // Una cifra sin respaldo se reemplazó: la persona ve la tarjeta del producto (precio real del servidor y enlace a la ficha).
+  if (salida.huboCifraSinRespaldo && tarjetasEnviadas.size === 0) {
+    const slug = slugsConocidos[0] ?? e.contexto.producto?.slug;
+    const t = slug ? await deps.tarjeta(slug) : null;
+    if (t) yield { tipo: 'tarjeta', tarjeta: t };
+  }
+  if (salida.derivarAsesor) {
+    const motivo = salida.huboRegla7 ? 'consulta sobre originalidad, autenticidad o marcas' : 'dato de precio, plazo o condición sin confirmar';
+    herramientasUsadas.push({ nombre: 'contactar_asesor', argumentos: JSON.stringify({ motivo: salida.huboRegla7 ? 'regla 7: originalidad o marcas' : 'cifra sin respaldo' }) });
+    const r = await ejecutarHerramienta(deps.herramientas, 'contactar_asesor', JSON.stringify({ motivo }));
     const enlace = (r.resultado as { enlace_whatsapp?: string }).enlace_whatsapp;
     if (enlace) yield { tipo: 'asesor', enlace };
   }
-  await deps.registrar({ modelo, tokensIn, tokensOut, costoMicros: costo, texto: textoFinal.trim(), herramientas: herramientasUsadas });
+  const motivos = [...new Set<string>([...salida.motivos, ...avisosHerramientas])];
+  if (motivos.length > 0) await deps.alerta?.(motivos);
+  await deps.registrar({ modelo, tokensIn, tokensOut, costoMicros: costo, texto: textoFinal.trim(), herramientas: herramientasUsadas, ...(motivos.length > 0 ? { motivos } : {}) });
   yield { tipo: 'fin' };
 }

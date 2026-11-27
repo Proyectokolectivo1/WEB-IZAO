@@ -21,7 +21,7 @@ export function crearMock(): LLMProvider {
       if (ult?.role === 'tool') {
         let slugs: string[] = [];
         try {
-          const r = JSON.parse(ult.content) as { productos?: { slug: string }[] };
+          const r = JSON.parse(ult.content.replace(/^<datos_herramienta[^>]*>/, '').replace(/<\/datos_herramienta>$/, '')) as { productos?: { slug: string }[] };
           slugs = (r.productos ?? []).slice(0, 2).map((p) => p.slug);
         } catch {
           /* resultado sin forma de lista */

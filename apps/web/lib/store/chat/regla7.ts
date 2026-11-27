@@ -19,7 +19,7 @@ export function violaReglaSiete(oracion: string): boolean {
 }
 
 /** Fin de oración: punto, cierre de interrogación/exclamación o salto de línea (no los puntos de decimales ni «1.5»). */
-const FIN_ORACION = /[.!?…]+(?=\s|$)|\n/;
+export const FIN_ORACION = /[.!?…]+(?=\s|$)|\n/;
 
 export class FiltroReglaSiete {
   private buffer = '';

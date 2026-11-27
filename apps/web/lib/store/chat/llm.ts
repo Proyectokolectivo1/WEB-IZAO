@@ -45,6 +45,8 @@ export interface SolicitudLLM {
   herramientas: DefHerramienta[];
   maxTokens: number;
   senal?: AbortSignal;
+  /** Pide al modelo que use alguna herramienta en esta llamada (`tool_choice: required`). */
+  herramientaObligatoria?: boolean;
 }
 
 export interface LLMProvider {

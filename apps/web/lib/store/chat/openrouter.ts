@@ -155,9 +155,11 @@ export function crearOpenRouter(o: OpcionesOpenRouter): LLMProvider {
           messages: mensajesAOpenAI(s.mensajes),
           tools: s.herramientas.map((h) => ({ type: 'function', function: { name: h.name, description: h.description, parameters: h.parameters } })),
           max_tokens: s.maxTokens,
+          ...(s.herramientaObligatoria && s.herramientas.length > 0 ? { tool_choice: 'required' } : {}),
           // Sin retención ni entrenamiento con las conversaciones de clientes (datos personales).
           provider: { data_collection: o.recoleccionDatos ?? 'deny' },
-          temperature: 0.4,
+          // Baja: el chat vende con datos exactos (precios, plazos); la creatividad la da el tono, no las cifras.
+          temperature: 0.2,
           stream: true,
         }),
         signal: s.senal ?? null,
