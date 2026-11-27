@@ -4,10 +4,13 @@ import { enteroEnv, ipCliente } from '@/lib/checkout/limite-tasa';
 import { crearLimitadorRedis, redisTasa } from '@/lib/limite-tasa-redis';
 import { usarSupabase } from '@/lib/store/checkout-datos';
 import { decidirAcceso, limpiarMensaje } from '@/lib/store/chat/acceso';
+import { clasificarEntrada } from '@/lib/store/chat/entrada-segura';
+import { renderizarMapa } from '@/lib/store/chat/mapa-conocimiento';
 import { conversar, type ResultadoTurno } from '@/lib/store/chat/conversar';
 import {
   conWhatsapp,
   crearProveedor,
+  datosMapaDePais,
   crearSesion,
   gastadoDelMes,
   guardarTurno,
@@ -15,6 +18,7 @@ import {
   historialSesion,
   leerAjustesChat,
   leerSesion,
+  registrarAlertaChat,
   sumarUso,
   tarjetaDePais,
   type AjustesChat,
@@ -43,7 +47,26 @@ const limitador = crearLimitadorRedis({
   ventanaMs: 10 * 60_000,
 });
 
+/**
+ * Anti-abuso: intentos de manipulación o de scraping por IP en una hora (los detecta `clasificarEntrada` antes de gastar
+ * una llamada) y consultas de pedido por IP (anti-enumeración de números de pedido). Pasado el tope, 429.
+ */
+const limitadorAbuso = crearLimitadorRedis({
+  prefijo: 'rl:chat:abuso',
+  cliente: redisTasa,
+  limite: enteroEnv(process.env.CHAT_ABUSE_LIMIT_PER_HOUR, 6),
+  ventanaMs: 60 * 60_000,
+});
+const limitadorPedido = crearLimitadorRedis({
+  prefijo: 'rl:chat:pedido',
+  cliente: redisTasa,
+  limite: enteroEnv(process.env.CHAT_ORDER_LOOKUPS_PER_HOUR, 6),
+  ventanaMs: 60 * 60_000,
+});
+
 const MAX_CUERPO = 16 * 1024;
+/** Marca interna del prompt (por proceso): si aparece en una respuesta, el prompt se filtró. */
+const CANARIO = `IZA-${randomUUID().replace(/-/g, '').slice(0, 16)}`;
 const entradaSchema = z.object({
   country: z.string().transform((v) => v.toLowerCase()).pipe(z.enum(['co', 'ec'])),
   visitor_id: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/),
@@ -98,6 +121,13 @@ export async function POST(req: Request) {
     return json({ estado: 'desactivado' }, 503);
   }
 
+  // Intentos de manipulación o de scraping: se limitan por IP; la respuesta fija la da `conversar` sin llamar al modelo.
+  const clasificacion = clasificarEntrada(mensaje);
+  if (clasificacion.accion === 'rechazar') {
+    const abuso = await limitadorAbuso.consumir(ip);
+    if (!abuso.permitido) return json({ estado: 'limite' }, 429, { 'Retry-After': String(abuso.reintentarEnSeg) });
+  }
+
   const veredicto = decidirAcceso({
     habilitado: ajustes.habilitado,
     presupuestoMicros: ajustes.presupuestoMicros,
@@ -126,7 +156,19 @@ export async function POST(req: Request) {
   }
   const sesionActiva = sesion;
 
-  const herramientas = conWhatsapp(herramientasDePais(pais), tiendaAjustes?.whatsappAsesor ?? null, tiendaAjustes?.nombreTienda ?? 'Izao');
+  const herramientas = {
+    ...conWhatsapp(herramientasDePais(pais), tiendaAjustes?.whatsappAsesor ?? null, tiendaAjustes?.nombreTienda ?? 'Izao'),
+    permitirConsultaPedido: async () => (await limitadorPedido.consumir(ip)).permitido,
+  };
+  // Mapa de conocimiento del país (qué existe en la tienda), cacheado 5 min; sin él Iza sigue con las herramientas.
+  const datosMapa = clasificacion.accion === 'ok' ? await datosMapaDePais(pais) : null;
+  const sitio = (() => {
+    try {
+      return new URL(process.env.SITE_URL ?? 'https://izaoperfumeria.com').hostname;
+    } catch {
+      return 'izaoperfumeria.com';
+    }
+  })();
   const tarjeta = tarjetaDePais(pais);
   const productoActual = e.page?.producto ? await tarjeta(e.page.producto.toLowerCase()).catch(() => null) : null;
   const carrito = (
@@ -151,6 +193,11 @@ export async function POST(req: Request) {
             registrar: async (r) => {
               resultado = r;
             },
+            // Intentos y respuestas corregidas: solo códigos cortos en `audit_log` (sin texto de la conversación ni IP).
+            alerta: async (motivos) => {
+              console.warn(`[iza] alerta de seguridad: pais=${pais} motivos=${motivos.join(',')}`);
+              await registrarAlertaChat(sesionActiva.id, pais, motivos).catch(() => undefined);
+            },
             // Solo estado HTTP, código y mensaje corto de OpenRouter, más el modelo: nunca la llave ni el cuerpo.
             fallo: (f) =>
               console.error(
@@ -162,7 +209,12 @@ export async function POST(req: Request) {
             modeloPrimario: ajustes.modeloPrimario ?? (proveedor.nombre === 'mock' ? 'mock' : null),
             modeloRespaldo: ajustes.modeloRespaldo,
             maxTokens: ajustes.maxTokens,
+            clasificacion,
+            canario: CANARIO,
+            hostsPropios: [sitio, 'wa.me', 'api.whatsapp.com'],
             contexto: {
+              mapa: datosMapa ? renderizarMapa(datosMapa) : null,
+              canario: CANARIO,
               nombrePais: tiendaAjustes?.nombrePais ?? (pais === 'co' ? 'Colombia' : 'Ecuador'),
               moneda: tiendaAjustes?.moneda ?? (pais === 'co' ? 'COP' : 'USD'),
               instruccionesExtra: ajustes.instruccionesExtra,
@@ -187,7 +239,8 @@ export async function POST(req: Request) {
         // Se guarda siempre lo dicho y se suma lo gastado, aunque la persona haya cerrado el chat a medias.
         if (conBase) {
           const r = resultado as ResultadoTurno | null;
-          await guardarTurno(sesionActiva, mensaje, r).catch((x) => console.error(`[iza] no se guardó el turno: ${x instanceof Error ? x.name : 'error'}`));
+          // Un mensaje bloqueado por seguridad no se guarda tal cual: solo el tipo de intento (sin contenido sensible).
+          await guardarTurno(sesionActiva, r?.bloqueado ? `[mensaje bloqueado: ${r.bloqueado}]` : mensaje, r).catch((x) => console.error(`[iza] no se guardó el turno: ${x instanceof Error ? x.name : 'error'}`));
           if (r) await sumarUso(r.costoMicros).catch((x) => console.error(`[iza] no se sumó el consumo: ${x instanceof Error ? x.name : 'error'}`));
         }
         controlador.close();

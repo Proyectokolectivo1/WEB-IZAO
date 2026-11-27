@@ -8,8 +8,9 @@ import { unstable_cache } from 'next/cache';
 import { byteaDesdePostgrest, descifrarCredenciales } from '@izao/core/credentials';
 import { clienteDb } from '@/lib/db/cliente';
 import { registrarTurnoChatDb, type MensajeTurnoChat } from '@/lib/db/chat';
-import { enlaceWhatsapp } from '../contacto';
+import { enlaceWhatsapp, numeroWhatsapp } from '../contacto';
 import { configCheckout, usarSupabase } from '../checkout-datos';
+import { textosEnvio } from '../envio';
 import { lineaDe, varianteInicial, presentacionDe } from '../ficha-util';
 import { tienda } from '../datos';
 import { ejemploPermitido } from '../modo-datos';
@@ -21,6 +22,7 @@ import { crearMock } from './mock';
 import { crearOpenRouter } from './openrouter';
 import type { ResultadoTurno, TarjetaChat } from './conversar';
 import { mesDeUso } from './presupuesto';
+import type { DatosMapa } from './mapa-conocimiento';
 import { registrarUsoMes, type ClienteRpc } from './uso';
 
 export interface AjustesChat {
@@ -241,7 +243,7 @@ const aTexto = (html: string) =>
     .replace(/\n\s*\n+/g, '\n')
     .trim();
 
-const KIND_POR_TEMA = { envios: 'envios', tiempos_entrega: 'envios', garantias: 'devoluciones', devoluciones: 'devoluciones' } as const;
+const KIND_POR_TEMA = { envios: 'envios', tiempos_entrega: 'envios', garantias: 'devoluciones', devoluciones: 'devoluciones', terminos: 'terminos', quienes_somos: 'quienes_somos' } as const;
 
 export function herramientasDePais(pais: CodigoPais): DepsHerramientas {
   const repo = tienda();
@@ -267,6 +269,10 @@ export function herramientasDePais(pais: CodigoPais): DepsHerramientas {
     async politica(tema) {
       const p = await repo.paginaPorTipo(pais, KIND_POR_TEMA[tema]);
       return p ? { titulo: p.title, texto: aTexto(p.content_html) } : null;
+    },
+    async envio() {
+      const e = textosEnvio(await repo.espacios(pais).catch(() => []));
+      return { valor: e.valor, nota: e.nota };
     },
     async metodos() {
       const c = await configCheckout(pais);
@@ -346,4 +352,72 @@ export function tarjetaDePais(pais: CodigoPais) {
       linea: v && disponible ? lineaDe(f, v) : null,
     };
   };
+}
+
+// ── Mapa de conocimiento (qué existe en la tienda del país) ─────────────────────────────────────────
+
+/**
+ * Datos del mapa de conocimiento de Iza (ver `mapa-conocimiento.ts`): se leen de la base por país y se cachean 5 minutos
+ * (el panel invalida `content:{PAÍS}` y `checkout-config` al guardar). Todo son textos: se pueden serializar en la caché.
+ */
+const leerDatosMapa = unstable_cache(
+  async (pais: CodigoPais): Promise<DatosMapa> => {
+    const repo = tienda();
+    const [ajustes, opciones, menu, config, paginas, espacios, codigos, home] = await Promise.all([
+      repo.ajustes(pais),
+      repo.opcionesFiltros(pais),
+      repo.menu(pais).catch(() => []),
+      configCheckout(pais),
+      repo.paginas(pais).catch(() => []),
+      repo.espacios(pais).catch(() => []),
+      herramientasDePais(pais).codigosIza().catch(() => []),
+      repo.home(pais).catch(() => null),
+    ]);
+    const envio = textosEnvio(espacios);
+    return {
+      nombrePais: ajustes.nombrePais,
+      moneda: ajustes.moneda,
+      generos: opciones.generos.map((o) => o.name),
+      familias: opciones.familias.map((o) => o.name),
+      concentraciones: opciones.concentraciones.map((o) => o.name),
+      categorias: menu.map((c) => ({ nombre: c.name, hijos: c.children.map((h) => h.name) })),
+      colecciones: (home?.colecciones ?? []).map((c) => c.name),
+      rangoPrecios: opciones.precioMax > 0 ? { min: formatearPrecio(opciones.precioMin, pais), max: formatearPrecio(opciones.precioMax, pais) } : null,
+      metodosPago: config.metodos.map((m) => ({ nombre: m.nombre, descripcion: m.descripcion })),
+      contraEntrega: { habilitada: config.codHabilitado, abono: formatearPrecio(config.codAbono, pais), minimoRecaudo: formatearPrecio(config.codMinimoRecaudo, pais) },
+      recargoFinanciacion: config.recargoFinanciacion,
+      envio: { valor: envio.valor, nota: envio.nota },
+      paginasPublicadas: [...new Set(paginas.map((p) => p.kind))].filter((k): k is DatosMapa['paginasPublicadas'][number] => k !== 'general'),
+      asesorDisponible: numeroWhatsapp(ajustes.whatsappAsesor) !== null,
+      codigosIza: codigos.length,
+    };
+  },
+  ['chat-mapa-conocimiento'],
+  { revalidate: 300, tags: ['content:CO', 'content:EC', 'checkout-config'] },
+);
+
+/** Datos del mapa del país; `null` si no se pudieron leer (Iza sigue funcionando solo con las herramientas). */
+export async function datosMapaDePais(pais: CodigoPais): Promise<DatosMapa | null> {
+  try {
+    return await leerDatosMapa(pais);
+  } catch (e) {
+    console.error(`[iza] no se pudo leer el mapa de conocimiento: ${e instanceof Error ? e.name : 'error'}`);
+    return null;
+  }
+}
+
+// ── Alertas de seguridad ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * Deja constancia en `audit_log` de un intento de manipulación o de una respuesta corregida por el guardarraíl. Solo
+ * guarda el país, la sesión y códigos cortos (`entrada_prompt`, `cifra_monto`…): nunca el texto de la persona, el de la
+ * respuesta, la IP ni datos personales.
+ */
+export async function registrarAlertaChat(sesionId: string, pais: CodigoPais, motivos: string[]): Promise<void> {
+  const codigos = motivos.map((m) => m.replace(/[^a-z0-9_]/gi, '').slice(0, 40)).filter(Boolean).slice(0, 8);
+  if (codigos.length === 0) return;
+  const { error } = await clienteDb()
+    .from('audit_log')
+    .insert({ actor: 'iza', action: 'chat_alerta_seguridad', entity: 'chat_session', entity_id: sesionId, diff: { pais: pais.toUpperCase(), motivos: codigos.join(',') } });
+  if (error) console.error(`[iza] no se registró la alerta de seguridad: ${error.message.slice(0, 120)}`);
 }

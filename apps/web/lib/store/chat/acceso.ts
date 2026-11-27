@@ -2,6 +2,7 @@
  * Decisión de acceso de un mensaje al chat (§20.4, §20.5), antes de gastar nada. Código puro: ajustes, consumo y sesión
  * entran como datos y sale un veredicto con el estado que el widget sabe mostrar.
  */
+import { sanearEntrada } from './entrada-segura';
 import { nivelPresupuesto, type NivelPresupuesto } from './presupuesto';
 
 export type EstadoChat = 'desactivado' | 'agotado' | 'entrada_larga' | 'entrada_vacia' | 'sesion_llena';
@@ -20,15 +21,9 @@ export interface EntradaAcceso {
 
 export type VeredictoAcceso = { ok: true; nivel: Exclude<NivelPresupuesto, 'agotado'> } | { ok: false; estado: EstadoChat; status: number };
 
-/** Quita caracteres de control y espacios sobrantes; el recorte de longitud lo decide `decidirAcceso`. */
+/** Quita caracteres de control, invisibles y de formato (ver `sanearEntrada`) y espacios sobrantes; el recorte de longitud lo decide `decidirAcceso`. */
 export function limpiarMensaje(crudo: string): string {
-  const sinControl = [...crudo.normalize('NFKC')]
-    .filter((c) => {
-      const n = c.charCodeAt(0);
-      return n >= 32 ? n !== 127 : n === 9 || n === 10 || n === 13;
-    })
-    .join('');
-  return sinControl.split('	').join(' ').replace(/ {2,}/g, ' ').trim();
+  return sanearEntrada(crudo).texto;
 }
 
 export function decidirAcceso(e: EntradaAcceso): VeredictoAcceso {
