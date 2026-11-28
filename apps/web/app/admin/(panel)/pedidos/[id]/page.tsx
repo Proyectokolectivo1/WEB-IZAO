@@ -6,6 +6,7 @@ import { isOrderStatus, puedeTransicionar } from '@izao/core/order-state';
 import { AccionConTexto, AccionSimple, FormularioNota } from '@/components/admin/AccionesPedido';
 import { BotonesCobro } from '@/components/admin/BotonesCobro';
 import { evaluarCobro } from '@/lib/admin/pedidos/cobro';
+import { enlacesContacto, textoDocumento } from '@/lib/admin/pedidos/contacto';
 import { dinero, obtenerDetallePedido } from '@/lib/admin/pedidos/detalle-servidor';
 import { advertenciaCancelar, haySolicitudReembolso, pagosPorReembolsar, textoReembolso } from '@/lib/admin/pedidos/reembolso';
 import {
@@ -25,6 +26,7 @@ import { agregarNota, cancelarPedido, copiarLinkCobro, marcarPagado, reenviarCob
 
 export const metadata: Metadata = { title: 'Detalle del pedido' };
 
+const PAIS: Record<string, string> = { CO: 'Colombia', EC: 'Ecuador' };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function formatoFecha(zona: string) {
@@ -39,6 +41,8 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
   if (!d) notFound();
 
   const { pedido: p } = d;
+  const contacto = enlacesContacto(p.contact_phone_e164);
+  const documento = textoDocumento(p.document_type, p.document_number);
   // Las fechas se muestran en la zona del país del pedido (Bogotá para CO; Guayaquil para EC).
   const fecha = formatoFecha(p.country_code === 'EC' ? 'America/Guayaquil' : 'America/Bogota');
   const cobro = evaluarCobro(
@@ -194,14 +198,99 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
         </section>
       ) : null}
 
-      <section className="adm-form-ancho" aria-labelledby="h-resumen">
-        <h2 id="h-resumen">Resumen</h2>
+      <section className="adm-form-ancho" aria-labelledby="h-cliente">
+        <h2 id="h-cliente">Cliente</h2>
         <p>
-          {p.contact_first_name} {p.contact_last_name} · {p.contact_phone_e164}
-          {p.contact_email ? ` · ${p.contact_email}` : ''}
+          <strong>
+            {p.contact_first_name} {p.contact_last_name}
+          </strong>
+          {documento ? ` · ${documento}` : ''}
         </p>
-        <p className="adm-suave">
-          {[p.shipping_address1, p.shipping_city_name, p.shipping_region_name].filter(Boolean).join(', ') || 'Sin dirección'}
+        <p>
+          {contacto ? (
+            <>
+              {p.contact_phone_e164} ·{' '}
+              <a href={contacto.whatsapp} target="_blank" rel="noopener noreferrer">
+                WhatsApp
+              </a>{' '}
+              ·{' '}
+              <a href={contacto.tel}>Llamar</a>
+            </>
+          ) : (
+            p.contact_phone_e164 || 'Sin teléfono'
+          )}
+        </p>
+        <p>{p.contact_email ? <a href={`mailto:${p.contact_email}`}>{p.contact_email}</a> : <span className="adm-suave">Sin correo</span>}</p>
+      </section>
+
+      <section className="adm-form-ancho" aria-labelledby="h-direccion">
+        <h2 id="h-direccion">Dirección de envío</h2>
+        {p.shipping_address1 ? (
+          <>
+            <p>
+              {p.shipping_address1}
+              {p.shipping_address2 ? `, ${p.shipping_address2}` : ''}
+            </p>
+            <p>
+              {[p.shipping_district, p.shipping_city_name, p.shipping_region_name].filter(Boolean).join(', ')} · {PAIS[p.country_code] ?? p.country_code}
+              {p.shipping_zip ? ` · código postal ${p.shipping_zip}` : ''}
+            </p>
+            {p.shipping_notes ? <p className="adm-suave">Observaciones: {p.shipping_notes}</p> : null}
+          </>
+        ) : (
+          <p className="adm-vacio">Sin dirección.</p>
+        )}
+      </section>
+
+      <section aria-labelledby="h-productos">
+        <h2 id="h-productos">Productos</h2>
+        {d.items.length === 0 ? (
+          <p className="adm-vacio">El pedido no tiene productos.</p>
+        ) : (
+          <div className="adm-tabla-caja">
+            <table className="adm-tabla adm-tabla-apilada">
+              <caption className="adm-suave">Productos del pedido en {p.currency_code}</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Producto</th>
+                  <th scope="col">SKU</th>
+                  <th scope="col">Cantidad</th>
+                  <th scope="col">Precio unitario</th>
+                  <th scope="col">Total línea</th>
+                </tr>
+              </thead>
+              <tbody>
+                {d.items.map((i) => (
+                  <tr key={i.id}>
+                    <td>
+                      {i.name_snapshot}
+                      {i.variant_label ? <span className="adm-suave"> · {i.variant_label}</span> : null}
+                    </td>
+                    <td data-etiqueta="SKU" className="adm-suave">{i.sku ?? '—'}</td>
+                    <td data-etiqueta="Cantidad">{i.quantity}</td>
+                    <td data-etiqueta="Precio unitario">{dinero(i.unit_price, p.currency_code)}</td>
+                    <td data-etiqueta="Total línea">
+                      {dinero(i.unit_price * i.quantity - i.line_discount, p.currency_code)}
+                      {i.line_discount > 0 ? <span className="adm-suave adm-chico"> (desc. −{dinero(i.line_discount, p.currency_code)})</span> : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="adm-form-ancho" aria-labelledby="h-resumen">
+        <h2 id="h-resumen">Pago y totales</h2>
+        <p>
+          Método: {ETIQUETA_METODO_PAGO[p.payment_method] ?? p.payment_method}
+          {p.payment_method === 'cod' ? (
+            <>
+              {' '}
+              · abono {dinero(p.cod_deposit_amount, p.currency_code)} · a recaudar al entregar {dinero(p.cod_collect_amount, p.currency_code)}
+            </>
+          ) : null}
         </p>
         <p>
           Subtotal {dinero(p.subtotal, p.currency_code)}
@@ -209,6 +298,9 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           {p.financing_surcharge_amount > 0 ? ` · recargo ${dinero(p.financing_surcharge_amount, p.currency_code)}` : ''} ·{' '}
           <strong>Total {dinero(p.total_customer, p.currency_code)}</strong>
         </p>
+        {p.shipping_cost_real !== null && p.shipping_cost_real > 0 ? (
+          <p className="adm-suave adm-chico">Costo real del envío (transportadora): {dinero(p.shipping_cost_real, p.currency_code)}. No se cobra aparte al cliente.</p>
+        ) : null}
       </section>
 
       <section aria-labelledby="h-pagos">

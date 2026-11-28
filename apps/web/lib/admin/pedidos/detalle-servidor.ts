@@ -64,6 +64,13 @@ export type DetallePedido = {
     shipping_city_name: string | null;
     shipping_region_name: string | null;
     shipping_address1: string | null;
+    shipping_address2: string | null;
+    shipping_district: string | null;
+    shipping_zip: string | null;
+    shipping_notes: string | null;
+    document_type: string | null;
+    document_number: string | null;
+    shipping_cost_real: number | null;
     subtotal: number;
     discount_amount: number;
     financing_surcharge_amount: number;
@@ -75,6 +82,7 @@ export type DetallePedido = {
     created_at: string;
     paid_at: string | null;
   };
+  items: { id: string; sku: string | null; name_snapshot: string; variant_label: string | null; quantity: number; unit_price: number; line_discount: number }[];
   pagos: { id: string; provider: string; purpose: string; amount: number; status: string; provider_reference: string | null; created_at: string }[];
   link: { expires_at: string; clicks: number; created_at: string } | null;
   mensajes: {
@@ -148,14 +156,19 @@ export async function obtenerDetallePedido(cliente: Cliente, id: string): Promis
   const { data: pedido, error } = await cliente
     .from('orders')
     .select(
-      'id, number, country_code, currency_code, status, payment_method, contact_first_name, contact_last_name, contact_phone_e164, contact_email, shipping_city_name, shipping_region_name, shipping_address1, subtotal, discount_amount, financing_surcharge_amount, total_customer, cod_deposit_amount, cod_collect_amount, stock_reserved_until, alerts, created_at, paid_at',
+      'id, number, country_code, currency_code, status, payment_method, contact_first_name, contact_last_name, contact_phone_e164, contact_email, shipping_city_name, shipping_region_name, shipping_address1, shipping_address2, shipping_district, shipping_zip, shipping_notes, document_type, document_number, shipping_cost_real, subtotal, discount_amount, financing_surcharge_amount, total_customer, cod_deposit_amount, cod_collect_amount, stock_reserved_until, alerts, created_at, paid_at',
     )
     .eq('id', id)
     .maybeSingle();
   if (error) throw new Error('No se pudo leer el pedido.');
   if (!pedido) return null;
 
-  const [pagos, links, mensajes, eventos, envios, impresiones] = await Promise.all([
+  const [items, pagos, links, mensajes, eventos, envios, impresiones] = await Promise.all([
+    cliente
+      .from('order_items')
+      .select('id, sku, name_snapshot, variant_label, quantity, unit_price, line_discount')
+      .eq('order_id', id)
+      .order('created_at', { ascending: true }),
     cliente
       .from('payments')
       .select('id, provider, purpose, amount, status, provider_reference, created_at')
@@ -187,6 +200,7 @@ export async function obtenerDetallePedido(cliente: Cliente, id: string): Promis
   const links1 = ok<DetallePedido['link'][]>(links, 'el link de cobro');
   return {
     pedido: pedido as never,
+    items: ok(items, 'los productos'),
     pagos: ok(pagos, 'los pagos'),
     link: links1[0] ?? null,
     mensajes: ok(mensajes, 'los mensajes'),
