@@ -5,6 +5,7 @@ import { LLAVE_PRIVADA_PRUEBA, fetchWompiFalso, type TransaccionPrueba } from '@
 import {
   ESTADOS_COBRO,
   MAX_FALLAS_SEGUIDAS,
+  UMBRAL_RITMO,
   crearConciliadorWompi,
   enTurno,
   type DepsConciliacion,
@@ -278,20 +279,35 @@ describe('conciliación Wompi (respaldo del webhook, D-059)', () => {
     expect(s.pedidos.get(P52)!.status).toBe('expirado');
   });
 
-  it('ritmo: pagos de menos de 3 h en cada corrida; los viejos solo en su turno (una vez cada 30 min)', async () => {
+  it('incidente 28/11: pocos candidatos viejos (~21 h) se consultan en CADA corrida, sin esperar su turno', async () => {
+    const instantes = Array.from({ length: 15 }, (_, i) => new Date(AHORA.getTime() + i * 120_000));
+    const fueraDeTurno = instantes[instantes.findIndex((t) => !enTurno('viejo', t))]!;
+    const s = escenario({ pagos: [pago({ id: 'viejo', created_at: HACE_15H })] });
+    s.deps.ahora = () => fueraDeTurno;
+    expect(await s.conciliador().barrer()).toMatchObject({ revisados: 1, aplicados: 1, omitidos: 0 });
+    expect(s.pedidos.get(P52)!.status).toBe('pagado');
+  });
+
+  it('ritmo solo con muchos candidatos: recientes en cada corrida, viejos en su turno (una vez cada 30 min)', async () => {
     const instantes = Array.from({ length: 15 }, (_, i) => new Date(AHORA.getTime() + i * 120_000));
     const turnos = instantes.map((t) => enTurno('viejo', t));
     expect(turnos.filter(Boolean)).toHaveLength(1);
-    const fuera = escenario({ pagos: [pago({ id: 'viejo', created_at: HACE_15H })] });
-    fuera.deps.ahora = () => instantes[turnos.indexOf(false)]!;
-    expect(await fuera.conciliador().barrer()).toMatchObject({ revisados: 0, omitidos: 1 });
-    expect(fuera.red.llamadas).toHaveLength(0);
-    const dentro = escenario({ pagos: [pago({ id: 'viejo', created_at: HACE_15H })] });
-    dentro.deps.ahora = () => instantes[turnos.indexOf(true)]!;
-    expect(await dentro.conciliador().barrer()).toMatchObject({ revisados: 1, aplicados: 1 });
-    const reciente = escenario({ pagos: [pago({ id: 'viejo', created_at: HACE_10M })] });
-    reciente.deps.ahora = () => instantes[turnos.indexOf(false)]!;
-    expect(await reciente.conciliador().barrer()).toMatchObject({ revisados: 1 });
+    const relleno = (n: number, creado: string) =>
+      Array.from({ length: n }, (_, i) => pago({ id: `r-${i}`, provider_reference: `IZ-CO-1${String(i).padStart(5, '0')}-P1`, created_at: creado }));
+    const muchos = (ahora: Date, creadoViejo: string) => {
+      const s = escenario({ pagos: [pago({ id: 'viejo', created_at: creadoViejo }), ...relleno(UMBRAL_RITMO, HACE_15H)] });
+      s.deps.ahora = () => ahora;
+      return s;
+    };
+    const fuera = muchos(instantes[turnos.indexOf(false)]!, HACE_15H);
+    await fuera.conciliador().barrer();
+    expect(fuera.red.llamadas.some((l) => l.url.includes('IZ-CO-000052-P1'))).toBe(false);
+    const dentro = muchos(instantes[turnos.indexOf(true)]!, HACE_15H);
+    await dentro.conciliador().barrer();
+    expect(dentro.red.llamadas.some((l) => l.url.includes('IZ-CO-000052-P1'))).toBe(true);
+    const reciente = muchos(instantes[turnos.indexOf(false)]!, HACE_10M);
+    await reciente.conciliador().barrer();
+    expect(reciente.red.llamadas.some((l) => l.url.includes('IZ-CO-000052-P1'))).toBe(true);
   });
 
   it('ventana de 48 h: pagos más viejos no se consultan', async () => {

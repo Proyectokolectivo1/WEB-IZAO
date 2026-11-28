@@ -16,9 +16,11 @@
  *   4. Un aprobado que no se pudo aplicar (sin stock, monto distinto, duplicado, estado raro) deja la alerta
  *      `pago_aprobado_sin_aplicar` en `order_events` (panel; deduplicada por transacción en la fuente) y un
  *      `console.error` con prefijo `[alerta-pagos]` para el monitoreo.
- * Ritmo: pagos de menos de `RECIENTE_MS` (3 h) en cada corrida; los más viejos una vez cada `PERIODO_ANTIGUOS_MS`
- * (30 min) repartidos por hash del id. Tope de consultas por corrida. Si Wompi falla `MAX_FALLAS_SEGUIDAS` veces
- * seguidas se corta la corrida (`wompi_caido`) y el barrido no vence pedidos con pago pendiente sin conciliar.
+ * Ritmo: con hasta `UMBRAL_RITMO` candidatos se consultan todos en cada corrida (lo normal; así el primer barrido
+ * tras desplegar ya los cubre). Con más, los de menos de `RECIENTE_MS` (3 h) en cada corrida y los más viejos una vez
+ * cada `PERIODO_ANTIGUOS_MS` (30 min) repartidos por hash del id. Tope de `MAX_CONSULTAS` llamadas por corrida (los
+ * recientes primero). Si Wompi falla `MAX_FALLAS_SEGUIDAS` veces seguidas se corta la corrida (`wompi_caido`) y el
+ * barrido no vence pedidos con pago pendiente sin conciliar. Cada corrida con candidatos deja una línea de resumen.
  * Nunca registra llaves ni cuerpos de respuesta.
  */
 import type { OrderStatus } from '@izao/core/order-state';
@@ -34,6 +36,8 @@ export const PERIODO_ANTIGUOS_MS = 30 * 60_000;
 export const INTERVALO_CONCILIACION_MS = 2 * 60_000;
 export const MAX_FALLAS_SEGUIDAS = 3;
 const MAX_CONSULTAS = 120;
+/** Hasta cuántos candidatos se consultan todos en cada corrida, sin ritmo por antigüedad. */
+export const UMBRAL_RITMO = 40;
 const LIMITE_CANDIDATOS = 500;
 const DIA_MS = 24 * 3600_000;
 
@@ -215,16 +219,17 @@ export function crearConciliadorWompi(deps: DepsConciliacion): ConciliadorWompi 
   return {
     async barrer() {
       const candidatos = await fuente.pagosPorConciliar(new Date(ahora.getTime() - VENTANA_CONCILIACION_MS), LIMITE_CANDIDATOS);
+      const conRitmo = candidatos.length > UMBRAL_RITMO;
       for (const p of candidatos) {
         if (r.wompi_caido) break;
         const edad = ahora.getTime() - new Date(p.created_at).getTime();
-        if ((edad > RECIENTE_MS && !enTurno(p.id, ahora)) || r.consultas >= MAX_CONSULTAS) {
+        if ((conRitmo && edad > RECIENTE_MS && !enTurno(p.id, ahora)) || r.consultas >= MAX_CONSULTAS) {
           r.omitidos += 1;
           continue;
         }
         await conciliarPago(p);
       }
-      if (r.revisados + r.errores > 0) console.log(`[worker] conciliación Wompi: ${JSON.stringify(r)}`);
+      if (candidatos.length > 0) console.log(`[worker] conciliación Wompi: ${JSON.stringify({ candidatos: candidatos.length, ...r })}`);
       return { ...r };
     },
 
