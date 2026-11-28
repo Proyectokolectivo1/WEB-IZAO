@@ -20,7 +20,7 @@ import {
 const ESPERADA: Record<OrderStatus, OrderStatus[]> = {
   pendiente_pago: ['pagado', 'pago_rechazado', 'expirado'],
   pago_rechazado: ['pendiente_pago', 'expirado'],
-  expirado: ['requiere_reembolso'],
+  expirado: ['pagado', 'requiere_reembolso'],
   esperando_abono: ['abono_pagado', 'abandonado'],
   abandonado: ['abono_pagado', 'requiere_reembolso'],
   pendiente_manual: ['pagado', 'cancelado', 'expirado'],
@@ -97,11 +97,12 @@ describe('order-state: tabla completa de transiciones (17 × 17)', () => {
     expect(puedeTransicionar('abandonado', 'requiere_reembolso')).toBe(true);
   });
 
-  it('decisión del dueño: pago completo aprobado tras expirar, expirado → requiere_reembolso y nada más', () => {
+  it('D-059: pago completo aprobado tras expirar → pagado si se re-reserva el stock, si no requiere_reembolso', () => {
+    expect(puedeTransicionar('expirado', 'pagado')).toBe(true);
     expect(puedeTransicionar('expirado', 'requiere_reembolso')).toBe(true);
-    expect(siguientesEstados('expirado')).toEqual(['requiere_reembolso']);
-    expect(puedeTransicionar('expirado', 'pagado')).toBe(false);
+    expect(siguientesEstados('expirado')).toEqual(['pagado', 'requiere_reembolso']);
     expect(puedeTransicionar('expirado', 'pendiente_pago')).toBe(false);
+    expect(puedeTransicionar('expirado', 'abono_pagado')).toBe(false);
   });
 });
 
@@ -180,11 +181,11 @@ describe('order-state: transicionar', () => {
     expect(r).toMatchObject({ ok: false, error: { code: 'TERMINAL_STATE' } });
   });
 
-  it('expirado ya no es final pero solo admite requiere_reembolso', () => {
-    const r = transicionar({ from: 'expirado', to: 'pagado', actor: 'webhook:wompi' });
+  it('expirado no es final: admite pagado (pago tardío con stock, D-059) y requiere_reembolso', () => {
+    const r = transicionar({ from: 'expirado', to: 'pendiente_pago', actor: 'webhook:wompi' });
     expect(r).toMatchObject({ ok: false, error: { code: 'INVALID_TRANSITION' } });
-    const ok = transicionar({ from: 'expirado', to: 'requiere_reembolso', actor: 'webhook:wompi' });
-    expect(ok.ok).toBe(true);
+    expect(transicionar({ from: 'expirado', to: 'pagado', actor: 'webhook:wompi' }).ok).toBe(true);
+    expect(transicionar({ from: 'expirado', to: 'requiere_reembolso', actor: 'webhook:wompi' }).ok).toBe(true);
   });
 
   it('rechaza salir de devuelto', () => {

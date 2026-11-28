@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { OrderStatus, OrderStatusEvent } from '@izao/core/order-state';
 import { barrerPedidos, encoladorInicioCod, type DepsBarrido } from './barrido.js';
 import type { PedidoCod, PedidoPorVencer, SolicitudFinanciacionAbierta } from './fuente.js';
+import type { ConciliadorWompi, EstadoConciliacionPedido, ResultadoConciliacion } from '../payments/conciliacion.js';
 
 const AHORA = new Date('2026-10-21T15:05:00.000Z');
 const id = (n: number) => `00000000-0000-4000-8000-0000000000${String(n).padStart(2, '0')}`;
@@ -120,7 +121,7 @@ function escenario(o: {
 describe('barrido de pedidos (cron)', () => {
   it('pendiente_pago vencido → expirado por aplicar_transicion_pedido, libera stock y canje', async () => {
     const s = escenario({ pedidos: [pedido(1, 'pendiente_pago')], vencer: [{ order_id: id(1), estado_actual: 'pendiente_pago', nuevo_estado: 'expirado' }] });
-    expect(await barrerPedidos(s.deps)).toEqual({ vencidos: 1, liberados: 0, encolados: 0, invalidadas: 0, omitidos: 0, errores: 0 });
+    expect(await barrerPedidos(s.deps)).toEqual({ vencidos: 1, liberados: 0, encolados: 0, invalidadas: 0, omitidos: 0, pospuestos: 0, errores: 0 });
     expect(s.transiciones).toEqual([
       { id: id(1), ev: expect.objectContaining({ from_status: 'pendiente_pago', to_status: 'expirado', actor: 'system', payload: { motivo: 'reserva_vencida' } }) },
     ]);
@@ -209,7 +210,7 @@ describe('barrido: solicitudes de Addi de pedidos vencidos (D-040)', () => {
       vencer: [{ order_id: id(20), estado_actual: 'pendiente_pago', nuevo_estado: 'expirado' }],
       pagos: [pagoAddi(1, 20, 'declined'), pagoAddi(2, 20, 'pending')],
     });
-    expect(await barrerPedidos(s.deps)).toEqual({ vencidos: 1, liberados: 0, encolados: 0, invalidadas: 1, omitidos: 0, errores: 0 });
+    expect(await barrerPedidos(s.deps)).toEqual({ vencidos: 1, liberados: 0, encolados: 0, invalidadas: 1, omitidos: 0, pospuestos: 0, errores: 0 });
     expect(s.pedidos.get(id(20))!.status).toBe('expirado');
     expect(s.liberados).toEqual([id(20)]);
     expect(s.invalidadas).toEqual(['pago-2']);
@@ -296,5 +297,90 @@ describe('encoladorInicioCod (mismo id fijo que el checkout)', () => {
     const c = colaFalsa({ fallido: false });
     expect(await encoladorInicioCod(c.cola as never)(id(8))).toBe('existente');
     expect(c.agregados).toHaveLength(0);
+  });
+});
+
+describe('barrido: no vence sin conciliar con Wompi (D-059)', () => {
+  const RES: ResultadoConciliacion = { revisados: 0, consultas: 0, aplicados: 0, sin_aplicar: 0, omitidos: 0, errores: 0, wompi_caido: false };
+
+  function conConciliador(
+    s: ReturnType<typeof escenario>,
+    porPedido: (orderId: string) => EstadoConciliacionPedido,
+    alConciliar?: (orderId: string) => void,
+  ) {
+    const llamadas = { barrer: 0, pedidos: [] as string[] };
+    const c: ConciliadorWompi = {
+      barrer: async () => {
+        llamadas.barrer += 1;
+        return { ...RES, revisados: 3 };
+      },
+      conciliarPedido: async (orderId) => {
+        llamadas.pedidos.push(orderId);
+        alConciliar?.(orderId);
+        return porPedido(orderId);
+      },
+    };
+    s.deps.conciliador = c;
+    return llamadas;
+  }
+  const venceP1 = (estado: OrderStatus = 'pendiente_pago'): PedidoPorVencer[] => [{ order_id: id(1), estado_actual: estado, nuevo_estado: estado === 'esperando_abono' ? 'abandonado' : 'expirado' }];
+
+  it('concilia primero (barrer en cada corrida) y antes de vencer cada pedido; sin pago aprobado → expira como siempre', async () => {
+    const s = escenario({ pedidos: [pedido(1, 'pendiente_pago')], vencer: venceP1() });
+    const l = conConciliador(s, () => 'conciliado');
+    const r = await barrerPedidos(s.deps);
+    expect(l).toEqual({ barrer: 1, pedidos: [id(1)] });
+    expect(r).toMatchObject({ vencidos: 1, pospuestos: 0, conciliacion: { revisados: 3 } });
+    expect(s.pedidos.get(id(1))!.status).toBe('expirado');
+  });
+
+  it('el pago estaba aprobado en Wompi: la conciliación lo aplica y el barrido NO expira ni libera stock', async () => {
+    const s = escenario({ pedidos: [pedido(1, 'pendiente_pago')], vencer: venceP1() });
+    conConciliador(s, () => 'conciliado', (x) => {
+      const p = s.pedidos.get(x)!;
+      p.status = 'pagado';
+      p.stock_state = 'confirmed';
+    });
+    const r = await barrerPedidos(s.deps);
+    expect(r).toMatchObject({ vencidos: 0, omitidos: 1 });
+    expect(s.pedidos.get(id(1))!.status).toBe('pagado');
+    expect(s.transiciones).toEqual([]);
+    expect(s.liberados).toEqual([]);
+  });
+
+  it('abono aprobado (contra entrega): no abandona, no cancela recordatorios ni programa aviso de cancelación', async () => {
+    const s = escenario({ pedidos: [pedido(1, 'esperando_abono')], vencer: venceP1('esperando_abono') });
+    conConciliador(s, () => 'conciliado', (x) => void (s.pedidos.get(x)!.status = 'abono_pagado'));
+    await barrerPedidos(s.deps);
+    expect(s.pedidos.get(id(1))!.status).toBe('abono_pagado');
+    expect(s.avisos).toEqual([]);
+    expect(s.liberados).toEqual([]);
+  });
+
+  it('Wompi caído: pospone el vencimiento (sin transición ni liberar stock) mientras no pase 1 h de la reserva', async () => {
+    const s = escenario({ pedidos: [pedido(1, 'pendiente_pago')], vencer: venceP1() });
+    conConciliador(s, () => 'fallo');
+    const r = await barrerPedidos(s.deps);
+    expect(r).toMatchObject({ vencidos: 0, pospuestos: 1 });
+    expect(s.transiciones).toEqual([]);
+    expect(s.liberados).toEqual([]);
+  });
+
+  it('Wompi caído más de 1 h después de la reserva: expira con motivo reserva_vencida_sin_conciliar (el pago tardío lo recupera)', async () => {
+    const s = escenario({ pedidos: [pedido(1, 'pendiente_pago', { stock_reserved_until: new Date('2026-10-21T13:59:00.000Z') })], vencer: venceP1() });
+    conConciliador(s, () => 'fallo');
+    const r = await barrerPedidos(s.deps);
+    expect(r).toMatchObject({ vencidos: 1, pospuestos: 0 });
+    expect(s.transiciones[0]!.ev.payload).toEqual({ motivo: 'reserva_vencida_sin_conciliar' });
+  });
+
+  it('si barrer lanza (Supabase caído), el resto del barrido sigue', async () => {
+    const s = escenario({ pedidos: [pedido(1, 'pendiente_pago')], vencer: venceP1() });
+    conConciliador(s, () => 'conciliado');
+    s.deps.conciliador!.barrer = async () => {
+      throw new TypeError('fetch failed');
+    };
+    const r = await barrerPedidos(s.deps);
+    expect(r).toMatchObject({ vencidos: 1, errores: 1 });
   });
 });

@@ -15,12 +15,12 @@ describe('registrarCron', () => {
 });
 
 describe('registrarCron barrido', () => {
-  it('programa pedidos.barrido cada 5 minutos', async () => {
+  it('programa pedidos.barrido cada 2 minutos (incluye la conciliación con Wompi, D-059)', async () => {
     const upsertJobScheduler = vi.fn().mockResolvedValue(undefined);
     await registrarCron({ upsertJobScheduler } as unknown as Queue);
     const llamadas = upsertJobScheduler.mock.calls as [string, { pattern: string; tz: string }, { name: string }][];
     const b = llamadas.find(([id]) => id === 'pedidos.barrido');
-    expect(b?.[1]).toEqual({ pattern: '*/5 * * * *', tz: 'America/Bogota' });
+    expect(b?.[1]).toEqual({ pattern: '*/2 * * * *', tz: 'America/Bogota' });
     expect(b?.[2].name).toBe('pedidos.barrido');
   });
 });

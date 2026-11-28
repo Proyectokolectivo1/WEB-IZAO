@@ -7,6 +7,7 @@
 - cea1725 Addi en el checkout (D-034). Revisión 2026-10-25: 0c72b49 Sistecrédito no vendible (`metodoVendible`, `soloMetodosVendibles`); 761747b productor de `metrics.recompute_day`; 05a94ea `Location` de Addi (D-036); ceb228e aprobado sobre `cancelado` (D-037).
 - 6fb63be atribución en `POST /api/checkout` (influencer revalidado). Barrido de solicitudes Addi de pedidos `expirado` (D-040).
 - 7c60d43 checkout lee el vínculo MasterShop de `variant_countries` del país (D-052); `product_variants.mastershop_*` ya no se lee. RPC y `crear-pedido.ts` sin cambios. `serverExternalPackages: ['bullmq']` quita el aviso de `@valkey/valkey-glide` del build (compilación sin avisos).
+- Rama fix/conciliacion-pagos-wompi (D-059): conciliación Wompi en `pedidos.barrido` (cada 2 min), pago tardío `expirado → pagado` con stock, alerta `pago_aprobado_sin_aplicar`, GET PostgREST con reintento. Recupera solos IZ-CO-000051/52 tras desplegar el worker.
 - caebb15 (rama feat/aviso-cookies) Purchase de CAPI con opt-in estricto: checkout guarda `marketing_consent` desde `izao_consent`; job `sin_consentimiento` sin llamar a Meta (D-057). Desplegar la migración antes del worker.
 
 ## Contratos para compañeros
@@ -22,18 +23,12 @@
 - [VERIFICAR] host real del `Location` de Addi en sandbox (D-036).
 - Sistecrédito: documentación del contrato. Proveedor de correo. Sandbox real de Wompi/Meta/Addi. Deduplicación BullMQ contra Redis real.
 
-## Prueba Wompi sandbox en producción (2026-11-06)
-- Webhook: GET 405, firma inválida 401 sin registrar (log `firma_invalida`), credenciales cargadas. 0 eventos Wompi aún.
-- Pedido de prueba IZ-CO-000041 (`249a4f9a…`), doble clic → 1 pedido, 1 pago `-P1`; Web Checkout abre en MODO DE PRUEBAS con monto y datos correctos.
-- Vencimiento: 07:15 UTC barrido → `expirado`, `stock_state=released`, reserva 0. El pago `-P1` queda `created` (Wompi ya no lo acepta por `expiration-time`).
-- Política: cliente bloquea sin aceptar; servidor 409 `DATA_POLICY_OUTDATED` (versión 1) y 400 sin `terms_and_data`; 0 pedidos extra.
-- Seguro: 1030 variantes sin `mastershop_product_id` → `buildCarrierOrder` lanza antes de la red; plantillas inactivas → sin WhatsApp.
-- Bloqueo: aprobar/rechazar en Wompi exige aceptar su reglamento y autorización de datos → necesita consentimiento del usuario (o que el dueño haga esos clics).
-
 ## Plantillas Meta (6da29d2 D-048, a2e75fb D-049)
 - cobro_abono/30m/5h/cancelado_24h alineadas (es_CO, sin botón, link en {{4}}). Job `cod.aviso_cancelacion` desde abandono y barrido. Prod: cobro_abono activa (líder); las otras 3 + offsets {30,300} = SQL entregado al líder tras desplegar a2e75fb. izao-admin: sumar `pedido_cancelado_24h` al panel.
 
 ## Siguiente paso exacto
+Tras desplegar D-059: verificar 51/52 con la consulta de solo lectura del reporte; confirmar en sandbox la forma del 200 de `GET /v1/transactions?reference=` ([VERIFICAR] de D-059).
+Antes:
 Con el dueño: pagar IZ-CO-000041 (o uno nuevo) con Transferencia Bancolombia/QR sandbox eligiendo aprobado y rechazado; yo verifico `webhook_events`, `payments` y estado. Luego COD (link `/pagar/{token}`).
 
 ## Decisiones que necesitan al líder

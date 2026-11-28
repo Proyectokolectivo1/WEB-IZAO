@@ -9,6 +9,10 @@
  *    recordatorios y el abandono y encola la transportadora. Un rechazo no mueve el pedido (el link admite otro
  *    intento hasta vencer). Abono tardío sobre `abandonado`: se reactiva si hay stock; si no, `requiere_reembolso`.
  *
+ * 7. Pago completo tardío sobre `expirado`: se reactiva si hay stock (D-059).
+ * La conciliación (`conciliacion.ts`) usa esta misma función con `origen: 'conciliacion'`: no hay fila de
+ * `webhook_events` que marcar y el rastro (`origen`) queda en el payload de eventos y alertas.
+ *
  * Idempotente: repetirlo con el mismo evento no duplica transiciones ni eventos; confirmar stock y canje son
  * idempotentes en la base y el job de transportadora usa id fijo. Un `ErrorReintentable` deja que BullMQ reintente.
  */
@@ -67,8 +71,9 @@ export async function procesarTransaccionWompi(datos: DatosJobWompi, deps: DepsJ
   const creds = await fuente.credencialesWompi();
   if (!creds) throw new ErrorReintentable('sin_credenciales');
 
+  const conciliacion = datos.origen === 'conciliacion';
   const terminar = async (accion: AccionPago, orderId: string | null, ok: boolean): Promise<ResultadoJob> => {
-    await fuente.marcarWebhook(datos.event_id, ok ? { ok: true } : { ok: false, error: accion });
+    if (!conciliacion) await fuente.marcarWebhook(datos.event_id, ok ? { ok: true } : { ok: false, error: accion });
     return { accion, order_id: orderId };
   };
 
@@ -91,7 +96,12 @@ export async function procesarTransaccionWompi(datos: DatosJobWompi, deps: DepsJ
   const pedido = await fuente.pedido(pago.order_id);
   if (!pedido) return terminar('pedido_no_encontrado', pago.order_id, false);
 
-  const ref = { payment_id: pago.id, reference: tx.reference, transaction_id: tx.id };
+  const ref: Record<string, string> = {
+    payment_id: pago.id,
+    reference: tx.reference,
+    transaction_id: tx.id,
+    ...(conciliacion ? { origen: 'conciliacion' } : {}),
+  };
   if ((pago.purpose === 'cod_deposit') !== (pedido.payment_method === 'cod')) {
     await fuente.registrarAlerta(pedido.id, 'proposito_no_coincide', { ...ref, metodo: pedido.payment_method });
     return terminar('estado_inesperado', pedido.id, false);
@@ -151,7 +161,7 @@ export async function procesarTransaccionWompi(datos: DatosJobWompi, deps: DepsJ
     }
     case 'approved':
       if (pago.purpose === 'cod_deposit') return aprobarAbono(deps, pedido, pago, ref, paso, terminar, ahora());
-      return aprobarPagoCompleto(deps, pedido, pago, ref, paso, terminar, ahora());
+      return aprobarPagoCompleto(deps, pedido, pago, ref, paso, terminar, ahora(), { reactivarExpirado: true });
   }
 }
 

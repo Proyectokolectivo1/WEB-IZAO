@@ -61,6 +61,7 @@ function escenario(o: { pedido?: Partial<PedidoFila>; pagos?: PagoFila[]; tx?: P
     transportadora: [] as string[],
     codCancelado: [] as string[],
     conflictoUnaVez: false,
+    fechasPago: [] as (Date | null)[],
   };
   const fuente: FuentePagosWorker = {
     credencialesWompi: async () => CREDS,
@@ -86,7 +87,7 @@ function escenario(o: { pedido?: Partial<PedidoFila>; pagos?: PagoFila[]; tx?: P
       registro.canjeConfirmado += 1;
       return { ok: true, estado: 'sin_codigo' };
     },
-    aplicarTransicion: async (id, ev) => {
+    aplicarTransicion: async (id, ev, op) => {
       if (registro.conflictoUnaVez) {
         registro.conflictoUnaVez = false;
         return false;
@@ -94,6 +95,7 @@ function escenario(o: { pedido?: Partial<PedidoFila>; pagos?: PagoFila[]; tx?: P
       if (id !== pedido.id || pedido.status !== ev.from_status) return false;
       pedido.status = ev.to_status;
       registro.eventos.push(ev);
+      registro.fechasPago.push(op?.paid_at ?? null);
       return true;
     },
     registrarAlerta: async (_id, motivo) => {
@@ -201,14 +203,41 @@ describe('job wompi.transaccion (§12.2): reconsulta, asocia y transiciona', () 
     expect(s.pedido.status).toBe('pendiente_pago');
   });
 
-  it('APPROVED sobre expirado → requiere_reembolso con alerta, sin confirmar stock ni despachar', async () => {
-    const s = escenario({ pedido: { status: 'expirado', stock_state: 'released' } });
-    const r = await s.correr();
-    expect(r.accion).toBe('requiere_reembolso');
-    expect(s.pedido.status).toBe('requiere_reembolso');
-    expect(s.registro.stockConfirmado).toBe(0);
-    expect(s.registro.transportadora).toEqual([]);
-    expect(s.registro.alertas).toEqual(['pago_tardio']);
+  describe('pago tardío: APPROVED sobre un pedido expirado con el stock liberado (D-059)', () => {
+    it('hay stock → se vuelve a reservar y confirmar, expirado → pagado con paid_at, canje, transportadora y alerta', async () => {
+      const s = escenario({ pedido: { status: 'expirado', stock_state: 'released' } });
+      const r = await s.correr();
+      expect(r.accion).toBe('pagado');
+      expect(s.pedido.status).toBe('pagado');
+      expect(s.registro.stockConfirmado).toBe(1);
+      expect(s.registro.canjeConfirmado).toBe(1);
+      expect(s.registro.eventos.map((e) => [e.from_status, e.to_status])).toEqual([['expirado', 'pagado']]);
+      expect(s.registro.fechasPago[0]).toBeInstanceOf(Date);
+      expect(s.registro.transportadora).toEqual([ORDER]);
+      expect(s.registro.alertas).toEqual(['pago_tardio_reactivado']);
+      expect(s.pagos[0]!.status).toBe('approved');
+    });
+
+    it('sin stock → requiere_reembolso con alerta pago_tardio_sin_stock; ni canje ni transportadora', async () => {
+      const s = escenario({ pedido: { status: 'expirado', stock_state: 'released' }, stockOk: false });
+      const r = await s.correr();
+      expect(r.accion).toBe('requiere_reembolso');
+      expect(s.pedido.status).toBe('requiere_reembolso');
+      expect(s.registro.canjeConfirmado).toBe(0);
+      expect(s.registro.transportadora).toEqual([]);
+      expect(s.registro.alertas).toEqual(['pago_tardio_sin_stock']);
+      expect(s.pagos[0]!.status).toBe('approved'); // el dinero queda registrado
+    });
+
+    it('reentrega del mismo aprobado tras reactivar → ya_pagado, sin segunda transición ni segunda alerta', async () => {
+      const s = escenario({ pedido: { status: 'expirado', stock_state: 'released' } });
+      await s.correr();
+      const r = await s.correr();
+      expect(r.accion).toBe('ya_pagado');
+      expect(s.registro.eventos).toHaveLength(1);
+      expect(s.registro.alertas).toEqual(['pago_tardio_reactivado']);
+      expect(s.registro.transportadora).toEqual([ORDER, ORDER]); // id fijo por pedido: BullMQ no duplica
+    });
   });
 
   describe('pago sobre un pedido cancelado (D-035: cancelar ya devolvió el stock)', () => {
