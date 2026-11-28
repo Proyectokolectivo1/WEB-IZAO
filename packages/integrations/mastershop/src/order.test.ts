@@ -43,14 +43,14 @@ describe('buildCarrierOrder — forma del cuerpo de POST /api/orders (§14.3)', 
       shipping_address: {
         zip: null,
         country: 'CO',
-        city: 'MEDELLÍN',
+        city: 'MEDELLIN',
         state: 'ANTIOQUIA',
         address1: 'Calle 10 # 43-20',
         address2: 'Apto 501',
         district: 'El Poblado',
-        full_name: 'Laura Gómez',
+        full_name: 'Laura Gomez',
         first_name: 'Laura',
-        last_name: 'Gómez',
+        last_name: 'Gomez',
         phone: '3001234567',
         company: null,
       },
@@ -62,9 +62,9 @@ describe('buildCarrierOrder — forma del cuerpo de POST /api/orders (§14.3)', 
         payment_gateway: 'wompi',
       },
       customer: {
-        full_name: 'Laura Gómez',
+        full_name: 'Laura Gomez',
         first_name: 'Laura',
-        last_name: 'Gómez',
+        last_name: 'Gomez',
         phone: '3001234567',
         email: 'laura@example.com',
         documentType: 'CC',
@@ -180,12 +180,12 @@ describe('buildCarrierOrder — nombres solo letras y espacios', () => {
       makeOrder({ contact_first_name: '  María-José  ', contact_last_name: "O'Neil  Ruiz Jr. 2" }),
       opts,
     );
-    expect(body.customer.first_name).toBe('María José');
+    expect(body.customer.first_name).toBe('Maria Jose');
     expect(body.customer.last_name).toBe('ONeil Ruiz Jr');
-    expect(body.customer.full_name).toBe('María José ONeil Ruiz Jr');
-    expect(body.shipping_address.full_name).toBe('María José ONeil Ruiz Jr');
+    expect(body.customer.full_name).toBe('Maria Jose ONeil Ruiz Jr');
+    expect(body.shipping_address.full_name).toBe('Maria Jose ONeil Ruiz Jr');
     for (const n of [body.customer.first_name, body.customer.last_name, body.customer.full_name]) {
-      expect(n).toMatch(/^[\p{L} ]+$/u);
+      expect(n).toMatch(/^[A-Za-z ]+$/);
     }
   });
 
