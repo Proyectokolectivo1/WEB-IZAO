@@ -19,6 +19,7 @@ import {
   type Fila,
   type OpcionesPostgrest,
 } from '../postgrest.js';
+import { ESTADOS_COBRO, type FuenteConciliacion, type PagoPorConciliar } from './conciliacion.js';
 import type { FuenteFinanciacionWorker, FuentePagosWorker, PagoFila } from './fuente.js';
 
 export { ErrorPostgrest, interpretarTransicion, type OpcionesPostgrest } from '../postgrest.js';
@@ -42,7 +43,7 @@ function aPago(f: Fila): PagoFila {
   };
 }
 
-export function crearFuentePostgrest(o: OpcionesPostgrest): FuentePagosWorker {
+export function crearFuentePostgrest(o: OpcionesPostgrest): FuentePagosWorker & FuenteConciliacion {
   const c = crearClientePostgrest(o);
   return {
     ...fuenteDeProveedor(c, 'wompi'),
@@ -52,6 +53,15 @@ export function crearFuentePostgrest(o: OpcionesPostgrest): FuentePagosWorker {
       const p = parseWompiCredentials(cred.valores, cred.ambiente);
       if (!p.ok) console.error(`[pagos] credenciales de Wompi incompletas: ${p.problemas.map((x) => x.key).join(',')}`);
       return p.ok ? p.credenciales : null;
+    },
+    async pagosPorConciliar(desde, limite) {
+      const ruta =
+        `payments?provider=eq.wompi&purpose=in.(full,cod_deposit)&created_at=gte.${encodeURIComponent(desde.toISOString())}` +
+        `&orders.status=in.(${ESTADOS_COBRO.join(',')})&order=created_at.desc&limit=${limite}` +
+        `&select=${COLUMNAS_PAGO},orders!inner(status)`;
+      return (await c.filas('payments', ruta)).map(
+        (f): PagoPorConciliar => ({ ...aPago(f), order_status: (f.orders as { status: OrderStatus }).status }),
+      );
     },
     async pagosPorLink(linkId) {
       return (
@@ -128,6 +138,16 @@ function fuenteDeProveedor(c: ClientePostgrest, proveedor: 'wompi' | 'addi'): Fu
       return aplicarTransicionRpc(c, orderId, evento, { paid_at: opciones.paid_at });
     },
     async registrarAlerta(orderId, motivo, payload) {
+      // Con transacción: una sola alerta por (pedido, motivo, transacción); reentregas y la conciliación
+      // periódica no llenan el panel de copias.
+      const tx = payload.transaction_id;
+      if (tx) {
+        const previas = await filas(
+          'order_events',
+          `order_events?order_id=${eq(orderId)}&type=eq.alerta&payload->>motivo=${eq(motivo)}&payload->>transaction_id=${eq(tx)}&select=id&limit=1`,
+        );
+        if (previas.length > 0) return;
+      }
       await pedir('order_events', 'order_events', {
         method: 'POST',
         headers: { prefer: 'return=minimal' },

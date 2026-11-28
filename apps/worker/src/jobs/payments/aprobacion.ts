@@ -4,7 +4,9 @@
  * - `pendiente_pago` / `pago_rechazado` → confirma stock → (`pago_rechazado → pendiente_pago`) → `pagado` →
  *   confirma canje y encola la transportadora.
  * - `pagado` (reentrega o reintento tras falla parcial) → repite los pasos idempotentes.
- * - `expirado` → `requiere_reembolso` con alerta `pago_tardio` (no se despacha).
+ * - `expirado` (pago tardío): con `reactivarExpirado` (Wompi, D-059) se vuelve a reservar y confirmar el stock →
+ *   `expirado → pagado` con alerta `pago_tardio_reactivado` y se despacha; sin stock → `requiere_reembolso` con
+ *   alerta `pago_tardio_sin_stock`. Sin la opción (financiación, D-040) → `requiere_reembolso` con alerta `pago_tardio`.
  * - `cancelado` (terminal, §16; `cancelar_pedido` ya devolvió el stock, D-035) → nunca se vuelve a reservar stock
  *   ni se despacha: reentrega del aprobado que ya pagó el pedido → `sin_cambio`; aprobado nuevo → alerta
  *   `pago_tras_cancelacion` para que el admin reembolse (`pagoSobreCancelado`, D-037).
@@ -103,6 +105,11 @@ export async function pagoSobreCancelado(
   return terminar('pago_tras_cancelacion', pedido.id, true);
 }
 
+export interface OpcionesAprobacion {
+  /** Pago tardío sobre `expirado`: reactivar si hay stock (D-059) en vez de ir directo a `requiere_reembolso`. */
+  reactivarExpirado?: boolean;
+}
+
 export async function aprobarPagoCompleto(
   deps: DepsAprobacion,
   pedido: PedidoFila,
@@ -111,6 +118,7 @@ export async function aprobarPagoCompleto(
   paso: Paso,
   terminar: Terminar,
   ahora: Date,
+  opciones: OpcionesAprobacion = {},
 ): Promise<ResultadoJob> {
   const { fuente } = deps;
   if (await duplicado(deps, pedido, pago, ref)) return terminar('pago_duplicado', pedido.id, false);
@@ -138,10 +146,24 @@ export async function aprobarPagoCompleto(
       await despuesDePagar(deps, pedido, ref);
       return terminar('ya_pagado', pedido.id, true);
     }
-    case 'expirado':
-      await paso('expirado', 'requiere_reembolso');
-      await fuente.registrarAlerta(pedido.id, 'pago_tardio', ref);
-      return terminar('requiere_reembolso', pedido.id, true);
+    case 'expirado': {
+      if (!opciones.reactivarExpirado) {
+        await paso('expirado', 'requiere_reembolso');
+        await fuente.registrarAlerta(pedido.id, 'pago_tardio', ref);
+        return terminar('requiere_reembolso', pedido.id, true);
+      }
+      // `confirmar_stock` vuelve a reservar (todo o nada) si el barrido ya liberó el stock.
+      const stock = await fuente.confirmarStock(pedido.id);
+      if (!stock.ok) {
+        await paso('expirado', 'requiere_reembolso');
+        await fuente.registrarAlerta(pedido.id, 'pago_tardio_sin_stock', ref);
+        return terminar('requiere_reembolso', pedido.id, true);
+      }
+      await paso('expirado', 'pagado', { paid_at: ahora });
+      await fuente.registrarAlerta(pedido.id, 'pago_tardio_reactivado', ref);
+      await despuesDePagar(deps, pedido, ref);
+      return terminar('pagado', pedido.id, true);
+    }
     case 'requiere_reembolso':
       return terminar('sin_cambio', pedido.id, true);
     case 'cancelado':

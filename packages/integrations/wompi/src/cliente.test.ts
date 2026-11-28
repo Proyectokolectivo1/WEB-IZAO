@@ -56,6 +56,49 @@ describe('cliente de la API de Wompi', () => {
     await expect(c.obtenerTransaccion(TX.id)).rejects.toMatchObject({ codigo: 'RESPUESTA_INVALIDA' });
   });
 
+  it('buscar por referencia: GET /v1/transactions?reference= con la llave privada, lista de transacciones', async () => {
+    const otra = { id: '1234-1610641025-49202', status: 'DECLINED' as const, amount_in_cents: 24_990_000, reference: TX.reference };
+    const { f, c } = cliente(fetchWompiFalso([TX, otra, { ...TX, id: 'x-3', reference: 'IZ-CO-000999-P1' }]));
+    const lista = await c.buscarTransacciones({ reference: TX.reference });
+    const u = new URL(f.llamadas[0]!.url);
+    expect(`${u.origin}${u.pathname}`).toBe('https://sandbox.wompi.co/v1/transactions');
+    expect(u.searchParams.get('reference')).toBe(TX.reference);
+    expect(f.llamadas[0]!.autorizacion).toBe(`Bearer ${LLAVE_PRIVADA_PRUEBA}`);
+    expect(lista.map((t) => t.id).sort()).toEqual([TX.id, otra.id].sort());
+    expect(lista[0]!.amount_in_cents).toBeTypeOf('bigint');
+  });
+
+  it('buscar por fechas: pagina (page/page_size) hasta una página incompleta', async () => {
+    const muchas = Array.from({ length: 5 }, (_, i) => ({ ...TX, id: `tx-${i}`, reference: `R-${i}`, payment_link_id: i === 3 ? 'lnk_1' : null }));
+    const { f, c } = cliente(fetchWompiFalso(muchas));
+    const lista = await c.buscarTransacciones({ from_date: '2026-11-25', until_date: '2026-11-28', page_size: 2 });
+    expect(lista).toHaveLength(5);
+    expect(f.llamadas).toHaveLength(3);
+    const u = new URL(f.llamadas[2]!.url);
+    expect(u.searchParams.get('from_date')).toBe('2026-11-25');
+    expect(u.searchParams.get('until_date')).toBe('2026-11-28');
+    expect(u.searchParams.get('page')).toBe('3');
+    expect(u.searchParams.get('page_size')).toBe('2');
+    expect(lista.find((t) => t.id === 'tx-3')!.payment_link_id).toBe('lnk_1');
+  });
+
+  it('buscar: referencia vacía o fecha mal formada se rechaza sin red; respuesta sin `data` lista → RESPUESTA_INVALIDA', async () => {
+    const { f, c } = cliente();
+    await expect(c.buscarTransacciones({ reference: '' })).rejects.toMatchObject({ codigo: 'ID_INVALIDO' });
+    await expect(c.buscarTransacciones({ from_date: '25/11/2026', until_date: '2026-11-28' })).rejects.toMatchObject({ codigo: 'ID_INVALIDO' });
+    expect(f.llamadas).toHaveLength(0);
+    const fetchRaro = (async () => new Response(JSON.stringify({ data: { id: 'x' } }), { status: 200 })) as typeof fetch;
+    const raro = crearClienteWompi({ ambiente: 'sandbox', llavePrivada: LLAVE_PRIVADA_PRUEBA, fetchImpl: fetchRaro });
+    await expect(raro.buscarTransacciones({ reference: TX.reference })).rejects.toMatchObject({ codigo: 'RESPUESTA_INVALIDA' });
+  });
+
+  it('buscar: red caída es reintentable', async () => {
+    const f = fetchWompiFalso([TX]);
+    f.caido = true;
+    const c = crearClienteWompi({ ambiente: 'sandbox', llavePrivada: LLAVE_PRIVADA_PRUEBA, fetchImpl: f.fetch });
+    await expect(c.buscarTransacciones({ reference: TX.reference })).rejects.toMatchObject({ codigo: 'RED', reintentable: true });
+  });
+
   it('error de red es reintentable', async () => {
     const fetchCaido = (async () => {
       throw new TypeError('fetch failed');

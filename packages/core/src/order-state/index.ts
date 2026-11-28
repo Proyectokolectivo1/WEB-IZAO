@@ -35,9 +35,9 @@ export type OrderStatus = (typeof ORDER_STATUSES)[number];
  * - D-002: `pendiente_manual → expirado` al vencer la reserva.
  * - §12.2: abono aprobado tarde para un pedido `abandonado` sin stock →
  *   `requiere_reembolso` (§16 lo describe como "pago tardío sin stock"). Aprobado por el dueño.
- * - Decisión del dueño (Oleada 1): pago completo aprobado después de `expirado` →
- *   `requiere_reembolso`, para que el dinero cobrado quede con rastro y alerta al admin.
- *   Es la única salida de `expirado`.
+ * - Pago completo aprobado después de `expirado` (D-059, reemplaza la decisión de la Oleada 1): si el
+ *   stock se puede volver a reservar → `pagado` (se despacha) con alerta `pago_tardio_reactivado`; si no →
+ *   `requiere_reembolso` con alerta, para que el dinero cobrado nunca quede sin rastro.
  * - Decisión del dueño (Oleada 1): MasterShop puede cancelar (id 9) un pedido en 3–4 →
  *   `en_preparacion → cancelado`, para no bloquear el pedido ni perder la cancelación.
  *   `en_transito → cancelado` sigue prohibida: un envío en tránsito no se cancela, se devuelve.
@@ -46,7 +46,7 @@ export const ORDER_TRANSITIONS: Readonly<Record<OrderStatus, readonly OrderStatu
   Object.freeze({
     pendiente_pago: ['pagado', 'pago_rechazado', 'expirado'],
     pago_rechazado: ['pendiente_pago', 'expirado'],
-    expirado: ['requiere_reembolso'],
+    expirado: ['pagado', 'requiere_reembolso'],
     esperando_abono: ['abono_pagado', 'abandonado'],
     abandonado: ['abono_pagado', 'requiere_reembolso'],
     pendiente_manual: ['pagado', 'cancelado', 'expirado'],

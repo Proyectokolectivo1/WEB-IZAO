@@ -139,4 +139,55 @@ describe('fuente PostgREST de pagos', () => {
     expect(llamadas[3]!.url).toContain('webhook_events?provider=eq.addi&event_id=eq.app.APPROVED.1');
     expect(llamadas[3]!.metodo).toBe('PATCH');
   });
+
+  it('alerta con transaction_id: si ya existe la misma (pedido, motivo, transacción) no se duplica', async () => {
+    let existe = false;
+    const { f, llamadas } = fetchFalso((l) => (l.metodo === 'GET' ? { status: 200, cuerpo: existe ? [{ id: 'e1' }] : [] } : { status: 201 }));
+    const fuente = crearFuentePostgrest({ supabaseUrl: 'https://x.supabase.co', secretKey: LLAVE_SB, claveCifrado: CLAVE, fetchImpl: f });
+    await fuente.registrarAlerta('o1', 'pago_aprobado_sin_aplicar', { transaction_id: 'tx-1', payment_id: 'p1' });
+    expect(llamadas[0]!.url).toContain('order_events?order_id=eq.o1&type=eq.alerta&payload->>motivo=eq.pago_aprobado_sin_aplicar&payload->>transaction_id=eq.tx-1');
+    expect(llamadas[1]!.metodo).toBe('POST');
+    existe = true;
+    await fuente.registrarAlerta('o1', 'pago_aprobado_sin_aplicar', { transaction_id: 'tx-1', payment_id: 'p1' });
+    expect(llamadas).toHaveLength(3);
+    expect(llamadas[2]!.metodo).toBe('GET');
+  });
+
+  it('pagosPorConciliar: wompi full/cod_deposit desde la fecha, pedido en estado de cobro (embed !inner), recientes primero', async () => {
+    const { f, llamadas } = fetchFalso(() => ({
+      status: 200,
+      cuerpo: [
+        {
+          id: 'p1', order_id: 'o1', provider: 'wompi', purpose: 'full', amount: 169900, currency_code: 'COP', status: 'created',
+          provider_reference: 'IZ-CO-000052-P1', provider_transaction_id: null, payment_link_id: null, created_at: '2026-11-27T05:00:00Z',
+          orders: { status: 'expirado' },
+        },
+      ],
+    }));
+    const fuente = crearFuentePostgrest({ supabaseUrl: 'https://x.supabase.co', secretKey: LLAVE_SB, claveCifrado: CLAVE, fetchImpl: f });
+    const r = await fuente.pagosPorConciliar(new Date('2026-11-26T00:00:00.000Z'), 500);
+    expect(r).toEqual([expect.objectContaining({ id: 'p1', amount: 169_900n, order_status: 'expirado' })]);
+    const u = decodeURIComponent(llamadas[0]!.url);
+    expect(u).toContain('payments?provider=eq.wompi&purpose=in.(full,cod_deposit)&created_at=gte.2026-11-26T00:00:00.000Z');
+    expect(u).toContain('orders.status=in.(pendiente_pago,pago_rechazado,expirado,esperando_abono,abandonado)');
+    expect(u).toContain('orders!inner(status)');
+    expect(u).toContain('order=created_at.desc&limit=500');
+  });
+
+  it('lecturas: `fetch failed` o 503 intermitente se reintenta; escrituras no se reintentan', async () => {
+    let n = 0;
+    const f = (async (_u: string, init?: RequestInit) => {
+      n += 1;
+      if ((init?.method ?? 'GET') !== 'GET') throw new TypeError('fetch failed');
+      if (n === 1) throw new TypeError('fetch failed');
+      if (n === 2) return new Response(null, { status: 503 });
+      return new Response('[]', { status: 200 });
+    }) as typeof fetch;
+    const fuente = crearFuentePostgrest({ supabaseUrl: 'https://x.supabase.co', secretKey: LLAVE_SB, claveCifrado: CLAVE, fetchImpl: f, esperasReintentoMs: [0, 0] });
+    expect(await fuente.pagosDelPedido('o1')).toEqual([]);
+    expect(n).toBe(3);
+    n = 10;
+    await expect(fuente.registrarAlerta('o1', 'x', {})).rejects.toThrow('fetch failed');
+    expect(n).toBe(11);
+  });
 });

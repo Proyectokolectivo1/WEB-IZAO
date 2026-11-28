@@ -13,7 +13,13 @@ export interface OpcionesPostgrest {
   secretKey: string;
   claveCifrado: string;
   fetchImpl?: typeof fetch;
+  /** Esperas entre reintentos de lecturas (GET) ante fallo de red o 502/503/504. Por defecto 300 ms y 1,5 s. */
+  esperasReintentoMs?: readonly number[];
 }
+
+const ESPERAS_REINTENTO_MS = [300, 1_500] as const;
+const REINTENTABLE_HTTP = new Set([502, 503, 504]);
+const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export class ErrorPostgrest extends Error {
   /** SQLSTATE devuelto por PostgREST (`code`), si vino; nunca el mensaje ni el detalle. */
@@ -49,11 +55,31 @@ export function crearClientePostgrest(o: OpcionesPostgrest): ClientePostgrest {
     'content-type': 'application/json',
   };
 
+  const esperas = o.esperasReintentoMs ?? ESPERAS_REINTENTO_MS;
+
+  /**
+   * Las lecturas (GET) se reintentan ante `fetch failed` (DNS/conexión/tiempo límite) o 502/503/504: los fallos
+   * intermitentes al arrancar el contenedor o hacia Supabase no deben tumbar una corrida entera. Las escrituras y
+   * RPC no se reintentan aquí (las reintenta el job completo, que es idempotente).
+   */
+  async function enviar(url: string, init: RequestInit): Promise<Response> {
+    const lectura = (init.method ?? 'GET').toUpperCase() === 'GET';
+    for (let intento = 0; ; intento += 1) {
+      const ultimo = !lectura || intento >= esperas.length;
+      try {
+        const res = await doFetch(url, { ...init, signal: AbortSignal.timeout(15_000) });
+        if (ultimo || !REINTENTABLE_HTTP.has(res.status)) return res;
+      } catch (e) {
+        if (ultimo) throw e;
+      }
+      await dormir(esperas[intento]!);
+    }
+  }
+
   async function pedir(operacion: string, ruta: string, init: RequestInit = {}): Promise<unknown> {
-    const res = await doFetch(`${base}/${ruta}`, {
+    const res = await enviar(`${base}/${ruta}`, {
       ...init,
       headers: { ...cabeceras, ...(init.headers as Record<string, string> | undefined) },
-      signal: AbortSignal.timeout(15_000),
     });
     if (!res.ok) {
       let codigo: string | null = null;
