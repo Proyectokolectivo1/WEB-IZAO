@@ -95,6 +95,8 @@ export type DetallePedido = {
     created_at: string;
     /** Solo trae el texto en las notas internas; en los demás eventos siempre es `null`. */
     nota: string | null;
+    /** Solo en eventos `alerta`: el `motivo` (p. ej. `reembolso_manual_pendiente`, D-061); si no, `null`. */
+    motivo_alerta: string | null;
   }[];
   envio: {
     id: string;
@@ -118,6 +120,11 @@ function ok<T>(r: { data: unknown; error: { message: string } | null }, que: str
 function textoDeNota(payload: unknown): string | null {
   const t = (payload as { texto?: unknown } | null)?.texto;
   return typeof t === 'string' ? t : null;
+}
+
+function motivoDeAlerta(payload: unknown): string | null {
+  const m = (payload as { motivo?: unknown } | null)?.motivo;
+  return typeof m === 'string' ? m : null;
 }
 
 function envioPublico(f: Record<string, unknown> | undefined): DetallePedido['envio'] {
@@ -186,6 +193,7 @@ export async function obtenerDetallePedido(cliente: Cliente, id: string): Promis
     eventos: ok<(DetallePedido['eventos'][number] & { payload?: unknown })[]>(eventos, 'la línea de tiempo').map(({ payload, ...e }) => ({
       ...e,
       nota: e.type === 'nota_interna' ? textoDeNota(payload) : null,
+      motivo_alerta: e.type === 'alerta' ? motivoDeAlerta(payload) : null,
     })),
     envio: envioPublico(ok<Record<string, unknown>[]>(envios, 'el envío')[0]),
     impresiones: ok(impresiones, 'las impresiones'),

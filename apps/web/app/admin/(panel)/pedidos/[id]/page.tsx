@@ -7,7 +7,9 @@ import { AccionConTexto, AccionSimple, FormularioNota } from '@/components/admin
 import { BotonesCobro } from '@/components/admin/BotonesCobro';
 import { evaluarCobro } from '@/lib/admin/pedidos/cobro';
 import { dinero, obtenerDetallePedido } from '@/lib/admin/pedidos/detalle-servidor';
+import { advertenciaCancelar, haySolicitudReembolso, pagosPorReembolsar, textoReembolso } from '@/lib/admin/pedidos/reembolso';
 import {
+  ETIQUETA_ALERTA,
   ETIQUETA_ESTADO_PEDIDO,
   ETIQUETA_EVENTO,
   ETIQUETA_IMPRESION,
@@ -60,6 +62,11 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
   const hayEtiqueta = d.envio?.etiqueta_lista === true || urlEtiqueta !== null;
   const whatsappFallo = d.mensajes.some((m) => m.status === 'failed');
   const notas = d.eventos.filter((e) => e.type === 'nota_interna' && e.nota);
+  // D-061: cancelado desde error_transportadora con dinero cobrado → reembolso manual en el proveedor.
+  const reembolsoPendiente =
+    p.status === 'cancelado' && haySolicitudReembolso(d.eventos)
+      ? (textoReembolso(pagosPorReembolsar(d.pagos), p.currency_code, p.paid_at !== null) ?? 'Requiere reembolso manual.')
+      : null;
 
   return (
     <>
@@ -72,7 +79,13 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
         {d.envio?.has_novelty ? <span className="adm-insignia adm-insignia-aviso">Novedad</span> : null}
         {p.status === 'error_transportadora' ? <span className="adm-insignia adm-insignia-aviso">Error transportadora</span> : null}
         {whatsappFallo ? <span className="adm-insignia adm-insignia-aviso">WhatsApp falló</span> : null}
+        {reembolsoPendiente ? <span className="adm-insignia adm-insignia-aviso">Reembolso pendiente</span> : null}
       </div>
+      {reembolsoPendiente ? (
+        <p className="adm-aviso" role="status">
+          {reembolsoPendiente} Izao no hace el reembolso: hazlo en el proveedor y deja una nota con el comprobante.
+        </p>
+      ) : null}
       <p className="adm-suave">
         {p.country_code} · {ETIQUETA_METODO_PAGO[p.payment_method] ?? p.payment_method} · creado {fecha.format(new Date(p.created_at))}
       </p>
@@ -110,7 +123,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
         {puedeCancelar ? (
           <AccionConTexto
             etiqueta="Cancelar pedido"
-            advertencia="El pedido pasa a Cancelado y se libera el stock reservado. Si el envío está creado en MasterShop, también se cancela allá. No se puede deshacer."
+            advertencia={advertenciaCancelar(p, d.pagos)}
             etiquetaCampo="Motivo de la cancelación"
             etiquetaConfirmar="Sí, cancelar el pedido"
             peligro
@@ -300,6 +313,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
             {d.eventos.map((e) => (
               <li key={e.id}>
                 <strong>{ETIQUETA_EVENTO[e.type] ?? e.type}</strong>
+                {e.motivo_alerta ? `: ${ETIQUETA_ALERTA[e.motivo_alerta] ?? e.motivo_alerta}` : ''}
                 {e.from_status || e.to_status
                   ? `: ${ETIQUETA_ESTADO_PEDIDO[e.from_status ?? ''] ?? e.from_status ?? '—'} → ${ETIQUETA_ESTADO_PEDIDO[e.to_status ?? ''] ?? e.to_status ?? '—'}`
                   : ''}{' '}

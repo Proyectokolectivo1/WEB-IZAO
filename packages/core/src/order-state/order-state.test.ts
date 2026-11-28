@@ -7,15 +7,17 @@ import {
   isTerminal,
   isValidActor,
   puedeTransicionar,
+  requiereMotivo,
   siguientesEstados,
   transicionar,
+  type JsonValue,
   type OrderStatus,
 } from './index';
 
 /**
  * Tabla literal de §16 de la especificación, más D-002, §12.2 (abono tardío sin stock)
  * y las decisiones del dueño de la Oleada 1 (pago completo aprobado después de expirar;
- * MasterShop cancela un pedido en preparación).
+ * MasterShop cancela un pedido en preparación) y D-061 (cancelar un pedido que MasterShop nunca aceptó).
  */
 const ESPERADA: Record<OrderStatus, OrderStatus[]> = {
   pendiente_pago: ['pagado', 'pago_rechazado', 'expirado'],
@@ -26,7 +28,7 @@ const ESPERADA: Record<OrderStatus, OrderStatus[]> = {
   pendiente_manual: ['pagado', 'cancelado', 'expirado'],
   pagado: ['enviado_transportadora', 'error_transportadora'],
   abono_pagado: ['enviado_transportadora', 'error_transportadora'],
-  error_transportadora: ['enviado_transportadora'],
+  error_transportadora: ['enviado_transportadora', 'cancelado'],
   enviado_transportadora: ['en_preparacion', 'cancelado'],
   en_preparacion: ['en_transito', 'cancelado'],
   en_transito: ['entregado', 'devuelto', 'reclamacion'],
@@ -216,6 +218,98 @@ describe('order-state: transicionar', () => {
     expect(isValidActor('admin:6f1c')).toBe(true);
     expect(isValidActor('webhook:mastershop')).toBe(true);
     expect(isValidActor('admin')).toBe(false);
+  });
+});
+
+describe('order-state: D-061 cancelar desde error_transportadora', () => {
+  it('error_transportadora admite reintento y cancelación, no requiere_reembolso directo', () => {
+    expect(siguientesEstados('error_transportadora')).toEqual(['enviado_transportadora', 'cancelado']);
+    expect(puedeTransicionar('error_transportadora', 'cancelado')).toBe(true);
+    expect(puedeTransicionar('error_transportadora', 'requiere_reembolso')).toBe(false);
+  });
+
+  it('un admin que cancela desde error_transportadora debe dar el motivo', () => {
+    const payloads: (Record<string, JsonValue> | undefined)[] = [undefined, {}, { motivo: '' }, { motivo: '   ' }, { motivo: 12 }, { motivo: null }];
+    for (const payload of payloads) {
+      const r = transicionar({ from: 'error_transportadora', to: 'cancelado', actor: 'admin:abc', payload });
+      expect(r).toMatchObject({ ok: false, error: { code: 'MOTIVO_REQUERIDO' } });
+    }
+  });
+
+  it('con motivo la cancelación devuelve el evento con el motivo', () => {
+    const r = transicionar({
+      from: 'error_transportadora',
+      to: 'cancelado',
+      actor: 'admin:abc',
+      payload: { motivo: 'MasterShop rechazó la ciudad' },
+    });
+    expect(r).toEqual({
+      ok: true,
+      event: {
+        type: 'status_changed',
+        from_status: 'error_transportadora',
+        to_status: 'cancelado',
+        actor: 'admin:abc',
+        payload: { motivo: 'MasterShop rechazó la ciudad' },
+      },
+    });
+  });
+
+  it('la sincronización (MasterShop 9) no necesita motivo: el id_status es la evidencia', () => {
+    const r = transicionar({
+      from: 'error_transportadora',
+      to: 'cancelado',
+      actor: 'webhook:mastershop',
+      payload: { provider_order_id: 1, id_status: 9 },
+    });
+    expect(r.ok).toBe(true);
+    expect(transicionar({ from: 'error_transportadora', to: 'cancelado', actor: 'system' }).ok).toBe(true);
+  });
+
+  it('requiereMotivo solo aplica a la cancelación manual desde error_transportadora', () => {
+    expect(requiereMotivo('error_transportadora', 'cancelado', 'admin:abc')).toBe(true);
+    expect(requiereMotivo('error_transportadora', 'cancelado', 'system')).toBe(false);
+    expect(requiereMotivo('error_transportadora', 'enviado_transportadora', 'admin:abc')).toBe(false);
+    // Las demás cancelaciones no cambian (D-061 no toca su contrato).
+    expect(requiereMotivo('en_preparacion', 'cancelado', 'admin:abc')).toBe(false);
+    expect(transicionar({ from: 'en_preparacion', to: 'cancelado', actor: 'admin:abc' }).ok).toBe(true);
+  });
+
+  it('el motivo se valida después de la transición: un destino inválido sigue siendo INVALID_TRANSITION', () => {
+    const r = transicionar({ from: 'error_transportadora', to: 'requiere_reembolso', actor: 'admin:abc' });
+    expect(r).toMatchObject({ ok: false, error: { code: 'INVALID_TRANSITION' } });
+  });
+
+  it('un pedido cancelado no se puede reenviar a la transportadora', () => {
+    const r = transicionar({ from: 'cancelado', to: 'enviado_transportadora', actor: 'admin:abc' });
+    expect(r).toMatchObject({ ok: false, error: { code: 'TERMINAL_STATE' } });
+    expect(findTransitionPath('cancelado', 'enviado_transportadora')).toBeNull();
+  });
+
+  it('camino directo, también dentro de las fases de transportadora (sincronización)', () => {
+    expect(findTransitionPath('error_transportadora', 'cancelado')).toEqual(['cancelado']);
+    expect(
+      findTransitionPath('error_transportadora', 'cancelado', [
+        'pagado',
+        'abono_pagado',
+        'error_transportadora',
+        'enviado_transportadora',
+        'en_preparacion',
+        'en_transito',
+        'entregado',
+        'cancelado',
+      ]),
+    ).toEqual(['cancelado']);
+  });
+
+  it('invariante: solo se cancela antes de que el paquete esté en tránsito', () => {
+    const cancelables = ORDER_STATUSES.filter((s) => puedeTransicionar(s, 'cancelado')).sort();
+    expect(cancelables).toEqual(
+      ['en_preparacion', 'enviado_transportadora', 'error_transportadora', 'pendiente_manual', 'requiere_reembolso'].sort(),
+    );
+    for (const s of ['en_transito', 'entregado', 'devuelto', 'reclamacion'] as const) {
+      expect(puedeTransicionar(s, 'cancelado')).toBe(false);
+    }
   });
 });
 

@@ -57,7 +57,27 @@ describe('campos obligatorios de las respuestas (20261025191446)', () => {
 
 describe('cancelarPedidoDb', () => {
   it('los estados cancelables salen de order-state y coinciden con la RPC', () => {
-    expect([...ESTADOS_CANCELABLES].sort()).toEqual(['en_preparacion', 'enviado_transportadora', 'pendiente_manual', 'requiere_reembolso']);
+    // D-061 (20261127180000): error_transportadora entra en la lista de la RPC.
+    expect([...ESTADOS_CANCELABLES].sort()).toEqual(['en_preparacion', 'enviado_transportadora', 'error_transportadora', 'pendiente_manual', 'requiere_reembolso']);
+  });
+
+  it('D-061: desde error_transportadora la respuesta trae el reembolso pendiente y los pagos aprobados', async () => {
+    const pago = {
+      payment_id: EV, provider: 'wompi', purpose: 'full', amount: 169900, currency_code: 'COP', provider_reference: 'IZ-CO-000052-1', provider_transaction_id: 'tx-52',
+    };
+    clienteFalso({
+      ok: true, order_id: ID, from_status: 'error_transportadora', to_status: 'cancelado', event_id: EV, stock_estado: 'released', stock_liberado: false,
+      stock_devuelto: true, unidades_devueltas: 1, stock_retenido: null, reembolso_pendiente: true, pagos_a_reembolsar: [pago],
+    });
+    expect(await cancelarPedidoDb({ order_id: ID, from_status: 'error_transportadora', actor: 'admin:u1', motivo: 'MasterShop rechazó la ciudad' })).toMatchObject({
+      ok: true, reembolso_pendiente: true, pagos_a_reembolsar: [pago],
+    });
+    // Un monto que no es entero no se acepta (el dinero viaja en unidad menor).
+    clienteFalso({
+      ok: true, order_id: ID, from_status: 'error_transportadora', to_status: 'cancelado', event_id: EV, stock_estado: 'released', stock_liberado: false,
+      stock_devuelto: true, unidades_devueltas: 1, stock_retenido: null, reembolso_pendiente: true, pagos_a_reembolsar: [{ ...pago, amount: 1699.5 }],
+    });
+    await expect(cancelarPedidoDb({ order_id: ID, from_status: 'error_transportadora', actor: 'admin:u1', motivo: 'x' })).rejects.toBeInstanceOf(ErrorDb);
   });
 
   it('cancela: envía {p} con la fecha en ISO y valida la respuesta', async () => {
