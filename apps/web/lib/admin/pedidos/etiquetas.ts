@@ -43,6 +43,13 @@ export const ETIQUETA_EVENTO: Record<string, string> = {
   nota_interna: 'Nota interna',
   stock_devuelto: 'Stock devuelto al inventario',
   stock_retenido: 'Stock retenido: el paquete ya salió con la transportadora',
+  alerta: 'Alerta',
+};
+
+/** Motivos de `alerta` con texto propio en la línea de tiempo; los demás se muestran tal cual. */
+export const ETIQUETA_ALERTA: Record<string, string> = {
+  reembolso_manual_pendiente: 'Reembolso manual pendiente',
+  error_transportadora: 'Error de transportadora',
 };
 
 export const ETIQUETA_IMPRESION: Record<string, string> = {

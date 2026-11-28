@@ -15,6 +15,7 @@ import { encolarRecalculoMetricas } from '@/app/api/checkout/cola-metricas';
 import { auditarCambio } from '@/lib/admin/auditoria';
 import { aplicarEventoPedidoDb, type ResultadoTransicion } from '@/lib/db/pedidos';
 import { cancelarPedidoDb, type EntradaCancelar, type ResultadoCancelar } from '@/lib/db/panel-atomicas';
+import { textoReembolso } from './reembolso';
 import type { Cliente } from '../catalogo/taxonomias-servidor';
 
 type Ctx = {
@@ -52,10 +53,14 @@ function primerError(r: { success: false; error: z.ZodError }): string {
   return r.error.issues[0]?.message ?? 'Datos no válidos.';
 }
 
-type PedidoBasico = { number: string; status: string; payment_method: string; country_code?: string | null };
+type PedidoBasico = { number: string; status: string; payment_method: string; country_code?: string | null; currency_code?: string | null };
 
 async function leerPedido(cliente: Cliente, orderId: string): Promise<PedidoBasico | null> {
-  const { data, error } = await cliente.from('orders').select('number, status, payment_method, country_code').eq('id', orderId).maybeSingle();
+  const { data, error } = await cliente
+    .from('orders')
+    .select('number, status, payment_method, country_code, currency_code')
+    .eq('id', orderId)
+    .maybeSingle();
   if (error) throw new Error('No se pudo leer el pedido.');
   return (data as PedidoBasico | null) ?? null;
 }
@@ -91,6 +96,23 @@ function mensajeTransicion(r: Exclude<ResultadoTransicion, { ok: true }>): strin
 /** Estados de MasterShop en los que aún se puede cancelar desde nuestro lado: 1 (creada) y 2 (confirmada). */
 const ESTADOS_CANCELABLES_REMOTOS: readonly number[] = [1, 2];
 const ESTADO_REMOTO_CANCELADO = 9;
+/**
+ * D-061: tras «Reintentar envío» el job `carrier.create` puede estar creando el pedido en MasterShop. Cancelar en ese
+ * momento dejaría un envío vivo para un pedido cancelado (y quizá reembolsado): se espera a que el reintento termine.
+ */
+const ESPERA_TRAS_REINTENTO_MS = 2 * 60_000;
+
+async function hayReintentoReciente(cliente: Cliente, orderId: string, ahora: Date): Promise<boolean> {
+  const { data, error } = await cliente
+    .from('order_events')
+    .select('id')
+    .eq('order_id', orderId)
+    .eq('type', TIPO_EVENTO_REINTENTO)
+    .gte('created_at', new Date(ahora.getTime() - ESPERA_TRAS_REINTENTO_MS).toISOString())
+    .limit(1);
+  if (error) throw new Error('No se pudo leer la línea de tiempo del pedido.');
+  return Array.isArray(data) && data.length > 0;
+}
 
 export type CancelarDb = (entrada: EntradaCancelar) => Promise<ResultadoCancelar>;
 
@@ -119,6 +141,12 @@ export async function cancelarPedidoBd(
 
   const t = transicionar({ from: pedido.status as OrderStatus, to: 'cancelado', actor: `admin:${actor}`, payload: { motivo: motivo.data } });
   if (!t.ok) return { ok: false, mensaje: `Este pedido no se puede cancelar desde el estado "${pedido.status}".` };
+  if (pedido.status === 'error_transportadora' && (await hayReintentoReciente(cliente, orderId, ahora))) {
+    return {
+      ok: false,
+      mensaje: 'Hace menos de 2 minutos se pidió un reintento de envío a MasterShop. Espera a que termine y vuelve a intentarlo; no se cambió nada.',
+    };
+  }
 
   const envio = await leerEnvio(cliente, orderId);
   let canceladoEnMasterShop = false;
@@ -163,6 +191,17 @@ export async function cancelarPedidoBd(
     return { ok: false, mensaje: mensajeCancelacion(r.motivo) + extra };
   }
 
+  // D-061: `cancelar_pedido` dejó la alerta `reembolso_manual_pendiente` en la misma transacción; aquí se avisa.
+  const pagosReembolso = r.pagos_a_reembolsar ?? [];
+  const reembolso =
+    r.reembolso_pendiente === true
+      ? textoReembolso(
+          pagosReembolso.map((x) => ({ provider: x.provider, amount: x.amount, status: 'approved', provider_reference: x.provider_reference })),
+          pagosReembolso[0]?.currency_code ?? pedido.currency_code ?? 'COP',
+          pagosReembolso.length === 0,
+        )
+      : null;
+
   await recalcularMetricas(args, orderId);
   await auditarCambio({
     actor,
@@ -181,9 +220,25 @@ export async function cancelarPedidoBd(
       stock_devuelto: r.stock_devuelto,
       unidades_devueltas: r.unidades_devueltas,
       stock_retenido: r.stock_retenido,
+      ...(r.reembolso_pendiente === undefined
+        ? {}
+        : {
+            reembolso_pendiente: r.reembolso_pendiente,
+            pagos_a_reembolsar: pagosReembolso.map((x) => ({
+              payment_id: x.payment_id,
+              provider: x.provider,
+              purpose: x.purpose,
+              amount: x.amount,
+              currency_code: x.currency_code,
+              provider_reference: x.provider_reference,
+            })),
+          }),
     },
   });
-  return { ok: true, mensaje: 'Pedido cancelado.' };
+  return {
+    ok: true,
+    mensaje: reembolso ? `Pedido cancelado. ${reembolso} Hazlo en el proveedor y deja una nota con el comprobante.` : 'Pedido cancelado.',
+  };
 }
 
 /** `MasterShopError` con `kind: 'estado_no_editable'` (409 del `PUT`: el pedido ya no está en 1 o 2). Sin importar la clase: sobrevive a límites de módulo. */

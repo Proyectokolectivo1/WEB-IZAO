@@ -71,6 +71,22 @@ const cancelarSchema = z.union([
     unidades_devueltas: z.number().int(),
     /** `envio_recolectado`: no se devolvió porque el paquete ya salió con la transportadora. */
     stock_retenido: z.literal('envio_recolectado').nullable(),
+    /** D-061, solo desde `error_transportadora`: hubo dinero cobrado y quedó la alerta `reembolso_manual_pendiente`. */
+    reembolso_pendiente: z.boolean().optional(),
+    /** Pagos aprobados que el admin debe reembolsar a mano en el proveedor (vacío si el pago fue manual). */
+    pagos_a_reembolsar: z
+      .array(
+        z.object({
+          payment_id: z.guid(),
+          provider: z.string(),
+          purpose: z.string(),
+          amount: z.number().int().nonnegative(),
+          currency_code: z.string(),
+          provider_reference: z.string().nullable(),
+          provider_transaction_id: z.string().nullable(),
+        }),
+      )
+      .optional(),
   }),
   z.object({
     ok: z.literal(false),

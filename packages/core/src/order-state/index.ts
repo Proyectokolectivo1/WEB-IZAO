@@ -41,6 +41,10 @@ export type OrderStatus = (typeof ORDER_STATUSES)[number];
  * - Decisión del dueño (Oleada 1): MasterShop puede cancelar (id 9) un pedido en 3–4 →
  *   `en_preparacion → cancelado`, para no bloquear el pedido ni perder la cancelación.
  *   `en_transito → cancelado` sigue prohibida: un envío en tránsito no se cancela, se devuelve.
+ * - D-061: `error_transportadora → cancelado` para un pedido pagado que MasterShop nunca aceptó. La hace el admin con
+ *   motivo obligatorio (`requiereMotivo`) por `cancelar_pedido`, que devuelve el stock y deja la alerta
+ *   `reembolso_manual_pendiente` con los pagos aprobados. No hay `error_transportadora → requiere_reembolso`: el
+ *   reembolso se marca con esa alerta y el pedido queda `cancelado` (terminal: no se puede reenviar a MasterShop).
  */
 export const ORDER_TRANSITIONS: Readonly<Record<OrderStatus, readonly OrderStatus[]>> =
   Object.freeze({
@@ -52,7 +56,7 @@ export const ORDER_TRANSITIONS: Readonly<Record<OrderStatus, readonly OrderStatu
     pendiente_manual: ['pagado', 'cancelado', 'expirado'],
     pagado: ['enviado_transportadora', 'error_transportadora'],
     abono_pagado: ['enviado_transportadora', 'error_transportadora'],
-    error_transportadora: ['enviado_transportadora'],
+    error_transportadora: ['enviado_transportadora', 'cancelado'],
     enviado_transportadora: ['en_preparacion', 'cancelado'],
     en_preparacion: ['en_transito', 'cancelado'],
     en_transito: ['entregado', 'devuelto', 'reclamacion'],
@@ -117,7 +121,9 @@ export type TransitionErrorCode =
   | 'SAME_STATE'
   | 'TERMINAL_STATE'
   | 'INVALID_TRANSITION'
-  | 'INVALID_ACTOR';
+  | 'INVALID_ACTOR'
+  /** D-061: la transición la hace una persona y exige `payload.motivo` (texto no vacío). */
+  | 'MOTIVO_REQUERIDO';
 
 export interface TransitionError {
   readonly code: TransitionErrorCode;
@@ -133,6 +139,18 @@ export interface TransitionInput {
   to: OrderStatus;
   actor: string;
   payload?: Record<string, JsonValue>;
+}
+
+/**
+ * Transiciones manuales (actor `admin:*`) que exigen `payload.motivo` (D-061). Las automáticas (p. ej. MasterShop
+ * informa 9 Cancelada) no lo piden: su evidencia va en el payload (`id_status`).
+ */
+const MOTIVO_OBLIGATORIO: readonly (readonly [OrderStatus, OrderStatus])[] = Object.freeze([
+  ['error_transportadora', 'cancelado'] as const,
+]);
+
+export function requiereMotivo(from: OrderStatus, to: OrderStatus, actor: string): boolean {
+  return actor.startsWith('admin:') && MOTIVO_OBLIGATORIO.some(([f, t]) => f === from && t === to);
 }
 
 function fail(code: TransitionErrorCode, message: string): TransitionResult {
@@ -155,6 +173,12 @@ export function transicionar(input: TransitionInput): TransitionResult {
   }
   if (!puedeTransicionar(from, to)) {
     return fail('INVALID_TRANSITION', `Transición no permitida: ${from} → ${to}.`);
+  }
+  if (requiereMotivo(from, to, actor)) {
+    const motivo = input.payload?.['motivo'];
+    if (typeof motivo !== 'string' || motivo.trim() === '') {
+      return fail('MOTIVO_REQUERIDO', `La transición ${from} → ${to} exige un motivo.`);
+    }
   }
   return {
     ok: true,

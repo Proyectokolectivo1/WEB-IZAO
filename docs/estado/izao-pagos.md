@@ -8,6 +8,7 @@
 - 6fb63be atribución en `POST /api/checkout` (influencer revalidado). Barrido de solicitudes Addi de pedidos `expirado` (D-040).
 - 7c60d43 checkout lee el vínculo MasterShop de `variant_countries` del país (D-052); `product_variants.mastershop_*` ya no se lee. RPC y `crear-pedido.ts` sin cambios. `serverExternalPackages: ['bullmq']` quita el aviso de `@valkey/valkey-glide` del build (compilación sin avisos).
 - Rama fix/conciliacion-pagos-wompi (D-059): conciliación Wompi en `pedidos.barrido` (cada 2 min), pago tardío `expirado → pagado` con stock, alerta `pago_aprobado_sin_aplicar`, GET PostgREST con reintento. Recupera solos IZ-CO-000051/52 tras desplegar el worker.
+- Rama feat/cancelar-error-transportadora (D-061): `error_transportadora → cancelado` (motivo obligatorio para admin), migración 20261127180000 (`cancelar_pedido` + alerta `reembolso_manual_pendiente`, sin aplicar), pgTAP 41, panel con aviso de reembolso.
 - caebb15 (rama feat/aviso-cookies) Purchase de CAPI con opt-in estricto: checkout guarda `marketing_consent` desde `izao_consent`; job `sin_consentimiento` sin llamar a Meta (D-057). Desplegar la migración antes del worker.
 
 ## Contratos para compañeros
@@ -27,10 +28,11 @@
 - cobro_abono/30m/5h/cancelado_24h alineadas (es_CO, sin botón, link en {{4}}). Job `cod.aviso_cancelacion` desde abandono y barrido. Prod: cobro_abono activa (líder); las otras 3 + offsets {30,300} = SQL entregado al líder tras desplegar a2e75fb. izao-admin: sumar `pedido_cancelado_24h` al panel.
 
 ## Siguiente paso exacto
+D-061: el líder aplica 20261127180000 y corre pgTAP 41 (no se ejecutó local: sin Supabase CLI); luego despliega la web.
 Tras desplegar D-059: verificar 51/52 con la consulta de solo lectura del reporte; confirmar en sandbox la forma del 200 de `GET /v1/transactions?reference=` ([VERIFICAR] de D-059).
 Antes:
 Con el dueño: pagar IZ-CO-000041 (o uno nuevo) con Transferencia Bancolombia/QR sandbox eligiendo aprobado y rechazado; yo verifico `webhook_events`, `payments` y estado. Luego COD (link `/pagar/{token}`).
 
 ## Decisiones que necesitan al líder
-- ¿`cancelado → requiere_reembolso` como estado visible? (hoy solo alerta, D-037; cambia §16 y la RPC de izao-db).
+- ¿`cancelado → requiere_reembolso` como estado visible o acción «Marcar reembolsado»? (hoy alerta, D-037 y D-061).
 - Anexo B (D-025), proveedor de correo, documentación de Sistecrédito y contrato de Addi.

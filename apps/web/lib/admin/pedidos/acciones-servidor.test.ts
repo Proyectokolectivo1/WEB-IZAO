@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { auditar } = vi.hoisted(() => ({ auditar: vi.fn(async (_e: unknown) => true) }));
 vi.mock('@/lib/admin/auditoria', () => ({ auditarCambio: auditar }));
 
-import type { OrderStatusEvent } from '@izao/core/order-state';
+import { transicionar, type OrderStatusEvent } from '@izao/core/order-state';
+import { ESTADOS_REINTENTO_ENVIO } from '@izao/mastershop';
 import { clienteFalso } from '../crud/cliente-falso';
 import {
   agregarNotaBd,
@@ -214,6 +215,133 @@ describe('cancelarPedidoBd (RPC atómica cancelar_pedido)', () => {
     const { cliente } = clienteFalso({ 'orders.select': { data: null } });
     const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'motivo válido', cancelar: okCancelar(), cancelarEnMasterShop: async () => undefined });
     expect(r.ok).toBe(false);
+  });
+});
+
+describe('cancelarPedidoBd · desde error_transportadora (D-061)', () => {
+  const pagoWompi = {
+    payment_id: '33333333-3333-4333-8333-333333333333',
+    provider: 'wompi',
+    purpose: 'full',
+    amount: 169900,
+    currency_code: 'COP',
+    provider_reference: 'IZ-CO-000052-1',
+    provider_transaction_id: 'tx-52',
+  };
+  const plano = (s: string) => s.replace(/\s/g, ' ');
+
+  it('MasterShop nunca lo aceptó: cancela sin llamar a MasterShop, avisa el reembolso con monto y referencia y audita', async () => {
+    const { cliente } = clienteFalso({
+      'orders.select': { data: pedido('error_transportadora', { payment_method: 'wompi' }) },
+      'shipments.select': { data: null },
+      'order_events.select': { data: [] },
+    });
+    const cancelar = okCancelar({ stock_estado: 'released', stock_devuelto: true, unidades_devueltas: 1, reembolso_pendiente: true, pagos_a_reembolsar: [pagoWompi] });
+    const cancelarEnMasterShop = vi.fn(async () => undefined);
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'MasterShop rechazó la ciudad', cancelar, cancelarEnMasterShop });
+    expect(r.ok).toBe(true);
+    expect(plano(r.mensaje)).toBe(
+      'Pedido cancelado. Requiere reembolso manual en Wompi: $ 169.900 (referencia IZ-CO-000052-1). Hazlo en el proveedor y deja una nota con el comprobante.',
+    );
+    expect(cancelarEnMasterShop).not.toHaveBeenCalled();
+    expect(cancelar).toHaveBeenCalledWith({
+      order_id: ID,
+      from_status: 'error_transportadora',
+      actor: 'admin:u1',
+      motivo: 'MasterShop rechazó la ciudad',
+      cancelled_at: AHORA.toISOString(),
+    });
+    expect(auditar.mock.calls[0]![0]).toMatchObject({
+      accion: 'pedido.cancelado',
+      diff: {
+        antes: { status: 'error_transportadora' },
+        despues: { status: 'cancelado' },
+        motivo: 'MasterShop rechazó la ciudad',
+        reembolso_pendiente: true,
+        pagos_a_reembolsar: [{ payment_id: pagoWompi.payment_id, provider: 'wompi', amount: 169900, currency_code: 'COP', provider_reference: 'IZ-CO-000052-1' }],
+      },
+    });
+  });
+
+  it('pago manual sin fila de pago: el aviso pide reembolsar por el medio en que se recibió', async () => {
+    const { cliente } = clienteFalso({
+      'orders.select': { data: pedido('error_transportadora', { payment_method: 'manual' }) },
+      'shipments.select': { data: null },
+      'order_events.select': { data: [] },
+    });
+    const cancelar = okCancelar({ reembolso_pendiente: true, pagos_a_reembolsar: [] });
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Sin cobertura', cancelar, cancelarEnMasterShop: async () => undefined });
+    expect(r.mensaje).toMatch(/por el medio en que se recibió el pago/);
+  });
+
+  it('sin dinero cobrado no menciona reembolso', async () => {
+    const { cliente } = clienteFalso({
+      'orders.select': { data: pedido('error_transportadora') },
+      'shipments.select': { data: null },
+      'order_events.select': { data: [] },
+    });
+    const cancelar = okCancelar({ reembolso_pendiente: false, pagos_a_reembolsar: [] });
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Prueba interna', cancelar, cancelarEnMasterShop: async () => undefined });
+    expect(r).toEqual({ ok: true, mensaje: 'Pedido cancelado.' });
+  });
+
+  it('si MasterShop alcanzó a crear el envío (1–2), lo cancela allá primero', async () => {
+    const { cliente } = clienteFalso({
+      'orders.select': { data: pedido('error_transportadora') },
+      'shipments.select': { data: envio({ provider_status_id: 1 }) },
+      'order_events.select': { data: [] },
+    });
+    const cancelarEnMasterShop = vi.fn(async () => undefined);
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Cliente desistió', cancelar: okCancelar(), cancelarEnMasterShop });
+    expect(r.ok).toBe(true);
+    expect(cancelarEnMasterShop).toHaveBeenCalledWith(777, 'CO');
+  });
+
+  it('con un reintento de envío recién pedido no cancela (podría estar creando el pedido en MasterShop)', async () => {
+    const { cliente, filtros } = clienteFalso({
+      'orders.select': { data: pedido('error_transportadora') },
+      'shipments.select': { data: null },
+      'order_events.select': { data: [{ id: 'e1' }] },
+    });
+    const cancelar = okCancelar();
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Cliente desistió', cancelar, cancelarEnMasterShop: async () => undefined });
+    expect(r.ok).toBe(false);
+    expect(r.mensaje).toMatch(/reintento de envío/);
+    expect(cancelar).not.toHaveBeenCalled();
+    expect(auditar).not.toHaveBeenCalled();
+    expect(filtros).toContainEqual({ tabla: 'order_events', metodo: 'eq', args: ['type', 'reintento_envio_solicitado'] });
+    expect(filtros).toContainEqual({ tabla: 'order_events', metodo: 'gte', args: ['created_at', new Date(AHORA.getTime() - 2 * 60_000).toISOString()] });
+  });
+
+  it('sin motivo no cancela', async () => {
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('error_transportadora') } });
+    const cancelar = okCancelar();
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: ' ', cancelar, cancelarEnMasterShop: async () => undefined });
+    expect(r.ok).toBe(false);
+    expect(cancelar).not.toHaveBeenCalled();
+  });
+
+  it('antes de aplicar la migración la RPC responde transicion_invalida y no cambia nada', async () => {
+    const { cliente } = clienteFalso({
+      'orders.select': { data: pedido('error_transportadora') },
+      'shipments.select': { data: null },
+      'order_events.select': { data: [] },
+    });
+    const r = await cancelarPedidoBd({ cliente, ...comun, orderId: ID, motivo: 'Cliente desistió', cancelar: noCancelar('transicion_invalida'), cancelarEnMasterShop: async () => undefined });
+    expect(r.ok).toBe(false);
+    expect(auditar).not.toHaveBeenCalled();
+  });
+
+  it('un pedido cancelado no se puede reenviar a MasterShop', async () => {
+    // La cola real (`reintentarEnvioMasterShop`) y `carrier.create` solo aceptan estos estados; cancelado es terminal.
+    expect(ESTADOS_REINTENTO_ENVIO.has('cancelado')).toBe(false);
+    expect(transicionar({ from: 'cancelado', to: 'enviado_transportadora', actor: 'system' }).ok).toBe(false);
+    const { cliente } = clienteFalso({ 'orders.select': { data: pedido('cancelado') } });
+    const reintentar = vi.fn(async (_id: string, estado: string) => (ESTADOS_REINTENTO_ENVIO.has(estado) ? ('encolado' as const) : ('estado_invalido' as const)));
+    const r = await reintentarEnvioBd({ cliente, ...comun, orderId: ID, reintentar });
+    expect(r.ok).toBe(false);
+    expect(reintentar).toHaveBeenCalledWith(ID, 'cancelado');
+    expect(auditar).not.toHaveBeenCalled();
   });
 });
 
