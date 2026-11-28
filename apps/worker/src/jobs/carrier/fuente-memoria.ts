@@ -6,14 +6,16 @@ import type { Order } from '@izao/core/contracts';
 import type { OrderStatus } from '@izao/core/order-state';
 import type { CountryCode } from '@izao/core/money';
 import type { MasterShopCredentials } from '@izao/mastershop';
-import type {
-  AjustesTransportadora,
-  CambiosEnvio,
-  EnvioFila,
-  FuenteCarrier,
-  PagoAprobado,
-  ProgramadorCarrier,
-  ResultadoWebhook,
+import {
+  ACCION_IMPRESION_MANUAL,
+  type AjustesTransportadora,
+  type CambiosEnvio,
+  type EnvioFila,
+  type EstadoImpresionAuto,
+  type FuenteCarrier,
+  type PagoAprobado,
+  type ProgramadorCarrier,
+  type ResultadoWebhook,
 } from './fuente.js';
 
 export interface EventoMemoria {
@@ -35,6 +37,8 @@ export class FuenteMemoria implements FuenteCarrier {
   ajustesPais: AjustesTransportadora | null = { proveedor: 'mastershop', autoConfirmar: true, modo: 'prorate' };
   creds: MasterShopCredentials | null = { apiKey: 'clave-de-prueba' };
   pago: PagoAprobado | null = { provider: 'wompi', referencia: 'ref-1' };
+  /** `country_settings.auto_print_max_shipping_rate` (D-062); `null` = sin límite. */
+  umbral: bigint | null = null;
   /** Simula que otro proceso mueve el pedido justo antes de la próxima transición. */
   moverAntes: OrderStatus | null = null;
 
@@ -134,6 +138,22 @@ export class FuenteMemoria implements FuenteCarrier {
   async crearImpresionEtiqueta(order_id: string, shipment_id: string) {
     if (this.impresiones.some((p) => p.shipment_id === shipment_id)) return false;
     this.impresiones.push({ order_id, shipment_id });
+    return true;
+  }
+  async umbralImpresionAuto(_pais: CountryCode) {
+    return this.umbral;
+  }
+  private retenida(order_id: string): boolean {
+    return this.eventos.some((e) => e.order_id === order_id && e.type === 'transportadora' && e.payload.accion === ACCION_IMPRESION_MANUAL);
+  }
+  async estadoImpresionAuto(order_id: string, shipment_id: string): Promise<EstadoImpresionAuto> {
+    if (this.impresiones.some((p) => p.shipment_id === shipment_id)) return 'creada';
+    return this.retenida(order_id) ? 'retenida' : 'ninguna';
+  }
+  async retenerImpresion(order_id: string, actor: string, payload: Record<string, unknown>) {
+    // Mismo contrato que el índice único parcial `order_events_impresion_manual_unica_key`.
+    if (this.retenida(order_id)) return false;
+    this.eventos.push({ order_id, type: 'transportadora', actor, payload: { ...payload, accion: ACCION_IMPRESION_MANUAL } });
     return true;
   }
   async marcarWebhook(id: string, r: ResultadoWebhook) {

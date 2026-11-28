@@ -1007,6 +1007,7 @@ export type Database = {
           advisor_whatsapp_button_enabled: boolean
           advisor_whatsapp_message: string | null
           announcement_rotation_seconds: number
+          auto_print_max_shipping_rate: number | null
           carrier_auto_confirm: boolean
           carrier_discount_mode: string
           carrier_provider: string | null
@@ -1038,6 +1039,7 @@ export type Database = {
           advisor_whatsapp_button_enabled?: boolean
           advisor_whatsapp_message?: string | null
           announcement_rotation_seconds?: number
+          auto_print_max_shipping_rate?: number | null
           carrier_auto_confirm?: boolean
           carrier_discount_mode?: string
           carrier_provider?: string | null
@@ -1069,6 +1071,7 @@ export type Database = {
           advisor_whatsapp_button_enabled?: boolean
           advisor_whatsapp_message?: string | null
           announcement_rotation_seconds?: number
+          auto_print_max_shipping_rate?: number | null
           carrier_auto_confirm?: boolean
           carrier_discount_mode?: string
           carrier_provider?: string | null

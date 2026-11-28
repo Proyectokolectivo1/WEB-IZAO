@@ -226,6 +226,15 @@ export function FormularioAjustesPais({
           }
           error={errores.carrier_wallet_low_balance}
         />
+        <CampoTexto
+          id="auto_print_max_shipping_rate"
+          name="auto_print_max_shipping_rate"
+          etiqueta={`Flete máximo para imprimir la guía automáticamente (${unidad})`}
+          inputMode="decimal"
+          defaultValue={inicial.auto_print_max_shipping_rate}
+          ayuda="Si el flete que cobra la transportadora supera este valor, la guía no se imprime sola: el pedido queda con un aviso para que llames al cliente y la imprimas desde el detalle. Vacío = sin límite. Un cambio no afecta los pedidos que ya quedaron retenidos."
+          error={errores.auto_print_max_shipping_rate}
+        />
       </fieldset>
 
       <div className="adm-acciones">

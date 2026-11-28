@@ -26,7 +26,7 @@ type Ctx = { cliente: Cliente; actor: string; ip: string | null };
 export type ResultadoAjustes = ResultadoAccion & { errores?: ErroresCampo };
 
 const COLUMNAS_PAIS =
-  'country_code, cod_enabled, cod_deposit_amount, cod_min_collect_amount, cod_link_ttl_hours, cod_reminder_offsets_minutes, cod_quiet_hours_start, cod_quiet_hours_end, cod_resend_max, financing_surcharge_pct, pending_payment_ttl_minutes, manual_order_ttl_hours, fx_rate_to_cop, carrier_provider, carrier_auto_confirm, carrier_discount_mode, carrier_wallet_low_balance, carrier_wallet_balance, carrier_wallet_balance_at, updated_at';
+  'country_code, cod_enabled, cod_deposit_amount, cod_min_collect_amount, cod_link_ttl_hours, cod_reminder_offsets_minutes, cod_quiet_hours_start, cod_quiet_hours_end, cod_resend_max, financing_surcharge_pct, pending_payment_ttl_minutes, manual_order_ttl_hours, fx_rate_to_cop, carrier_provider, carrier_auto_confirm, carrier_discount_mode, carrier_wallet_low_balance, carrier_wallet_balance, carrier_wallet_balance_at, auto_print_max_shipping_rate, updated_at';
 const COLUMNAS_METODO =
   'country_code, method, is_enabled, sort_order, display_name, description, fee_pct, fee_fixed, fee_tax_pct, updated_at';
 
@@ -50,6 +50,8 @@ export type FormularioPais = {
   carrier_provider: string;
   carrier_auto_confirm: boolean;
   carrier_discount_mode: string;
+  /** Flete máximo para imprimir la guía sola (D-062); `''` = sin límite. */
+  auto_print_max_shipping_rate: string;
   /** Solo lectura. Variantes activas de productos publicados sin vínculo de MasterShop en este país. */
   sin_vinculo: number;
   tiene_transportadora: boolean;
@@ -98,6 +100,7 @@ export function aFormularioPais(f: Fila, pais: PaisAjustes, sinVinculo = 0): For
     carrier_provider: txt(f.carrier_provider),
     carrier_auto_confirm: f.carrier_auto_confirm !== false,
     carrier_discount_mode: txt(f.carrier_discount_mode) || 'prorate',
+    auto_print_max_shipping_rate: montoATexto(f.auto_print_max_shipping_rate, moneda),
     sin_vinculo: sinVinculo,
     tiene_transportadora: f.carrier_provider !== null && f.carrier_provider !== undefined,
     saldo_billetera: montoATexto(f.carrier_wallet_balance, moneda),
@@ -252,6 +255,9 @@ export async function guardarAjustesPaisBd(args: Ctx & { pais: PaisAjustes; dato
     ...(datos.carrier_provider === undefined ? {} : { carrier_provider: datos.carrier_provider }),
     ...(datos.carrier_auto_confirm === undefined ? {} : { carrier_auto_confirm: datos.carrier_auto_confirm }),
     ...(datos.carrier_discount_mode === undefined ? {} : { carrier_discount_mode: datos.carrier_discount_mode }),
+    ...(datos.auto_print_max_shipping_rate === undefined
+      ? {}
+      : { auto_print_max_shipping_rate: datos.auto_print_max_shipping_rate === null ? null : datos.auto_print_max_shipping_rate.toString() }),
   };
 
   const { error } = await cliente.from('country_settings').update(nuevo).eq('country_code', pais);
@@ -264,6 +270,8 @@ export async function guardarAjustesPaisBd(args: Ctx & { pais: PaisAjustes; dato
     cod_deposit_amount: txt(antes.cod_deposit_amount),
     cod_min_collect_amount: txt(antes.cod_min_collect_amount),
     carrier_wallet_low_balance: antes.carrier_wallet_low_balance === null ? null : txt(antes.carrier_wallet_low_balance),
+    auto_print_max_shipping_rate:
+      antes.auto_print_max_shipping_rate === null || antes.auto_print_max_shipping_rate === undefined ? null : txt(antes.auto_print_max_shipping_rate),
     fx_rate_to_cop: antes.fx_rate_to_cop === null ? null : txt(antes.fx_rate_to_cop),
   };
   const diff = diffCampos(previoNorm, serializable(nuevo));

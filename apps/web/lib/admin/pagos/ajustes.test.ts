@@ -120,6 +120,15 @@ describe('ajustes del país', () => {
     expect(esquemaAjustesPais('CO').safeParse({ ...BASE_CO, carrier_wallet_low_balance: '-5' }).success).toBe(false);
   });
 
+  it('D-062: flete máximo de impresión automática opcional; vacío = sin límite; no negativo; USD en centavos', () => {
+    expect('auto_print_max_shipping_rate' in esquemaAjustesPais('CO').parse(BASE_CO)).toBe(false);
+    expect(esquemaAjustesPais('CO').parse({ ...BASE_CO, auto_print_max_shipping_rate: '25000' }).auto_print_max_shipping_rate).toBe(25_000n);
+    expect(esquemaAjustesPais('CO').parse({ ...BASE_CO, auto_print_max_shipping_rate: '' }).auto_print_max_shipping_rate).toBeNull();
+    expect(esquemaAjustesPais('EC').parse({ ...BASE_CO, carrier_wallet_low_balance: '', auto_print_max_shipping_rate: '7.5' }).auto_print_max_shipping_rate).toBe(750n);
+    expect(esquemaAjustesPais('CO').safeParse({ ...BASE_CO, auto_print_max_shipping_rate: '-1' }).success).toBe(false);
+    expect(esquemaAjustesPais('CO').safeParse({ ...BASE_CO, auto_print_max_shipping_rate: '25000.5' }).success).toBe(false);
+  });
+
   it('COP no admite decimales y USD admite máximo dos', () => {
     expect(esquemaAjustesPais('CO').safeParse({ ...BASE_CO, cod_deposit_amount: '10000.5' }).success).toBe(false);
     expect(esquemaAjustesPais('EC').safeParse({ ...BASE_CO, cod_deposit_amount: '2.555' }).success).toBe(false);

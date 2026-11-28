@@ -8,7 +8,7 @@ import { fromDbAmount, type CountryCode, type CurrencyCode } from '@izao/core/mo
 import type { OrderStatus } from '@izao/core/order-state';
 import { parseMasterShopCredentials, type CarrierDiscountMode } from '@izao/mastershop';
 import { aplicarTransicionRpc, crearClientePostgrest, eq, ErrorPostgrest, type Fila, type OpcionesPostgrest } from '../postgrest.js';
-import type { CambiosEnvio, EnvioFila, FuenteCarrier } from './fuente.js';
+import { ACCION_IMPRESION_MANUAL, type CambiosEnvio, type EnvioFila, type FuenteCarrier } from './fuente.js';
 
 const json = (v: unknown): string => JSON.stringify(v, (_k, x) => (typeof x === 'bigint' ? x.toString() : x));
 
@@ -201,6 +201,39 @@ export function crearFuenteCarrierPostgrest(o: OpcionesPostgrest): FuenteCarrier
         });
       } catch (e) {
         // `print_jobs_etiqueta_auto_unica_key`: otro proceso (poll_label / sync) la creó entre la lectura y el insert.
+        if (e instanceof ErrorPostgrest && e.codigo === '23505') return false;
+        throw e;
+      }
+      return true;
+    },
+    async umbralImpresionAuto(pais) {
+      // Consulta aparte de `ajustes`: si la columna faltara (migración sin aplicar) solo falla la etiqueta, no la creación.
+      const rows = await filas('country_settings', `country_settings?country_code=${eq(pais)}&select=auto_print_max_shipping_rate`);
+      return montoONull(rows[0]?.auto_print_max_shipping_rate);
+    },
+    async estadoImpresionAuto(id, shipmentId) {
+      const [auto, retenida] = await Promise.all([
+        filas(
+          'print_jobs',
+          `print_jobs?shipment_id=${eq(shipmentId)}&type=eq.label&requested_by=eq.auto&status=neq.cancelled&select=id&limit=1`,
+        ),
+        filas(
+          'order_events',
+          `order_events?order_id=${eq(id)}&type=eq.transportadora&payload->>accion=eq.${ACCION_IMPRESION_MANUAL}&select=id&limit=1`,
+        ),
+      ]);
+      if (auto.length > 0) return 'creada';
+      return retenida.length > 0 ? 'retenida' : 'ninguna';
+    },
+    async retenerImpresion(id, actor, payload) {
+      try {
+        await pedir('order_events', 'order_events', {
+          method: 'POST',
+          headers: { prefer: 'return=minimal' },
+          body: json({ order_id: id, type: 'transportadora', actor, payload: { ...payload, accion: ACCION_IMPRESION_MANUAL } }),
+        });
+      } catch (e) {
+        // `order_events_impresion_manual_unica_key`: otro proceso ya la registró.
         if (e instanceof ErrorPostgrest && e.codigo === '23505') return false;
         throw e;
       }
