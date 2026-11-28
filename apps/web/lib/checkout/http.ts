@@ -7,6 +7,8 @@ import { z } from 'zod';
 import { crearPedidoCheckout } from './crear-pedido';
 import type { FuenteCheckout } from './fuente';
 import { ipCliente, type LimitadorTasa } from './limite-tasa';
+import { datosMetaDelNavegador, type DatosMetaNavegador } from './datos-meta';
+import { leerAtribucion } from '@/lib/store/atribucion/captura';
 import type { AddiCredentials, ClienteAddi } from '@izao/addi';
 import { prepararPagoAddi, type FuentePagosAddi, type ResultadoPagoAddi } from './pago-addi';
 import { prepararPagoWompi, type FuentePagos, type PedidoParaPago, type ResultadoPago } from './pago-wompi';
@@ -39,6 +41,11 @@ export interface DepsCheckout {
   encolarCod?: (orderId: string) => Promise<void>;
   /** Encola `metrics.recompute_day` del pedido recién creado (best effort: nunca tumba la respuesta, D-033). */
   recalcularMetricas?: (orderId: string) => Promise<void>;
+  /**
+   * Guarda `fbp`, `fbc`, IP y user-agent del comprador (solo con consentimiento de marketing) para la API de Conversiones
+   * de Meta. Best effort: un fallo no afecta al pedido.
+   */
+  guardarDatosMeta?: (orderId: string, datos: DatosMetaNavegador) => Promise<void>;
 }
 
 export interface DepsPago {
@@ -122,6 +129,15 @@ export async function manejarCheckout(req: Request, deps: DepsCheckout): Promise
     r = await crearPedidoCheckout(deps.fuente(), lectura.valor, ahora, { cookie: req.headers.get('cookie') });
   } catch (e) {
     return fallaInterna('checkout', e);
+  }
+  if (r.ok && !r.cuerpo.repeated && deps.guardarDatosMeta) {
+    try {
+      const fbclid = leerAtribucion(req.headers.get('cookie')).click_ids.fbclid;
+      const datos = datosMetaDelNavegador(req.headers, fbclid, ahora.getTime());
+      if (datos) await deps.guardarDatosMeta(r.order_id, datos);
+    } catch (e) {
+      console.error(`[checkout] datos de Meta no guardados: ${e instanceof Error ? e.name : 'error'}`);
+    }
   }
   if (r.ok && !r.cuerpo.repeated && deps.recalcularMetricas) {
     try {

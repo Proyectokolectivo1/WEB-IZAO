@@ -21,6 +21,7 @@ import {
   eventoCompra,
   versionGraph,
   type EventoServidor,
+  type NavegadorMeta,
   type OpcionesEnvio,
   type ResultadoEnvio,
 } from '@izao/meta-pixel/capi';
@@ -46,6 +47,11 @@ export interface PedidoConversion {
   lineas: LineaEvento[];
   /** `orders.marketing_consent`; nulo o ausente = `false`. */
   consentimientoMarketing: boolean;
+  nombre?: string | null;
+  apellido?: string | null;
+  ciudad?: string | null;
+  /** `orders.meta_user_data`: `fbp`, `fbc`, IP y user-agent del navegador (solo con consentimiento). */
+  navegador?: NavegadorMeta | null;
 }
 
 export interface CredencialMeta {
@@ -95,6 +101,11 @@ export async function enviarCompraCapi(orderId: string, deps: DepsConversiones):
     pagadoEn: pedido.pagadoEn,
     correo: pedido.correo,
     telefono: pedido.telefono,
+    nombre: pedido.nombre,
+    apellido: pedido.apellido,
+    ciudad: pedido.ciudad,
+    externalId: pedido.numero,
+    navegador: pedido.navegador,
     pais: pedido.pais,
     contenido: parametrosContenido(pedido.lineas, moneda, pedido.total),
     urlPedido: `${deps.urlSitio.replace(/\/+$/, '')}/${pedido.pais.toLowerCase()}`,

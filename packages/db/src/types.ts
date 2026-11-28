@@ -2220,6 +2220,7 @@ export type Database = {
           id: string
           influencer_id: string | null
           marketing_consent: boolean
+          meta_user_data: Json | null
           notes_internal: string | null
           number: string
           paid_at: string | null
@@ -2279,6 +2280,7 @@ export type Database = {
           id?: string
           influencer_id?: string | null
           marketing_consent?: boolean
+          meta_user_data?: Json | null
           notes_internal?: string | null
           number?: string
           paid_at?: string | null
@@ -2338,6 +2340,7 @@ export type Database = {
           id?: string
           influencer_id?: string | null
           marketing_consent?: boolean
+          meta_user_data?: Json | null
           notes_internal?: string | null
           number?: string
           paid_at?: string | null
