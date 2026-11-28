@@ -556,6 +556,10 @@ export class MasterShopMock {
           formatIssues.push({ path: `${who}.${k}`, message: 'Solo letras y espacios' });
         }
       }
+      // Producción (D-060): `city` con tildes/ñ/comas → 400 con este mensaje exacto.
+      if (who !== 'customer' && (typeof b[who].city !== 'string' || !/^[A-Za-z0-9 ().-]+$/.test(b[who].city))) {
+        formatIssues.push({ path: [who, 'city'], message: 'Solo alfanuméricos, espacios, guiones, paréntesis y puntos' });
+      }
       // Teléfono nacional: CO 3XXXXXXXXX; EC 09XXXXXXXX (D-052, [VERIFICAR]).
       if (typeof b[who].phone !== 'string' || !/^(3\d{9}|09\d{8})$/.test(b[who].phone)) {
         formatIssues.push({ path: `${who}.phone`, message: 'Teléfono inválido' });

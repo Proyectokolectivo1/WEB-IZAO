@@ -8,6 +8,8 @@
  * - `currency` legal en el país de la dirección.
  * - `documentType` y `documentNumber` van los dos o ninguno.
  * - `phone` nacional; nombres solo letras y espacios.
+ * - `city` solo `[A-Za-z0-9 ( ) . -]` (400 en producción con «ITAGÜÍ», D-060): ciudad, departamento y
+ *   nombres se envían sin diacríticos (`texto.ts`); el pedido guardado conserva sus tildes.
  */
 import { COUNTRY_CURRENCY, formatMoney, money } from '@izao/core/money';
 import type { Order, OrderItem } from '@izao/core/contracts';
@@ -15,6 +17,12 @@ import { normalizeName, normalizePhone } from '@izao/core/schemas';
 import { z } from 'zod';
 import { buildCarrierLines, CarrierLinesError } from './lines';
 import type { CarrierDiscountMode, CarrierLines, CarrierPaymentKind } from './lines';
+import {
+  aLugarMasterShop,
+  aNombreMasterShop,
+  MASTERSHOP_NAME_PATTERN,
+  MASTERSHOP_PLACE_PATTERN,
+} from './texto';
 
 /** Tipos de documento que acepta MasterShop. */
 export const MASTERSHOP_DOCUMENT_TYPES = [
@@ -61,23 +69,25 @@ const PHONE_MESSAGE: Readonly<Record<string, string>> = {
 const REGION_LABEL: Readonly<Record<string, string>> = { CO: 'el departamento', EC: 'la provincia' };
 
 export const ORDER_NUMBER_PATTERN = /^[A-Za-z0-9-]+$/;
-/** `[VERIFICAR]` si MasterShop acepta tildes y ñ como "letras". */
-const NAME_PATTERN = /^[\p{L} ]+$/u;
 const NATIONAL_PHONE_PATTERN = /^\d{10}$/;
 
 // ---------------------------------------------------------------------------
 // Esquema del cuerpo (zod)
 // ---------------------------------------------------------------------------
 
-const nameSchema = z.string().min(1).regex(NAME_PATTERN, 'Solo letras y espacios');
+const nameSchema = z.string().min(1).regex(MASTERSHOP_NAME_PATTERN, 'Solo letras y espacios');
+const placeSchema = z
+  .string()
+  .min(1)
+  .regex(MASTERSHOP_PLACE_PATTERN, 'Solo alfanuméricos, espacios, guiones, paréntesis y puntos');
 const phoneSchema = z.string().regex(NATIONAL_PHONE_PATTERN, 'Teléfono nacional de 10 dígitos (CO 3…, EC 09…)');
 const nonEmpty = z.string().trim().min(1);
 
 export const MasterShopAddressSchema = z.strictObject({
   zip: z.string().min(1).nullable(),
   country: z.string().length(2),
-  city: nonEmpty,
-  state: nonEmpty,
+  city: placeSchema,
+  state: placeSchema,
   address1: nonEmpty,
   address2: z.string().min(1).nullable(),
   district: z.string().min(1).nullable(),
@@ -277,8 +287,8 @@ export function buildCarrierOrder(order: Order, options: CarrierOrderOptions): B
   }
 
   // Nombres
-  const firstName = normalizeName(order.contact_first_name);
-  const lastName = normalizeName(order.contact_last_name);
+  const firstName = aNombreMasterShop(normalizeName(order.contact_first_name));
+  const lastName = aNombreMasterShop(normalizeName(order.contact_last_name));
   if (firstName === '')
     add('nombre_invalido', 'contact_first_name', 'El nombre debe tener al menos una letra.');
   if (lastName === '')
@@ -316,8 +326,9 @@ export function buildCarrierOrder(order: Order, options: CarrierOrderOptions): B
   }
 
   // Dirección
-  const city = blankToNull(order.shipping_city_name);
-  const state = blankToNull(order.shipping_region_name);
+  // Ciudad y departamento sin diacríticos (D-060). MasterShop los identifica por nombre (D-043).
+  const city = blankToNull(aLugarMasterShop(order.shipping_city_name ?? ''));
+  const state = blankToNull(aLugarMasterShop(order.shipping_region_name ?? ''));
   const address1 = blankToNull(order.shipping_address1);
   if (city === null) add('direccion_incompleta', 'shipping_city_name', 'Falta la ciudad.');
   if (state === null) {

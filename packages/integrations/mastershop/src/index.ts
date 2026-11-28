@@ -1,5 +1,6 @@
 export * from './lines';
 export * from './order';
+export * from './texto';
 export * from './json';
 export * from './status';
 export * from './errors';
