@@ -57,6 +57,11 @@ export interface CambiosEnvio {
 
 export type ResultadoWebhook = { ok: true } | { ok: false; error: string };
 
+export type EstadoImpresionAuto = 'creada' | 'retenida' | 'ninguna';
+
+/** `order_events.payload.accion` de la retención de la impresión automática por flete (D-062). */
+export const ACCION_IMPRESION_MANUAL = 'impresion_manual_requerida';
+
 export interface FuenteCarrier {
   /** Pedido con sus líneas (snapshot con vínculos de MasterShop); `null` si no existe. */
   pedido(orderId: string): Promise<Order | null>;
@@ -80,6 +85,21 @@ export interface FuenteCarrier {
   registrarEvento(orderId: string, tipo: 'alerta' | 'transportadora', actor: string, payload: Record<string, unknown>): Promise<void>;
   /** `print_jobs` de tipo `label` para el envío, si no hay ya uno no cancelado. Devuelve si lo creó. */
   crearImpresionEtiqueta(orderId: string, shipmentId: string): Promise<boolean>;
+  /**
+   * `country_settings.auto_print_max_shipping_rate` del país (unidad menor), D-062. `null` = sin límite (o el país
+   * no tiene ajustes). Si `shipments.shipping_rate` lo supera, la guía no se imprime sola.
+   */
+  umbralImpresionAuto(pais: CountryCode): Promise<bigint | null>;
+  /**
+   * Estado de la impresión automática del envío: `creada` si ya hay un `print_job` automático no cancelado,
+   * `retenida` si el pedido ya tiene el evento `impresion_manual_requerida` (D-062), si no `ninguna`.
+   */
+  estadoImpresionAuto(orderId: string, shipmentId: string): Promise<EstadoImpresionAuto>;
+  /**
+   * Registra el evento `transportadora` `impresion_manual_requerida` (una vez por pedido: índice único parcial).
+   * Devuelve `false` si ya estaba registrado.
+   */
+  retenerImpresion(orderId: string, actor: string, payload: Record<string, unknown>): Promise<boolean>;
   marcarWebhook(eventId: string, resultado: ResultadoWebhook): Promise<void>;
 }
 

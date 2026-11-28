@@ -49,6 +49,7 @@ export const ETIQUETA_EVENTO: Record<string, string> = {
 /** Motivos de `alerta` con texto propio en la línea de tiempo; los demás se muestran tal cual. */
 export const ETIQUETA_ALERTA: Record<string, string> = {
   reembolso_manual_pendiente: 'Reembolso manual pendiente',
+  impresion_manual_requerida: 'Imprimir la guía a mano: el flete supera el umbral',
   error_transportadora: 'Error de transportadora',
 };
 

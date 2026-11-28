@@ -8,6 +8,7 @@ import { BotonesCobro } from '@/components/admin/BotonesCobro';
 import { evaluarCobro } from '@/lib/admin/pedidos/cobro';
 import { enlacesContacto, textoDocumento } from '@/lib/admin/pedidos/contacto';
 import { dinero, obtenerDetallePedido } from '@/lib/admin/pedidos/detalle-servidor';
+import { impresionManualAtendida, textoImpresionManual } from '@/lib/admin/pedidos/impresion-manual';
 import { advertenciaCancelar, haySolicitudReembolso, pagosPorReembolsar, textoReembolso } from '@/lib/admin/pedidos/reembolso';
 import {
   ETIQUETA_ALERTA,
@@ -71,6 +72,9 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
     p.status === 'cancelado' && haySolicitudReembolso(d.eventos)
       ? (textoReembolso(pagosPorReembolsar(d.pagos), p.currency_code, p.paid_at !== null) ?? 'Requiere reembolso manual.')
       : null;
+  // D-062: el flete superó el umbral del país y la guía no se imprimió sola; se avisa hasta imprimirla desde el panel.
+  const impresionManual = d.impresion_manual && !impresionManualAtendida(d.impresiones) ? textoImpresionManual(d.impresion_manual, p.currency_code) : null;
+  const hayImpresionEtiqueta = d.impresiones.some((i) => i.type === 'label');
 
   return (
     <>
@@ -84,7 +88,13 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
         {p.status === 'error_transportadora' ? <span className="adm-insignia adm-insignia-aviso">Error transportadora</span> : null}
         {whatsappFallo ? <span className="adm-insignia adm-insignia-aviso">WhatsApp falló</span> : null}
         {reembolsoPendiente ? <span className="adm-insignia adm-insignia-aviso">Reembolso pendiente</span> : null}
+        {impresionManual ? <span className="adm-insignia adm-insignia-aviso">Imprimir a mano</span> : null}
       </div>
+      {impresionManual ? (
+        <p className="adm-aviso" role="status">
+          {impresionManual}
+        </p>
+      ) : null}
       {reembolsoPendiente ? (
         <p className="adm-aviso" role="status">
           {reembolsoPendiente} Izao no hace el reembolso: hazlo en el proveedor y deja una nota con el comprobante.
@@ -107,7 +117,7 @@ export default async function DetallePedido({ params }: { params: Promise<{ id: 
           ) : null}
           {puedeReimprimir ? (
             <AccionSimple
-              etiqueta="Reimprimir etiqueta"
+              etiqueta={hayImpresionEtiqueta ? 'Reimprimir etiqueta' : 'Imprimir etiqueta'}
               accion={reimprimirEtiqueta.bind(null, p.id)}
               deshabilitada={!hayEtiqueta}
               motivo="La etiqueta todavía no está disponible."

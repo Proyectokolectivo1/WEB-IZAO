@@ -250,6 +250,30 @@ describe('transportadora por país (D-052)', () => {
     expect('carrier_auto_confirm' in upd).toBe(false);
   });
 
+  it('D-062: guarda el flete máximo de impresión automática en unidad menor y lo audita; vacío = null (sin límite)', async () => {
+    const co = clienteFalso({ 'country_settings.select': { data: { ...FILA_CO, auto_print_max_shipping_rate: 25000 } }, 'country_settings.update': { data: null } });
+    await guardarAjustesPaisBd({ cliente: co.cliente, ...comun, pais: 'CO', datos: datosPais({ auto_print_max_shipping_rate: '30000' }) });
+    const upd = co.llamadas.find((l) => l.clave === 'country_settings.update')!.args[0] as Record<string, unknown>;
+    expect(upd.auto_print_max_shipping_rate).toBe('30000');
+    const ev = auditar.mock.calls.at(-1)![0] as { diff: { antes: Record<string, unknown>; despues: Record<string, unknown> } };
+    expect(ev.diff.antes.auto_print_max_shipping_rate).toBe('25000');
+    expect(ev.diff.despues.auto_print_max_shipping_rate).toBe('30000');
+
+    const ec = clienteFalso({ 'country_settings.select': { data: { ...filaEc, carrier_provider: 'mastershop', auto_print_max_shipping_rate: 1500 } }, 'country_settings.update': { data: null } });
+    await guardarAjustesPaisBd({ cliente: ec.cliente, ...comun, pais: 'EC', datos: datosPais({ ...extra, auto_print_max_shipping_rate: '' }, 'EC') });
+    const updEc = ec.llamadas.find((l) => l.clave === 'country_settings.update')!.args[0] as Record<string, unknown>;
+    expect(updEc.auto_print_max_shipping_rate).toBeNull();
+  });
+
+  it('D-062: un formulario que no trae el flete máximo no lo toca; el formulario lo muestra en unidad mayor', async () => {
+    const { cliente, llamadas } = clienteFalso({ 'country_settings.select': { data: FILA_CO }, 'country_settings.update': { data: null } });
+    await guardarAjustesPaisBd({ cliente, ...comun, pais: 'CO', datos: datosPais() });
+    const upd = llamadas.find((l) => l.clave === 'country_settings.update')!.args[0] as Record<string, unknown>;
+    expect('auto_print_max_shipping_rate' in upd).toBe(false);
+    expect(aFormularioPais({ ...filaEc, auto_print_max_shipping_rate: 2550 }, 'EC').auto_print_max_shipping_rate).toBe('25.50');
+    expect(aFormularioPais({ ...FILA_CO, auto_print_max_shipping_rate: null }, 'CO').auto_print_max_shipping_rate).toBe('');
+  });
+
   it('leerAjustes informa cuántas variantes publicadas faltan por vincular', async () => {
     const { cliente } = clienteFalso({
       'country_settings.select': { data: filaEc },

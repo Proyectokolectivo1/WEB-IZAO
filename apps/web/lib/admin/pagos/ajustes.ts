@@ -149,6 +149,11 @@ export type AjustesPais = {
   carrier_auto_confirm?: boolean;
   /** Cómo se cuadra el total del pedido en MasterShop. `undefined` = no se toca. */
   carrier_discount_mode?: ModoDescuentoTransportadora;
+  /**
+   * Flete máximo (unidad menor) para imprimir la guía sola (D-062). Por encima, el administrador imprime a mano tras
+   * llamar al cliente. `null` = sin límite; `undefined` = el formulario no lo envió: no se toca.
+   */
+  auto_print_max_shipping_rate?: bigint | null;
 };
 
 export const PROVEEDORES_TRANSPORTADORA = ['mastershop'] as const;
@@ -185,6 +190,7 @@ export function esquemaAjustesPais(pais: PaisAjustes) {
       carrier_provider: z.enum(['ninguna', ...PROVEEDORES_TRANSPORTADORA], { message: 'Elige una transportadora de la lista.' }).optional(),
       carrier_auto_confirm: z.enum(['si', 'no'], { message: 'Elige si se confirma automáticamente.' }).optional(),
       carrier_discount_mode: z.enum(MODOS_DESCUENTO, { message: 'Elige cómo se envía el descuento.' }).optional(),
+      auto_print_max_shipping_rate: montoOpcional(moneda, 'El flete máximo para imprimir solo', false).optional(),
     })
     .superRefine((d, ctx) => {
       if (d.cod_quiet_hours_start === d.cod_quiet_hours_end) {
@@ -230,6 +236,7 @@ export function esquemaAjustesPais(pais: PaisAjustes) {
         ...(d.carrier_provider === undefined ? {} : { carrier_provider: d.carrier_provider === 'ninguna' ? null : d.carrier_provider }),
         ...(d.carrier_auto_confirm === undefined ? {} : { carrier_auto_confirm: d.carrier_auto_confirm === 'si' }),
         ...(d.carrier_discount_mode === undefined ? {} : { carrier_discount_mode: d.carrier_discount_mode }),
+        ...(d.auto_print_max_shipping_rate === undefined ? {} : { auto_print_max_shipping_rate: d.auto_print_max_shipping_rate }),
       };
     });
 }

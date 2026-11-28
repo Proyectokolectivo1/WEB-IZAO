@@ -9,6 +9,7 @@
 - D-052 vinculación por país: lee/escribe `variant_countries` del país con su llave (`vinculacionPorPais`, CLI `--pais`/`--aplicar`), `sqlVinculacion(vista, fecha, pais)`; nunca `product_variants.mastershop_*`. `cb45db3`.
 - Revisión D-052: billetera filtra pedidos por país, `external_ref` `{PAIS}:{id}` (CO reconoce el id sin prefijo), montos con > 2 decimales → aviso y null; §14.3 actualizada. `d802e82`.
 - D-060 (rama `fix/mastershop-ciudad-sin-tildes`): `texto.ts` quita diacríticos de city/state/nombres al enviar (400 «ITAGÜÍ» en IZ-CO-000046/47/51/52); *mock* con el 400 de city. Reintento: botón del panel tras desplegar worker.
+- D-062 (rama `feat/impresion-auto-umbral-flete`): `country_settings.auto_print_max_shipping_rate` (CO 25000, EC null); `guardarEtiqueta` retiene el `print_job` si el flete supera el umbral (evento + alerta una vez, índice único), sin retroactividad; panel: campo en ajustes del país y aviso «Imprimir a mano» en el detalle. Migración sin aplicar (la aplica el líder).
 
 ## Para izao-infra
 - Redesplegar el worker: el contenedor actual **no** tiene D-043 ni el arreglo del 403 (D-044); revisar también D-042.
@@ -31,7 +32,6 @@
 
 ## Datos de prueba
 - Ninguno abierto: 3076033 y 3084317 cancelados (9). No hay etiquetas de prueba guardadas en el VPS.
-
 - EC: vínculo por país ya existe (ea21e44/7c60d43/6034931). Primer pedido real de EC (aprobación del usuario): verificar provincia/cantón, celular `09…`, CEDULA→CC, total con decimales.
 
 ## Siguiente paso exacto

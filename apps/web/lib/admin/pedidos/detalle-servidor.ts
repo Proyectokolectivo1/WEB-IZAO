@@ -8,6 +8,7 @@ import { urlEtiquetaSegura } from '@izao/mastershop';
 import type { Cliente } from '../catalogo/taxonomias-servidor';
 import { escaparBusqueda, rangoPagina } from '../crud/comun';
 import { interpretarBusqueda, rangoFechasUtc, type FiltrosPedido } from './filtros';
+import { impresionManualDeEventos, type ImpresionManual } from './impresion-manual';
 
 export type FilaPedidoLista = {
   id: string;
@@ -118,6 +119,8 @@ export type DetallePedido = {
     etiqueta_url: string | null;
   } | null;
   impresiones: { id: string; type: string; status: string; requested_by: string; attempts: number; error: string | null; created_at: string; printed_at: string | null }[];
+  /** D-062: el flete superó el umbral y la guía no se imprimió sola (flete y umbral en unidad menor); si no, `null`. */
+  impresion_manual: ImpresionManual | null;
 };
 
 function ok<T>(r: { data: unknown; error: { message: string } | null }, que: string): T {
@@ -198,19 +201,21 @@ export async function obtenerDetallePedido(cliente: Cliente, id: string): Promis
       .limit(10),
   ]);
   const links1 = ok<DetallePedido['link'][]>(links, 'el link de cobro');
+  const eventos1 = ok<(DetallePedido['eventos'][number] & { payload?: unknown })[]>(eventos, 'la línea de tiempo');
   return {
     pedido: pedido as never,
     items: ok(items, 'los productos'),
     pagos: ok(pagos, 'los pagos'),
     link: links1[0] ?? null,
     mensajes: ok(mensajes, 'los mensajes'),
-    eventos: ok<(DetallePedido['eventos'][number] & { payload?: unknown })[]>(eventos, 'la línea de tiempo').map(({ payload, ...e }) => ({
+    eventos: eventos1.map(({ payload, ...e }) => ({
       ...e,
       nota: e.type === 'nota_interna' ? textoDeNota(payload) : null,
       motivo_alerta: e.type === 'alerta' ? motivoDeAlerta(payload) : null,
     })),
     envio: envioPublico(ok<Record<string, unknown>[]>(envios, 'el envío')[0]),
     impresiones: ok(impresiones, 'las impresiones'),
+    impresion_manual: impresionManualDeEventos(eventos1),
   };
 }
 

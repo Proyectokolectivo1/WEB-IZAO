@@ -20,6 +20,7 @@ export type AccionEtiqueta =
   | 'guardada'
   | 'ya_guardada'
   | 'remota'
+  | 'impresion_manual'
   | 'sin_etiqueta'
   | 'consulta_programada'
   | 'agotado'
@@ -38,7 +39,7 @@ export async function procesarEtiqueta(
   if (!pedido || !ESPERAN_ETIQUETA.has(pedido.status)) return r('fuera_de_fase');
   const envio = await deps.fuente.envio(pedido.id);
   if (!envio || envio.provider_order_id === null) return r('sin_envio');
-  if (envio.label_local_path) return r(await guardarEtiqueta(deps, pedido.id, pedido.number, envio, ACTOR_SISTEMA));
+  if (envio.label_local_path) return r(await guardarEtiqueta(deps, pedido.id, pedido.number, pedido.country_code, envio, ACTOR_SISTEMA));
 
   const creds = await deps.fuente.credenciales(pedido.country_code);
   if (!creds) {
@@ -64,7 +65,7 @@ export async function procesarEtiqueta(
     const actualizado = await guardarRemoto(deps, pedido.id, pedido.number, envio, remoto, 'poll_label');
     if (remoto.statusId === 9) return r('cancelado');
     if (!actualizado.label_url) return r(await siguiente());
-    return r(await guardarEtiqueta(deps, pedido.id, pedido.number, actualizado, ACTOR_SISTEMA));
+    return r(await guardarEtiqueta(deps, pedido.id, pedido.number, pedido.country_code, actualizado, ACTOR_SISTEMA));
   } catch (e) {
     if (esReintentable(e)) return r(await siguiente(e));
     await deps.fuente.registrarEvento(pedido.id, 'alerta', ACTOR_SISTEMA, {

@@ -112,7 +112,7 @@ export async function procesarSync(datos: DatosJobSync, deps: DepsCarrier): Prom
 
   if (actualizado.label_url && !actualizado.label_local_path && remoto.statusId !== 9) {
     try {
-      await guardarEtiqueta(deps, pedido.id, pedido.number, actualizado, actor);
+      await guardarEtiqueta(deps, pedido.id, pedido.number, pedido.country_code, actualizado, actor);
     } catch (e) {
       // La etiqueta la vuelve a intentar `carrier.poll_label`; la sincronización no falla por esto.
       await deps.fuente.registrarEvento(pedido.id, 'alerta', actor, { motivo: 'etiqueta_error', error: errorParaEvento(e) });

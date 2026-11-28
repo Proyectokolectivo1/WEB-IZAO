@@ -13,7 +13,7 @@ import {
 } from '@izao/mastershop';
 import { esBloqueoEtiqueta } from './almacen-etiquetas.js';
 import type { RecalcularMetricasPedido } from '../metrics/tras-transicion.js';
-import type { AlmacenEtiquetas, EnvioFila, FuenteCarrier, ProgramadorCarrier } from './fuente.js';
+import { ACCION_IMPRESION_MANUAL, type AlmacenEtiquetas, type EnvioFila, type FuenteCarrier, type ProgramadorCarrier } from './fuente.js';
 
 export interface DepsCarrier {
   fuente: FuenteCarrier;
@@ -124,6 +124,37 @@ export async function guardarRemoto(
   });
 }
 
+/** Resultado de asegurar la impresión automática de la etiqueta. */
+type DecisionImpresion = 'creada' | 'ya_existia' | 'manual';
+
+/**
+ * Crea el `print_job` automático salvo que el flete supere el umbral del país (D-062). La decisión se toma una sola
+ * vez por envío: si ya hay un trabajo automático no se mira el flete; si el pedido ya quedó retenido, sigue retenido
+ * aunque el flete baje o el administrador cambie el umbral (no se imprime solo de forma retroactiva). Sin umbral
+ * (`null`) o sin tarifa conocida se imprime como siempre.
+ */
+async function asegurarImpresion(
+  deps: DepsCarrier,
+  orderId: string,
+  pais: CountryCode,
+  envio: EnvioFila,
+  actor: string,
+): Promise<DecisionImpresion> {
+  const estado = await deps.fuente.estadoImpresionAuto(orderId, envio.id);
+  if (estado === 'creada') return 'ya_existia';
+  if (estado === 'retenida') return 'manual';
+  const flete = envio.shipping_rate ?? null;
+  const umbral = flete === null ? null : await deps.fuente.umbralImpresionAuto(pais);
+  if (flete !== null && umbral !== null && flete > umbral) {
+    const detalle = { guia: envio.tracking_code, flete: flete.toString(), umbral: umbral.toString(), shipment_id: envio.id };
+    const nueva = await deps.fuente.retenerImpresion(orderId, actor, { ...detalle, motivo: 'flete_sobre_umbral' });
+    // La alerta del panel sale con la primera retención; si otro proceso ganó, él ya la dejó.
+    if (nueva) await deps.fuente.registrarEvento(orderId, 'alerta', actor, { motivo: ACCION_IMPRESION_MANUAL, causa: 'flete_sobre_umbral', ...detalle });
+    return 'manual';
+  }
+  return (await deps.fuente.crearImpresionEtiqueta(orderId, envio.id)) ? 'creada' : 'ya_existia';
+}
+
 /**
  * Descarga la etiqueta a `MEDIA_ROOT/labels/`, guarda la ruta y crea el `print_job` (§14.5 paso 3).
  * Idempotente: si ya hay ruta local solo asegura el trabajo de impresión.
@@ -131,17 +162,21 @@ export async function guardarRemoto(
  * Respaldo D-051: si el CDN bloquea la IP del servidor (403), no es un error terminal. Se crea igual el `print_job`
  * y el agente descarga el PDF desde `shipments.label_url` (API del agente v1.1). La copia local se vuelve a intentar
  * en cada sincronización; el trabajo automático sigue siendo uno por envío.
+ *
+ * D-062: si el flete supera `country_settings.auto_print_max_shipping_rate`, la etiqueta se descarga igual pero no se
+ * crea el trabajo automático (`impresion_manual`): el administrador llama al cliente e imprime desde el panel.
  */
 export async function guardarEtiqueta(
   deps: DepsCarrier,
   orderId: string,
   numero: string,
+  pais: CountryCode,
   envio: EnvioFila,
   actor: string,
-): Promise<'guardada' | 'ya_guardada' | 'sin_etiqueta' | 'remota'> {
+): Promise<'guardada' | 'ya_guardada' | 'sin_etiqueta' | 'remota' | 'impresion_manual'> {
   if (envio.label_local_path) {
-    await deps.fuente.crearImpresionEtiqueta(orderId, envio.id);
-    return 'ya_guardada';
+    const d = await asegurarImpresion(deps, orderId, pais, envio, actor);
+    return d === 'manual' ? 'impresion_manual' : 'ya_guardada';
   }
   if (!envio.label_url) return 'sin_etiqueta';
   let ruta: string;
@@ -149,8 +184,9 @@ export async function guardarEtiqueta(
     ruta = await deps.etiquetas.guardar(envio.label_url, numero);
   } catch (e) {
     if (!esBloqueoEtiqueta(e)) throw e;
-    const creado = await deps.fuente.crearImpresionEtiqueta(orderId, envio.id);
-    if (creado) {
+    const d = await asegurarImpresion(deps, orderId, pais, envio, actor);
+    if (d === 'manual') return 'impresion_manual';
+    if (d === 'creada') {
       await deps.fuente.registrarEvento(orderId, 'transportadora', actor, {
         accion: 'etiqueta_por_agente',
         guia: envio.tracking_code,
@@ -162,12 +198,14 @@ export async function guardarEtiqueta(
     return 'remota';
   }
   const actualizado = await deps.fuente.guardarEnvio(orderId, { external_order_id: numero, label_local_path: ruta });
-  const creado = await deps.fuente.crearImpresionEtiqueta(orderId, actualizado.id);
+  // La fila devuelta trae la tarifa vigente; si faltara, vale la que se leyó antes.
+  const d = await asegurarImpresion(deps, orderId, pais, { ...actualizado, shipping_rate: actualizado.shipping_rate ?? envio.shipping_rate ?? null }, actor);
   await deps.fuente.registrarEvento(orderId, 'transportadora', actor, {
     accion: 'etiqueta_guardada',
     guia: envio.tracking_code,
     ruta,
-    impresion_creada: creado,
+    impresion_creada: d === 'creada',
+    ...(d === 'manual' ? { impresion_manual: true } : {}),
   });
-  return 'guardada';
+  return d === 'manual' ? 'impresion_manual' : 'guardada';
 }
