@@ -5,6 +5,7 @@ import { fuenteAddiSupabase } from '@/lib/checkout/fuente-addi-supabase';
 import { crearLimitadorMemoria, enteroEnv } from '@/lib/checkout/limite-tasa';
 import { encolarInicioCod } from './cola-cod';
 import { encolarRecalculoMetricas } from './cola-metricas';
+import { guardarDatosMeta } from './guardar-datos-meta';
 
 /**
  * `POST /api/checkout`: crea el pedido recalculando todo en el servidor (§10, §11). Contrato en
@@ -31,5 +32,6 @@ export async function POST(req: Request) {
     },
     encolarCod: encolarInicioCod,
     recalcularMetricas: encolarRecalculoMetricas,
+    guardarDatosMeta,
   });
 }

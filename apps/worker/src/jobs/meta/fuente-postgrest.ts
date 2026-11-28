@@ -4,10 +4,17 @@
  */
 import { fromDbAmount, type CountryCode } from '@izao/core/money';
 import { esPixelId, idContenido } from '@izao/meta-pixel';
+import type { NavegadorMeta } from '@izao/meta-pixel/capi';
 import { crearClientePostgrest, eq, type OpcionesPostgrest } from '../postgrest.js';
 import type { FuenteConversiones } from './conversiones.js';
 
 const txt = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
+
+function navegadorDe(v: unknown): NavegadorMeta | null {
+  if (typeof v !== 'object' || v === null) return null;
+  const o = v as Record<string, unknown>;
+  return { fbp: txt(o.fbp), fbc: txt(o.fbc), ip: txt(o.ip), ua: txt(o.ua) };
+}
 
 export function crearFuenteConversionesPostgrest(o: OpcionesPostgrest): FuenteConversiones {
   const c = crearClientePostgrest(o);
@@ -15,7 +22,7 @@ export function crearFuenteConversionesPostgrest(o: OpcionesPostgrest): FuenteCo
     async pedido(orderId) {
       const [f] = await c.filas(
         'orders',
-        `orders?id=${eq(orderId)}&select=number,country_code,paid_at,total_customer,contact_email,contact_phone_e164,marketing_consent`,
+        `orders?id=${eq(orderId)}&select=number,country_code,paid_at,total_customer,contact_email,contact_phone_e164,marketing_consent,contact_first_name,contact_last_name,shipping_city_name,meta_user_data`,
       );
       if (!f) return null;
       const pais = f.country_code === 'CO' || f.country_code === 'EC' ? (f.country_code as CountryCode) : null;
@@ -32,6 +39,10 @@ export function crearFuenteConversionesPostgrest(o: OpcionesPostgrest): FuenteCo
         telefono: txt(f.contact_phone_e164),
         // Opt-in estricto: solo el booleano `true`; nulo, ausente o cualquier otro valor = sin consentimiento.
         consentimientoMarketing: f.marketing_consent === true,
+        nombre: txt(f.contact_first_name),
+        apellido: txt(f.contact_last_name),
+        ciudad: txt(f.shipping_city_name),
+        navegador: navegadorDe(f.meta_user_data),
         lineas: items.map((i) => ({
           id: idContenido(txt(i.sku), String(i.variant_id ?? i.sku ?? 'sin-id')),
           cantidad: Number(i.quantity),

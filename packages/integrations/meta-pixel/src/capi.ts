@@ -38,17 +38,68 @@ export function normalizarTelefono(telefono: string | null | undefined): string 
 export interface DatosUsuarioMeta {
   em?: string[];
   ph?: string[];
+  fn?: string[];
+  ln?: string[];
+  ct?: string[];
+  external_id?: string[];
   country?: string[];
+  /** Sin hash (así lo pide Meta): cookies `_fbp`/`_fbc`, IP y user-agent del navegador al comprar. */
+  fbp?: string;
+  fbc?: string;
+  client_ip_address?: string;
+  client_user_agent?: string;
 }
 
-/** `user_data` con hash. No incluye nombres ni dirección: con correo y teléfono Meta ya relaciona al comprador. */
-export function datosUsuario(origen: { correo?: string | null; telefono?: string | null; pais: string }): DatosUsuarioMeta {
+/** Nombre, apellido o ciudad: minúsculas, sin acentos, sin signos ni espacios (norma de Meta); `null` si queda vacío. */
+export function normalizarTexto(texto: string | null | undefined): string | null {
+  const t = (texto ?? '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '');
+  return t || null;
+}
+
+/** Datos del navegador guardados con el pedido (solo si hubo consentimiento de marketing). */
+export interface NavegadorMeta {
+  fbp?: string | null;
+  fbc?: string | null;
+  ip?: string | null;
+  ua?: string | null;
+}
+
+/**
+ * `user_data`: correo, teléfono, nombre, apellido, ciudad y país con SHA-256; `external_id` = número del pedido con hash;
+ * `fbp`, `fbc`, IP y user-agent sin hash. Cuantos más campos, mejor coincidencia (Meta atribuye la venta al anuncio).
+ */
+export function datosUsuario(origen: {
+  correo?: string | null;
+  telefono?: string | null;
+  nombre?: string | null;
+  apellido?: string | null;
+  ciudad?: string | null;
+  externalId?: string | null;
+  navegador?: NavegadorMeta | null;
+  pais: string;
+}): DatosUsuarioMeta {
   const correo = normalizarCorreo(origen.correo);
   const telefono = normalizarTelefono(origen.telefono);
+  const nombre = normalizarTexto(origen.nombre);
+  const apellido = normalizarTexto(origen.apellido);
+  const ciudad = normalizarTexto(origen.ciudad);
+  const nav = origen.navegador ?? {};
   return {
     ...(correo ? { em: [sha256Hex(correo)] } : {}),
     ...(telefono ? { ph: [sha256Hex(telefono)] } : {}),
+    ...(nombre ? { fn: [sha256Hex(nombre)] } : {}),
+    ...(apellido ? { ln: [sha256Hex(apellido)] } : {}),
+    ...(ciudad ? { ct: [sha256Hex(ciudad)] } : {}),
+    ...(origen.externalId ? { external_id: [sha256Hex(origen.externalId)] } : {}),
     country: [sha256Hex(origen.pais.trim().toLowerCase())],
+    ...(nav.fbp ? { fbp: nav.fbp } : {}),
+    ...(nav.fbc ? { fbc: nav.fbc } : {}),
+    ...(nav.ip ? { client_ip_address: nav.ip } : {}),
+    ...(nav.ua ? { client_user_agent: nav.ua } : {}),
   };
 }
 
@@ -67,6 +118,11 @@ export function eventoCompra(d: {
   pagadoEn: Date;
   correo?: string | null;
   telefono?: string | null;
+  nombre?: string | null;
+  apellido?: string | null;
+  ciudad?: string | null;
+  externalId?: string | null;
+  navegador?: NavegadorMeta | null;
   pais: string;
   contenido: ParametrosContenido;
   urlPedido?: string;
@@ -77,7 +133,16 @@ export function eventoCompra(d: {
     event_id: d.eventId,
     action_source: 'website',
     ...(d.urlPedido ? { event_source_url: d.urlPedido } : {}),
-    user_data: datosUsuario({ correo: d.correo, telefono: d.telefono, pais: d.pais }),
+    user_data: datosUsuario({
+      correo: d.correo,
+      telefono: d.telefono,
+      nombre: d.nombre,
+      apellido: d.apellido,
+      ciudad: d.ciudad,
+      externalId: d.externalId,
+      navegador: d.navegador,
+      pais: d.pais,
+    }),
     custom_data: d.contenido,
   };
 }

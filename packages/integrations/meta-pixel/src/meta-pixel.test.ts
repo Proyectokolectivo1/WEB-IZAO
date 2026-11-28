@@ -171,3 +171,28 @@ describe('envío a la Graph API', () => {
     expect(versionGraph({} as NodeJS.ProcessEnv)).toBe(GRAPH_VERSION_DEFECTO);
   });
 });
+
+describe('datos de usuario ampliados (calidad de coincidencia)', () => {
+  it('manda nombre, apellido, ciudad y external_id con hash; fbp, fbc, IP y user-agent sin hash', () => {
+    const u = datosUsuario({
+      nombre: 'José Ángel',
+      apellido: 'Núñez-Pérez',
+      ciudad: 'Bogotá D.C.',
+      externalId: 'IZ-CO-000054',
+      navegador: { fbp: 'fb.1.1732400000000.123456789', fbc: 'fb.1.1732400000000.AbC_d-1', ip: '181.50.1.2', ua: 'Mozilla/5.0' },
+      pais: 'CO',
+    });
+    expect(u.fn).toEqual([sha256Hex('joseangel')]);
+    expect(u.ln).toEqual([sha256Hex('nunezperez')]);
+    expect(u.ct).toEqual([sha256Hex('bogotadc')]);
+    expect(u.external_id).toEqual([sha256Hex('IZ-CO-000054')]);
+    expect(u.fbp).toBe('fb.1.1732400000000.123456789');
+    expect(u.fbc).toBe('fb.1.1732400000000.AbC_d-1');
+    expect(u.client_ip_address).toBe('181.50.1.2');
+    expect(u.client_user_agent).toBe('Mozilla/5.0');
+  });
+  it('sin datos del navegador no incluye esos campos', () => {
+    const u = datosUsuario({ correo: 'a@b.co', pais: 'CO', navegador: { fbp: null, ip: '' } });
+    expect(Object.keys(u).sort()).toEqual(['country', 'em']);
+  });
+});
